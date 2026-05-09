@@ -423,7 +423,14 @@ Type-aware page:
 
 ---
 
-## 16. Key Scripts
+## 16. Deployment
+
+**Repo**: https://github.com/Jayks/clear.git (master)
+**Deployment**: Vercel (pending — new Supabase project needs wiring)
+
+---
+
+## 17. Key Scripts
 
 ```bash
 pnpm dev / build / typecheck

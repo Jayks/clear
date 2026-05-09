@@ -1,0 +1,34 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import AppNav from "./app-nav";
+import { MobileNav } from "@/components/shared/mobile-nav";
+import { PullToRefresh } from "@/components/shared/pull-to-refresh";
+import { isPlatformAdmin } from "@/lib/db/queries/admin";
+import { TourProvider } from "@/components/tour/tour-context";
+
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const isAdmin = isPlatformAdmin(user.email);
+
+  return (
+    <TourProvider>
+      <div className="min-h-screen flex flex-col">
+        <AppNav user={user} isAdmin={isAdmin} />
+        <PullToRefresh />
+        {/* pb-24 on mobile leaves room above the bottom nav */}
+        <main className="flex-1 p-6 pb-24 md:pb-8 md:p-8 max-w-7xl mx-auto w-full">
+          {children}
+        </main>
+        <MobileNav />
+      </div>
+    </TourProvider>
+  );
+}

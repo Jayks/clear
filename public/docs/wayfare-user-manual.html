@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wayfare — User Manual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cyan:      #06B6D4;
+      --teal:      #14B8A6;
+      --cyan-dark: #0891B2;
+      --slate-800: #1E293B;
+      --slate-600: #475569;
+      --slate-400: #94A3B8;
+      --slate-100: #F1F5F9;
+      --slate-50:  #F8FAFC;
+      --white:     #FFFFFF;
+      --page-w:    720px;
+      --font-head: 'Fraunces', Georgia, serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    html { font-size: 15px; }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--slate-800);
+      background: #fff;
+      line-height: 1.65;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── Page layout ── */
+    .page {
+      max-width: var(--page-w);
+      margin: 0 auto;
+      padding: 48px 40px;
+    }
+
+    /* ── Cover page ── */
+    .cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      padding: 60px 40px;
+      page-break-after: always;
+      background:
+        linear-gradient(160deg,
+          #0e7490 0%,
+          #0c4a6e 30%,
+          #0f172a 65%,
+          #042f2e 100%);
+      overflow: hidden;
+    }
+
+    /* Decorative blobs — solid colour + opacity only, no gradient patterns (PDF.js compat) */
+    .cover-blob-1 {
+      position: absolute;
+      width: 520px;
+      height: 520px;
+      border-radius: 50%;
+      background: #06B6D4;
+      opacity: 0.18;
+      top: -160px;
+      left: -180px;
+    }
+
+    .cover-blob-2 {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: #14B8A6;
+      opacity: 0.14;
+      bottom: -100px;
+      right: -120px;
+    }
+
+    .cover-blob-3 {
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: #22D3EE;
+      opacity: 0.10;
+      top: 45%;
+      right: 80px;
+    }
+
+    /* Removed grid — linear-gradient repeating patterns also cause PDF.js pattern errors */
+
+    .cover > *:not(.cover-blob-1):not(.cover-blob-2):not(.cover-blob-3) {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 16px;
+      padding: 16px 28px;
+      margin-bottom: 32px;
+    }
+
+    .cover-badge svg { width: 40px; height: 40px; color: white; }
+
+    .cover-wordmark {
+      font-family: var(--font-head);
+      font-size: 3rem;
+      font-weight: 700;
+      color: white;
+      letter-spacing: -0.5px;
+    }
+
+    .cover h1 {
+      font-family: var(--font-head);
+      font-size: 2.25rem;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .cover .tagline {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: 48px;
+    }
+
+    .cover .meta {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ── Table of contents ── */
+    .toc { page-break-after: always; }
+
+    .toc h2 {
+      font-family: var(--font-head);
+      font-size: 1.6rem;
+      color: var(--slate-800);
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--cyan);
+    }
+
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+    }
+
+    .toc ol li {
+      counter-increment: toc;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: 0.95rem;
+    }
+
+    .toc ol li::before {
+      content: counter(toc);
+      font-family: var(--font-head);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--cyan-dark);
+      min-width: 28px;
+    }
+
+    .toc .toc-title { font-weight: 500; color: var(--slate-800); }
+    .toc .toc-desc  { font-size: 0.85rem; color: var(--slate-400); margin-left: auto; }
+
+    /* ── Section headers ── */
+    .section {
+      page-break-before: always;
+      padding-top: 8px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .section-num {
+      font-family: var(--font-head);
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, var(--cyan), var(--teal));
+      border-radius: 10px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section h2 {
+      font-family: var(--font-head);
+      font-size: 1.7rem;
+      font-weight: 600;
+      color: var(--slate-800);
+      line-height: 1.2;
+    }
+
+    /* ── Subsection headers ── */
+    .section h3 {
+      font-family: var(--font-head);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--cyan-dark);
+      margin: 28px 0 10px;
+    }
+
+    /* ── Body text ── */
+    .section p {
+      color: var(--slate-600);
+      margin-bottom: 14px;
+    }
+
+    /* ── Screenshot placeholder ── */
+    .screenshot {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      margin: 20px 0;
+      display: block;
+      background: var(--slate-50);
+    }
+
+    .screenshot-placeholder {
+      width: 100%;
+      min-height: 340px;
+      border-radius: 12px;
+      border: 2px dashed #CBD5E1;
+      background: var(--slate-50);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0;
+      gap: 8px;
+    }
+
+    .screenshot-placeholder .ph-icon {
+      font-size: 2rem;
+      opacity: 0.35;
+    }
+
+    .screenshot-placeholder .ph-label {
+      font-size: 0.8rem;
+      color: var(--slate-400);
+      font-family: monospace;
+    }
+
+    .screenshot-caption {
+      font-size: 0.8rem;
+      color: var(--slate-400);
+      text-align: center;
+      margin-top: -12px;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 18px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 0.9rem;
+    }
+
+    .callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .callout-body { color: var(--slate-600); }
+    .callout-body strong { color: var(--slate-800); }
+
+    .callout.tip   { background: #ECFDF5; border-left: 3px solid #10B981; }
+    .callout.note  { background: #EFF6FF; border-left: 3px solid var(--cyan); }
+    .callout.warn  { background: #FFFBEB; border-left: 3px solid #F59E0B; }
+
+    /* ── Concept cards ── */
+    .concept-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    .concept-card {
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      padding: 16px 18px;
+      background: var(--slate-50);
+    }
+
+    .concept-card .concept-icon { font-size: 1.5rem; margin-bottom: 8px; }
+    .concept-card .concept-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--slate-800);
+      margin-bottom: 4px;
+    }
+    .concept-card .concept-desc {
+      font-size: 0.85rem;
+      color: var(--slate-600);
+    }
+
+    /* ── Steps list ── */
+    .steps {
+      list-style: none;
+      counter-reset: steps;
+      margin: 16px 0;
+    }
+
+    .steps li {
+      counter-increment: steps;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: 0.9rem;
+      color: var(--slate-600);
+    }
+
+    .steps li:last-child { border-bottom: none; }
+
+    .steps li::before {
+      content: counter(steps);
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: white;
+      background: linear-gradient(135deg, var(--cyan), var(--teal));
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .steps li strong { color: var(--slate-800); }
+
+    /* ── Feature pill ── */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #ECFEFF, #F0FDFA);
+      border: 1px solid #A5F3FC;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.78rem;
+      color: var(--cyan-dark);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* ── Inline kbd ── */
+    kbd {
+      font-family: monospace;
+      font-size: 0.8rem;
+      background: var(--slate-100);
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: var(--slate-800);
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--slate-100);
+      margin: 24px 0;
+    }
+
+    /* ── Print ── */
+    @media print {
+      .cover { page-break-after: always; }
+      .toc   { page-break-after: always; }
+      .section { page-break-before: always; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     COVER
+════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-blob-1"></div>
+  <div class="cover-blob-2"></div>
+  <div class="cover-blob-3"></div>
+  <div class="cover-badge">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <line x1="12" y1="2" x2="16" y2="12"/><line x1="12" y1="2" x2="8" y2="12"/>
+    </svg>
+    <span class="cover-wordmark">Wayfare</span>
+  </div>
+  <h1>User Manual</h1>
+  <p class="tagline">Travel together. Settle easy.</p>
+  <p class="meta">Version 1.0 &nbsp;·&nbsp; May 2026</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+════════════════════════════════════════════════════════════ -->
+<div class="page toc">
+  <h2>Contents</h2>
+  <ol>
+    <li>
+      <span class="toc-title">Introduction</span>
+      <span class="toc-desc">What Wayfare is and how it works</span>
+    </li>
+    <li>
+      <span class="toc-title">Getting Started</span>
+      <span class="toc-desc">Sign in, join a trip</span>
+    </li>
+    <li>
+      <span class="toc-title">Creating &amp; Managing Trips</span>
+      <span class="toc-desc">New trip, edit, archive</span>
+    </li>
+    <li>
+      <span class="toc-title">Members</span>
+      <span class="toc-desc">Invite, guest members, roles</span>
+    </li>
+    <li>
+      <span class="toc-title">Logging Expenses</span>
+      <span class="toc-desc">Add, split, quick-add, voice, chat import</span>
+    </li>
+    <li>
+      <span class="toc-title">Settling Up</span>
+      <span class="toc-desc">Balances, payments, UPI, WhatsApp</span>
+    </li>
+    <li>
+      <span class="toc-title">Insights</span>
+      <span class="toc-desc">Charts, group roles, plan vs reality</span>
+    </li>
+    <li>
+      <span class="toc-title">Trip Summary</span>
+      <span class="toc-desc">Shareable page, AI story</span>
+    </li>
+    <li>
+      <span class="toc-title">Theme / Appearance</span>
+      <span class="toc-desc">Light &amp; dark theme toggle</span>
+    </li>
+    <li>
+      <span class="toc-title">Platform Admin</span>
+      <span class="toc-desc">Admin-only dashboard</span>
+    </li>
+  </ol>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 1 — INTRODUCTION
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <h2>Introduction</h2>
+  </div>
+
+  <p>
+    Wayfare is a group expense tracker built for trips and tours. When a group travels together,
+    payments naturally scatter — one person pays for dinner, another for the taxi, a third for
+    hotel check-in. Wayfare keeps track of all of it and, at the end, tells everyone exactly
+    who owes whom with the fewest possible transactions.
+  </p>
+
+  <img src="screenshots/02-trips-list.png" class="screenshot" alt="The Wayfare trips dashboard" />
+  <p class="screenshot-caption">The Wayfare trips dashboard — all your trips at a glance.</p>
+
+  <h3>Key Concepts</h3>
+  <p>Understanding these four building blocks will make everything else click.</p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">✈️</div>
+      <div class="concept-title">Trip</div>
+      <div class="concept-desc">
+        A named group journey with optional dates, budget, cover photo, and itinerary. Everything
+        — expenses, members, settlements — lives inside a trip.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👥</div>
+      <div class="concept-title">Member</div>
+      <div class="concept-desc">
+        Anyone who participates in the trip's costs. Members can be real Wayfare users (Google
+        account) or <em>guests</em> — people added by name without an account.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🧾</div>
+      <div class="concept-title">Expense</div>
+      <div class="concept-desc">
+        A single payment — e.g. "Dinner at Gajalee, ₹3,200, paid by Raj, split equally among 5."
+        Expenses can be split four different ways.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">💸</div>
+      <div class="concept-title">Settlement</div>
+      <div class="concept-desc">
+        A real-world payment between two members that clears part of a debt. Wayfare computes
+        the minimum number of settlements needed to balance the group.
+      </div>
+    </div>
+  </div>
+
+  <h3>How Wayfare calculates who owes whom</h3>
+  <p>
+    After every expense is logged, Wayfare computes each member's <strong>net balance</strong>:
+    how much they paid out minus how much they owe for their share of all expenses. Members
+    with a positive balance are owed money; members with a negative balance owe money.
+  </p>
+  <p>
+    A greedy algorithm then pairs the largest creditor with the largest debtor, transferring
+    the smaller of the two amounts, until all balances reach zero. This guarantees the fewest
+    possible payments — at most <em>n&nbsp;−&nbsp;1</em> transactions for a group of
+    <em>n</em> people.
+  </p>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      <strong>Example:</strong> Five people on a trip. Wayfare might settle everything with
+      just four payments instead of each person paying every other person individually
+      (which could be up to ten payments).
+    </div>
+  </div>
+
+  <h3>What Wayfare is not</h3>
+  <p>
+    Wayfare is designed specifically for group trips. It is <em>not</em> a general household
+    bill splitter, a recurring subscription tracker, or a personal budgeting app. Every
+    feature is built around the shared-journey use case.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 2 — GETTING STARTED
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <h2>Getting Started</h2>
+  </div>
+
+  <p>
+    Wayfare uses Google sign-in — no username or password to remember. All you need is a
+    Google account.
+  </p>
+
+  <h3>Signing in</h3>
+
+  <img src="screenshots/01-login-page.png" class="screenshot" alt="The Wayfare login page" />
+  <p class="screenshot-caption">The Wayfare login page.</p>
+
+  <ol class="steps">
+    <li>Open <strong>wayfare-sigma.vercel.app</strong> in your browser.</li>
+    <li>Click <strong>Continue with Google</strong>.</li>
+    <li>Choose your Google account and grant permission.</li>
+    <li>You are redirected to your trips dashboard. Done.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">
+      Your display name and profile picture are pulled from Google automatically. You don't
+      need to set up a profile.
+    </div>
+  </div>
+
+  <h3>Joining a trip via invite link</h3>
+  <p>
+    If someone already created a trip and shared an invite link or QR code with you, you can
+    join without creating a trip yourself.
+  </p>
+
+  <ol class="steps">
+    <li>Open the invite link (it looks like <kbd>wayfare-sigma.vercel.app/join/…</kbd>).</li>
+    <li>If you are not signed in, you will be prompted to sign in with Google first.</li>
+    <li>Click <strong>Join Trip</strong> on the confirmation page.</li>
+    <li>You are added as a member and taken to the trip dashboard.</li>
+  </ol>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      <strong>QR codes:</strong> Trip admins can display a QR code that opens the same join
+      link. Scan it with your phone camera to join instantly.
+    </div>
+  </div>
+
+  <h3>Navigation</h3>
+  <p>
+    Once signed in, two sections are always accessible:
+  </p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">🗺️</div>
+      <div class="concept-title">Trips</div>
+      <div class="concept-desc">
+        Your home base. Lists all active trips you belong to, plus archived trips below.
+        This is where you create new trips and pick up where you left off.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📊</div>
+      <div class="concept-title">Insights</div>
+      <div class="concept-desc">
+        A portfolio view across all your trips — total spend, favourite categories, most
+        travelled companions, and a trip-by-trip comparison chart.
+      </div>
+    </div>
+  </div>
+
+  <p>
+    On <strong>desktop</strong>, these appear in the top navigation bar. On <strong>mobile</strong>,
+    they appear in the bottom navigation bar so your thumb can always reach them.
+  </p>
+
+  <h3>Signing out</h3>
+  <p>
+    Click your avatar or initials in the top-right corner, then select <strong>Sign out</strong>
+    from the dropdown menu.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 3 — CREATING & MANAGING TRIPS
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <h2>Creating &amp; Managing Trips</h2>
+  </div>
+
+  <p>
+    A trip is the container for everything — members, expenses, and settlements.
+    You must create (or join) a trip before you can log any expenses.
+  </p>
+
+  <h3>Creating a new trip</h3>
+
+  <ol class="steps">
+    <li>From the Trips page, click <strong>New Trip</strong>.</li>
+    <li>Enter a <strong>Trip name</strong> (required). Make it recognisable — e.g. "Goa June 2026".</li>
+    <li>Add an optional <strong>Description</strong> to give context to other members.</li>
+    <li>Set <strong>Start date</strong> and <strong>End date</strong> if known. Wayfare uses these to default new expenses to the right date.</li>
+    <li>Choose a <strong>Currency</strong> — this is the display currency for the trip. INR is the default.</li>
+    <li>Optionally set a <strong>Budget</strong>. A progress bar on the dashboard will track spend against it.</li>
+    <li>Optionally add an <strong>Itinerary / Plan</strong> — a free-text description of what you plan to do. Wayfare's AI uses this on the Insights page to compare your plan against actual expenses.</li>
+    <li>Click <strong>Pick cover photo</strong> to search Unsplash for a photo that represents your destination.</li>
+    <li>Click <strong>Create Trip</strong>.</li>
+  </ol>
+
+  <img src="screenshots/03-new-trip-form.png" class="screenshot" alt="The new trip form" />
+  <p class="screenshot-caption">The new trip form.</p>
+
+  <div class="callout tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">
+      <strong>Cover photo tip:</strong> Search for your destination name (e.g. "Rajasthan", "Bali",
+      "Swiss Alps") to find high-quality travel photography from Unsplash. The photo appears on
+      the trip card and the shareable summary page.
+    </div>
+  </div>
+
+  <h3>The trip dashboard</h3>
+
+  <img src="screenshots/04-trip-dashboard.png" class="screenshot" alt="The trip dashboard" />
+  <p class="screenshot-caption">The trip dashboard — your command centre for a single trip.</p>
+
+  <p>
+    Each trip has five sub-pages accessible from the tabs at the top:
+  </p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">🏠</div>
+      <div class="concept-title">Dashboard</div>
+      <div class="concept-desc">Overview: member balances, recent expenses, budget bar, quick-add expense bar.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🧾</div>
+      <div class="concept-title">Expenses</div>
+      <div class="concept-desc">Full list of all expenses with search, filters, and sort controls.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👥</div>
+      <div class="concept-title">Members</div>
+      <div class="concept-desc">Everyone in the trip — invite new people, add guests, manage roles.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">💸</div>
+      <div class="concept-title">Settle Up</div>
+      <div class="concept-desc">Suggested payments to balance the group, mark paid, settlement history.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📊</div>
+      <div class="concept-title">Insights</div>
+      <div class="concept-desc">Charts, group roles, smart observations, and plan vs reality comparison.</div>
+    </div>
+  </div>
+
+  <h3>Editing a trip</h3>
+  <p>
+    Trip admins can edit any trip detail after creation. Open the trip, then click the
+    <strong>Edit</strong> button (pencil icon) near the trip name. All fields from the creation
+    form are editable, including the cover photo, budget, and itinerary.
+  </p>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      <strong>Who is an admin?</strong> The person who created the trip is an admin by default.
+      Admins can edit trip details, remove members, and archive the trip. Regular members can
+      only add and manage expenses.
+    </div>
+  </div>
+
+  <h3>Archiving a trip</h3>
+  <p>
+    Once a trip is fully settled and done, you can archive it to keep your Trips page tidy.
+    Archived trips move to a collapsed "Archived" section at the bottom of the page — they
+    are never deleted and remain fully accessible.
+  </p>
+
+  <ol class="steps">
+    <li>Open the trip and click <strong>Edit</strong>.</li>
+    <li>Scroll to the bottom of the edit form and click <strong>Archive Trip</strong>.</li>
+    <li>Confirm the action. The trip disappears from your active list.</li>
+  </ol>
+
+  <p>
+    To restore an archived trip, expand the Archived section on the Trips page, open the trip,
+    go to Edit, and click <strong>Restore Trip</strong>.
+  </p>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>Only admins can archive or restore a trip.</strong> If you don't see the Archive
+      button, you are a regular member of that trip.
+    </div>
+  </div>
+
+  <h3>Sharing a trip</h3>
+  <p>
+    Every trip has a <strong>public summary page</strong> — a read-only snapshot of the trip
+    (cover photo, dates, members, total spend) that anyone can view without signing in.
+    This is useful for sharing a trip recap with people who weren't on the trip.
+  </p>
+  <p>
+    On the trip card on the Trips page, click the <strong>Share</strong> button. On mobile,
+    this opens the native share sheet; on desktop, it copies the link to your clipboard.
+    You can also scan or copy the invite QR code from the Members page.
+  </p>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 4 — MEMBERS
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <h2>Members</h2>
+  </div>
+
+  <p>
+    Every expense in Wayfare is tied to a member — someone who paid and someone who owes.
+    Getting your members set up correctly before logging expenses saves a lot of editing later.
+  </p>
+
+  <img src="screenshots/07-members-page.png" class="screenshot" alt="The Members page" />
+  <p class="screenshot-caption">The Members page — everyone in the trip, their role, and invite tools.</p>
+
+  <h3>Types of members</h3>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">👤</div>
+      <div class="concept-title">Real users</div>
+      <div class="concept-desc">
+        People who signed into Wayfare with Google. Their name and avatar are pulled from
+        Google automatically. They can log in and manage expenses themselves.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🪄</div>
+      <div class="concept-title">Guest members</div>
+      <div class="concept-desc">
+        People added by name only — no Google account needed. Useful for family members,
+        children, or anyone who won't be using the app directly. An admin logs their
+        expenses on their behalf.
+      </div>
+    </div>
+  </div>
+
+  <h3>Member roles</h3>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">🛡️</div>
+      <div class="concept-title">Admin</div>
+      <div class="concept-desc">
+        Can edit trip details, add and remove members, regenerate the invite link, and
+        archive the trip. The person who creates the trip is always an admin.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👥</div>
+      <div class="concept-title">Member</div>
+      <div class="concept-desc">
+        Can add, edit, and delete expenses. Cannot change trip settings or remove other
+        members. This is the default role when joining via an invite link.
+      </div>
+    </div>
+  </div>
+
+  <h3>Inviting people via link</h3>
+
+  <ol class="steps">
+    <li>Open the trip and go to the <strong>Members</strong> tab.</li>
+    <li>Click <strong>Copy invite link</strong> or <strong>Show QR code</strong>.</li>
+    <li>Share the link (WhatsApp, SMS, email — anywhere) or let people scan the QR code.</li>
+    <li>When they open the link and click <strong>Join Trip</strong>, they are added automatically.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">
+      <strong>QR code:</strong> Great for in-person situations — display it on your phone and
+      everyone scans it before the trip starts. No link sharing needed.
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>The invite link is public.</strong> Anyone with the link can join. If the link
+      is accidentally shared too widely, admins can <strong>regenerate</strong> it — the old
+      link stops working immediately.
+    </div>
+  </div>
+
+  <h3>Adding a guest member</h3>
+  <p>
+    Use this for people who won't have a Wayfare account — children, elderly relatives, or
+    anyone you're logging expenses on behalf of.
+  </p>
+
+  <ol class="steps">
+    <li>Go to the <strong>Members</strong> tab.</li>
+    <li>Click <strong>Add guest</strong>.</li>
+    <li>Enter the guest's name (e.g. "Grandma", "Arjun (kid)").</li>
+    <li>Click <strong>Add Guest</strong>. They appear in the member list immediately.</li>
+  </ol>
+
+  <p>
+    Guests appear in all expense split selectors and the settle-up screen just like real members.
+    Their balances are tracked identically.
+  </p>
+
+  <h3>Removing a member</h3>
+  <p>
+    Only admins can remove members. On the Members tab, click the <strong>Remove</strong> button
+    next to a member's name.
+  </p>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>Removing a member does not delete their expenses.</strong> Any expenses they paid
+      or were split with remain in the trip. Only remove a member if they genuinely should not
+      be part of the trip at all.
+    </div>
+  </div>
+
+  <h3>Regenerating the invite link</h3>
+  <p>
+    If the invite link was shared with the wrong people, admins can generate a new one.
+    On the Members tab, click <strong>Regenerate link</strong>. The previous link immediately
+    becomes invalid — anyone who clicks it will see an error page.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 5 — LOGGING EXPENSES
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <h2>Logging Expenses</h2>
+  </div>
+
+  <p>
+    Expenses are the heart of Wayfare. This section covers every way to add them — from the
+    full form to the AI quick-add bar to bulk chat import.
+  </p>
+
+  <h3>The add expense form</h3>
+
+  <img src="screenshots/06-add-expense-form.png" class="screenshot" alt="The Add Expense form" />
+  <p class="screenshot-caption">The full add expense form — every field explained below.</p>
+
+  <p>To open it: go to a trip's <strong>Expenses</strong> tab and click <strong>Add Expense</strong>,
+  or use the quick-add bar on the dashboard (see below).</p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">📝</div>
+      <div class="concept-title">Description</div>
+      <div class="concept-desc">What the expense was for. Keep it short and recognisable — "Hotel checkout", "Lunch at Anand".</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">💰</div>
+      <div class="concept-title">Amount</div>
+      <div class="concept-desc">The total amount paid. Enter numbers only — no currency symbol needed. A numeric keypad appears on mobile.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👤</div>
+      <div class="concept-title">Paid by</div>
+      <div class="concept-desc">Which member actually paid. Defaults to you. Change this when you're logging an expense on someone else's behalf.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📅</div>
+      <div class="concept-title">Date</div>
+      <div class="concept-desc">When the expense occurred. Defaults to today (or the trip's start date if the trip hasn't begun yet).</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🏷️</div>
+      <div class="concept-title">Category</div>
+      <div class="concept-desc">One of eight categories: Food, Accommodation, Transport, Sightseeing, Shopping, Activities, Groceries, Other.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📋</div>
+      <div class="concept-title">Notes</div>
+      <div class="concept-desc">Optional free-text note — useful for bill numbers, restaurant names, or anything that doesn't fit the description.</div>
+    </div>
+  </div>
+
+  <h3>Split modes</h3>
+  <p>
+    Wayfare supports four ways to divide an expense. Choose the one that matches how you
+    actually want to share the cost.
+  </p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">⚖️</div>
+      <div class="concept-title">Equal</div>
+      <div class="concept-desc">
+        The total is divided equally among all selected members. Tick or untick members to
+        include or exclude them. The most common mode.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🔢</div>
+      <div class="concept-title">Exact</div>
+      <div class="concept-desc">
+        You type the exact rupee amount each member owes. The sum of all amounts must equal
+        the total — Wayfare will alert you if it doesn't.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">%</div>
+      <div class="concept-title">Percentage</div>
+      <div class="concept-desc">
+        Each member is assigned a percentage. All percentages must add up to 100%. Wayfare
+        computes each person's share automatically.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🎲</div>
+      <div class="concept-title">Shares</div>
+      <div class="concept-desc">
+        Assign a number of "shares" to each member. Someone with 2 shares pays twice as much
+        as someone with 1. Good for room splits where adults and children pay differently.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">
+      <strong>Example — shares mode:</strong> Hotel room ₹6,000. Two adults (2 shares each)
+      and two children (1 share each) → 6 total shares → each adult pays ₹2,000, each child
+      pays ₹1,000.
+    </div>
+  </div>
+
+  <h3>Browsing and filtering expenses</h3>
+
+  <img src="screenshots/05-expenses-list.png" class="screenshot" alt="The Expenses list with filters" />
+  <p class="screenshot-caption">The Expenses list — search, filter, and sort to find any expense instantly.</p>
+
+  <p>The Expenses tab has a full set of filters above the list:</p>
+
+  <ul style="list-style: disc; padding-left: 20px; color: var(--slate-600); font-size: 0.9rem; margin: 12px 0 16px;">
+    <li style="margin-bottom: 6px;"><strong>Search</strong> — type any word from the description to filter instantly.</li>
+    <li style="margin-bottom: 6px;"><strong>Category pills</strong> — click a category icon to show only that category.</li>
+    <li style="margin-bottom: 6px;"><strong>Paid by</strong> — filter to one member's expenses.</li>
+    <li style="margin-bottom: 6px;"><strong>Date range</strong> — show expenses between two dates.</li>
+    <li style="margin-bottom: 6px;"><strong>Sort</strong> — sort by date (newest/oldest) or amount (high/low).</li>
+  </ul>
+
+  <p>
+    A running <strong>filtered total</strong> at the top of the list updates as you apply
+    filters — useful for checking "how much did we spend on food this trip?"
+  </p>
+
+  <h3>Editing an expense</h3>
+  <p>
+    Click any expense card to open it, then click <strong>Edit</strong>. All fields are
+    editable. Changes take effect immediately for all members.
+  </p>
+
+  <h3>Duplicating an expense</h3>
+  <p>
+    On an expense card, click the <strong>Duplicate</strong> button (two overlapping squares).
+    A copy of the expense is created with today's date — useful for recurring costs like
+    daily breakfast or parking.
+  </p>
+
+  <h3>Deleting an expense</h3>
+  <p>
+    Click the <strong>Delete</strong> button (bin icon) on any expense card. You'll be asked
+    to confirm. Deletion is instant in the UI and reverses if the server reports an error.
+  </p>
+
+  <hr class="divider" />
+
+  <h3>Quick-add bar <span class="pill">✨ AI</span></h3>
+  <p>
+    The quick-add bar sits at the top of the trip dashboard. Type a plain-English description
+    of an expense and it pre-fills the form for you — no tapping through dropdowns.
+  </p>
+
+  <div class="callout note">
+    <span class="callout-icon">💡</span>
+    <div class="callout-body">
+      <strong>Example inputs:</strong><br/>
+      <code>dinner 2400 raj yesterday split 4</code><br/>
+      <code>hotel 12000 paid by priya equal all</code><br/>
+      <code>cab airport 850 me 30% raj 70%</code>
+    </div>
+  </div>
+
+  <p>The parser understands:</p>
+  <ul style="list-style: disc; padding-left: 20px; color: var(--slate-600); font-size: 0.9rem; margin: 12px 0 16px;">
+    <li style="margin-bottom: 6px;"><strong>Amounts</strong> — plain numbers, "2.4k", "₹1200"</li>
+    <li style="margin-bottom: 6px;"><strong>Member names</strong> — partial names matched to your trip members</li>
+    <li style="margin-bottom: 6px;"><strong>Relative dates</strong> — "yesterday", "Monday", "3 days ago"</li>
+    <li style="margin-bottom: 6px;"><strong>Split hints</strong> — "split 4", "equal all", "30% raj 70% me", "raj 2 shares priya 1"</li>
+    <li style="margin-bottom: 6px;"><strong>Categories</strong> — "dinner", "hotel", "cab", "groceries" are detected automatically</li>
+  </ul>
+
+  <p>
+    A badge shows whether AI mode (<span class="pill">✨ AI</span>) or rule-based fallback
+    (<span class="pill">⚡ Basic</span>) was used. Both pre-fill the same form — AI mode
+    handles more complex phrasing.
+  </p>
+
+  <h3>Voice input <span class="pill">🎤 Speak</span></h3>
+  <p>
+    Next to the quick-add bar is a microphone button. Tap it, speak your expense naturally,
+    and the transcript is passed to the AI parser automatically.
+  </p>
+
+  <ol class="steps">
+    <li>Tap the <strong>microphone</strong> icon in the quick-add bar.</li>
+    <li>Allow microphone access if prompted by the browser.</li>
+    <li>Speak the expense — e.g. <em>"Lunch at Saravana Bhavan, eight hundred rupees, paid by me, split four ways."</em></li>
+    <li>The transcript appears in the bar and the form is pre-filled.</li>
+  </ol>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      Voice input uses the Web Speech API and is optimised for Indian English (<kbd>en-IN</kbd>).
+      It is hidden on browsers that don't support speech recognition (mainly Firefox and some
+      older mobile browsers).
+    </div>
+  </div>
+
+  <h3>Chat import — bulk expense extraction</h3>
+  <p>
+    If your group discussed expenses in a WhatsApp or Telegram chat, you can paste the
+    entire chat snippet and Wayfare will extract all the expenses at once.
+  </p>
+
+  <ol class="steps">
+    <li>On the Expenses tab, click <strong>Import from chat</strong>.</li>
+    <li>Paste the chat text into the dialog box.</li>
+    <li>Click <strong>Extract expenses</strong>. The AI reads the conversation and identifies all payments mentioned.</li>
+    <li>Review the extracted list — you can edit any row inline before adding.</li>
+    <li>Click <strong>Add all</strong> to bulk-add every expense at once.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">
+      <strong>Best results:</strong> Include a few lines of context around each payment mention.
+      The AI uses member names from the chat to match them to your trip members — make sure
+      names in the chat roughly match the names in Wayfare.
+    </div>
+  </div>
+
+  <h3>CSV export</h3>
+  <p>
+    To download all expenses as a spreadsheet, open the trip and click <strong>Export CSV</strong>
+    (in the Expenses tab header or the trip menu). The file downloads immediately and includes
+    every expense with description, amount, category, date, payer, and each member's share.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 6 — SETTLING UP
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <h2>Settling Up</h2>
+  </div>
+
+  <p>
+    Once all expenses are logged, Wayfare tells everyone who owes whom and how much —
+    with the fewest possible transfers. This is the settle-up flow.
+  </p>
+
+  <img src="screenshots/08-settle-page.png" class="screenshot" alt="The Settle Up page" />
+  <p class="screenshot-caption">The Settle Up page — suggested payments, one-tap UPI links, and settlement history.</p>
+
+  <h3>Reading your balance</h3>
+  <p>
+    At the top of the Settle Up page, each member's <strong>net balance</strong> is shown:
+  </p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">🟢</div>
+      <div class="concept-title">Positive balance</div>
+      <div class="concept-desc">
+        You are owed money. You paid more than your share across the trip. Others need to
+        pay you.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🔴</div>
+      <div class="concept-title">Negative balance</div>
+      <div class="concept-desc">
+        You owe money. Your share of expenses exceeded what you paid. You need to pay someone.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      <strong>How is this calculated?</strong> Net balance = total paid − total owed + payments
+      sent − payments received. The "How is this calculated?" link at the bottom of the page
+      shows a step-by-step breakdown for your specific numbers.
+    </div>
+  </div>
+
+  <h3>Suggested payments</h3>
+  <p>
+    Below the balances, Wayfare lists the specific transfers needed to settle the group.
+    These are computed to use the minimum number of transactions possible.
+    Each row shows: <strong>who pays → who receives → how much</strong>.
+  </p>
+
+  <h3>Marking a payment as paid</h3>
+  <p>
+    When a real-world payment has been made — cash, bank transfer, or UPI — record it in
+    Wayfare so the balances update.
+  </p>
+
+  <ol class="steps">
+    <li>Find the relevant payment row on the Settle Up page.</li>
+    <li>Click <strong>Mark as paid</strong>.</li>
+    <li>Confirm the amount (you can adjust it for partial payments).</li>
+    <li>The settlement is recorded and balances recalculate immediately.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">
+      <strong>Partial settlements:</strong> If someone pays part of what they owe, enter the
+      actual amount transferred — not the full suggested amount. The remaining balance stays
+      in the settle-up list.
+    </div>
+  </div>
+
+  <h3>UPI payment <span class="pill">🇮🇳 UPI</span></h3>
+  <p>
+    If you owe someone money, a <strong>Pay via UPI</strong> button appears on your row.
+    Tap it, enter the recipient's UPI ID (once — it's saved for the session), and Wayfare
+    opens PhonePe, Google Pay, or Paytm pre-filled with the exact amount and a payment note.
+  </p>
+
+  <ol class="steps">
+    <li>On your payment row, click <strong>Pay via UPI</strong>.</li>
+    <li>Enter the recipient's UPI ID (e.g. <kbd>raj@okicici</kbd>).</li>
+    <li>Your default UPI app opens with the amount pre-filled.</li>
+    <li>Complete the payment in the UPI app.</li>
+    <li>Return to Wayfare and click <strong>Mark as paid</strong> to record it.</li>
+  </ol>
+
+  <h3>WhatsApp debt reminder <span class="pill">💬 WhatsApp</span></h3>
+  <p>
+    If someone owes you money, a <strong>Remind on WhatsApp</strong> link appears on your
+    row (when you are the recipient). Tapping it opens WhatsApp with a pre-written message
+    containing the amount and trip name — ready to send.
+  </p>
+
+  <h3>Settlement history</h3>
+  <p>
+    All recorded settlements are listed below the suggested payments. Each entry shows the
+    payer, recipient, amount, and date. You can delete a settlement if it was recorded in
+    error — balances will revert accordingly.
+  </p>
+
+  <h3>Member debt breakdown</h3>
+  <p>
+    The <strong>Per-member view</strong> toggle (below the suggested payments) switches to a
+    detailed breakdown showing exactly who owes what to whom at the individual level —
+    useful for understanding the full picture beyond the optimised summary.
+  </p>
+
+  <h3>How the calculation works — in plain English</h3>
+  <p>
+    Wayfare's settlement algorithm works in two steps:
+  </p>
+
+  <ol class="steps">
+    <li>
+      <strong>Compute net balances.</strong> For every member: add up what they paid, subtract
+      what they owe for their share of each expense, add any settlements they sent, subtract
+      any settlements they received.
+    </li>
+    <li>
+      <strong>Greedily match creditors and debtors.</strong> The person who is owed the most
+      is matched with the person who owes the most. They exchange the smaller of the two
+      amounts. This repeats until all balances reach zero.
+    </li>
+  </ol>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      For a group of <em>n</em> people, this always produces at most <em>n&nbsp;−&nbsp;1</em>
+      transactions — far fewer than the <em>n × (n−1) / 2</em> possible pairings if everyone
+      paid everyone else directly.
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 7 — INSIGHTS
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <h2>Insights</h2>
+  </div>
+
+  <p>
+    Wayfare goes beyond tracking — it analyses your spending and helps you understand
+    patterns, habits, and group dynamics across every trip.
+  </p>
+
+  <h3>Per-trip insights</h3>
+
+  <img src="screenshots/09-trip-insights.png" class="screenshot" alt="Per-trip Insights page" />
+  <p class="screenshot-caption">The per-trip Insights page — KPIs, charts, group roles, and smart observations.</p>
+
+  <p>Open any trip and go to the <strong>Insights</strong> tab. You'll find:</p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">📊</div>
+      <div class="concept-title">KPI cards</div>
+      <div class="concept-desc">
+        Total spend, number of expenses, average per day, and per-person cost — each with
+        an animated count-up so the numbers feel alive.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🍩</div>
+      <div class="concept-title">Category donut</div>
+      <div class="concept-desc">
+        How your spending breaks down by category. Hover a segment to see the exact amount
+        and percentage for that category.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📅</div>
+      <div class="concept-title">Daily spend bar</div>
+      <div class="concept-desc">
+        Spend per day of the trip. Quickly spot your splurge days and quiet days.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👥</div>
+      <div class="concept-title">Member contributions</div>
+      <div class="concept-desc">
+        A bar chart of how much each member paid out of pocket versus their share. Shows
+        at a glance who bankrolled the trip.
+      </div>
+    </div>
+  </div>
+
+  <h3>Smart insight cards</h3>
+  <p>
+    Below the charts, Wayfare generates up to seven plain-English observations about your
+    trip — things like:
+  </p>
+  <ul style="list-style: disc; padding-left: 20px; color: var(--slate-600); font-size: 0.9rem; margin: 12px 0 16px;">
+    <li style="margin-bottom: 6px;">"Food was your biggest category — 42% of total spend"</li>
+    <li style="margin-bottom: 6px;">"Priya covered 60% of accommodation costs"</li>
+    <li style="margin-bottom: 6px;">"Day 3 was your most expensive day (₹18,400)"</li>
+    <li style="margin-bottom: 6px;">"You're on track to finish 12% under budget"</li>
+  </ul>
+
+  <h3>Group roles</h3>
+  <p>
+    Each member is assigned a role based on their spending and payment behaviour:
+  </p>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">🏦</div>
+      <div class="concept-title">Trip Banker</div>
+      <div class="concept-desc">Paid the most out of pocket. The group's primary bankroller.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🧾</div>
+      <div class="concept-title">Tab Master</div>
+      <div class="concept-desc">Logged the most individual expenses. The group's unofficial accountant.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">💎</div>
+      <div class="concept-title">High Roller</div>
+      <div class="concept-desc">Highest average spend per expense. Goes big when they pay.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">⚖️</div>
+      <div class="concept-title">Fair Splitter</div>
+      <div class="concept-desc">Paid almost exactly their fair share. The most balanced member.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🎯</div>
+      <div class="concept-title">The Balancer</div>
+      <div class="concept-desc">Settled up first and fastest. Keeps the group's books clean.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">✈️</div>
+      <div class="concept-title">Traveler</div>
+      <div class="concept-desc">A well-rounded participant — contributes evenly across all categories.</div>
+    </div>
+  </div>
+
+  <h3>Payment fairness score</h3>
+  <p>
+    Each member also gets a fairness score bar — green means they paid close to their
+    fair share, amber means slightly off, red means significantly over or under. This is
+    purely informational, not a judgement.
+  </p>
+
+  <h3>Plan vs Reality <span class="pill">✨ AI</span></h3>
+  <p>
+    If you added an <strong>itinerary</strong> when creating the trip, Wayfare compares
+    your plan against what you actually spent on. Claude AI analyses both and shows:
+  </p>
+  <ul style="list-style: disc; padding-left: 20px; color: var(--slate-600); font-size: 0.9rem; margin: 12px 0 16px;">
+    <li style="margin-bottom: 6px;"><strong>Coverage %</strong> — how much of your plan made it into expenses</li>
+    <li style="margin-bottom: 6px;"><strong>Covered activities</strong> — planned things you actually did</li>
+    <li style="margin-bottom: 6px;"><strong>Missed activities</strong> — things in the plan with no matching expense</li>
+    <li style="margin-bottom: 6px;"><strong>Surprise spending</strong> — expenses that weren't in the plan at all</li>
+  </ul>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      Plan vs Reality only appears when the trip has an itinerary and at least a few expenses.
+      It requires an Anthropic API key on the server — if not configured, the card is hidden.
+    </div>
+  </div>
+
+  <h3>All-trips portfolio</h3>
+
+  <img src="screenshots/11-all-trips-insights.png" class="screenshot" alt="All-trips portfolio insights" />
+  <p class="screenshot-caption">The all-trips portfolio — patterns and comparisons across every trip you've been on.</p>
+
+  <p>
+    The top-level <strong>Insights</strong> page (from the main navigation) gives you a
+    bird's-eye view across all trips:
+  </p>
+
+  <ul style="list-style: disc; padding-left: 20px; color: var(--slate-600); font-size: 0.9rem; margin: 12px 0 16px;">
+    <li style="margin-bottom: 6px;"><strong>Total spend across all trips</strong> — your lifetime travel expenditure in Wayfare</li>
+    <li style="margin-bottom: 6px;"><strong>Unique travel companions</strong> — everyone you've ever split with</li>
+    <li style="margin-bottom: 6px;"><strong>Favourite category</strong> — what you spend most on across all trips</li>
+    <li style="margin-bottom: 6px;"><strong>Trip comparison bar</strong> — all trips side by side by total spend</li>
+    <li style="margin-bottom: 6px;"><strong>Spend trajectory</strong> — are your trips getting cheaper or more expensive?</li>
+    <li style="margin-bottom: 6px;"><strong>Budget forecast</strong> — predicted final spend based on daily rate, for active trips</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 8 — TRIP SUMMARY
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <h2>Trip Summary</h2>
+  </div>
+
+  <p>
+    Every trip has a public summary page that anyone can view — no account needed.
+    Share it with friends who weren't on the trip, post it in a group chat, or keep it
+    as a personal record.
+  </p>
+
+  <img src="screenshots/13-trip-summary.png" class="screenshot" alt="The public trip summary page" />
+  <p class="screenshot-caption">The public trip summary — cover photo, members, spend breakdown, and AI narrative.</p>
+
+  <h3>What the summary page shows</h3>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">🖼️</div>
+      <div class="concept-title">Cover &amp; header</div>
+      <div class="concept-desc">Trip name, cover photo, dates, and total member count.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">💰</div>
+      <div class="concept-title">Spend summary</div>
+      <div class="concept-desc">Total spend, top category, and a category breakdown.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">👥</div>
+      <div class="concept-title">Member list</div>
+      <div class="concept-desc">Everyone who was on the trip, shown with their avatar initials.</div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📖</div>
+      <div class="concept-title">AI trip story</div>
+      <div class="concept-desc">A narrative generated by Claude — a travel story written from your expenses.</div>
+    </div>
+  </div>
+
+  <h3>Sharing the summary</h3>
+
+  <ol class="steps">
+    <li>Open the trip from your Trips list.</li>
+    <li>Click the <strong>Share</strong> button on the trip card or detail page.</li>
+    <li>On mobile, the native share sheet opens. On desktop, the link is copied to your clipboard.</li>
+    <li>Paste and send — anyone with the link can view the summary without signing in.</li>
+  </ol>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      The summary page never shows individual balances or who owes whom — only the
+      aggregate spend. Private financial details stay within the app.
+    </div>
+  </div>
+
+  <h3>AI trip narrative <span class="pill">✨ AI</span></h3>
+  <p>
+    The trip story is generated on-demand by Claude AI. It reads your day-by-day expense
+    timeline and optional itinerary to write a short travel narrative in the style of a
+    trip recap.
+  </p>
+
+  <ol class="steps">
+    <li>On the summary page, scroll to the <strong>Trip Story</strong> section.</li>
+    <li>Click <strong>Generate story</strong>.</li>
+    <li>Wait a few seconds — Claude writes a personalised narrative based on your actual expenses.</li>
+    <li>The story is cached; refresh the page and it reappears without regenerating.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="callout-icon">✅</span>
+    <div class="callout-body">
+      <strong>Better stories:</strong> Add an itinerary when creating the trip. Claude uses it
+      as a backbone for the narrative — without it, the story is based on expense descriptions
+      alone and may feel thinner.
+    </div>
+  </div>
+
+  <h3>Open Graph image</h3>
+  <p>
+    When the summary link is shared on WhatsApp, iMessage, Twitter, or any platform that
+    shows link previews, Wayfare generates a rich 1200×630 preview image showing the trip
+    name, dates, member count, and total spend — automatically.
+  </p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 9 — THEME / APPEARANCE
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">9</div>
+    <h2>Theme / Appearance</h2>
+  </div>
+
+  <p>
+    Wayfare supports both light and dark themes — every screen, chart, and form adapts
+    fully to your preferred appearance. By default, the app matches your operating
+    system's setting.
+  </p>
+
+  <img src="screenshots/15-light-mode-trips.png" class="screenshot" alt="Wayfare in light mode" />
+  <p class="screenshot-caption">Wayfare in light mode — a bright glassmorphic design with a cyan/teal palette.</p>
+
+  <h3>Toggling the theme</h3>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">🖥️</div>
+      <div class="concept-title">Desktop</div>
+      <div class="concept-desc">
+        The Sun / Moon toggle is in the top navigation bar, between the nav links and your
+        avatar. Click it to switch between light and dark themes instantly.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📱</div>
+      <div class="concept-title">Mobile &amp; login</div>
+      <div class="concept-desc">
+        The toggle also appears in the top-right corner of the login page and landing page
+        so you can set your preference before signing in.
+      </div>
+    </div>
+  </div>
+
+  <h3>Light mode</h3>
+  <p>
+    Light mode (shown above) uses a bright background with a cyan and teal colour palette,
+    frosted-glass cards, and high-contrast text — well suited for use in daylight or
+    well-lit environments.
+  </p>
+
+  <h3>Dark mode</h3>
+  <p>
+    Dark mode switches to a deep slate palette that reduces eye strain in low-light
+    conditions. Every chart, form, and dialog adapts automatically — no elements are
+    left with a bright white background.
+  </p>
+
+  <h3>How your preference is saved</h3>
+  <p>
+    Your theme choice is stored in your browser's local storage. It survives page refreshes,
+    closing the tab, and reopening the app. If you have never set a preference, Wayfare
+    automatically follows your operating system's light or dark setting.
+  </p>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      Theme preference is per-device and per-browser. Switching to dark mode on your phone
+      does not affect your desktop browser — toggle it separately on each device.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 10 — PLATFORM ADMIN
+════════════════════════════════════════════════════════════ -->
+<div class="page section">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <h2>Platform Admin</h2>
+  </div>
+
+  <p>
+    The admin dashboard is a restricted area visible only to designated platform
+    administrators. Regular users will not see it. This section is for administrators
+    who manage the Wayfare deployment.
+  </p>
+
+  <img src="screenshots/14-admin-dashboard.png" class="screenshot" alt="The platform admin dashboard" />
+  <p class="screenshot-caption">The platform admin dashboard — user overview, trip stats, and expense totals.</p>
+
+  <h3>Accessing the admin dashboard</h3>
+  <p>
+    Navigate to <kbd>/admin</kbd>. If your email matches the <code>PLATFORM_ADMIN_EMAIL</code>
+    environment variable (set by the deployment administrator), you see the dashboard.
+    Otherwise, you are redirected to your trips page.
+  </p>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-body">
+      <strong>Admin access is email-based.</strong> Multiple admins can be configured by
+      adding comma-separated email addresses to the <code>PLATFORM_ADMIN_EMAIL</code>
+      environment variable on Vercel.
+    </div>
+  </div>
+
+  <h3>What the dashboard shows</h3>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <div class="concept-icon">👥</div>
+      <div class="concept-title">Users</div>
+      <div class="concept-desc">
+        Total registered users, list of all accounts with email, name, and sign-up date.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">✈️</div>
+      <div class="concept-title">Trips</div>
+      <div class="concept-desc">
+        Total trips created across the platform, list with name, creator, member count,
+        and expense count.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">🧾</div>
+      <div class="concept-title">Expenses</div>
+      <div class="concept-desc">
+        Platform-wide expense count and total spend across all trips and all users.
+      </div>
+    </div>
+    <div class="concept-card">
+      <div class="concept-icon">📊</div>
+      <div class="concept-title">Activity</div>
+      <div class="concept-desc">
+        Recent platform activity — new users, new trips, recent expenses — for a
+        quick health check.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout note">
+    <span class="callout-icon">ℹ️</span>
+    <div class="callout-body">
+      The admin dashboard is read-only — it shows data but does not allow editing or
+      deleting any user's trips or expenses. Administrative changes must be made
+      directly in the Supabase dashboard or via the database.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     BACK COVER
+════════════════════════════════════════════════════════════ -->
+<div class="cover" style="page-break-before: always; min-height: 60vh;">
+  <div class="cover-blob-1"></div>
+  <div class="cover-blob-2"></div>
+  <div class="cover-blob-3"></div>
+  <div class="cover-badge">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <line x1="12" y1="2" x2="16" y2="12"/><line x1="12" y1="2" x2="8" y2="12"/>
+    </svg>
+    <span class="cover-wordmark">Wayfare</span>
+  </div>
+  <p class="tagline" style="margin-bottom: 8px;">Travel together. Settle easy.</p>
+  <p class="meta">wayfare-sigma.vercel.app</p>
+</div>
+
+</body>
+</html>

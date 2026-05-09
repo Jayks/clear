@@ -1,0 +1,203 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Wayfare design tokens ─────────────────────────────────────────────── */
+@theme inline {
+  /* Fonts */
+  --font-sans:    var(--font-inter);
+  --font-heading: var(--font-fraunces);
+  --font-mono:    ui-monospace, monospace;
+
+  /* Cool vibrant palette */
+  --color-cyan-50:    #ECFEFF;
+  --color-cyan-100:   #CFFAFE;
+  --color-cyan-200:   #A5F3FC;
+  --color-cyan-300:   #67E8F9;
+  --color-cyan-400:   #22D3EE;
+  --color-cyan-500:   #06B6D4;
+  --color-cyan-600:   #0891B2;
+  --color-cyan-700:   #0E7490;
+
+  --color-teal-50:    #F0FDFA;
+  --color-teal-100:   #CCFBF1;
+  --color-teal-200:   #99F6E4;
+  --color-teal-300:   #5EEAD4;
+  --color-teal-400:   #2DD4BF;
+  --color-teal-500:   #14B8A6;
+  --color-teal-600:   #0D9488;
+  --color-teal-700:   #0F766E;
+
+  --color-emerald-400: #34D399;
+  --color-emerald-500: #10B981;
+  --color-emerald-600: #059669;
+
+  --color-blue-50:    #EFF6FF;
+  --color-blue-100:   #DBEAFE;
+  --color-blue-200:   #BFDBFE;
+  --color-blue-400:   #60A5FA;
+  --color-blue-500:   #3B82F6;
+  --color-blue-600:   #2563EB;
+
+  --color-indigo-500: #6366F1;
+  --color-indigo-600: #4F46E5;
+
+  --color-slate-50:   #F8FAFC;
+  --color-slate-100:  #F1F5F9;
+  --color-slate-200:  #E2E8F0;
+  --color-slate-300:  #CBD5E1;
+  --color-slate-400:  #94A3B8;
+  --color-slate-500:  #64748B;
+  --color-slate-600:  #475569;
+  --color-slate-700:  #334155;
+  --color-slate-800:  #1E293B;
+  --color-slate-900:  #0F172A;
+
+  --color-error:    #EF4444;
+  --color-success:  #10B981;
+  --color-warning:  #F59E0B;
+
+  /* shadcn semantic tokens */
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
+
+  /* Radius scale */
+  --radius-sm:  calc(var(--radius) * 0.6);
+  --radius-md:  calc(var(--radius) * 0.8);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* ─── Light mode ────────────────────────────────────────────────────────── */
+:root {
+  --background:           #EFF6FF;
+  --foreground:           #0F172A;
+  --card:                 #FFFFFF;
+  --card-foreground:      #0F172A;
+  --popover:              #FFFFFF;
+  --popover-foreground:   #0F172A;
+  --primary:              #0891B2;   /* cyan-600 */
+  --primary-foreground:   #FFFFFF;
+  --secondary:            #0D9488;   /* teal-600 */
+  --secondary-foreground: #FFFFFF;
+  --muted:                #F1F5F9;
+  --muted-foreground:     #64748B;
+  --accent:               #CCFBF1;   /* teal-100 */
+  --accent-foreground:    #0D9488;
+  --destructive:          #EF4444;
+  --border:               #E2E8F0;
+  --input:                #E2E8F0;
+  --ring:                 #06B6D4;
+  --radius:               0.75rem;
+}
+
+/* ─── Dark mode ─────────────────────────────────────────────────────────── */
+.dark {
+  --background:           #0F172A;
+  --foreground:           #E2E8F0;
+  --card:                 #1E293B;
+  --card-foreground:      #E2E8F0;
+  --popover:              #1E293B;
+  --popover-foreground:   #E2E8F0;
+  --primary:              #22D3EE;   /* cyan-400 — brighter on dark bg */
+  --primary-foreground:   #0F172A;
+  --secondary:            #2DD4BF;   /* teal-400 */
+  --secondary-foreground: #0F172A;
+  --muted:                #1E293B;
+  --muted-foreground:     #94A3B8;
+  --accent:               #083344;
+  --accent-foreground:    #67E8F9;
+  --destructive:          #F87171;
+  --border:               #334155;
+  --input:                #334155;
+  --ring:                 #22D3EE;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply text-foreground font-sans antialiased min-h-screen;
+    background: linear-gradient(135deg, #EFF6FF 0%, #ECFEFF 35%, #F0FDFA 70%, #ECFDF5 100%);
+    background-attachment: fixed;
+    /* Prevent browser pull-to-refresh on mobile so our custom one takes over */
+    overscroll-behavior-y: contain;
+  }
+  .dark body {
+    background: linear-gradient(135deg, #0F172A 0%, #0C1520 35%, #0A1A18 70%, #0B1F15 100%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+  [data-amount], .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Native-app feel: remove tap flash, speed up tap response */
+  button, a, [role="button"], input, select, textarea, label {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+/* ─── Glass utilities ────────────────────────────────────────────────────── */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow: 0 8px 32px rgba(8, 145, 178, 0.08), 0 1px 0 rgba(255,255,255,0.9) inset;
+  }
+  .glass-sm {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+  }
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 1px 0 rgba(8, 145, 178, 0.06);
+  }
+
+  /* Dark mode glass overrides */
+  .dark .glass {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(51, 65, 85, 0.3) inset;
+  }
+  .dark .glass-sm {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+  }
+  .dark .glass-nav {
+    background: rgba(15, 23, 42, 0.85);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  }
+}

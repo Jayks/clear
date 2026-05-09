@@ -6,7 +6,9 @@
       "Bash(pnpm dev *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(pnpm db:push)",
+      "Bash(grep -n \"{ trip,\" \"app/\\(app\\)/trips/[id]/page.tsx\" \"app/\\(app\\)/trips/[id]/edit/page.tsx\" \"app/\\(app\\)/trips/[id]/members/page.tsx\" \"app/\\(app\\)/trips/[id]/expenses/page.tsx\" \"app/\\(app\\)/trips/[id]/expenses/new/page.tsx\" \"app/\\(app\\)/trips/[id]/expenses/[expenseId]/edit/page.tsx\" \"app/\\(app\\)/trips/[id]/settle/page.tsx\" \"app/\\(app\\)/trips/[id]/insights/page.tsx\")"
     ]
   }
 }

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { CategoryIcon } from "@/components/expense/category-icon";
 import { formatCurrency, getMemberName } from "@/lib/utils";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { ExpenseSplit } from "@/lib/db/schema/expense-splits";
 import type { MemberBalanceRow } from "@/lib/db/queries/balances";
@@ -13,7 +13,7 @@ import type { Transaction } from "@/lib/settle/optimize";
 
 interface Props {
   expensesWithSplits: { expense: Expense; splits: ExpenseSplit[] }[];
-  members: TripMember[];
+  members: GroupMember[];
   balances: MemberBalanceRow[];
   suggestions: Transaction[];
   currency: string;

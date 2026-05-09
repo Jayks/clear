@@ -1,6 +1,6 @@
 import { getCategory, CATEGORY_HEX } from "@/lib/categories";
-import type { Trip } from "@/lib/db/schema/trips";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { Group } from "@/lib/db/schema/groups";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 
 export interface TripSummary {
   tripId: string;
@@ -24,10 +24,10 @@ export interface AllTripsInsights {
 }
 
 export function computeAllTripsInsights(params: {
-  trips: Trip[];
+  trips: Group[];
   summaries: TripSummary[];
   categoryTotals: Record<string, number>;
-  allMembers: TripMember[];
+  allMembers: GroupMember[];
   currentUserId: string;
 }): AllTripsInsights {
   const { trips, summaries, categoryTotals, allMembers, currentUserId } = params;
@@ -71,14 +71,14 @@ export function computeAllTripsInsights(params: {
     smartInsights.push({
       emoji: "✈️",
       title: `${tripCount} trip${tripCount > 1 ? "s" : ""}, ${fmt(totalSpend, primaryCurrency)} total`,
-      sub: `That's ${fmt(avgTripCost, primaryCurrency)} on average per trip`,
+      sub: `That's ${fmt(avgTripCost, primaryCurrency)} per trip on average`,
     });
 
     if (topCategories[0]) {
       smartInsights.push({
         emoji: "🍽️",
-        title: `${topCategories[0].label} is your go-to category`,
-        sub: `${topCategories[0].percentage}% of all travel spend across every trip`,
+        title: `${topCategories[0].label} is your top category`,
+        sub: `${topCategories[0].percentage}% of all trip spend`,
       });
     }
 
@@ -102,7 +102,7 @@ export function computeAllTripsInsights(params: {
     smartInsights.push({
       emoji: "🧾",
       title: `${totalExpenses} expenses logged`,
-      sub: `${Math.round(totalExpenses / Math.max(tripCount, 1))} expenses per trip on average`,
+      sub: `${Math.round(totalExpenses / Math.max(tripCount, 1))} per trip on average`,
     });
   }
 

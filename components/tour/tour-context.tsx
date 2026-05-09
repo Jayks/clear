@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { getTourSteps } from "@/lib/tour/steps";
 import { TourLayer } from "./tour-layer";
 
-const DONE_KEY = "wayfare_tour_done";
+const DONE_KEY = "clear_tour_done";
 
 interface TourContextValue {
   active: boolean;
@@ -56,7 +56,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (!el) return;
     const link = el.querySelector("a") as HTMLAnchorElement | null;
     const href = link?.getAttribute("href") ?? "";
-    const match = href.match(/^\/trips\/([^/]+)$/);
+    const match = href.match(/^\/groups\/([^/]+)$/);
     if (match?.[1]) setDemoTripId(match[1]);
   }, [active, pathname, demoTripId]);
 
@@ -82,9 +82,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setActive(false);
     localStorage.setItem(DONE_KEY, "1");
     if (navigateHome) {
-      router.push("/trips");
-      toast.success("You're all set! Ready to plan your first trip?", {
-        action: { label: "New trip", onClick: () => router.push("/trips/new") },
+      router.push("/groups");
+      toast.success("You're all set! Ready to create your first group?", {
+        action: { label: "New group", onClick: () => router.push("/groups/new") },
         duration: 6000,
       });
     }
@@ -106,6 +106,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const start = useCallback(() => {
     localStorage.removeItem(DONE_KEY);
+    setDemoTripId(null);
     setStep(0);
     setActive(true);
   }, []);

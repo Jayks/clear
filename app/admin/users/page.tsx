@@ -3,7 +3,7 @@ import { formatDate } from "@/lib/utils";
 import { Shield, Briefcase, UserCircle2, Users } from "lucide-react";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Users — Wayfare Admin" };
+export const metadata: Metadata = { title: "Users — Clear Admin" };
 
 const ROLE_CONFIG = {
   platform_admin: {
@@ -12,8 +12,8 @@ const ROLE_CONFIG = {
     badge: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50",
     row: "bg-red-50/30 dark:bg-red-900/10",
   },
-  trip_owner: {
-    label: "Trip Owner",
+  group_owner: {
+    label: "Group Owner",
     icon: Briefcase,
     badge: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/50",
     row: "",
@@ -43,7 +43,7 @@ export default async function AdminUsersPage() {
   const users = await getAdminUserList();
 
   const admins  = users.filter((u) => u.role === "platform_admin");
-  const owners  = users.filter((u) => u.role === "trip_owner");
+  const owners  = users.filter((u) => u.role === "group_owner");
   const members = users.filter((u) => u.role === "member");
 
   return (
@@ -60,7 +60,7 @@ export default async function AdminUsersPage() {
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {[
             { label: "Platform admins", count: admins.length, cfg: ROLE_CONFIG.platform_admin },
-            { label: "Trip owners", count: owners.length, cfg: ROLE_CONFIG.trip_owner },
+            { label: "Trip owners", count: owners.length, cfg: ROLE_CONFIG.group_owner },
             { label: "Members", count: members.length, cfg: ROLE_CONFIG.member },
           ].map(({ label, count, cfg }) => (
             <div key={label} className="glass rounded-xl px-3 py-2 text-center min-w-[80px]">
@@ -122,9 +122,9 @@ export default async function AdminUsersPage() {
 
                     {/* Trips owned */}
                     <td className="px-5 py-3 text-right tabular text-slate-700 dark:text-slate-200 font-medium hidden md:table-cell">
-                      {u.tripsOwned > 0 ? (
+                      {u.groupsOwned > 0 ? (
                         <span className="inline-flex items-center gap-1 text-cyan-700 dark:text-cyan-400">
-                          {u.tripsOwned}
+                          {u.groupsOwned}
                           <span className="text-xs font-normal text-slate-400 dark:text-slate-500">trips</span>
                         </span>
                       ) : (
@@ -134,7 +134,7 @@ export default async function AdminUsersPage() {
 
                     {/* Trips joined */}
                     <td className="px-5 py-3 text-right tabular text-slate-600 dark:text-slate-300 hidden lg:table-cell">
-                      {u.tripsJoined}
+                      {u.groupsJoined}
                     </td>
 
                     {/* Joined date */}
@@ -160,7 +160,7 @@ export default async function AdminUsersPage() {
       <div className="glass rounded-xl px-5 py-4">
         <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Role definitions</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {(["platform_admin", "trip_owner", "member"] as const).map((role) => {
+          {(["platform_admin", "group_owner", "member"] as const).map((role) => {
             const cfg = ROLE_CONFIG[role];
             return (
               <div key={role} className="flex items-start gap-2.5">
@@ -171,7 +171,7 @@ export default async function AdminUsersPage() {
                   <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{cfg.label}</p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                     {role === "platform_admin" && "Email listed in PLATFORM_ADMIN_EMAIL env var. Full platform access."}
-                    {role === "trip_owner" && "Created at least one trip. Manages members and expenses for their trips."}
+                    {role === "group_owner" && "Created at least one trip. Manages members and expenses for their trips."}
                     {role === "member" && "Joined trips created by others. Can add expenses and view balances."}
                   </p>
                 </div>

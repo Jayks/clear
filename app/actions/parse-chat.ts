@@ -19,7 +19,11 @@ const itemSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
   category: z
-    .enum(["food", "accommodation", "transport", "sightseeing", "shopping", "activities", "groceries", "other"])
+    .enum([
+      "food", "accommodation", "transport", "sightseeing", "shopping", "activities", "groceries",
+      "rent", "utilities", "subscriptions", "healthcare", "maintenance", "supplies",
+      "other",
+    ])
     .default("other"),
   paidByMemberId: z.string().nullable().optional(),
   splitMemberIds: z.array(z.string()).nullable().optional(),

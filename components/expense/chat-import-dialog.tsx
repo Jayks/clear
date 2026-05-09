@@ -7,12 +7,12 @@ import { parseChatExpenses, type ChatParsedExpense } from "@/app/actions/parse-c
 import { addExpense } from "@/app/actions/expenses";
 import { getMemberName, formatCurrency, smartDefaultDate, formatDate } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { SplitInput } from "@/lib/splits/compute";
 
 interface Props {
-  tripId: string;
-  members: TripMember[];
+  groupId: string;
+  members: GroupMember[];
   currency: string;
   defaultMemberId: string;
   tripStartDate: string | null;
@@ -29,7 +29,7 @@ interface RowState extends ChatParsedExpense {
   editPaidByMemberId: string;
 }
 
-function resolveSplits(row: RowState, members: TripMember[]): SplitInput[] {
+function resolveSplits(row: RowState, members: GroupMember[]): SplitInput[] {
   if (row.splitMemberIds && row.splitMemberIds.length > 0)
     return row.splitMemberIds.map((id) => ({ memberId: id }));
   if (row.splitCount && row.splitCount > 0)
@@ -37,7 +37,7 @@ function resolveSplits(row: RowState, members: TripMember[]): SplitInput[] {
   return members.map((m) => ({ memberId: m.id }));
 }
 
-function splitLabel(row: RowState, members: TripMember[]): string {
+function splitLabel(row: RowState, members: GroupMember[]): string {
   if (row.splitMemberIds && row.splitMemberIds.length > 0) {
     const names = row.splitMemberIds
       .map((id) => members.find((m) => m.id === id))
@@ -51,7 +51,7 @@ function splitLabel(row: RowState, members: TripMember[]): string {
 }
 
 export function ChatImportDialog({
-  tripId, members, currency, defaultMemberId, tripStartDate, tripEndDate,
+  groupId, members, currency, defaultMemberId, tripStartDate, tripEndDate,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [chatText, setChatText] = useState("");
@@ -139,7 +139,7 @@ export function ChatImportDialog({
       const today = new Date().toISOString().split("T")[0];
 
       const result = await addExpense({
-        tripId,
+        groupId,
         paidByMemberId: row.editPaidByMemberId || defaultMemberId,
         description: row.editDescription.trim(),
         category: row.category,

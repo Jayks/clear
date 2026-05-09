@@ -1,10 +1,11 @@
 import { z } from "zod";
 
-export const createTripSchema = z.object({
-  name: z.string().min(1, "Trip name is required").max(100),
+export const createGroupSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   coverPhotoUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
   defaultCurrency: z.string().length(3),
+  groupType: z.enum(["trip", "nest"]).default("trip"),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   budget: z.number().positive().optional(),
@@ -14,10 +15,10 @@ export const createTripSchema = z.object({
   { message: "End date must be on or after start date", path: ["endDate"] }
 );
 
-export type CreateTripInput = z.infer<typeof createTripSchema>;
+export type CreateGroupInput = z.input<typeof createGroupSchema>;
 
 export const addGuestSchema = z.object({
-  tripId: z.string().uuid(),
+  groupId: z.string().uuid(),
   guestName: z.string().min(1, "Name is required").max(100),
 });
 

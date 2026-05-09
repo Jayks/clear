@@ -26,11 +26,11 @@ export default function AppError({
       </p>
       <div className="flex items-center gap-3">
         <Link
-          href="/trips"
+          href="/groups"
           className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to trips
+          Back to groups
         </Link>
         <button
           onClick={reset}

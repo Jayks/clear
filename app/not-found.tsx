@@ -18,7 +18,7 @@ export default function NotFound() {
           This page doesn't exist — the destination may have moved or the link is wrong.
         </p>
         <Link
-          href="/trips"
+          href="/groups"
           className="inline-flex items-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-md shadow-cyan-500/20 transition-all"
         >
           <MapPin className="w-4 h-4" />

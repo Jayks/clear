@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db/client";
-import { trips } from "@/lib/db/schema/trips";
-import { tripMembers } from "@/lib/db/schema/trip-members";
+import { groups } from "@/lib/db/schema/groups";
+import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { eq, sql } from "drizzle-orm";
 import { differenceInDays, parseISO } from "date-fns";
@@ -17,19 +17,19 @@ export default async function OgImage({
 }) {
   const { token } = await params;
 
-  const [trip] = await db.select().from(trips).where(eq(trips.shareToken, token));
+  const [trip] = await db.select().from(groups).where(eq(groups.shareToken, token));
   if (!trip) {
     return new ImageResponse(
       <div style={{ width: "100%", height: "100%", background: "#0891B2", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 32 }}>
-        Wayfare
+        Clear
       </div>,
       size
     );
   }
 
   const [[totalRow], memberRows] = await Promise.all([
-    db.select({ total: sql<number>`coalesce(sum(amount)::float8, 0)` }).from(expenses).where(eq(expenses.tripId, trip.id)),
-    db.select({ id: tripMembers.id }).from(tripMembers).where(eq(tripMembers.tripId, trip.id)),
+    db.select({ total: sql<number>`coalesce(sum(amount)::float8, 0)` }).from(expenses).where(eq(expenses.groupId, trip.id)),
+    db.select({ id: groupMembers.id }).from(groupMembers).where(eq(groupMembers.groupId, trip.id)),
   ]);
 
   const totalSpend = totalRow?.total ?? 0;
@@ -89,7 +89,7 @@ export default async function OgImage({
         }}>
           W
         </div>
-        <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>Wayfare</span>
+        <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>Clear</span>
       </div>
 
       {/* Trip name + date */}

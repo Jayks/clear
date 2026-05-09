@@ -7,8 +7,8 @@
  * The authenticated user (saijayakumar@gmail.com) is inserted as trip admin.
  */
 import { db } from "../lib/db/client";
-import { trips } from "../lib/db/schema/trips";
-import { tripMembers } from "../lib/db/schema/trip-members";
+import { groups as trips } from "../lib/db/schema/groups";
+import { groupMembers as tripMembers } from "../lib/db/schema/group-members";
 import { expenses } from "../lib/db/schema/expenses";
 import type { NewExpense } from "../lib/db/schema/expenses";
 import { expenseSplits } from "../lib/db/schema/expense-splits";
@@ -23,7 +23,7 @@ function fmt(n: number) {
 }
 
 async function insertExpense(params: {
-  tripId: string;
+  groupId: string;
   paidByMemberId: string;
   description: string;
   category: NewExpense["category"];
@@ -38,7 +38,7 @@ async function insertExpense(params: {
   if (!result.ok) throw new Error(`Split failed for "${params.description}": ${result.error}`);
 
   const [expense] = await db.insert(expenses).values({
-    tripId: params.tripId,
+    groupId: params.groupId,
     paidByMemberId: params.paidByMemberId,
     description: params.description,
     category: params.category,
@@ -62,7 +62,7 @@ async function insertExpense(params: {
 }
 
 async function main() {
-  console.log("\n🛕  Wayfare seed — South India Temple Circuit 2026\n");
+  console.log("\n🛕  Clear seed — South India Temple Circuit 2026\n");
 
   // ── Find admin user by email ──────────────────────────────────────────────
   const supabaseAdmin = createAdminClient();
@@ -92,7 +92,7 @@ async function main() {
 
   // ── Create members ─────────────────────────────────────────────────────────
   const [me] = await db.insert(tripMembers).values({
-    tripId: trip.id,
+    groupId: trip.id,
     userId,
     displayName: userDisplayName,
     role: "admin",
@@ -108,7 +108,7 @@ async function main() {
     "Saroja", "Krishnan", "Vimala", "Gopal",
   ];
   const guestRows = await db.insert(tripMembers).values(
-    guestNames.map((name) => ({ tripId: trip.id, guestName: name, role: "member" as const }))
+    guestNames.map((name) => ({ groupId: trip.id, guestName: name, role: "member" as const }))
   ).returning();
 
   const [ramesh, lakshmi, venkat, padma, murali] = guestRows;
@@ -126,7 +126,7 @@ async function main() {
     paidBy: string
   ) {
     await insertExpense({
-      tripId: trip.id, paidByMemberId: paidBy,
+      groupId: trip.id, paidByMemberId: paidBy,
       description, category, amount, currency: "INR",
       expenseDate: date, allMemberIds: allIds, createdByUserId: userId,
     });
@@ -178,14 +178,14 @@ async function main() {
   await add("2026-01-14", "Farewell dinner — Hotel Germanus, Madurai", "food", 14000, me.id);
 
   // ── Summary ────────────────────────────────────────────────────────────────
-  const allExpenses = await db.select().from(expenses).where(eq(expenses.tripId, trip.id));
+  const allExpenses = await db.select().from(expenses).where(eq(expenses.groupId, trip.id));
   const total = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
   console.log(`\n${"─".repeat(58)}`);
   console.log(`✅  ${count} expenses · ${all.length} members`);
   console.log(`💰  Total: ${fmt(total)}  |  Per person: ${fmt(Math.round(total / all.length))}`);
-  console.log(`\n🔗  Trip:    http://localhost:3000/trips/${trip.id}`);
-  console.log(`📊  Settle:  http://localhost:3000/trips/${trip.id}/settle\n`);
+  console.log(`\n🔗  Trip:    http://localhost:3000/groups/${trip.id}`);
+  console.log(`📊  Settle:  http://localhost:3000/groups/${trip.id}/settle\n`);
 
   process.exit(0);
 }

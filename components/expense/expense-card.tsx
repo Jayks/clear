@@ -1,5 +1,5 @@
 import type { Expense } from "@/lib/db/schema/expenses";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import { CategoryIcon } from "./category-icon";
 import { formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import { DeleteExpenseButton } from "./delete-expense-button";
@@ -9,7 +9,7 @@ import { Pencil } from "lucide-react";
 
 interface ExpenseCardProps {
   expense: Expense;
-  members: TripMember[];
+  members: GroupMember[];
   currentUserId: string;
   isAdmin: boolean;
   onDelete?: (expenseId: string) => void;
@@ -50,7 +50,7 @@ export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete
         {canEdit && (
           <>
             <Link
-              href={`/trips/${expense.tripId}/expenses/${expense.id}/edit`}
+              href={`/groups/${expense.groupId}/expenses/${expense.id}/edit`}
               className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 flex items-center justify-center transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" />
@@ -58,7 +58,7 @@ export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete
             <DuplicateExpenseButton expenseId={expense.id} />
             <DeleteExpenseButton
               expenseId={expense.id}
-              tripId={expense.tripId}
+              groupId={expense.groupId}
               onSuccess={() => onDelete?.(expense.id)}
               onFail={() => onDeleteFail?.(expense.id)}
             />

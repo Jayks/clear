@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Zap, X, Sparkles, Loader2, CalendarDays, Mic, MicOff } from "lucide-react";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import { parseExpenseText } from "@/lib/parser/parse-expense";
 import { parseExpenseWithAI } from "@/app/actions/parse-expense";
@@ -13,7 +13,7 @@ import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 type ParseMode = "ai" | "basic";
 
 interface Props {
-  members: TripMember[];
+  members: GroupMember[];
   currency: string;
   tripStartDate?: string | null;
   tripEndDate?: string | null;

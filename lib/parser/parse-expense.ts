@@ -1,7 +1,8 @@
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getMemberName } from "@/lib/utils";
 
 export type CategoryValue =
+  // Trip categories
   | "food"
   | "accommodation"
   | "transport"
@@ -9,6 +10,13 @@ export type CategoryValue =
   | "shopping"
   | "activities"
   | "groceries"
+  // Nest categories
+  | "rent"
+  | "utilities"
+  | "subscriptions"
+  | "healthcare"
+  | "maintenance"
+  | "supplies"
   | "other";
 
 export interface ParsedExpense {
@@ -57,7 +65,7 @@ const CATEGORY_KEYWORDS: Partial<Record<CategoryValue, string[]>> = {
   ],
 };
 
-export function parseExpenseText(text: string, members: TripMember[]): ParsedExpense {
+export function parseExpenseText(text: string, members: GroupMember[]): ParsedExpense {
   const raw = text.trim();
   const tokens = raw.toLowerCase().split(/\s+/).filter(Boolean);
   const origTokens = raw.split(/\s+/).filter(Boolean);

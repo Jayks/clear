@@ -4,12 +4,12 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ArrowRight, CheckCircle2 } from "lucide-react";
 import type { Transaction } from "@/lib/settle/optimize";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getMemberName, formatCurrency } from "@/lib/utils";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 
 interface Props {
-  members: TripMember[];
+  members: GroupMember[];
   suggestions: Transaction[];
   currency: string;
 }

@@ -7,7 +7,7 @@ import { deleteExpense } from "@/app/actions/expenses";
 import { toast } from "sonner";
 import { ExpenseCard } from "./expense-card";
 import type { Expense } from "@/lib/db/schema/expenses";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 
 const REVEAL_WIDTH = 76;
 const SNAP_THRESHOLD = 40;
@@ -15,7 +15,7 @@ const FAST_VELOCITY = 300;
 
 interface Props {
   expense: Expense;
-  members: TripMember[];
+  members: GroupMember[];
   currentUserId: string;
   isAdmin: boolean;
   onDelete?: (id: string) => void;
@@ -65,7 +65,7 @@ export function SwipeableExpenseCard(props: Props) {
     let cancelled = false;
     const timer = setTimeout(async () => {
       if (cancelled) return;
-      const result = await deleteExpense(expense.id, expense.tripId);
+      const result = await deleteExpense(expense.id, expense.groupId);
       if (!result.ok) {
         onDeleteFail?.(expense.id);
         toast.error("Failed to delete expense");

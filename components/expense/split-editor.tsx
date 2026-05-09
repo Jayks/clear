@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import { computeSplits } from "@/lib/splits/compute";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import { formatCurrency } from "@/lib/utils";
 
 interface SplitEditorProps {
-  members: TripMember[];
+  members: GroupMember[];
   amount: number;
   currency: string;
   mode: SplitMode;
@@ -25,7 +25,7 @@ const MODES: { value: SplitMode; label: string }[] = [
   { value: "shares", label: "Shares" },
 ];
 
-function memberLabel(m: TripMember): string {
+function memberLabel(m: GroupMember): string {
   return m.guestName ?? "Member";
 }
 

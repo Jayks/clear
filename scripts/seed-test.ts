@@ -5,8 +5,8 @@
  * Requires at least one trip already in the DB (to discover the user's ID).
  */
 import { db } from "../lib/db/client";
-import { trips } from "../lib/db/schema/trips";
-import { tripMembers } from "../lib/db/schema/trip-members";
+import { groups as trips } from "../lib/db/schema/groups";
+import { groupMembers as tripMembers } from "../lib/db/schema/group-members";
 import { expenses } from "../lib/db/schema/expenses";
 import type { NewExpense } from "../lib/db/schema/expenses";
 import { expenseSplits } from "../lib/db/schema/expense-splits";
@@ -23,7 +23,7 @@ function fmt(n: number) {
 }
 
 async function insertExpense(params: {
-  tripId: string;
+  groupId: string;
   paidByMemberId: string;
   description: string;
   category: NewExpense["category"];
@@ -38,7 +38,7 @@ async function insertExpense(params: {
   if (!result.ok) throw new Error(`Split failed for "${params.description}": ${result.error}`);
 
   const [expense] = await db.insert(expenses).values({
-    tripId: params.tripId,
+    groupId: params.groupId,
     paidByMemberId: params.paidByMemberId,
     description: params.description,
     category: params.category,
@@ -64,7 +64,7 @@ async function insertExpense(params: {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("\n🌱 Wayfare test seed — Goa Summer 2025\n");
+  console.log("\n🌱 Clear test seed — Goa Summer 2025\n");
 
   // Discover user ID from existing trips
   const existingTrips = await db.select().from(trips).limit(1);
@@ -93,7 +93,7 @@ async function main() {
 
   // ── Create members ─────────────────────────────────────────────────────────
   const [me] = await db.insert(tripMembers).values({
-    tripId: trip.id,
+    groupId: trip.id,
     userId,
     displayName: userDisplayName,
     role: "admin",
@@ -101,7 +101,7 @@ async function main() {
 
   const guestNames = ["Meera", "Raj", "Priya", "Arjun", "Kavitha", "Suresh", "Deepa", "Karthik", "Anita"];
   const guests = await db.insert(tripMembers).values(
-    guestNames.map((name) => ({ tripId: trip.id, guestName: name, role: "member" as const }))
+    guestNames.map((name) => ({ groupId: trip.id, guestName: name, role: "member" as const }))
   ).returning();
 
   const [meera, raj, priya, arjun, kavitha, suresh, deepa, karthik, anita] = guests;
@@ -120,7 +120,7 @@ async function main() {
     amount: number, paidBy: string, splitMode: NewExpenseSplit["splitType"], splitInputs: SplitInput[]
   ) {
     await insertExpense({
-      tripId: trip.id, paidByMemberId: paidBy, description, category,
+      groupId: trip.id, paidByMemberId: paidBy, description, category,
       amount, currency: "INR", expenseDate: date, splitMode,
       splits: splitInputs, createdByUserId: userId,
     });
@@ -302,7 +302,7 @@ async function main() {
     anita.id, "equal", eqAll);
 
   // ── Summary ────────────────────────────────────────────────────────────────
-  const allExpenses = await db.select().from(expenses).where(eq(expenses.tripId, trip.id));
+  const allExpenses = await db.select().from(expenses).where(eq(expenses.groupId, trip.id));
   const total = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const allSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, allExpenses[0]?.id ?? ""));
@@ -310,8 +310,8 @@ async function main() {
   console.log(`\n${"─".repeat(62)}`);
   console.log(`✅  ${count} expenses created`);
   console.log(`💰  Total trip spend: ${fmt(total)} (${fmt(Math.round(total / 10))} per person)`);
-  console.log(`\n🔗  Open your trip: http://localhost:3000/trips/${trip.id}`);
-  console.log(`📊  Settle page:    http://localhost:3000/trips/${trip.id}/settle\n`);
+  console.log(`\n🔗  Open your trip: http://localhost:3000/groups/${trip.id}`);
+  console.log(`📊  Settle page:    http://localhost:3000/groups/${trip.id}/settle\n`);
 
   process.exit(0);
 }

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db/client";
-import { trips } from "@/lib/db/schema/trips";
-import { tripMembers } from "@/lib/db/schema/trip-members";
+import { groups } from "@/lib/db/schema/groups";
+import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { settlements } from "@/lib/db/schema/settlements";
 import { count, sum, eq, sql, desc, isNotNull } from "drizzle-orm";
@@ -27,8 +27,8 @@ export function isPlatformAdmin(email: string | null | undefined): boolean {
 
 export async function getAdminStats() {
   await requirePlatformAdmin();
-  const [tripsResult, expensesResult, settledResult, usersResult] = await Promise.all([
-    db.select({ total: count() }).from(trips),
+  const [groupsResult, expensesResult, settledResult, usersResult] = await Promise.all([
+    db.select({ total: count() }).from(groups),
     db.select({ total: count() }).from(expenses),
     db.select({ total: sum(settlements.amount) }).from(settlements),
     createAdminClient().auth.admin.listUsers({ perPage: 1 }),
@@ -36,7 +36,7 @@ export async function getAdminStats() {
 
   return {
     totalUsers: ("total" in usersResult.data ? usersResult.data.total : 0) ?? 0,
-    totalTrips: tripsResult[0].total,
+    totalGroups: groupsResult[0].total,
     totalExpenses: expensesResult[0].total,
     totalSettled: Number(settledResult[0].total ?? 0),
   };
@@ -48,15 +48,15 @@ export async function getAdminUserList() {
 
   const [ownerCounts, memberCounts] = await Promise.all([
     db
-      .select({ userId: tripMembers.userId, owned: count() })
-      .from(tripMembers)
-      .where(eq(tripMembers.role, "admin"))
-      .groupBy(tripMembers.userId),
+      .select({ userId: groupMembers.userId, owned: count() })
+      .from(groupMembers)
+      .where(eq(groupMembers.role, "admin"))
+      .groupBy(groupMembers.userId),
     db
-      .select({ userId: tripMembers.userId, total: count() })
-      .from(tripMembers)
-      .where(isNotNull(tripMembers.userId))
-      .groupBy(tripMembers.userId),
+      .select({ userId: groupMembers.userId, total: count() })
+      .from(groupMembers)
+      .where(isNotNull(groupMembers.userId))
+      .groupBy(groupMembers.userId),
   ]);
 
   const ownerMap = new Map(ownerCounts.map((r) => [r.userId!, r.owned]));
@@ -65,10 +65,10 @@ export async function getAdminUserList() {
 
   return users.map((u) => {
     const email = u.email ?? "";
-    const tripsOwned = ownerMap.get(u.id) ?? 0;
-    const role: "platform_admin" | "trip_owner" | "member" =
+    const groupsOwned = ownerMap.get(u.id) ?? 0;
+    const role: "platform_admin" | "group_owner" | "member" =
       adminEmails.includes(email) ? "platform_admin"
-      : tripsOwned > 0 ? "trip_owner"
+      : groupsOwned > 0 ? "group_owner"
       : "member";
 
     return {
@@ -79,37 +79,37 @@ export async function getAdminUserList() {
           ? u.user_metadata.full_name
           : email.split("@")[0],
       joinedAt: u.created_at,
-      tripsOwned,
-      tripsJoined: memberMap.get(u.id) ?? 0,
+      groupsOwned,
+      groupsJoined: memberMap.get(u.id) ?? 0,
       role,
     };
   });
 }
 
-export async function getAdminTripList() {
+export async function getAdminGroupList() {
   await requirePlatformAdmin();
   return db
     .select({
-      id: trips.id,
-      name: trips.name,
-      coverPhotoUrl: trips.coverPhotoUrl,
-      createdBy: trips.createdBy,
+      id: groups.id,
+      name: groups.name,
+      coverPhotoUrl: groups.coverPhotoUrl,
+      createdBy: groups.createdBy,
       creatorName: sql<string>`(
-        select coalesce(tm.display_name, tm.guest_name, 'Unknown')
-        from trip_members tm
-        where tm.trip_id = ${trips.id} and tm.user_id = ${trips.createdBy}
+        select coalesce(gm.display_name, gm.guest_name, 'Unknown')
+        from group_members gm
+        where gm.group_id = ${groups.id} and gm.user_id = ${groups.createdBy}
         limit 1
       )`,
-      defaultCurrency: trips.defaultCurrency,
-      startDate: trips.startDate,
-      endDate: trips.endDate,
-      isArchived: trips.isArchived,
-      createdAt: trips.createdAt,
-      memberCount: sql<number>`(select count(*) from trip_members where trip_members.trip_id = trips.id)`,
-      expenseCount: sql<number>`(select count(*) from expenses where expenses.trip_id = trips.id)`,
-      totalSpend: sql<number | null>`(select sum(amount)::float8 from expenses where expenses.trip_id = trips.id)`,
+      defaultCurrency: groups.defaultCurrency,
+      startDate: groups.startDate,
+      endDate: groups.endDate,
+      isArchived: groups.isArchived,
+      createdAt: groups.createdAt,
+      memberCount: sql<number>`(select count(*) from group_members where group_members.group_id = groups.id)`,
+      expenseCount: sql<number>`(select count(*) from expenses where expenses.group_id = groups.id)`,
+      totalSpend: sql<number | null>`(select sum(amount)::float8 from expenses where expenses.group_id = groups.id)`,
     })
-    .from(trips)
-    .orderBy(desc(trips.createdAt))
+    .from(groups)
+    .orderBy(desc(groups.createdAt))
     .limit(200);
 }

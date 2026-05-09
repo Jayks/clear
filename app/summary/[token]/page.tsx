@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db/client";
-import { trips } from "@/lib/db/schema/trips";
-import { tripMembers } from "@/lib/db/schema/trip-members";
+import { groups } from "@/lib/db/schema/groups";
+import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { eq, sql, desc, asc } from "drizzle-orm";
 import { cache } from "react";
@@ -17,23 +17,23 @@ import { Compass } from "lucide-react";
 import type { Metadata } from "next";
 
 const getSummaryData = cache(async function getSummaryData(token: string) {
-  const [trip] = await db.select().from(trips).where(eq(trips.shareToken, token));
-  if (!trip) return null;
+  const [trip] = await db.select().from(groups).where(eq(groups.shareToken, token));
+  if (!trip || trip.groupType === "nest") return null;
 
   const [memberRows, categoryRows, [expCount], allExpenseRows] = await Promise.all([
-    db.select({ id: tripMembers.id }).from(tripMembers).where(eq(tripMembers.tripId, trip.id)),
+    db.select({ id: groupMembers.id }).from(groupMembers).where(eq(groupMembers.groupId, trip.id)),
     db
       .select({
         category: expenses.category,
         total: sql<number>`sum(amount)::float8`,
       })
       .from(expenses)
-      .where(eq(expenses.tripId, trip.id))
+      .where(eq(expenses.groupId, trip.id))
       .groupBy(expenses.category),
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(expenses)
-      .where(eq(expenses.tripId, trip.id)),
+      .where(eq(expenses.groupId, trip.id)),
     db
       .select({
         description: expenses.description,
@@ -41,7 +41,7 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
         expenseDate: expenses.expenseDate,
       })
       .from(expenses)
-      .where(eq(expenses.tripId, trip.id))
+      .where(eq(expenses.groupId, trip.id))
       .orderBy(asc(expenses.expenseDate)),
   ]);
 
@@ -78,15 +78,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { token } = await params;
   const data = await getSummaryData(token);
-  if (!data) return { title: "Trip Summary | Wayfare" };
+  if (!data) return { title: "Clear" };
 
   const { trip, totalSpend, memberCount } = data;
   const currency = trip.defaultCurrency;
   const total = new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(totalSpend);
 
   return {
-    title: `${trip.name} | Wayfare`,
-    description: `${memberCount} people · ${total} total · Travel together. Settle easy.`,
+    title: `${trip.name} | Clear`,
+    description: `${memberCount} people · ${total} total · Split it. Clear it.`,
   };
 }
 
@@ -127,15 +127,15 @@ export default async function SummaryPage({
             className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-cyan-600 transition-colors"
             style={{ fontFamily: "var(--font-fraunces)" }}
           >
-            Wayfare
+            Clear
           </span>
         </Link>
         {isLoggedIn ? (
           <Link
-            href="/trips"
+            href="/groups"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 transition-colors"
           >
-            ← My trips
+            ← My groups
           </Link>
         ) : (
           <Link
@@ -278,7 +278,7 @@ export default async function SummaryPage({
             className="text-xl font-semibold text-slate-700 dark:text-slate-200 mb-1"
             style={{ fontFamily: "var(--font-fraunces)" }}
           >
-            Share this trip story
+            Share this trip
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Let the group relive the adventure</p>
           <SummaryShareButton url={shareUrl} tripName={trip.name} />
@@ -288,9 +288,9 @@ export default async function SummaryPage({
         <p className="text-center text-xs text-slate-400 dark:text-slate-500">
           Made with{" "}
           <Link href="/" className="text-cyan-500 hover:text-cyan-600 font-medium transition-colors">
-            Wayfare
+            Clear
           </Link>
-          {" "}· Travel together. Settle easy.
+          {" "}· Split it. Clear it.
         </p>
       </div>
     </div>

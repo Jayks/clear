@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { trips } from "./schema/trips";
-import { tripMembers, memberRoleEnum } from "./schema/trip-members";
-import { expenses, categoryEnum } from "./schema/expenses";
+import { groups, groupTypeEnum } from "./schema/groups";
+import { groupMembers, memberRoleEnum } from "./schema/group-members";
+import { expenses } from "./schema/expenses";
 import { expenseSplits, splitTypeEnum } from "./schema/expense-splits";
 import { settlements } from "./schema/settlements";
 
@@ -29,5 +29,5 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const db = drizzle(client, {
-  schema: { trips, tripMembers, memberRoleEnum, expenses, categoryEnum, expenseSplits, splitTypeEnum, settlements },
+  schema: { groups, groupTypeEnum, groupMembers, memberRoleEnum, expenses, expenseSplits, splitTypeEnum, settlements },
 });

@@ -1,9 +1,9 @@
-import { getAdminStats, getAdminUserList, getAdminTripList } from "@/lib/db/queries/admin";
+import { getAdminStats, getAdminUserList, getAdminGroupList } from "@/lib/db/queries/admin";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Users, Map, Receipt, TrendingUp, Shield, Briefcase, UserCircle2 } from "lucide-react";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Admin Dashboard — Wayfare" };
+export const metadata: Metadata = { title: "Admin Dashboard — Clear" };
 
 const ROLE_CONFIG = {
   platform_admin: {
@@ -11,8 +11,8 @@ const ROLE_CONFIG = {
     icon: Shield,
     badge: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50",
   },
-  trip_owner: {
-    label: "Trip Owner",
+  group_owner: {
+    label: "Group Owner",
     icon: Briefcase,
     badge: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800/50",
   },
@@ -27,19 +27,19 @@ export default async function AdminDashboardPage() {
   const [stats, users, trips] = await Promise.all([
     getAdminStats(),
     getAdminUserList(),
-    getAdminTripList(),
+    getAdminGroupList(),
   ]);
 
   const statCards = [
     { label: "Total users", value: stats.totalUsers, icon: Users, color: "from-cyan-500 to-teal-500" },
-    { label: "Total trips", value: stats.totalTrips, icon: Map, color: "from-teal-500 to-emerald-500" },
+    { label: "Total groups", value: stats.totalGroups, icon: Map, color: "from-teal-500 to-emerald-500" },
     { label: "Total expenses", value: stats.totalExpenses, icon: Receipt, color: "from-blue-500 to-cyan-500" },
     { label: "Total settled", value: formatCurrency(stats.totalSettled, "INR"), icon: TrendingUp, color: "from-emerald-500 to-teal-500", isAmount: true },
   ];
 
   // Group users by role for the hierarchy view
   const admins = users.filter((u) => u.role === "platform_admin");
-  const owners = users.filter((u) => u.role === "trip_owner");
+  const owners = users.filter((u) => u.role === "group_owner");
   const members = users.filter((u) => u.role === "member");
 
   return (
@@ -77,7 +77,7 @@ export default async function AdminDashboardPage() {
         <div className="space-y-3">
           {[
             { role: "platform_admin" as const, users: admins, description: "Full platform access" },
-            { role: "trip_owner" as const, users: owners, description: "Own at least one trip" },
+            { role: "group_owner" as const, users: owners, description: "Own at least one group" },
             { role: "member" as const, users: members, description: "Participate in trips as members" },
           ].map(({ role, users: roleUsers, description }) => {
             const cfg = ROLE_CONFIG[role];
@@ -107,8 +107,8 @@ export default async function AdminDashboardPage() {
                           <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email}</p>
                         </div>
                         <div className="text-right shrink-0 hidden sm:block">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{u.tripsOwned} trips owned</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500">{u.tripsJoined} total trips</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{u.groupsOwned} groups owned</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500">{u.groupsJoined} total groups</p>
                         </div>
                         <p className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{formatDate(u.joinedAt)}</p>
                       </div>

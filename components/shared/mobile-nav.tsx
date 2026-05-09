@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MapPin, BarChart2 } from "lucide-react";
+import { LayoutGrid, BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/trips",    label: "Trips",    icon: MapPin,    tourId: "nav-trips"    },
+  { href: "/groups",   label: "Groups",   icon: LayoutGrid, tourId: "nav-trips"    },
   { href: "/insights", label: "Insights", icon: BarChart2, tourId: "nav-insights" },
 ];
 

@@ -1,7 +1,7 @@
 import type { TourStep } from "./types";
 
 export function getTourSteps(demoTripId: string | null): TourStep[] {
-  const base = demoTripId ? `/trips/${demoTripId}` : null;
+  const base = demoTripId ? `/groups/${demoTripId}` : null;
 
   const tripSteps: TourStep[] = base
     ? [
@@ -10,7 +10,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
           page: base,
           title: "Inside a trip",
           description:
-            "Jump to Members, Expenses, Settle up, or Insights — everything about this trip in one place.",
+            "Jump to Members, Expenses, Settle up, or Insights — everything about this group in one place.",
         },
         {
           target: "[data-tour='expense-add-btn']",
@@ -24,12 +24,12 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
           page: `${base}/settle`,
           title: "Settle up",
           description:
-            "The app computes the minimum number of payments to clear all debts. Mark payments done or pay directly via UPI.",
+            "Clear computes the minimum number of payments to clear all debts. Mark payments done or pay directly via UPI.",
         },
         {
           target: "[data-tour='trip-kpis']",
           page: `${base}/insights`,
-          title: "Trip insights",
+          title: "Insights",
           description:
             "Spending by category, daily patterns, member contributions — and smart observations about your group's habits.",
         },
@@ -40,39 +40,48 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
     // 1 — Welcome
     {
       target: null,
-      title: "Welcome to Wayfare",
+      title: "Welcome to Clear",
       description:
-        "Track group expenses on trips, split costs across everyone, and settle up with the fewest possible payments. Let's take a quick tour.",
+        "Clear tracks shared expenses for two kinds of groups — Trips for travel, and Nests for households. Split costs, settle up with the fewest payments, and see where the money goes.",
     },
 
-    // 2 — New trip button
+    // 2 — New group button
     {
       target: "[data-tour='new-trip-btn']",
-      page: "/trips",
-      title: "Create your own trip",
+      page: "/groups",
+      title: "Create a group",
       description:
-        "Hit New trip to start tracking your own group. Add a cover photo, set dates and a budget, then invite companions via link or QR code.",
+        "Hit New group to get started. Choose Trip for a holiday or Nest for a flat — then invite everyone via link or QR code.",
     },
 
-    // 3 — Sample trip card (demoTripId is read from DOM here)
+    // 3 — Sample trip card
     {
       target: "[data-tour='demo-trip']",
-      page: "/trips",
-      title: "Your sample trip",
+      page: "/groups",
+      title: "Sample Trip — Goa 2025",
       description:
-        "This pre-loaded Goa trip lets you explore every feature with real data — expenses, balances, settlements, and insights.",
+        "This pre-loaded trip lets you explore the travel features with real data — expenses, balances, settlements, and AI-powered insights.",
     },
 
-    // 4–7 — Inside the demo trip (appended once demoTripId is known)
+    // 4 — Sample nest card (NEW)
+    {
+      target: "[data-tour='demo-nest']",
+      page: "/groups",
+      title: "Sample Nest — Mumbai Flat",
+      description:
+        "This pre-loaded nest shows household features: recurring expense templates for rent, electricity and WiFi — log each month with one tap, then settle up.",
+    },
+
+    // 5–8 — Inside the demo trip
     ...tripSteps,
 
-    // 8 — All-trips Insights (back on /trips, highlight nav link)
+    // 9 — All-groups insights nav
     {
       target: "[data-tour='nav-insights']",
-      page: "/trips",
-      title: "All-trips insights",
+      page: "/groups",
+      title: "Insights across all groups",
       description:
-        "A portfolio view across all your trips — total spend, category habits, your most-travelled companions, and smarter spending patterns.",
+        "A portfolio view across every trip and nest — total spend, category habits, your most frequent companions, and smarter patterns over time.",
     },
   ];
 }

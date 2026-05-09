@@ -1,7 +1,7 @@
 import { pgTable, uuid, numeric, pgEnum, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { expenses } from "./expenses";
-import { tripMembers } from "./trip-members";
+import { groupMembers } from "./group-members";
 
 export const splitTypeEnum = pgEnum("split_type", [
   "equal",
@@ -15,7 +15,7 @@ export const expenseSplits = pgTable(
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
     expenseId: uuid("expense_id").notNull().references(() => expenses.id, { onDelete: "cascade" }),
-    memberId: uuid("member_id").notNull().references(() => tripMembers.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id").notNull().references(() => groupMembers.id, { onDelete: "cascade" }),
     shareAmount: numeric("share_amount", { precision: 12, scale: 2 }).notNull(),
     splitType: splitTypeEnum("split_type").notNull(),
     splitValue: numeric("split_value", { precision: 12, scale: 4 }),

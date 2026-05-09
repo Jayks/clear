@@ -1,15 +1,15 @@
 import { pgTable, uuid, text, timestamp, numeric, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { trips } from "./trips";
-import { tripMembers } from "./trip-members";
+import { groups } from "./groups";
+import { groupMembers } from "./group-members";
 
 export const settlements = pgTable(
   "settlements",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-    tripId: uuid("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
-    fromMemberId: uuid("from_member_id").notNull().references(() => tripMembers.id),
-    toMemberId: uuid("to_member_id").notNull().references(() => tripMembers.id),
+    groupId: uuid("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
+    fromMemberId: uuid("from_member_id").notNull().references(() => groupMembers.id),
+    toMemberId: uuid("to_member_id").notNull().references(() => groupMembers.id),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
     currency: text("currency").notNull(),
     note: text("note"),

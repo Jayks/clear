@@ -32,7 +32,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected =
-    pathname.startsWith("/trips") ||
+    pathname.startsWith("/groups") ||
     pathname.startsWith("/join") ||
     pathname.startsWith("/admin");
 
@@ -47,7 +47,7 @@ export async function proxy(request: NextRequest) {
   // Redirect authenticated users away from login and landing page
   if (user && (pathname === "/login" || pathname === "/")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/trips";
+    url.pathname = "/groups";
     url.search = "";
     return NextResponse.redirect(url);
   }

@@ -2,8 +2,8 @@ import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { settlements } from "@/lib/db/schema/settlements";
-import { tripMembers } from "@/lib/db/schema/trip-members";
-import { eq, sum } from "drizzle-orm";
+import { groupMembers } from "@/lib/db/schema/group-members";
+import { eq, sum, and } from "drizzle-orm";
 import { optimizeSettlements } from "@/lib/settle/optimize";
 import { getMemberName } from "@/lib/utils";
 
@@ -17,37 +17,37 @@ export interface MemberBalanceRow {
   net: number; // positive = owed money, negative = owes money
 }
 
-export async function getBalances(tripId: string) {
+export async function getBalances(groupId: string) {
   const members = await db
     .select()
-    .from(tripMembers)
-    .where(eq(tripMembers.tripId, tripId));
+    .from(groupMembers)
+    .where(eq(groupMembers.groupId, groupId));
 
   // 4 aggregated queries regardless of member count (replaces n*4 individual queries)
   const [paidRows, owedRows, sentRows, receivedRows] = await Promise.all([
     db
       .select({ memberId: expenses.paidByMemberId, total: sum(expenses.amount) })
       .from(expenses)
-      .where(eq(expenses.tripId, tripId))
+      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))
       .groupBy(expenses.paidByMemberId),
 
     db
       .select({ memberId: expenseSplits.memberId, total: sum(expenseSplits.shareAmount) })
       .from(expenseSplits)
       .innerJoin(expenses, eq(expenseSplits.expenseId, expenses.id))
-      .where(eq(expenses.tripId, tripId))
+      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))
       .groupBy(expenseSplits.memberId),
 
     db
       .select({ memberId: settlements.fromMemberId, total: sum(settlements.amount) })
       .from(settlements)
-      .where(eq(settlements.tripId, tripId))
+      .where(eq(settlements.groupId, groupId))
       .groupBy(settlements.fromMemberId),
 
     db
       .select({ memberId: settlements.toMemberId, total: sum(settlements.amount) })
       .from(settlements)
-      .where(eq(settlements.tripId, tripId))
+      .where(eq(settlements.groupId, groupId))
       .groupBy(settlements.toMemberId),
   ]);
 
@@ -65,8 +65,6 @@ export async function getBalances(tripId: string) {
     const settlementsSent  = sent.get(member.id) ?? 0;
     const settlementsRecvd = received.get(member.id) ?? 0;
 
-    // sent: you paid someone → reduces your debt → adds to net
-    // received: someone paid you → your receivable shrinks → subtracts from net
     const net = totalPaid - totalOwed + settlementsSent - settlementsRecvd;
 
     return {
@@ -85,10 +83,10 @@ export async function getBalances(tripId: string) {
   return { balances: rows, suggestions };
 }
 
-export async function getSettlements(tripId: string) {
+export async function getSettlements(groupId: string) {
   return db
     .select()
     .from(settlements)
-    .where(eq(settlements.tripId, tripId))
+    .where(eq(settlements.groupId, groupId))
     .orderBy(settlements.settledAt);
 }

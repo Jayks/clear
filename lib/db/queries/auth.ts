@@ -1,11 +1,11 @@
 import { db } from "@/lib/db/client";
-import { tripMembers } from "@/lib/db/schema/trip-members";
+import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, and } from "drizzle-orm";
 
-export async function getMembership(tripId: string, userId: string) {
+export async function getMembership(groupId: string, userId: string) {
   const [m] = await db
     .select()
-    .from(tripMembers)
-    .where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, userId)));
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
   return m ?? null;
 }

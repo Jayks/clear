@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function useTripRealtime(tripId: string) {
+export function useGroupRealtime(groupId: string) {
   const router = useRouter();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -17,20 +17,20 @@ export function useTripRealtime(tripId: string) {
     const supabase = createClient();
 
     const channel = supabase
-      .channel(`trip:${tripId}`)
+      .channel(`group:${groupId}`)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "expenses",
-        filter: `trip_id=eq.${tripId}`,
+        filter: `group_id=eq.${groupId}`,
       }, debouncedRefresh)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "settlements",
-        filter: `trip_id=eq.${tripId}`,
+        filter: `group_id=eq.${groupId}`,
       }, debouncedRefresh)
       .on("postgres_changes", {
-        event: "*", schema: "public", table: "trip_members",
-        filter: `trip_id=eq.${tripId}`,
+        event: "*", schema: "public", table: "group_members",
+        filter: `group_id=eq.${groupId}`,
       }, debouncedRefresh)
-      // expense_splits has no trip_id column — listen broadly, debounce absorbs noise
+      // expense_splits has no group_id column — listen broadly, debounce absorbs noise
       .on("postgres_changes", {
         event: "*", schema: "public", table: "expense_splits",
       }, debouncedRefresh)
@@ -40,5 +40,5 @@ export function useTripRealtime(tripId: string) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       supabase.removeChannel(channel);
     };
-  }, [tripId, debouncedRefresh]);
+  }, [groupId, debouncedRefresh]);
 }

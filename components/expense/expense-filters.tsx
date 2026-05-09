@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Search, X, ChevronDown } from "lucide-react";
 import type { Expense } from "@/lib/db/schema/expenses";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import { CATEGORIES } from "@/lib/categories";
 import { SwipeableExpenseCard } from "./swipeable-expense-card";
 import { formatCurrency, getMemberName } from "@/lib/utils";
@@ -13,15 +13,16 @@ type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
 interface Props {
   expenses: Expense[];
-  members: TripMember[];
+  members: GroupMember[];
   currentUserId: string;
   isAdmin: boolean;
   currency: string;
   tripStartDate?: string | null;
   tripEndDate?: string | null;
+  groupByMonth?: boolean;
 }
 
-export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, currency, tripStartDate, tripEndDate }: Props) {
+export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, currency, tripStartDate, tripEndDate, groupByMonth }: Props) {
   const [search, setSearch]         = useState("");
   const [category, setCategory]     = useState<string | null>(null);
   const [payerId, setPayerId]        = useState<string | null>(null);
@@ -215,6 +216,16 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
         <div className="py-14 text-center text-slate-400 dark:text-slate-500 text-sm glass rounded-xl">
           No expenses match your filters.
         </div>
+      ) : groupByMonth ? (
+        <MonthGroupedList
+          expenses={filtered}
+          members={members}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          currency={currency}
+          onDelete={optimisticDelete}
+          onDeleteFail={restoreDelete}
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((expense) => (
@@ -230,6 +241,68 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+const MONTH_LABELS: Record<string, string> = {
+  "01": "January", "02": "February", "03": "March", "04": "April",
+  "05": "May", "06": "June", "07": "July", "08": "August",
+  "09": "September", "10": "October", "11": "November", "12": "December",
+};
+
+function MonthGroupedList({ expenses, members, currentUserId, isAdmin, currency, onDelete, onDeleteFail }: {
+  expenses: Expense[];
+  members: GroupMember[];
+  currentUserId: string;
+  isAdmin: boolean;
+  currency: string;
+  onDelete: (id: string) => void;
+  onDeleteFail: (id: string) => void;
+}) {
+  // Group by YYYY-MM, newest month first
+  const groups = useMemo(() => {
+    const map = new Map<string, Expense[]>();
+    for (const e of expenses) {
+      const key = e.expenseDate.slice(0, 7); // YYYY-MM
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [expenses]);
+
+  return (
+    <div className="space-y-6">
+      {groups.map(([yearMonth, group]) => {
+        const [year, month] = yearMonth.split("-");
+        const label = `${MONTH_LABELS[month]} ${year}`;
+        const total = group.reduce((s, e) => s + Number(e.amount), 0);
+        return (
+          <div key={yearMonth}>
+            <div className="flex items-center justify-between mb-2 px-0.5">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                {label}
+              </span>
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular">
+                {formatCurrency(total, currency)}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {group.map((expense) => (
+                <SwipeableExpenseCard
+                  key={expense.id}
+                  expense={expense}
+                  members={members}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                  onDelete={onDelete}
+                  onDeleteFail={onDeleteFail}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -7,14 +7,14 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 interface Props {
   expenseId: string;
-  tripId: string;
+  groupId: string;
   onSuccess?: () => void;
   onFail?: () => void;
 }
 
-export function DeleteExpenseButton({ expenseId, tripId, onSuccess, onFail }: Props) {
+export function DeleteExpenseButton({ expenseId, groupId, onSuccess, onFail }: Props) {
   async function handleDelete() {
-    const result = await deleteExpense(expenseId, tripId);
+    const result = await deleteExpense(expenseId, groupId);
     if (!result.ok) {
       toast.error(result.error);
       onFail?.();

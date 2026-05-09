@@ -1,116 +1,163 @@
 import { db } from "@/lib/db/client";
-import { trips } from "@/lib/db/schema/trips";
-import { tripMembers } from "@/lib/db/schema/trip-members";
+import { groups } from "@/lib/db/schema/groups";
+import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
-import { eq, sum, count, inArray, ne } from "drizzle-orm";
+import { eq, sum, count, inArray, and, sql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { computeAllTripsInsights } from "@/lib/insights/all-trips-insights";
+import { computeAllNestsInsights } from "@/lib/insights/all-nests-insights";
 import type { TripSummary } from "@/lib/insights/all-trips-insights";
 import type { OtherTripSummary } from "@/lib/insights/cross-trip";
 
-export async function getAllTripsInsightsData() {
+async function getCurrentUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
+export async function getAllTripsInsightsData() {
+  const user = await getCurrentUser();
   if (!user) return null;
 
-  // All trips the user is a member of
   const memberships = await db
-    .select({ tripId: tripMembers.tripId })
-    .from(tripMembers)
-    .where(eq(tripMembers.userId, user.id));
+    .select({ groupId: groupMembers.groupId })
+    .from(groupMembers)
+    .where(eq(groupMembers.userId, user.id));
 
   if (memberships.length === 0) return null;
+  const allGroupIds = memberships.map((m) => m.groupId);
 
-  const tripIds = memberships.map((m) => m.tripId);
-
-  const [userTrips, allMembers] = await Promise.all([
-    db.select().from(trips).where(inArray(trips.id, tripIds)),
-    db.select().from(tripMembers).where(inArray(tripMembers.tripId, tripIds)),
+  const [tripGroups, allMembers] = await Promise.all([
+    db.select().from(groups).where(
+      and(inArray(groups.id, allGroupIds), eq(groups.groupType, "trip"))
+    ),
+    db.select().from(groupMembers).where(inArray(groupMembers.groupId, allGroupIds)),
   ]);
 
-  // Expense totals per trip
+  if (tripGroups.length === 0) return null;
+  const tripIds = tripGroups.map((g) => g.id);
+
   const summaries: TripSummary[] = await Promise.all(
-    userTrips.map(async (trip) => {
+    tripGroups.map(async (group) => {
       const [totals] = await db
         .select({ total: sum(expenses.amount), cnt: count(expenses.id) })
         .from(expenses)
-        .where(eq(expenses.tripId, trip.id));
-
+        .where(and(eq(expenses.groupId, group.id), eq(expenses.isTemplate, false)));
       return {
-        tripId: trip.id,
-        name: trip.name,
+        tripId: group.id,
+        name: group.name,
         totalSpend: Number(totals?.total ?? 0),
         expenseCount: Number(totals?.cnt ?? 0),
-        memberCount: allMembers.filter((m) => m.tripId === trip.id).length,
-        currency: trip.defaultCurrency,
+        memberCount: allMembers.filter((m) => m.groupId === group.id).length,
+        currency: group.defaultCurrency,
       };
     })
   );
 
-  // Category totals across all trips
   const catRows = await db
     .select({ category: expenses.category, total: sum(expenses.amount) })
     .from(expenses)
-    .where(inArray(expenses.tripId, tripIds))
+    .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
     .groupBy(expenses.category);
 
   const categoryTotals: Record<string, number> = {};
-  for (const row of catRows) {
-    categoryTotals[row.category] = Number(row.total ?? 0);
-  }
+  for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
 
-  return computeAllTripsInsights({ trips: userTrips, summaries, categoryTotals, allMembers, currentUserId: user.id });
+  const tripMembers = allMembers.filter((m) => tripIds.includes(m.groupId));
+  return computeAllTripsInsights({ trips: tripGroups, summaries, categoryTotals, allMembers: tripMembers, currentUserId: user.id });
 }
 
-export async function getOtherTripsSummary(currentTripId: string): Promise<OtherTripSummary[]> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export async function getAllNestsInsightsData() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const memberships = await db
+    .select({ groupId: groupMembers.groupId })
+    .from(groupMembers)
+    .where(eq(groupMembers.userId, user.id));
+
+  if (memberships.length === 0) return null;
+  const allGroupIds = memberships.map((m) => m.groupId);
+
+  const [nestGroups, allMembers] = await Promise.all([
+    db.select().from(groups).where(
+      and(inArray(groups.id, allGroupIds), eq(groups.groupType, "nest"))
+    ),
+    db.select().from(groupMembers).where(inArray(groupMembers.groupId, allGroupIds)),
+  ]);
+
+  if (nestGroups.length === 0) return null;
+  const nestIds = nestGroups.map((g) => g.id);
+
+  // All non-template expenses across all nests
+  const allExpenses = await db
+    .select()
+    .from(expenses)
+    .where(and(inArray(expenses.groupId, nestIds), eq(expenses.isTemplate, false)))
+    .orderBy(expenses.expenseDate);
+
+  const catRows = await db
+    .select({ category: expenses.category, total: sum(expenses.amount) })
+    .from(expenses)
+    .where(and(inArray(expenses.groupId, nestIds), eq(expenses.isTemplate, false)))
+    .groupBy(expenses.category);
+
+  const categoryTotals: Record<string, number> = {};
+  for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
+
+  const nestMembers = allMembers.filter((m) => nestIds.includes(m.groupId));
+  return computeAllNestsInsights({ nests: nestGroups, allExpenses, categoryTotals, allMembers: nestMembers, currentUserId: user.id });
+}
+
+export async function getOtherTripsSummary(currentGroupId: string): Promise<OtherTripSummary[]> {
+  const user = await getCurrentUser();
   if (!user) return [];
 
   const memberships = await db
-    .select({ tripId: tripMembers.tripId })
-    .from(tripMembers)
-    .where(eq(tripMembers.userId, user.id));
+    .select({ groupId: groupMembers.groupId })
+    .from(groupMembers)
+    .where(eq(groupMembers.userId, user.id));
 
-  const otherTripIds = memberships.map((m) => m.tripId).filter((id) => id !== currentTripId);
-  if (otherTripIds.length === 0) return [];
+  const otherGroupIds = memberships.map((m) => m.groupId).filter((id) => id !== currentGroupId);
+  if (otherGroupIds.length === 0) return [];
 
-  const [otherTrips, memberCounts, expTotals, catRows] = await Promise.all([
-    db.select().from(trips).where(inArray(trips.id, otherTripIds)),
+  const [otherGroups, memberCounts, expTotals, catRows] = await Promise.all([
+    db.select().from(groups).where(
+      and(inArray(groups.id, otherGroupIds), eq(groups.groupType, "trip"))
+    ),
     db
-      .select({ tripId: tripMembers.tripId, n: count() })
-      .from(tripMembers)
-      .where(inArray(tripMembers.tripId, otherTripIds))
-      .groupBy(tripMembers.tripId),
+      .select({ groupId: groupMembers.groupId, n: count() })
+      .from(groupMembers)
+      .where(inArray(groupMembers.groupId, otherGroupIds))
+      .groupBy(groupMembers.groupId),
     db
-      .select({ tripId: expenses.tripId, total: sum(expenses.amount) })
+      .select({ groupId: expenses.groupId, total: sum(expenses.amount) })
       .from(expenses)
-      .where(inArray(expenses.tripId, otherTripIds))
-      .groupBy(expenses.tripId),
+      .where(and(inArray(expenses.groupId, otherGroupIds), eq(expenses.isTemplate, false)))
+      .groupBy(expenses.groupId),
     db
-      .select({ tripId: expenses.tripId, category: expenses.category, total: sum(expenses.amount) })
+      .select({ groupId: expenses.groupId, category: expenses.category, total: sum(expenses.amount) })
       .from(expenses)
-      .where(inArray(expenses.tripId, otherTripIds))
-      .groupBy(expenses.tripId, expenses.category),
+      .where(and(inArray(expenses.groupId, otherGroupIds), eq(expenses.isTemplate, false)))
+      .groupBy(expenses.groupId, expenses.category),
   ]);
 
-  const memberMap = new Map(memberCounts.map((r) => [r.tripId, r.n]));
-  const totalMap = new Map(expTotals.map((r) => [r.tripId, Number(r.total ?? 0)]));
-
+  const memberMap = new Map(memberCounts.map((r) => [r.groupId, r.n]));
+  const totalMap = new Map(expTotals.map((r) => [r.groupId, Number(r.total ?? 0)]));
   const catMap = new Map<string, Record<string, number>>();
   for (const row of catRows) {
-    if (!catMap.has(row.tripId)) catMap.set(row.tripId, {});
-    catMap.get(row.tripId)![row.category] = Number(row.total ?? 0);
+    if (!catMap.has(row.groupId)) catMap.set(row.groupId, {});
+    catMap.get(row.groupId)![row.category] = Number(row.total ?? 0);
   }
 
-  return otherTrips.map((t) => ({
-    tripId: t.id,
-    totalSpend: totalMap.get(t.id) ?? 0,
-    memberCount: memberMap.get(t.id) ?? 0,
-    startDate: t.startDate,
-    endDate: t.endDate,
-    currency: t.defaultCurrency,
-    categoryTotals: catMap.get(t.id) ?? {},
+  return otherGroups.map((g) => ({
+    tripId: g.id,
+    totalSpend: totalMap.get(g.id) ?? 0,
+    memberCount: memberMap.get(g.id) ?? 0,
+    startDate: g.startDate,
+    endDate: g.endDate,
+    currency: g.defaultCurrency,
+    categoryTotals: catMap.get(g.id) ?? {},
   }));
 }

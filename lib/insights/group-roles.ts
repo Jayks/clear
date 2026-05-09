@@ -1,4 +1,4 @@
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { ExpenseSplit } from "@/lib/db/schema/expense-splits";
 
@@ -58,7 +58,7 @@ function r2(n: number) {
 }
 
 export function computeGroupRoles(params: {
-  members: TripMember[];
+  members: GroupMember[];
   expensesWithSplits: { expense: Expense; splits: ExpenseSplit[] }[];
 }): GroupRolesResult {
   const { members, expensesWithSplits } = params;

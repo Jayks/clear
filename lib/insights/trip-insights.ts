@@ -1,7 +1,7 @@
 import { eachDayOfInterval, parseISO, format, differenceInDays } from "date-fns";
 import { getCategory, CATEGORY_HEX } from "@/lib/categories";
-import type { Trip } from "@/lib/db/schema/trips";
-import type { TripMember } from "@/lib/db/schema/trip-members";
+import type { Group } from "@/lib/db/schema/groups";
+import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { ExpenseSplit } from "@/lib/db/schema/expense-splits";
 
@@ -51,8 +51,8 @@ export interface TripInsights {
 function r2(n: number) { return Math.round(n * 100) / 100; }
 
 export function computeTripInsights(params: {
-  trip: Trip;
-  members: TripMember[];
+  trip: Group;
+  members: GroupMember[];
   expensesWithSplits: { expense: Expense; splits: ExpenseSplit[] }[];
 }): TripInsights {
   const { trip, members, expensesWithSplits } = params;

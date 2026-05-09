@@ -18,9 +18,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Wayfare — Travel together. Settle easy.",
+  title: "Clear — Split it. Clear it.",
   description:
-    "Group expense tracking for trips. Log what you spent, who paid, and let Wayfare figure out who owes whom.",
+    "Group expense splitting for any group. Log what you spent, who paid, and let Clear figure out who owes whom.",
 };
 
 export const viewport: Viewport = {

@@ -150,74 +150,142 @@ export default function LandingPage() {
             </div>
 
             {/* Right — dual mockup */}
-            <div className="flex-1 w-full max-w-[420px] lg:max-w-none" style={{ position: "relative", height: 460 }}>
-              <div className="absolute inset-6 rounded-3xl blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgba(6,182,212,0.18) 0%, rgba(20,184,166,0.12) 60%, transparent 100%)" }} />
+            <div className="flex-1 w-full max-w-[420px] lg:max-w-none">
 
-              {/* Trip expense card */}
-              <div className="absolute glass rounded-2xl p-5 shadow-xl w-[258px]" style={{ top: 16, left: 0, transform: "rotate(-3deg)", zIndex: 1 }}>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
-                  </div>
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-base shadow-sm">🏖️</div>
-                </div>
-                {[
-                  { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500", by: "Priya", n: 5 },
-                  { icon: "🏨", desc: "Hotel check-in", amount: "₹12,000", by: "You", n: 5 },
-                  { icon: "🚕", desc: "Airport taxi", amount: "₹2,000", by: "Raj", n: 5 },
-                ].map((e, i) => (
-                  <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
-                    <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
-                      <p className="text-[11px] text-slate-400">{e.by} · {e.n} splits</p>
+              {/* ── Mobile: stacked cards, no rotation ── */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {/* Trip card */}
+                <div className="glass rounded-2xl p-4 shadow-xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
                     </div>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0">{e.amount}</p>
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-sm shadow-sm">🏖️</div>
                   </div>
-                ))}
-              </div>
-
-              {/* Nest template card */}
-              <div className="absolute glass rounded-2xl p-5 w-[232px] border border-white/90" style={{ bottom: 0, right: 0, transform: "rotate(2.5deg)", zIndex: 2, boxShadow: "0 20px 60px rgba(20,184,166,0.18), 0 4px 16px rgba(0,0,0,0.08)" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recurring</p>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-0.5" style={{ fontFamily: "var(--font-fraunces)" }}>Mumbai Flat</p>
-                  </div>
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-400 flex items-center justify-center text-base shadow-sm">🏠</div>
-                </div>
-                <div className="space-y-2">
                   {[
-                    { icon: "🏠", label: "Monthly rent",   amount: "₹30,000", logged: true  },
-                    { icon: "⚡", label: "Electricity",     amount: "₹1,800",  logged: false },
-                    { icon: "📡", label: "WiFi broadband",  amount: "₹999",    logged: false },
-                  ].map((t, i) => (
-                    <div key={i} className="flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 rounded-xl px-2.5 py-2">
-                      <span className="text-sm shrink-0">{t.icon}</span>
+                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500", by: "Priya", n: 5 },
+                    { icon: "🏨", desc: "Hotel check-in", amount: "₹12,000", by: "You", n: 5 },
+                    { icon: "🚕", desc: "Airport taxi", amount: "₹2,000", by: "Raj", n: 5 },
+                  ].map((e, i) => (
+                    <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                      <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{t.label}</p>
-                        <p className="text-[10px] text-slate-400">{t.amount}</p>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
+                        <p className="text-[10px] text-slate-400">{e.by} · {e.n} splits</p>
                       </div>
-                      {t.logged ? (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-600 shrink-0">
-                          <CheckCircle2 className="w-3 h-3" /> May
-                        </span>
-                      ) : (
-                        <div className="h-5 px-1.5 rounded-md flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(135deg, #06B6D4, #14B8A6)" }}>
-                          <span className="text-[8px] font-bold text-white tracking-wide">LOG</span>
-                        </div>
-                      )}
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">{e.amount}</p>
                     </div>
                   ))}
                 </div>
+
+                {/* Nest card */}
+                <div className="glass rounded-2xl p-4" style={{ boxShadow: "0 12px 40px rgba(20,184,166,0.15)" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recurring</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-0.5" style={{ fontFamily: "var(--font-fraunces)" }}>Mumbai Flat</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-400 flex items-center justify-center text-sm shadow-sm">🏠</div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {[
+                      { icon: "🏠", label: "Monthly rent",  amount: "₹30,000", logged: true  },
+                      { icon: "⚡", label: "Electricity",    amount: "₹1,800",  logged: false },
+                      { icon: "📡", label: "WiFi broadband", amount: "₹999",    logged: false },
+                    ].map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 rounded-xl px-2.5 py-1.5">
+                        <span className="text-sm shrink-0">{t.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{t.label}</p>
+                          <p className="text-[10px] text-slate-400">{t.amount}</p>
+                        </div>
+                        {t.logged ? (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-600 shrink-0">
+                            <CheckCircle2 className="w-3 h-3" /> May
+                          </span>
+                        ) : (
+                          <div className="h-5 px-1.5 rounded-md flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(135deg, #06B6D4, #14B8A6)" }}>
+                            <span className="text-[8px] font-bold text-white tracking-wide">LOG</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {/* Floating badge */}
-              <div className="absolute glass-sm rounded-full px-3 py-1.5 shadow-md border border-white/80 flex items-center gap-1.5" style={{ top: 0, right: 24, zIndex: 3, transform: "rotate(-1deg)" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Trips & nests</span>
+              {/* ── sm+: overlapping absolute layout ── */}
+              <div className="hidden sm:block relative" style={{ height: 460 }}>
+                <div className="absolute inset-6 rounded-3xl blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgba(6,182,212,0.18) 0%, rgba(20,184,166,0.12) 60%, transparent 100%)" }} />
+
+                {/* Trip expense card */}
+                <div className="absolute glass rounded-2xl p-5 shadow-xl w-[258px]" style={{ top: 16, left: 0, transform: "rotate(-3deg)", zIndex: 1 }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
+                    </div>
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-base shadow-sm">🏖️</div>
+                  </div>
+                  {[
+                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500", by: "Priya", n: 5 },
+                    { icon: "🏨", desc: "Hotel check-in", amount: "₹12,000", by: "You", n: 5 },
+                    { icon: "🚕", desc: "Airport taxi", amount: "₹2,000", by: "Raj", n: 5 },
+                  ].map((e, i) => (
+                    <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
+                        <p className="text-[11px] text-slate-400">{e.by} · {e.n} splits</p>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0">{e.amount}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Nest template card */}
+                <div className="absolute glass rounded-2xl p-5 w-[232px] border border-white/90" style={{ bottom: 0, right: 0, transform: "rotate(2.5deg)", zIndex: 2, boxShadow: "0 20px 60px rgba(20,184,166,0.18), 0 4px 16px rgba(0,0,0,0.08)" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recurring</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-0.5" style={{ fontFamily: "var(--font-fraunces)" }}>Mumbai Flat</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-400 flex items-center justify-center text-base shadow-sm">🏠</div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { icon: "🏠", label: "Monthly rent",   amount: "₹30,000", logged: true  },
+                      { icon: "⚡", label: "Electricity",     amount: "₹1,800",  logged: false },
+                      { icon: "📡", label: "WiFi broadband",  amount: "₹999",    logged: false },
+                    ].map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 rounded-xl px-2.5 py-2">
+                        <span className="text-sm shrink-0">{t.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{t.label}</p>
+                          <p className="text-[10px] text-slate-400">{t.amount}</p>
+                        </div>
+                        {t.logged ? (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-600 shrink-0">
+                            <CheckCircle2 className="w-3 h-3" /> May
+                          </span>
+                        ) : (
+                          <div className="h-5 px-1.5 rounded-md flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(135deg, #06B6D4, #14B8A6)" }}>
+                            <span className="text-[8px] font-bold text-white tracking-wide">LOG</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Floating badge */}
+                <div className="absolute glass-sm rounded-full px-3 py-1.5 shadow-md border border-white/80 flex items-center gap-1.5" style={{ top: 0, right: 24, zIndex: 3, transform: "rotate(-1deg)" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Trips & nests</span>
+                </div>
               </div>
+
             </div>
 
           </div>
@@ -258,7 +326,7 @@ export default function LandingPage() {
           {/* Trip card */}
           <div className="glass rounded-3xl overflow-hidden">
             <div className="relative h-48">
-              <Image src={HERO_IMAGE} alt="Travel trip" fill className="object-cover object-center" />
+              <Image src={HERO_IMAGE} alt="Travel trip" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
               <div className="absolute bottom-4 left-5">
                 <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-3 py-1 mb-2">
@@ -288,7 +356,7 @@ export default function LandingPage() {
           {/* Nest card */}
           <div className="glass rounded-3xl overflow-hidden">
             <div className="relative h-48">
-              <Image src={NEST_IMAGE} alt="Shared tab nest" fill className="object-cover object-center" />
+              <Image src={NEST_IMAGE} alt="Shared tab nest" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
               <div className="absolute bottom-4 left-5">
                 <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-3 py-1 mb-2">

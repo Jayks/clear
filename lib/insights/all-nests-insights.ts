@@ -19,7 +19,7 @@ export interface AllNestsInsights {
   totalSpend: number;
   totalExpenses: number;
   monthlyAverage: number;
-  uniqueHousemates: number;
+  uniqueMates: number;
   byNest: NestSummary[];
   monthlyTrend: MonthSpend[];
   topCategories: { category: string; label: string; amount: number; percentage: number; hex: string }[];
@@ -64,14 +64,14 @@ export function computeAllNestsInsights(params: {
 
   const monthlyAverage = sortedMonths.length > 0 ? Math.round(totalSpend / sortedMonths.length) : 0;
 
-  // Unique housemates (not current user)
+  // Unique mates (not current user)
   const seenUsers = new Set<string>();
   const seenGuests = new Set<string>();
   for (const m of allMembers) {
     if (m.userId && m.userId !== currentUserId) seenUsers.add(m.userId);
     if (m.guestName) seenGuests.add(m.guestName.toLowerCase());
   }
-  const uniqueHousemates = seenUsers.size + seenGuests.size;
+  const uniqueMates = seenUsers.size + seenGuests.size;
 
   // Per-nest summaries
   const byNest: NestSummary[] = nests.map((nest) => {
@@ -118,7 +118,7 @@ export function computeAllNestsInsights(params: {
       smartInsights.push({
         emoji: "📊",
         title: `${topCategories[0].label} is your biggest cost`,
-        sub: `${topCategories[0].percentage}% of total household spend`,
+        sub: `${topCategories[0].percentage}% of total spend`,
       });
     }
 
@@ -132,11 +132,11 @@ export function computeAllNestsInsights(params: {
       });
     }
 
-    if (uniqueHousemates > 0) {
+    if (uniqueMates > 0) {
       smartInsights.push({
         emoji: "👥",
-        title: `${uniqueHousemates} housemate${uniqueHousemates > 1 ? "s" : ""}`,
-        sub: "Unique people you share household expenses with",
+        title: `${uniqueMates} mate${uniqueMates > 1 ? "s" : ""}`,
+        sub: "Unique people you split expenses with",
       });
     }
 
@@ -161,5 +161,5 @@ export function computeAllNestsInsights(params: {
     });
   }
 
-  return { nestCount, totalSpend, totalExpenses, monthlyAverage, uniqueHousemates, byNest, monthlyTrend, topCategories, smartInsights };
+  return { nestCount, totalSpend, totalExpenses, monthlyAverage, uniqueMates, byNest, monthlyTrend, topCategories, smartInsights };
 }

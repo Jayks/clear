@@ -34,7 +34,7 @@ export default async function GroupsPage() {
             No groups yet
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs">
-            Create a trip or a household nest — split expenses and settle up with ease.
+            Create a trip or a nest — split expenses and settle up with ease.
           </p>
           <Link
             href="/groups/new"

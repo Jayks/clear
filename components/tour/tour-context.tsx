@@ -49,16 +49,27 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Read the demo trip ID from the demo-trip card's Link href whenever we're on /trips.
+  // Read the demo trip ID from the demo-trip card's Link href.
+  // Runs on pathname/step change and retries after a delay to handle the
+  // /groups loading skeleton (card isn't in the DOM until the server data resolves).
   useEffect(() => {
     if (!active || demoTripId) return;
-    const el = document.querySelector("[data-tour='demo-trip']");
-    if (!el) return;
-    const link = el.querySelector("a") as HTMLAnchorElement | null;
-    const href = link?.getAttribute("href") ?? "";
-    const match = href.match(/^\/groups\/([^/]+)$/);
-    if (match?.[1]) setDemoTripId(match[1]);
-  }, [active, pathname, demoTripId]);
+
+    const tryRead = () => {
+      const el = document.querySelector("[data-tour='demo-trip']");
+      if (!el) return false;
+      const link = el.querySelector("a") as HTMLAnchorElement | null;
+      const href = link?.getAttribute("href") ?? "";
+      const match = href.match(/^\/groups\/([^/]+)$/);
+      if (match?.[1]) { setDemoTripId(match[1]); return true; }
+      return false;
+    };
+
+    if (!tryRead()) {
+      const t = setTimeout(tryRead, 800);
+      return () => clearTimeout(t);
+    }
+  }, [active, pathname, demoTripId, step]);
 
   // Navigate to the step's required page when the step changes.
   useEffect(() => {

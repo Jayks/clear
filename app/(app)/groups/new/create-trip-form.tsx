@@ -85,7 +85,7 @@ export function CreateTripForm() {
                     {cfg.labels.singular}
                   </p>
                   <p className="text-xs text-slate-400 dark:text-slate-500">
-                    {type === "trip" ? "Travel expenses" : "Household expenses"}
+                    {type === "trip" ? "Travel expenses" : "Shared tab expenses"}
                   </p>
                 </div>
               </button>
@@ -120,7 +120,7 @@ export function CreateTripForm() {
         <textarea
           {...register("description")}
           rows={2}
-          placeholder={groupType === "trip" ? "A quick note about the trip" : "Who's in this household?"}
+          placeholder={groupType === "trip" ? "A quick note about the trip" : "What's this shared tab for?"}
           className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
         />
       </div>

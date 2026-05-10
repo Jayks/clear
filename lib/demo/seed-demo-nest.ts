@@ -24,7 +24,7 @@ export async function seedDemoNest(userId: string, displayName: string | null) {
   // ── 1. Group ─────────────────────────────────────────────────────────────
   const [group] = await db.insert(groups).values({
     name: "Mumbai Flat · Sample",
-    description: "A pre-loaded sample nest — explore household splitting freely!",
+    description: "A pre-loaded sample nest — explore shared tab splitting freely!",
     groupType: "nest",
     defaultCurrency: "INR",
     coverPhotoUrl: COVER_PHOTO,

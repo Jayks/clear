@@ -43,7 +43,7 @@ export async function ensureDemoGroup() {
   }
 
   // Re-seed the nest if it's the old sparse version (description doesn't match current seed)
-  const NEST_SEED_VERSION = "A pre-loaded sample nest — explore household splitting freely!";
+  const NEST_SEED_VERSION = "A pre-loaded sample nest — explore shared tab splitting freely!";
   const existingNest = nestDemos[0];
   if (!existingNest) {
     await seedDemoNest(user.id, displayName);

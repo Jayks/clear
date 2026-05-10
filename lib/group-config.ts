@@ -25,10 +25,10 @@ export const GROUP_CONFIG = {
     labels: {
       singular: "Nest",
       plural: "Nests",
-      members: "Housemates",
+      members: "Mates",
       newGroup: "New nest",
       noGroups: "No nests yet",
-      noGroupsDesc: "Create a household group and split expenses with your housemates.",
+      noGroupsDesc: "Create a nest and split expenses with your mates.",
       createFirst: "Create your first nest",
     },
     icon: Home,

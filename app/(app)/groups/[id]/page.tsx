@@ -79,7 +79,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               {group.name}
             </h1>
             {isNest ? (
-              <p className="text-white/75 text-sm mt-1">Ongoing</p>
+              <p className="text-white/75 text-sm mt-1">Shared tab</p>
             ) : (group.startDate || group.endDate) ? (
               <p className="text-white/75 text-sm mt-1">
                 {group.startDate ? formatDate(group.startDate) : ""}
@@ -171,7 +171,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                 Invite to {config.labels.singular.toLowerCase()}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Share with your {isNest ? "housemates" : "group"}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Share with your {isNest ? "mates" : "group"}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <ShareButton url={inviteUrl} tripName={group.name} />

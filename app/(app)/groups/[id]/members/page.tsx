@@ -83,7 +83,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
         <div className="glass rounded-2xl p-5 mb-4">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-cyan-500" />
-            Add a guest {config.labels.members === "Housemates" ? "housemate" : "member"}
+            Add a guest {group.groupType === "nest" ? "mate" : "member"}
           </h2>
           <AddGuestForm groupId={group.id} />
         </div>

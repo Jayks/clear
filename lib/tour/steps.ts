@@ -42,7 +42,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
       target: null,
       title: "Welcome to Clear",
       description:
-        "Clear tracks shared expenses for two kinds of groups — Trips for travel, and Nests for households. Split costs, settle up with the fewest payments, and see where the money goes.",
+        "Clear tracks shared expenses for two kinds of groups — Trips for travel, and Nests for shared tabs. Split costs, settle up with the fewest payments, and see where the money goes.",
     },
 
     // 2 — New group button
@@ -69,7 +69,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
       page: "/groups",
       title: "Sample Nest — Mumbai Flat",
       description:
-        "This pre-loaded nest shows household features: recurring expense templates for rent, electricity and WiFi — log each month with one tap, then settle up.",
+        "This pre-loaded nest shows shared tab features: recurring expense templates for rent, electricity and WiFi — log each month with one tap, then settle up.",
     },
 
     // 5–8 — Inside the demo trip

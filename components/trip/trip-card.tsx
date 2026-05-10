@@ -54,7 +54,7 @@ export function TripCard({ group, memberCount }: TripCardProps) {
               {group.name}
             </h3>
             {isNest ? (
-              <p className="text-white/75 text-xs mt-0.5">Ongoing</p>
+              <p className="text-white/75 text-xs mt-0.5">Shared tab</p>
             ) : (group.startDate || group.endDate) ? (
               <p className="text-white/75 text-xs mt-0.5">
                 {group.startDate ? formatDate(group.startDate) : ""}
@@ -69,7 +69,7 @@ export function TripCard({ group, memberCount }: TripCardProps) {
       <div className="px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs">
           <Users className="w-3.5 h-3.5" />
-          {memberCount} {memberCount === 1 ? (isNest ? "housemate" : "member") : (isNest ? "housemates" : "members")}
+          {memberCount} {memberCount === 1 ? (isNest ? "mate" : "member") : (isNest ? "mates" : "members")}
         </div>
         <div className="flex items-center gap-1">
           <TripCardShareButtons url={summaryUrl} tripName={group.name} />

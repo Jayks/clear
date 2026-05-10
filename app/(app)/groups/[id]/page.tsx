@@ -157,7 +157,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* Budget bar */}
-      {group.budget && (
+      {config.showBudget && group.budget && (
         <div className="mb-4">
           <BudgetBar spent={totalSpent} budget={Number(group.budget)} currency={group.defaultCurrency} />
         </div>

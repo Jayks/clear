@@ -35,7 +35,7 @@ const itemSchema = z.object({
 export async function parseChatExpenses(
   chatText: string,
   memberContext: { id: string; name: string }[],
-  dateContext: { today: string; tripStart?: string | null; tripEnd?: string | null }
+  dateContext: { today: string; groupStart?: string | null; groupEnd?: string | null }
 ): Promise<{ ok: true; expenses: ChatParsedExpense[] } | { ok: false; error: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, error: "AI parsing is not configured." };
@@ -47,9 +47,9 @@ export async function parseChatExpenses(
     .join("\n");
 
   const tripDateLine =
-    dateContext.tripStart && dateContext.tripEnd
-      ? `Trip runs ${dateContext.tripStart} → ${dateContext.tripEnd}.`
-      : "No trip date range set.";
+    dateContext.groupStart && dateContext.groupEnd
+      ? `Group runs ${dateContext.groupStart} → ${dateContext.groupEnd}.`
+      : "No date range set.";
 
   const validMemberIds = new Set(memberContext.map((m) => m.id));
 

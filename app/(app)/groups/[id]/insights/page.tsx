@@ -29,11 +29,11 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
   ]);
   if (!tripData) notFound();
 
-  const { group: trip, members } = tripData;
-  const isNest = trip.groupType === "nest";
-  const insights = computeTripInsights({ trip, members, expensesWithSplits });
+  const { group, members } = tripData;
+  const isNest = group.groupType === "nest";
+  const insights = computeTripInsights({ trip: group, members, expensesWithSplits });
   const groupRoles = computeGroupRoles({ members, expensesWithSplits });
-  const currency = trip.defaultCurrency;
+  const currency = group.defaultCurrency;
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
@@ -74,9 +74,9 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
   // Trip: trajectory + cross-group
   const trajectory = !isNest ? computeSpendTrajectory({
     totalSpend: insights.totalSpend,
-    startDate: trip.startDate,
-    endDate: trip.endDate,
-    budget: trip.budget ? Number(trip.budget) : null,
+    startDate: group.startDate,
+    endDate: group.endDate,
+    budget: group.budget ? Number(group.budget) : null,
   }) : null;
 
   const crossTripInsights = !isNest ? computeCrossTripInsights({
@@ -123,7 +123,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
           <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
             Insights
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">{trip.name}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{group.name}</p>
         </div>
       </div>
 
@@ -181,9 +181,9 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
       )}
 
       {/* Plan vs Reality — trip only */}
-      {!isNest && trip.itinerary && (
+      {!isNest && group.itinerary && (
         <AdherenceCard
-          itinerary={trip.itinerary}
+          itinerary={group.itinerary}
           expenses={expensesWithSplits.map(({ expense }) => ({
             description: expense.description,
             expenseDate: expense.expenseDate,

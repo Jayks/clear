@@ -9,7 +9,7 @@ export default async function NewExpensePage({ params }: { params: Promise<{ id:
   const data = await getGroupWithMembers(id);
   if (!data) notFound();
 
-  const { group: trip, members } = data;
+  const { group, members } = data;
 
   return (
     <div className="max-w-xl">
@@ -24,10 +24,10 @@ export default async function NewExpensePage({ params }: { params: Promise<{ id:
       <h1 className="text-2xl text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
         Add expense
       </h1>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{trip.name}</p>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{group.name}</p>
 
       <div className="glass rounded-2xl p-6">
-        <AddExpenseForm trip={trip} members={members} />
+        <AddExpenseForm group={group} members={members} />
       </div>
     </div>
   );

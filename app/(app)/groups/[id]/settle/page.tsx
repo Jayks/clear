@@ -30,8 +30,8 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
   ]);
   if (!data) notFound();
 
-  const { group: trip, members, currentMember } = data;
-  const isNest = trip.groupType === "nest";
+  const { group, members, currentMember } = data;
+  const isNest = group.groupType === "nest";
   const monthlySummary = isNest ? await getMonthlyExpenseSummary(id) : null;
   const isAdmin = currentMember?.role === "admin";
   const pastSettlementsTotal = settlementHistory.reduce((sum, s) => sum + Number(s.amount), 0);
@@ -88,7 +88,7 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
               ) : (
                 <CountUp
                   value={Math.abs(b.net)}
-                  currency={trip.defaultCurrency}
+                  currency={group.defaultCurrency}
                   className={`text-base font-semibold tabular shrink-0 ${isPositive ? "text-emerald-600" : "text-red-500"}`}
                 />
               )}
@@ -107,14 +107,14 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">Total spent</p>
               <p className="text-base font-semibold text-slate-800 dark:text-slate-100 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
-                {formatCurrency(monthlySummary.total, trip.defaultCurrency)}
+                {formatCurrency(monthlySummary.total, group.defaultCurrency)}
               </p>
             </div>
             {currentMember && monthlySummary.byMember[currentMember.id] !== undefined && (
               <div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Your share</p>
                 <p className="text-base font-semibold text-slate-800 dark:text-slate-100 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
-                  {formatCurrency(monthlySummary.byMember[currentMember.id], trip.defaultCurrency)}
+                  {formatCurrency(monthlySummary.byMember[currentMember.id], group.defaultCurrency)}
                 </p>
               </div>
             )}
@@ -127,7 +127,7 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
                 <div key={m.id}>
                   <p className="text-xs text-slate-500 dark:text-slate-400">You paid</p>
                   <p className="text-base font-semibold text-emerald-600 dark:text-emerald-400 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
-                    {formatCurrency(paid, trip.defaultCurrency)}
+                    {formatCurrency(paid, group.defaultCurrency)}
                   </p>
                 </div>
               );
@@ -170,20 +170,20 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
                   className="text-base font-semibold text-slate-800 dark:text-slate-100 tabular mr-auto sm:mr-0"
                   style={{ fontFamily: "var(--font-fraunces)" }}
                 >
-                  {formatCurrency(s.amount, trip.defaultCurrency)}
+                  {formatCurrency(s.amount, group.defaultCurrency)}
                 </span>
                 {currentMember?.id === s.from && (
                   <UpiPayButton
                     amount={s.amount}
-                    currency={trip.defaultCurrency}
+                    currency={group.defaultCurrency}
                     toName={memberName(s.to)}
                   />
                 )}
                 {currentMember?.id === s.to && (
                   <WhatsAppRemindButton
                     fromName={memberName(s.from)}
-                    amount={formatCurrency(s.amount, trip.defaultCurrency)}
-                    tripName={trip.name}
+                    amount={formatCurrency(s.amount, group.defaultCurrency)}
+                    tripName={group.name}
                     settleUrl={settleUrl}
                   />
                 )}
@@ -192,7 +192,7 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
                   fromMemberId={s.from}
                   toMemberId={s.to}
                   amount={s.amount}
-                  currency={trip.defaultCurrency}
+                  currency={group.defaultCurrency}
                 />
               </div>
             </div>
@@ -205,7 +205,7 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
       <MemberDebtBreakdown
         members={members}
         suggestions={suggestions}
-        currency={trip.defaultCurrency}
+        currency={group.defaultCurrency}
       />
 
       {/* Settlement history */}
@@ -244,7 +244,7 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
         members={members}
         balances={balances}
         suggestions={suggestions}
-        currency={trip.defaultCurrency}
+        currency={group.defaultCurrency}
         pastSettlementsTotal={pastSettlementsTotal}
       />
     </div>

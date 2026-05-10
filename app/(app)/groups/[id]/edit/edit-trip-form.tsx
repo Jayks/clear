@@ -13,10 +13,10 @@ import { getGroupConfig } from "@/lib/group-config";
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "SGD", "AED", "JPY", "CAD", "AUD"];
 
-export function EditTripForm({ trip }: { trip: Group }) {
+export function EditTripForm({ group }: { group: Group }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const config = getGroupConfig(trip.groupType);
+  const config = getGroupConfig(group.groupType);
 
   const {
     register,
@@ -27,15 +27,15 @@ export function EditTripForm({ trip }: { trip: Group }) {
   } = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema),
     defaultValues: {
-      name: trip.name,
-      description: trip.description ?? "",
-      coverPhotoUrl: trip.coverPhotoUrl ?? "",
-      defaultCurrency: trip.defaultCurrency,
-      groupType: trip.groupType,
-      startDate: trip.startDate ?? "",
-      endDate: trip.endDate ?? "",
-      budget: trip.budget ? Number(trip.budget) : undefined,
-      itinerary: trip.itinerary ?? "",
+      name: group.name,
+      description: group.description ?? "",
+      coverPhotoUrl: group.coverPhotoUrl ?? "",
+      defaultCurrency: group.defaultCurrency,
+      groupType: group.groupType,
+      startDate: group.startDate ?? "",
+      endDate: group.endDate ?? "",
+      budget: group.budget ? Number(group.budget) : undefined,
+      itinerary: group.itinerary ?? "",
     },
   });
 
@@ -43,7 +43,7 @@ export function EditTripForm({ trip }: { trip: Group }) {
 
   async function onSubmit(data: CreateGroupInput) {
     setSubmitting(true);
-    const result = await updateGroup(trip.id, data);
+    const result = await updateGroup(group.id, data);
     setSubmitting(false);
 
     if (!result.ok) {
@@ -51,7 +51,7 @@ export function EditTripForm({ trip }: { trip: Group }) {
       return;
     }
     toast.success(`${config.labels.singular} updated!`);
-    router.push(`/groups/${trip.id}`);
+    router.push(`/groups/${group.id}`);
   }
 
   return (

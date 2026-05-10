@@ -21,11 +21,6 @@ export const addExpenseSchema = z.object({
 
 export type AddExpenseInput = z.infer<typeof addExpenseSchema>;
 
-const splitInputSchema2 = z.object({
-  memberId: z.string().uuid(),
-  value: z.number().optional(),
-});
-
 export const addTemplateSchema = z.object({
   groupId: z.string().uuid(),
   paidByMemberId: z.string().uuid(),
@@ -35,7 +30,7 @@ export const addTemplateSchema = z.object({
   currency: z.string().length(3),
   recurrence: z.enum(["monthly", "weekly"]),
   splitMode: z.enum(["equal", "exact", "percentage", "shares"]),
-  splits: z.array(splitInputSchema2).min(1),
+  splits: z.array(splitInputSchema).min(1),
 });
 
 export type AddTemplateInput = z.infer<typeof addTemplateSchema>;

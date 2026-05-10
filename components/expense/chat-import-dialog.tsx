@@ -15,8 +15,8 @@ interface Props {
   members: GroupMember[];
   currency: string;
   defaultMemberId: string;
-  tripStartDate: string | null;
-  tripEndDate: string | null;
+  groupStartDate: string | null;
+  groupEndDate: string | null;
 }
 
 type RowStatus = "pending" | "adding" | "done" | "error";
@@ -51,7 +51,7 @@ function splitLabel(row: RowState, members: GroupMember[]): string {
 }
 
 export function ChatImportDialog({
-  groupId, members, currency, defaultMemberId, tripStartDate, tripEndDate,
+  groupId, members, currency, defaultMemberId, groupStartDate, groupEndDate,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [chatText, setChatText] = useState("");
@@ -92,8 +92,8 @@ export function ChatImportDialog({
     const memberContext = members.map((m) => ({ id: m.id, name: getMemberName(m) }));
     const result = await parseChatExpenses(chatText, memberContext, {
       today,
-      tripStart: tripStartDate,
-      tripEnd: tripEndDate,
+      groupStart: groupStartDate,
+      groupEnd: groupEndDate,
     });
 
     setExtracting(false);
@@ -145,7 +145,7 @@ export function ChatImportDialog({
         category: row.category,
         amount,
         currency,
-        expenseDate: row.expenseDate ?? smartDefaultDate(tripStartDate, tripEndDate),
+        expenseDate: row.expenseDate ?? smartDefaultDate(groupStartDate, groupEndDate),
         notes: row.notes ?? undefined,
         splitMode: "equal",
         splits,
@@ -319,7 +319,7 @@ export function ChatImportDialog({
                             <span className={`text-xs ${row.expenseDate ? "text-slate-400 dark:text-slate-500" : "text-slate-300 dark:text-slate-600 italic"}`}>
                               {row.expenseDate
                                 ? formatDate(row.expenseDate)
-                                : formatDate(smartDefaultDate(tripStartDate, tripEndDate))}
+                                : formatDate(smartDefaultDate(groupStartDate, groupEndDate))}
                             </span>
                           </div>
                         </div>

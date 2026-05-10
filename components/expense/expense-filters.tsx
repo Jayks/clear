@@ -17,12 +17,12 @@ interface Props {
   currentUserId: string;
   isAdmin: boolean;
   currency: string;
-  tripStartDate?: string | null;
-  tripEndDate?: string | null;
+  groupStartDate?: string | null;
+  groupEndDate?: string | null;
   groupByMonth?: boolean;
 }
 
-export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, currency, tripStartDate, tripEndDate, groupByMonth }: Props) {
+export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth }: Props) {
   const [search, setSearch]         = useState("");
   const [category, setCategory]     = useState<string | null>(null);
   const [payerId, setPayerId]        = useState<string | null>(null);
@@ -170,8 +170,8 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
         <input
           type="date"
           value={dateFrom}
-          min={tripStartDate ?? undefined}
-          max={dateTo || (tripEndDate ?? undefined)}
+          min={groupStartDate ?? undefined}
+          max={dateTo || (groupEndDate ?? undefined)}
           onChange={(e) => setDateFrom(e.target.value)}
           className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
         />
@@ -179,8 +179,8 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
         <input
           type="date"
           value={dateTo}
-          min={dateFrom || (tripStartDate ?? undefined)}
-          max={tripEndDate ?? undefined}
+          min={dateFrom || (groupStartDate ?? undefined)}
+          max={groupEndDate ?? undefined}
           onChange={(e) => setDateTo(e.target.value)}
           className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
         />

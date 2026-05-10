@@ -12,15 +12,15 @@ export default async function EditExpensePage({
 }) {
   const { id, expenseId } = await params;
 
-  const [tripData, expenseData] = await Promise.all([
+  const [groupData, expenseData] = await Promise.all([
     getGroupWithMembers(id),
     getExpenseWithSplits(expenseId),
   ]);
 
-  if (!tripData || !expenseData) notFound();
+  if (!groupData || !expenseData) notFound();
   if (expenseData.expense.groupId !== id) notFound();
 
-  const { group: trip, members, currentMember } = tripData;
+  const { group, members, currentMember } = groupData;
   const { expense, splits } = expenseData;
   const isAdmin = currentMember?.role === "admin";
 
@@ -37,11 +37,11 @@ export default async function EditExpensePage({
       <h1 className="text-2xl text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
         Edit expense
       </h1>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{trip.name}</p>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{group.name}</p>
 
       <div className="glass rounded-2xl p-6">
         <EditExpenseForm
-          trip={trip}
+          group={group}
           members={members}
           expense={expense}
           splits={splits}

@@ -18,14 +18,14 @@ import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 
 interface Props {
-  trip: Group;
+  group: Group;
   members: GroupMember[];
 }
 
-export function AddExpenseForm({ trip, members }: Props) {
+export function AddExpenseForm({ group, members }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const groupConfig = getGroupConfig(trip.groupType);
+  const groupConfig = getGroupConfig(group.groupType);
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
   const [splitEditorKey, setSplitEditorKey] = useState(0);
   const [initialSplitIds, setInitialSplitIds] = useState<Set<string>>(
@@ -41,9 +41,9 @@ export function AddExpenseForm({ trip, members }: Props) {
   } = useForm<AddExpenseInput>({
     resolver: zodResolver(addExpenseSchema),
     defaultValues: {
-      groupId: trip.id,
-      currency: trip.defaultCurrency,
-      expenseDate: smartDefaultDate(trip.startDate, trip.endDate),
+      groupId: group.id,
+      currency: group.defaultCurrency,
+      expenseDate: smartDefaultDate(group.startDate, group.endDate),
       category: "other",
       paidByMemberId: members[0]?.id ?? "",
       splitMode: "equal",
@@ -70,7 +70,7 @@ export function AddExpenseForm({ trip, members }: Props) {
     if (parsed.description) setValue("description", parsed.description);
     if (parsed.amount !== null) setValue("amount", parsed.amount);
     if (parsed.paidByMemberId) setValue("paidByMemberId", parsed.paidByMemberId);
-    setValue("expenseDate", parsed.expenseDate ?? smartDefaultDate(trip.startDate, trip.endDate));
+    setValue("expenseDate", parsed.expenseDate ?? smartDefaultDate(group.startDate, group.endDate));
     setValue("category", parsed.category);
 
     let nextIds: Set<string>;
@@ -90,12 +90,12 @@ export function AddExpenseForm({ trip, members }: Props) {
   }
 
   async function onSubmit(data: AddExpenseInput) {
-    if (trip.startDate && data.expenseDate < trip.startDate) {
-      toast.error(`Date must be on or after ${trip.startDate}`);
+    if (group.startDate && data.expenseDate < group.startDate) {
+      toast.error(`Date must be on or after ${group.startDate}`);
       return;
     }
-    if (trip.endDate && data.expenseDate > trip.endDate) {
-      toast.error(`Date must be on or before ${trip.endDate}`);
+    if (group.endDate && data.expenseDate > group.endDate) {
+      toast.error(`Date must be on or before ${group.endDate}`);
       return;
     }
     if (data.endDate && data.endDate < data.expenseDate) {
@@ -111,7 +111,7 @@ export function AddExpenseForm({ trip, members }: Props) {
       return;
     }
     toast.success("Expense added!");
-    router.push(`/groups/${trip.id}/expenses`);
+    router.push(`/groups/${group.id}/expenses`);
   }
 
   return (
@@ -121,8 +121,8 @@ export function AddExpenseForm({ trip, members }: Props) {
       <QuickAddBar
         members={members}
         currency={watch("currency")}
-        tripStartDate={trip.startDate}
-        tripEndDate={trip.endDate}
+        groupStartDate={group.startDate}
+        groupEndDate={group.endDate}
         onParsed={handleQuickAdd}
       />
 
@@ -188,8 +188,8 @@ export function AddExpenseForm({ trip, members }: Props) {
           <input
             {...register("expenseDate")}
             type="date"
-            min={trip.startDate ?? undefined}
-            max={trip.endDate ?? undefined}
+            min={group.startDate ?? undefined}
+            max={group.endDate ?? undefined}
             className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
           {errors.expenseDate && <p className="mt-1 text-xs text-red-500">{errors.expenseDate.message}</p>}
@@ -214,8 +214,8 @@ export function AddExpenseForm({ trip, members }: Props) {
           <input
             {...register("endDate")}
             type="date"
-            min={trip.startDate ?? undefined}
-            max={trip.endDate ?? undefined}
+            min={group.startDate ?? undefined}
+            max={group.endDate ?? undefined}
             className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
           {errors.endDate && <p className="mt-1 text-xs text-red-500">{errors.endDate.message}</p>}

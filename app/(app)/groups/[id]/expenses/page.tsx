@@ -51,8 +51,8 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             members={members}
             currency={group.defaultCurrency}
             defaultMemberId={currentMember?.id ?? members[0]?.id ?? ""}
-            tripStartDate={group.startDate ?? null}
-            tripEndDate={group.endDate ?? null}
+            groupStartDate={group.startDate ?? null}
+            groupEndDate={group.endDate ?? null}
           />
           {expenses.length > 0 && (
             <a
@@ -119,8 +119,8 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             currentUserId={currentUser.id}
             isAdmin={isAdmin}
             currency={group.defaultCurrency}
-            tripStartDate={group.startDate}
-            tripEndDate={group.endDate}
+            groupStartDate={group.startDate}
+            groupEndDate={group.endDate}
             groupByMonth={isNest}
           />
         </>

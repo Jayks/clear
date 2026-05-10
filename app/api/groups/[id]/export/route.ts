@@ -3,7 +3,7 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { groups } from "@/lib/db/schema/groups";
 import { createClient } from "@/lib/supabase/server";
-import { eq, desc, and, ne } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { getCategory } from "@/lib/categories";
 
 function escapeCSV(value: string | null | undefined): string {

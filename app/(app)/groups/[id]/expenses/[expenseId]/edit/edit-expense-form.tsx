@@ -17,16 +17,16 @@ import { getMemberName } from "@/lib/utils";
 import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 
 interface Props {
-  trip: Group;
+  group: Group;
   members: GroupMember[];
   expense: Expense;
   splits: ExpenseSplit[];
 }
 
-export function EditExpenseForm({ trip, members, expense, splits }: Props) {
+export function EditExpenseForm({ group, members, expense, splits }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const groupConfig = getGroupConfig(trip.groupType);
+  const groupConfig = getGroupConfig(group.groupType);
 
   // Reconstruct split mode and raw values from stored splits
   const initialMode = (splits[0]?.splitType ?? "equal") as SplitMode;
@@ -48,7 +48,7 @@ export function EditExpenseForm({ trip, members, expense, splits }: Props) {
   } = useForm<AddExpenseInput>({
     resolver: zodResolver(addExpenseSchema),
     defaultValues: {
-      groupId: trip.id,
+      groupId: group.id,
       paidByMemberId: expense.paidByMemberId,
       description: expense.description,
       category: expense.category,
@@ -79,12 +79,12 @@ export function EditExpenseForm({ trip, members, expense, splits }: Props) {
   }
 
   async function onSubmit(data: AddExpenseInput) {
-    if (trip.startDate && data.expenseDate < trip.startDate) {
-      toast.error(`Date must be on or after ${trip.startDate}`);
+    if (group.startDate && data.expenseDate < group.startDate) {
+      toast.error(`Date must be on or after ${group.startDate}`);
       return;
     }
-    if (trip.endDate && data.expenseDate > trip.endDate) {
-      toast.error(`Date must be on or before ${trip.endDate}`);
+    if (group.endDate && data.expenseDate > group.endDate) {
+      toast.error(`Date must be on or before ${group.endDate}`);
       return;
     }
     if (data.endDate && data.endDate < data.expenseDate) {
@@ -100,7 +100,7 @@ export function EditExpenseForm({ trip, members, expense, splits }: Props) {
       return;
     }
     toast.success("Expense updated!");
-    router.push(`/groups/${trip.id}/expenses`);
+    router.push(`/groups/${group.id}/expenses`);
   }
 
   return (
@@ -168,8 +168,8 @@ export function EditExpenseForm({ trip, members, expense, splits }: Props) {
           <input
             {...register("expenseDate")}
             type="date"
-            min={trip.startDate ?? undefined}
-            max={trip.endDate ?? undefined}
+            min={group.startDate ?? undefined}
+            max={group.endDate ?? undefined}
             className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
           {errors.expenseDate && <p className="mt-1 text-xs text-red-500">{errors.expenseDate.message}</p>}
@@ -194,8 +194,8 @@ export function EditExpenseForm({ trip, members, expense, splits }: Props) {
           <input
             {...register("endDate")}
             type="date"
-            min={trip.startDate ?? undefined}
-            max={trip.endDate ?? undefined}
+            min={group.startDate ?? undefined}
+            max={group.endDate ?? undefined}
             className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
           {errors.endDate && <p className="mt-1 text-xs text-red-500">{errors.endDate.message}</p>}

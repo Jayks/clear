@@ -15,12 +15,12 @@ type ParseMode = "ai" | "basic";
 interface Props {
   members: GroupMember[];
   currency: string;
-  tripStartDate?: string | null;
-  tripEndDate?: string | null;
+  groupStartDate?: string | null;
+  groupEndDate?: string | null;
   onParsed: (result: ParsedExpense) => void;
 }
 
-export function QuickAddBar({ members, currency, tripStartDate, tripEndDate, onParsed }: Props) {
+export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, onParsed }: Props) {
   const [text, setText] = useState("");
   const [parsed, setParsed] = useState<ParsedExpense | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,8 +37,8 @@ export function QuickAddBar({ members, currency, tripStartDate, tripEndDate, onP
 
     const aiResult = await parseExpenseWithAI(value, memberContext, {
       today,
-      tripStart: tripStartDate,
-      tripEnd: tripEndDate,
+      groupStart: groupStartDate,
+      groupEnd: groupEndDate,
     });
     const result = aiResult ?? parseExpenseText(value, members);
     const mode: ParseMode = aiResult ? "ai" : "basic";
@@ -47,7 +47,7 @@ export function QuickAddBar({ members, currency, tripStartDate, tripEndDate, onP
     setParseMode(mode);
     onParsed(result);
     setLoading(false);
-  }, [text, members, tripStartDate, tripEndDate, onParsed]);
+  }, [text, members, groupStartDate, groupEndDate, onParsed]);
 
   const { isSupported: micSupported, isListening, interimTranscript, start, stop } =
     useSpeechRecognition({

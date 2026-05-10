@@ -19,6 +19,7 @@ export default async function EditGroupPage({ params }: { params: Promise<{ id: 
   if (!data) notFound();
 
   const { group, currentMember } = data;
+
   if (currentMember?.role !== "admin") notFound();
 
   const config = getGroupConfig(group.groupType);
@@ -39,7 +40,7 @@ export default async function EditGroupPage({ params }: { params: Promise<{ id: 
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{group.name}</p>
 
       <div className="glass rounded-2xl p-6">
-        <EditTripForm trip={group} />
+        <EditTripForm group={group} />
       </div>
     </div>
   );

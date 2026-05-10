@@ -87,7 +87,7 @@ export default async function OgImage({
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 28, fontWeight: 800, color: "white",
         }}>
-          W
+          C
         </div>
         <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>Clear</span>
       </div>
@@ -139,7 +139,7 @@ export default async function OgImage({
 
       {/* Tagline */}
       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 17, letterSpacing: "0.3px" }}>
-        Travel together. Settle easy.
+        Split it. Clear it.
       </div>
     </div>,
     { ...size }

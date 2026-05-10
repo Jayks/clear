@@ -34,12 +34,10 @@ export function ShareButton({ url, tripName }: Props) {
   return (
     <button
       onClick={handleShare}
-      className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-cyan-600 hover:text-cyan-700 bg-cyan-50 hover:bg-cyan-100 px-3 py-1.5 rounded-lg transition-colors"
+      title="Share invite link"
+      className="inline-flex items-center justify-center w-8 h-8 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white/60 dark:bg-slate-700/60 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors"
     >
-      {copied
-        ? <><Check className="w-3.5 h-3.5 text-teal-500" /> Copied!</>
-        : <><Share2 className="w-3.5 h-3.5" /> Share</>
-      }
+      {copied ? <Check className="w-4 h-4 text-teal-500" /> : <Share2 className="w-4 h-4" />}
     </button>
   );
 }

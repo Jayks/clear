@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { archiveGroup } from "@/app/actions/groups";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore } from "lucide-react";
 
 export function ArchiveButton({ groupId, isArchived }: { groupId: string; isArchived: boolean }) {
+  const [hovered, setHovered] = useState(false);
+
   async function handleToggle() {
     const result = await archiveGroup(groupId, !isArchived);
     if (!result.ok) toast.error(result.error);
@@ -23,10 +26,16 @@ export function ArchiveButton({ groupId, isArchived }: { groupId: string; isArch
       confirmLabel={isArchived ? "Restore" : "Archive"}
       onConfirm={handleToggle}
       trigger={
-        <button className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white/60 hover:bg-white/80 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors">
+        <button
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className={`inline-flex items-center gap-1.5 text-xs transition-colors py-1 ${
+            hovered ? "text-red-500 dark:text-red-400" : "text-slate-400 dark:text-slate-500"
+          }`}
+        >
           {isArchived
-            ? <><ArchiveRestore className="w-3.5 h-3.5" /> Restore</>
-            : <><Archive className="w-3.5 h-3.5" /> Archive</>}
+            ? <><ArchiveRestore className="w-3.5 h-3.5" /> Restore group</>
+            : <><Archive className="w-3.5 h-3.5" /> Archive group</>}
         </button>
       }
     />

@@ -18,11 +18,10 @@ export function QRInvite({ url }: { url: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
         title="Show QR code"
+        className="inline-flex items-center justify-center w-8 h-8 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white/60 dark:bg-slate-700/60 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors"
       >
-        <QrCode className="w-3.5 h-3.5" />
-        QR
+        <QrCode className="w-4 h-4" />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -54,7 +53,7 @@ export function QRInvite({ url }: { url: string }) {
                 toast.error("Couldn't copy link");
               }
             }}
-            className="w-full py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+            className="w-full py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
           >
             Copy invite link
           </button>

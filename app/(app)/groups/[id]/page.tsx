@@ -163,30 +163,28 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* Invite */}
+      {/* Invite + Archive */}
       {isAdmin && (
-        <div className="glass rounded-xl p-4 mb-4">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                Invite to {config.labels.singular.toLowerCase()}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Share with your {isNest ? "mates" : "group"}</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <ShareButton url={inviteUrl} tripName={group.name} />
-              <QRInvite url={inviteUrl} />
-            </div>
+        <>
+          <div className="glass rounded-xl p-4 mb-2">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
+              Invite to {config.labels.singular.toLowerCase()}
+            </p>
+            <RegenerateTokenButton
+              groupId={group.id}
+              inviteUrl={inviteUrl}
+              actions={
+                <>
+                  <ShareButton url={inviteUrl} tripName={group.name} />
+                  <QRInvite url={inviteUrl} />
+                </>
+              }
+            />
           </div>
-          <RegenerateTokenButton groupId={group.id} inviteUrl={inviteUrl} />
-        </div>
-      )}
-
-      {/* Archive */}
-      {isAdmin && (
-        <div className="flex justify-end">
-          <ArchiveButton groupId={group.id} isArchived={group.isArchived} />
-        </div>
+          <div className="flex justify-end mb-4">
+            <ArchiveButton groupId={group.id} isArchived={group.isArchived} />
+          </div>
+        </>
       )}
     </div>
   );

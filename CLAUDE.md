@@ -108,6 +108,22 @@ const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,
 memberCount: sql<number>`(select count(*) from group_members where group_members.group_id = ${groups.id})`
 ```
 
+### `computeTripInsights` still uses `trip` in its interface
+
+The function signature predates the rename. Always call it as:
+```typescript
+const insights = computeTripInsights({ trip: group, members, expensesWithSplits });
+```
+Do NOT rename the parameter — it would break the destructuring inside the function.
+
+### Summary page is trips-only
+
+`/summary/[token]` returns 404 for nests (`group.groupType === "nest"`). The AI narrative and shareable trip story are trip-exclusive features. Do not add a nest summary equivalent without discussion.
+
+### Date-range props naming
+
+Components that accept optional date bounds use `groupStartDate`/`groupEndDate` (not `tripStartDate`/`tripEndDate`). The AI `DateContext` interface uses `groupStart`/`groupEnd`. Keep this consistent.
+
 ---
 
 ## 4. Architecture Principles
@@ -301,7 +317,7 @@ clear/
 │   │       └── [id]/
 │   │           ├── layout.tsx (RealtimeRefresh), page.tsx
 │   │           ├── edit/page.tsx + edit-trip-form.tsx
-│   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, templates/new/
+│   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, templates/new/, templates/[templateId]/edit/
 │   │           ├── members/page.tsx + forms/buttons
 │   │           ├── settle/page.tsx, loading.tsx, mark-paid-button, upi-pay-button
 │   │           └── insights/page.tsx + loading.tsx
@@ -362,6 +378,10 @@ clear/
 - **Dark mode**: every colour class needs a `dark:` counterpart.
 - **Mobile-first**: grids `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, multi-action rows `flex-col gap sm:flex-row`.
 - **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` for any type-specific label, flag, or category list.
+- **Date-range props**: name as `groupStartDate`/`groupEndDate` in components, `groupStart`/`groupEnd` in `DateContext`.
+- **CategoryValue**: 15 categories across trip + nest — defined in `lib/parser/parse-expense.ts`. AI actions validate against this union type.
+- **Form props**: expense/edit forms use `group: Group` (not `trip`). The `computeTripInsights` function is the one exception — call it with `{ trip: group }`.
+- **Templates excluded from totals**: always filter `eq(expenses.isTemplate, false)` in any query that computes spend or balances.
 
 ---
 
@@ -398,7 +418,7 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 1. Welcome modal — "Trips for travel, Nests for home"
 2. New group button (`[data-tour='new-trip-btn']`)
 3. Sample Trip card (`[data-tour='demo-trip']`)
-4. Sample Nest card (`[data-tour='demo-nest']`) ← new
+4. Sample Nest card (`[data-tour='demo-nest']`)
 5. Trip quick-actions (`[data-tour='trip-quick-actions']`, /groups/[id])
 6. Add expense (`[data-tour='expense-add-btn']`)
 7. Settle up (`[data-tour='settle-suggestions']`)
@@ -436,11 +456,17 @@ Type-aware page:
 pnpm dev / build / typecheck
 pnpm test / pnpm test --run
 pnpm db:push / db:studio
+pnpm seed                # Goa trip — 10 members, 30 expenses (requires 1 existing group)
+pnpm seed:temple         # South India temple tour — 20 members
 ```
+
+**Puppeteer scripts** (for upcoming user manual):
+- `scripts/take-screenshots.js` — captures 16 app screenshots (needs `pnpm dev` + `cookies.json`)
+- `scripts/generate-manual-pdf.js` — generates PDF from HTML manual source
 
 ---
 
-## 17. Working Style
+## 18. Working Style
 
 - **Ask before scope creep** — new deps, new feature areas, skipping sections.
 - **Run `pnpm typecheck && pnpm test` before declaring done**.

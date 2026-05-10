@@ -44,8 +44,18 @@ function quadrants(rect: Rect, vpW: number, vpH: number) {
 export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip }: Props) {
   const [mounted, setMounted] = useState(false);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [slowLoad, setSlowLoad] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Show a reassurance message if the target element takes more than 3s to appear
+  // (happens on Vercel cold starts when navigating into a group page).
+  useEffect(() => {
+    if (!step.target) { setSlowLoad(false); return; }
+    setSlowLoad(false);
+    const t = setTimeout(() => setSlowLoad(true), 3000);
+    return () => clearTimeout(t);
+  }, [step.target]);
 
   // Reset rect immediately on step change so the old spotlight never bleeds
   // onto the next page while it loads.
@@ -192,9 +202,12 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15, delay: 0.15 }}
-            className="fixed inset-0 z-[1002] flex items-center justify-center pointer-events-none"
+            className="fixed inset-0 z-[1002] flex flex-col items-center justify-center gap-3 pointer-events-none"
           >
             <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            {slowLoad && (
+              <p className="text-white/60 text-xs">Loading, hang on…</p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -37,7 +37,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
       <div className="flex items-center gap-2 mb-6 flex-wrap">
         <Link
           href={`/groups/${id}`}
-          className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -86,6 +86,15 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
           isAdmin={isAdmin}
         />
       )}
+
+      {/* Mobile FAB — above bottom nav, primary action for thumb zone */}
+      <Link
+        href={`/groups/${id}/expenses/new`}
+        className="md:hidden fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/40 flex items-center justify-center"
+        aria-label="Add expense"
+      >
+        <Plus className="w-6 h-6 text-white" />
+      </Link>
 
       {expenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

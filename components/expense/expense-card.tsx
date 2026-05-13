@@ -51,7 +51,7 @@ export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete
           <>
             <Link
               href={`/groups/${expense.groupId}/expenses/${expense.id}/edit`}
-              className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 flex items-center justify-center transition-colors"
+              className="w-11 h-11 sm:w-7 sm:h-7 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 flex items-center justify-center transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" />
             </Link>

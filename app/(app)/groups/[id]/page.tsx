@@ -42,7 +42,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       <div className="flex items-center justify-between mb-6">
         <Link
           href="/groups"
-          className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           All groups
@@ -50,7 +50,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         {isAdmin && (
           <Link
             href={`/groups/${group.id}/edit`}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 min-h-[44px] text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg transition-colors"
           >
             <Pencil className="w-3.5 h-3.5" />
             Edit {config.labels.singular.toLowerCase()}

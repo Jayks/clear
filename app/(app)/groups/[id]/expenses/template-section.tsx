@@ -69,54 +69,55 @@ export function TemplateSection({ templates, members, groupId, currency, isAdmin
               const splitCount = splits.length;
 
               return (
-                <div key={template.id} className="flex items-center gap-3 px-4 py-3">
-                  {/* Category icon */}
-                  <div className={`w-8 h-8 rounded-lg ${cat.color} flex items-center justify-center shrink-0`}>
-                    <CatIcon className={`w-4 h-4 ${cat.textColor}`} />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                      {template.description}
-                    </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                      {template.recurrence === "weekly" ? "Weekly" : "Monthly"} · paid by {payer ? getMemberName(payer) : "?"} · {splitCount} {splitCount === 1 ? "person" : "people"}
-                    </p>
-                  </div>
-
-                  {/* Amount */}
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0">
-                    {formatCurrency(Number(template.amount), currency)}
-                  </span>
-
-                  {/* Log button */}
-                  <LogTemplateButton
-                    templateId={template.id}
-                    description={template.description}
-                    loggedThisMonth={loggedThisMonth}
-                    lastLoggedDate={lastLoggedDate}
-                  />
-
-                  {/* Edit + Delete */}
-                  {isAdmin && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Link
-                        href={`/groups/${groupId}/expenses/templates/${template.id}/edit`}
-                        className="p-1.5 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
-                        title="Edit template"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(template.id, template.description)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                        title="Remove template"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                <div key={template.id} className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+                  {/* Top row: icon + info (+ amount on desktop) */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`w-8 h-8 rounded-lg ${cat.color} flex items-center justify-center shrink-0`}>
+                      <CatIcon className={`w-4 h-4 ${cat.textColor}`} />
                     </div>
-                  )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                        {template.description}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                        {template.recurrence === "weekly" ? "Weekly" : "Monthly"} · paid by {payer ? getMemberName(payer) : "?"} · {splitCount} {splitCount === 1 ? "person" : "people"}
+                      </p>
+                    </div>
+                    <span className="hidden sm:block text-sm font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0">
+                      {formatCurrency(Number(template.amount), currency)}
+                    </span>
+                  </div>
+
+                  {/* Bottom row on mobile: amount left, actions right */}
+                  <div className="flex items-center gap-2 pl-11 sm:pl-0">
+                    <span className="sm:hidden text-sm font-semibold text-slate-700 dark:text-slate-200 tabular mr-auto">
+                      {formatCurrency(Number(template.amount), currency)}
+                    </span>
+                    <LogTemplateButton
+                      templateId={template.id}
+                      description={template.description}
+                      loggedThisMonth={loggedThisMonth}
+                      lastLoggedDate={lastLoggedDate}
+                    />
+                    {isAdmin && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Link
+                          href={`/groups/${groupId}/expenses/templates/${template.id}/edit`}
+                          className="p-1.5 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+                          title="Edit template"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(template.id, template.description)}
+                          className="p-1.5 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                          title="Remove template"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })

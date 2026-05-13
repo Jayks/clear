@@ -98,7 +98,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
     return (
       <div>
         <Link href={`/groups/${id}`}
-          className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors">
+          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -116,7 +116,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
     <div>
       <div className="flex items-center gap-3 mb-6">
         <Link href={`/groups/${id}`}
-          className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors">
+          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div>

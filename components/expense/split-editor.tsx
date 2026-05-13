@@ -106,18 +106,19 @@ export function SplitEditor({ members, amount, currency, mode, onModeChange, onS
               {mode !== "equal" && selected && (
                 <input
                   type="number"
+                  inputMode={mode === "shares" ? "numeric" : "decimal"}
                   min="0"
                   step={mode === "shares" ? "1" : "0.01"}
                   placeholder={mode === "percentage" ? "%" : mode === "shares" ? "shares" : "0.00"}
                   value={values[member.id] ?? ""}
                   onChange={(e) => setValue(member.id, e.target.value)}
-                  className="w-20 sm:w-24 text-right text-sm px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                  className="w-24 sm:w-28 text-right text-sm px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 />
               )}
 
               {/* Preview amount */}
               {selected && preview != null && (
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-300 tabular w-16 sm:w-20 text-right shrink-0">
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-300 tabular w-20 sm:w-24 text-right shrink-0">
                   {formatCurrency(preview, currency)}
                 </span>
               )}

@@ -85,7 +85,7 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
         {/* Avatar */}
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<button className="focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-full" />}
+            render={<button className="min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-full" />}
           >
             <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-white shadow-sm">
               <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name ?? "User"} />

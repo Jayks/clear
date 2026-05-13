@@ -33,7 +33,7 @@ export function DeleteExpenseButton({ expenseId, groupId, onSuccess, onFail }: P
       trigger={
         <button
           type="button"
-          className="w-9 h-9 sm:w-7 sm:h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-500 flex items-center justify-center transition-colors"
+          className="w-11 h-11 sm:w-7 sm:h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-500 flex items-center justify-center transition-colors"
           aria-label="Delete expense"
         >
           <Trash2 className="w-3.5 h-3.5" />

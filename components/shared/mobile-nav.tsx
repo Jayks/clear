@@ -32,7 +32,7 @@ export function MobileNav() {
               )}
             >
               <Icon className={cn("w-5 h-5", active && "drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]")} />
-              <span className="text-[10px] font-medium">{label}</span>
+              <span className="text-xs font-medium">{label}</span>
             </Link>
           );
         })}

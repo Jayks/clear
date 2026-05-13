@@ -89,6 +89,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, [active, step, steps, router]);
 
+  // Prefetch all inner trip pages as soon as the demo trip ID is known.
+  useEffect(() => {
+    if (!active || !demoTripId) return;
+    const base = `/groups/${demoTripId}`;
+    [base, `${base}/expenses`, `${base}/settle`, `${base}/insights`].forEach(
+      (p) => router.prefetch(p)
+    );
+  }, [active, demoTripId, router]);
+
   const finish = useCallback((navigateHome = true) => {
     setActive(false);
     localStorage.setItem(DONE_KEY, "1");

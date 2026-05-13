@@ -2,13 +2,7 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, and, count, sql } from "drizzle-orm";
-import { createClient } from "@/lib/supabase/server";
-
-async function getCurrentUser() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
+import { getCurrentUser } from "@/lib/db/queries/auth";
 
 export async function getGroups() {
   const user = await getCurrentUser();
@@ -60,18 +54,12 @@ export async function getGroupWithMembers(groupId: string) {
 
   if (!membership) return null;
 
-  const [group] = await db
-    .select()
-    .from(groups)
-    .where(eq(groups.id, groupId));
+  const [[group], rawMembers] = await Promise.all([
+    db.select().from(groups).where(eq(groups.id, groupId)),
+    db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId)).orderBy(groupMembers.joinedAt),
+  ]);
 
   if (!group) return null;
-
-  const rawMembers = await db
-    .select()
-    .from(groupMembers)
-    .where(eq(groupMembers.groupId, groupId))
-    .orderBy(groupMembers.joinedAt);
 
   const sessionName =
     (user.user_metadata?.full_name as string | undefined) ??

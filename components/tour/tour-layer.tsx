@@ -9,7 +9,8 @@ import type { TourStep } from "@/lib/tour/types";
 
 const PAD = 8;
 const BLUR = "blur(6px)";
-const TINT = "rgba(0,0,0,0.45)";
+const TINT_FULL = "rgba(0,0,0,0.45)";
+const TINT_LOAD = "rgba(0,0,0,0.28)";
 
 interface Rect {
   top: number;
@@ -48,12 +49,11 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Show a reassurance message if the target element takes more than 3s to appear
-  // (happens on Vercel cold starts when navigating into a group page).
+  // Show a reassurance message if the target element takes more than 1.5s to appear.
   useEffect(() => {
     if (!step.target) { setSlowLoad(false); return; }
     setSlowLoad(false);
-    const t = setTimeout(() => setSlowLoad(true), 3000);
+    const t = setTimeout(() => setSlowLoad(true), 1500);
     return () => clearTimeout(t);
   }, [step.target]);
 
@@ -94,7 +94,7 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
   const vpW = window.innerWidth;
   const isMobile = vpW < 640;
   const isLoading = !!step.target && !rect;
-  const isReady   = !step.target || !!rect;
+  const isReady   = true;
 
   // Popover position
   let popoverStyle: React.CSSProperties;
@@ -139,7 +139,7 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[1001] pointer-events-all"
-            style={{ backdropFilter: BLUR, background: TINT }}
+            style={{ backdropFilter: BLUR, background: isLoading ? TINT_LOAD : TINT_FULL }}
           />
         )}
       </AnimatePresence>
@@ -154,7 +154,7 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed z-[1001] pointer-events-all"
-            style={{ ...style, backdropFilter: BLUR, background: TINT }}
+            style={{ ...style, backdropFilter: BLUR, background: TINT_FULL }}
           />
         ))}
       </AnimatePresence>
@@ -193,25 +193,6 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
         )}
       </AnimatePresence>
 
-      {/* ── Loading spinner ───────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isLoading && (
-          <motion.div
-            key="spinner"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, delay: 0.15 }}
-            className="fixed inset-0 z-[1002] flex flex-col items-center justify-center gap-3 pointer-events-none"
-          >
-            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            {slowLoad && (
-              <p className="text-white/60 text-xs">Loading, hang on…</p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ── Popover ──────────────────────────────────────────────────── */}
       <AnimatePresence>
         {isReady && (
@@ -241,9 +222,16 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
                 </button>
               </div>
 
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                {step.description}
-              </p>
+              {isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 mb-4">
+                  <div className="w-3.5 h-3.5 border-2 border-slate-300 dark:border-slate-600 border-t-cyan-500 rounded-full animate-spin shrink-0" />
+                  <span>{slowLoad ? "Taking a moment — hang on…" : "Loading…"}</span>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                  {step.description}
+                </p>
+              )}
 
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -272,7 +260,8 @@ export function TourLayer({ step, stepIndex, totalSteps, onNext, onPrev, onSkip 
                   )}
                   <button
                     onClick={onNext}
-                    className="flex items-center gap-1 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-xs font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-cyan-500/25 min-h-[36px]"
+                    disabled={isLoading}
+                    className="flex items-center gap-1 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-xs font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-cyan-500/25 min-h-[36px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-cyan-500 disabled:hover:to-teal-500"
                   >
                     {stepIndex === totalSteps - 1 ? "Done" : (
                       <>Next <ChevronRight className="w-3.5 h-3.5" /></>

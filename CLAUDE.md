@@ -71,6 +71,22 @@ if (process.env.NODE_ENV !== 'production') globalThis._pgClient = client;
 
 Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `middleware`).
 
+### Auth pattern — always use `getCurrentUser()`, never raw `getUser()`
+
+`lib/db/queries/auth.ts` exports a React-`cache()`-wrapped `getCurrentUser()` that uses `getSession()` (reads JWT from cookie, no network). Safe because `proxy.ts` middleware calls `getUser()` on every request first to validate and refresh the session.
+
+```typescript
+// ✅ correct — deduplicated across layout + all query functions, no extra network call
+import { getCurrentUser } from "@/lib/db/queries/auth";
+const user = await getCurrentUser();
+
+// ❌ wrong — fires an independent network round trip to Supabase auth servers
+const supabase = await createClient();
+const { data: { user } } = await supabase.auth.getUser();
+```
+
+The `(app)/layout.tsx` and all `lib/db/queries/*.ts` files use `getCurrentUser()`. Server actions still call `supabase.auth.getUser()` directly (they run in a separate request context and must validate independently).
+
 ### Supabase publishable key
 
 Uses new `sb_publishable_*` format for `NEXT_PUBLIC_SUPABASE_ANON_KEY` — @supabase/ssr handles it.
@@ -100,6 +116,16 @@ const client = new Anthropic();
 Strip markdown fences before `JSON.parse` — Haiku wraps JSON in ` ```json ``` `:
 ```typescript
 const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+```
+
+### `getGroupWithMembers` — parallel group + members fetch
+
+After the membership check, group row and members list are fetched in parallel:
+```typescript
+const [[group], rawMembers] = await Promise.all([
+  db.select().from(groups).where(eq(groups.id, groupId)),
+  db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId)).orderBy(groupMembers.joinedAt),
+]);
 ```
 
 ### Group member count — correlated subquery
@@ -136,7 +162,7 @@ Components that accept optional date bounds use `groupStartDate`/`groupEndDate` 
 6. **Shared Zod schemas**: same schema for form (zodResolver), server action input, and DB insert.
 7. **Optimistic UI via useState**: `removedIds: Set<string>` state, rolls back on server error.
 8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `app/(app)/groups/[id]/layout.tsx`.
-9. **Auth checks in every query**: `lib/db/queries/*.ts` verifies user + membership before returning data.
+9. **Auth via shared `getCurrentUser()`**: layout and all `lib/db/queries/*.ts` call `getCurrentUser()` from `lib/db/queries/auth.ts` — React-`cache()`-wrapped so the whole render tree shares 1 auth call. Never call `supabase.auth.getUser()` directly in server components or query functions.
 10. **GROUP_CONFIG pattern**: All group-type differences flow through `lib/group-config.ts` — never raw `group.type === 'trip'` checks scattered across files.
 
 ---
@@ -269,6 +295,7 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 ### Motion
 - Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger 30–50ms via `AnimatedList`
 - Balance numbers: `CountUp` (Framer Motion)
+- Navigation progress: `NavProgress` (`components/shared/nav-progress.tsx`) — thin cyan→teal bar at top, shown instantly on any link click, completes when pathname changes
 
 ---
 
@@ -293,10 +320,10 @@ Four modes returning `SplitResult[]` with `shareAmount` + `splitValue`:
 - `percentage`: % per member (must sum to 100)
 - `shares`: share count per member (total > 0)
 
-Rounding: `Math.round(n * 100) / 100`. Remainder to first row. **22 Vitest tests — all must pass.**
+Rounding: `Math.round(n * 100) / 100`. Remainder to first row. **16 Vitest tests — all must pass.**
 
 ### Settlement optimizer (`lib/settle/optimize.ts`)
-Greedy: split members into creditors/debtors by net, sort desc, match top pairs, emit min transactions. **6 Vitest fixtures.**
+Greedy: split members into creditors/debtors by net, sort desc, match top pairs, emit min transactions. **6 Vitest tests.**
 
 ---
 
@@ -335,11 +362,11 @@ clear/
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
-│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle)
+│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress)
 ├── hooks/
 │   ├── use-trip-realtime.ts (exports useGroupRealtime), use-warn-before-leave.ts, use-speech-recognition.ts
 ├── lib/
-│   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth).ts
+│   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth).ts  # auth.ts exports getCurrentUser (cached)
 │   ├── supabase/server.ts, client.ts, admin.ts
 │   ├── demo/seed-demo-trip.ts + seed-demo-nest.ts
 │   ├── tour/types.ts + steps.ts         # 9-step tour (trip + nest cards)
@@ -359,7 +386,9 @@ clear/
 
 ## 10. Auth & Realtime
 
-**Auth**: Google OAuth via Supabase. `proxy.ts` refreshes session + redirects unauthenticated → `/login`. Protected routes: `/groups`, `/join`, `/admin`.
+**Auth**: Google OAuth via Supabase. `proxy.ts` (middleware) calls `supabase.auth.getUser()` on every request — validates + refreshes the session cookie. Protected routes: `/groups`, `/join`, `/admin`.
+
+Server components and query functions call `getCurrentUser()` from `lib/db/queries/auth.ts`, which uses `getSession()` (reads cookie locally, no network). This is safe because the middleware already validated the token before any server component runs. All calls within the same render tree are deduplicated via React `cache()`.
 
 **Realtime**: `useGroupRealtime(groupId)` in `hooks/use-trip-realtime.ts` — subscribes to expenses, settlements, group_members, expense_splits → calls `router.refresh()`. Mounted via `RealtimeRefresh` in `app/(app)/groups/[id]/layout.tsx`.
 
@@ -427,6 +456,8 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 
 Tour localStorage key: `clear_tour_done`. Replayable from avatar dropdown.
 
+**Tour UX behaviour**: The popover is always visible (even while navigating between pages). During loading, the description area shows a spinner; the Next button is disabled until the target element is found. The "Taking a moment…" hint appears after 1.5 s (not 3 s). When `demoTripId` is first resolved, all 4 inner trip pages are prefetched at once.
+
 ---
 
 ## 15. Insights Architecture
@@ -440,6 +471,10 @@ Type-aware page:
 - **Trips tab**: "Your travel story" — total spend, trip count, companions, TripsSpendBar, CategoryDonut, smart insights, per-trip links
 - **Nests tab**: "Your household spending" — monthly average, total, housemates, MonthlySpendBar, CategoryDonut, smart insights, per-nest links
 - Shows tab switcher only if user has both trips and nests
+
+**Query optimizations in `lib/db/queries/insights.ts`**:
+- `getAllTripsInsightsData`: per-trip expense totals fetched in a single `GROUP BY group_id` query (not 1 query per trip)
+- `getAllNestsInsightsData`: category totals derived in-memory from the expenses already fetched (no second DB query)
 
 ---
 

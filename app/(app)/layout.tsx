@@ -1,18 +1,18 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AppNav from "./app-nav";
 import { MobileNav } from "@/components/shared/mobile-nav";
 import { PullToRefresh } from "@/components/shared/pull-to-refresh";
 import { isPlatformAdmin } from "@/lib/db/queries/admin";
 import { TourProvider } from "@/components/tour/tour-context";
+import { getCurrentUser } from "@/lib/db/queries/auth";
+import { NavProgress } from "@/components/shared/nav-progress";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) redirect("/login");
 
@@ -20,6 +20,7 @@ export default async function AppLayout({
 
   return (
     <TourProvider>
+      <NavProgress />
       <div className="min-h-screen flex flex-col">
         <AppNav user={user} isAdmin={isAdmin} />
         <PullToRefresh />

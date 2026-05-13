@@ -3,7 +3,7 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, desc, inArray, and, sql } from "drizzle-orm";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 
 async function assertMember(groupId: string, userId: string): Promise<boolean> {
   const [row] = await db
@@ -14,8 +14,7 @@ async function assertMember(groupId: string, userId: string): Promise<boolean> {
 }
 
 export async function getExpenses(groupId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   const isMember = await assertMember(groupId, user.id);
@@ -29,8 +28,7 @@ export async function getExpenses(groupId: string) {
 }
 
 export async function getGroupTemplates(groupId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   const isMember = await assertMember(groupId, user.id);
@@ -93,8 +91,7 @@ export async function getGroupTemplates(groupId: string) {
 }
 
 export async function getExpenseWithSplits(expenseId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
@@ -112,8 +109,7 @@ export async function getExpenseWithSplits(expenseId: string) {
 }
 
 export async function getTemplateWithSplits(templateId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const [template] = await db.select().from(expenses).where(
@@ -167,8 +163,7 @@ export async function getMonthlyExpenseSummary(groupId: string) {
 }
 
 export async function getGroupExpensesWithSplits(groupId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   const isMember = await assertMember(groupId, user.id);

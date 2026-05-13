@@ -4,17 +4,11 @@ import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { eq, sum, count, inArray, and, sql } from "drizzle-orm";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 import { computeAllTripsInsights } from "@/lib/insights/all-trips-insights";
 import { computeAllNestsInsights } from "@/lib/insights/all-nests-insights";
 import type { TripSummary } from "@/lib/insights/all-trips-insights";
 import type { OtherTripSummary } from "@/lib/insights/cross-trip";
-
-async function getCurrentUser() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
 
 export async function getAllTripsInsightsData() {
   const user = await getCurrentUser();
@@ -38,22 +32,24 @@ export async function getAllTripsInsightsData() {
   if (tripGroups.length === 0) return null;
   const tripIds = tripGroups.map((g) => g.id);
 
-  const summaries: TripSummary[] = await Promise.all(
-    tripGroups.map(async (group) => {
-      const [totals] = await db
-        .select({ total: sum(expenses.amount), cnt: count(expenses.id) })
-        .from(expenses)
-        .where(and(eq(expenses.groupId, group.id), eq(expenses.isTemplate, false)));
-      return {
-        tripId: group.id,
-        name: group.name,
-        totalSpend: Number(totals?.total ?? 0),
-        expenseCount: Number(totals?.cnt ?? 0),
-        memberCount: allMembers.filter((m) => m.groupId === group.id).length,
-        currency: group.defaultCurrency,
-      };
-    })
-  );
+  const perTripTotals = await db
+    .select({ groupId: expenses.groupId, total: sum(expenses.amount), cnt: count(expenses.id) })
+    .from(expenses)
+    .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
+    .groupBy(expenses.groupId);
+
+  const totalMap = new Map(perTripTotals.map((r) => [r.groupId, r]));
+  const summaries: TripSummary[] = tripGroups.map((group) => {
+    const t = totalMap.get(group.id);
+    return {
+      tripId: group.id,
+      name: group.name,
+      totalSpend: Number(t?.total ?? 0),
+      expenseCount: Number(t?.cnt ?? 0),
+      memberCount: allMembers.filter((m) => m.groupId === group.id).length,
+      currency: group.defaultCurrency,
+    };
+  });
 
   const catRows = await db
     .select({ category: expenses.category, total: sum(expenses.amount) })
@@ -97,14 +93,10 @@ export async function getAllNestsInsightsData() {
     .where(and(inArray(expenses.groupId, nestIds), eq(expenses.isTemplate, false)))
     .orderBy(expenses.expenseDate);
 
-  const catRows = await db
-    .select({ category: expenses.category, total: sum(expenses.amount) })
-    .from(expenses)
-    .where(and(inArray(expenses.groupId, nestIds), eq(expenses.isTemplate, false)))
-    .groupBy(expenses.category);
-
   const categoryTotals: Record<string, number> = {};
-  for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
+  for (const e of allExpenses) {
+    categoryTotals[e.category] = (categoryTotals[e.category] ?? 0) + Number(e.amount);
+  }
 
   const nestMembers = allMembers.filter((m) => nestIds.includes(m.groupId));
   return computeAllNestsInsights({ nests: nestGroups, allExpenses, categoryTotals, allMembers: nestMembers, currentUserId: user.id });

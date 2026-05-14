@@ -43,10 +43,22 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const steps = getTourSteps(demoTripId);
 
   // Auto-launch for users who haven't completed the tour.
+  // Wait until the groups page content is in the DOM (ensureDemoGroup may still
+  // be seeding on first visit, blocking the RSC render). Polling for
+  // new-trip-btn ensures we don't start before the page is ready.
   useEffect(() => {
-    if (!localStorage.getItem(DONE_KEY)) {
+    if (localStorage.getItem(DONE_KEY)) return;
+
+    const launch = () => {
+      if (!document.querySelector("[data-tour='new-trip-btn']")) {
+        setTimeout(launch, 250);
+        return;
+      }
       setActive(true);
-    }
+    };
+
+    const t = setTimeout(launch, 300);
+    return () => clearTimeout(t);
   }, []);
 
   // Read the demo trip ID from the demo-trip card's Link href.

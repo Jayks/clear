@@ -35,7 +35,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
+      <div className="flex items-center gap-2 mb-6 flex-wrap" data-tour="expense-add-btn">
         <Link
           href={`/groups/${id}`}
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
@@ -68,7 +68,6 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
           )}
           <Link
             href={`/groups/${id}/expenses/new`}
-            data-tour="expense-add-btn"
             className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md shadow-cyan-500/25 transition-all"
           >
             <Plus className="w-4 h-4" />

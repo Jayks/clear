@@ -103,9 +103,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(DONE_KEY, "1");
     if (navigateHome) {
       router.push("/groups");
-      toast.success("You're all set! Ready to create your first group?", {
+      toast.success("You know the ropes — go split it. Clear it.", {
         action: { label: "New group", onClick: () => router.push("/groups/new") },
-        duration: 6000,
+        duration: 5000,
       });
     }
   }, [router]);

@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   title: "Clear — Split it. Clear it.",
   description:
     "Group expense splitting for any group. Log what you spent, who paid, and let Clear figure out who owes whom.",
+  icons: {
+    apple: [{ url: "/api/pwa-icon?size=192", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {

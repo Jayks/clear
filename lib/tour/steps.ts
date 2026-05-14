@@ -17,7 +17,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
           page: `${base}/expenses`,
           title: "Log expenses",
           description:
-            "Add what was spent, who paid, and split it however you like — equally, by exact amount, percentage, or shares.",
+            "Every expense shows who paid and how it's split. Hit Add to log one — choose equal split, exact amounts, percentages, or shares.",
         },
         {
           target: "[data-tour='settle-suggestions']",

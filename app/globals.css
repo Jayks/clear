@@ -140,8 +140,6 @@
     @apply text-foreground font-sans antialiased min-h-screen;
     background: linear-gradient(135deg, #EFF6FF 0%, #ECFEFF 35%, #F0FDFA 70%, #ECFDF5 100%);
     background-attachment: fixed;
-    /* Prevent browser pull-to-refresh on mobile so our custom one takes over */
-    overscroll-behavior-y: contain;
   }
   .dark body {
     background: linear-gradient(135deg, #0F172A 0%, #0C1520 35%, #0A1A18 70%, #0B1F15 100%);

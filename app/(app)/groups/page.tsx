@@ -4,6 +4,7 @@ import { getGroups, getArchivedGroups } from "@/lib/db/queries/groups";
 import { TripCard } from "@/components/trip/trip-card";
 import { AnimatedList } from "@/components/shared/animated-list";
 import { ensureDemoGroup } from "@/app/actions/demo";
+import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 
 export default async function GroupsPage() {
   await ensureDemoGroup();
@@ -11,6 +12,7 @@ export default async function GroupsPage() {
 
   return (
     <div>
+      <GroupsBackGuard />
       <div className="flex items-center gap-4 mb-8">
         <h1 className="text-3xl text-slate-800 dark:text-slate-100 flex-1" style={{ fontFamily: "var(--font-fraunces)" }}>
           Your groups

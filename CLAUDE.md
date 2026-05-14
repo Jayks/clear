@@ -105,6 +105,14 @@ Convention: all "Get started" / "Start for free" CTAs on the marketing page link
 
 Served via `metadata.icons.apple` in `app/layout.tsx`, pointing to `/api/pwa-icon?size=192`. Do NOT use `app/apple-icon.tsx` — the App Router file convention for apple icons does not work with Turbopack in Next.js 16.
 
+### iOS PWA install hint
+
+`components/shared/ios-install-hint.tsx` — detects iOS Safari (not Chrome/Firefox on iOS), checks not already in standalone mode, checks localStorage `clear_ios_hint_dismissed`. Shows a dismissable glassmorphic bottom banner instructing users to tap Share → "Add to Home Screen". Rendered in root `app/layout.tsx`. Positioned `bottom-20 md:bottom-6` to clear the MobileNav on mobile.
+
+### PWA manifest required fields
+
+`app/manifest.ts` must include `id: "/"` and `scope: "/"` — Chrome on Android requires `id` to identify the app; without it, Android shows an "older version" privacy warning. The 512×512 icon needs two separate entries: one with `purpose: "any"` and one with `purpose: "maskable"`. Do not collapse them into a single entry.
+
 ### Sign-out redirect
 
 `handleSignOut()` in `app/(app)/app-nav.tsx` redirects to `/` (marketing page) after sign-out. This is intentional — users land on the marketing page where they can re-sign in via "Sign in" or "Get started". Do not change this to `/login`.
@@ -393,7 +401,7 @@ clear/
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
-│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo [ClearLogo + ClearIcon])
+│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo [ClearLogo + ClearIcon], ios-install-hint)
 ├── hooks/
 │   ├── use-trip-realtime.ts (exports useGroupRealtime), use-warn-before-leave.ts, use-speech-recognition.ts
 ├── lib/
@@ -505,6 +513,8 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 Tour localStorage key: `clear_tour_done`. Replayable from avatar dropdown.
 
 **Tour UX behaviour**: The popover is always visible (even while navigating between pages). During loading, the description area shows a spinner; the Next button is disabled until the target element is found. The "Taking a moment…" hint appears after 1.5 s (not 3 s). When `demoTripId` is first resolved, all 4 inner trip pages are prefetched at once.
+
+**Auto-launch timing**: The tour does NOT start immediately on mount. It polls for `[data-tour='new-trip-btn']` (300 ms initial delay, then every 250 ms) before setting `active = true`. This prevents the blank full-screen blur that occurred when the tour launched before `ensureDemoGroup()` had finished seeding and the RSC had rendered the page content. Do not change this to an immediate launch.
 
 ---
 

@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ExpenseFilters } from "@/components/expense/expense-filters";
 import { ChatImportDialog } from "@/components/expense/chat-import-dialog";
+import { ExpenseQuickAddFab } from "@/components/expense/expense-quick-add-fab";
 import { TemplateSection } from "./template-section";
 import { formatCurrency } from "@/lib/utils";
 
@@ -87,14 +88,15 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         />
       )}
 
-      {/* Mobile FAB — above bottom nav, primary action for thumb zone */}
-      <Link
-        href={`/groups/${id}/expenses/new`}
-        className="md:hidden fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/40 flex items-center justify-center"
-        aria-label="Add expense"
-      >
-        <Plus className="w-6 h-6 text-white" />
-      </Link>
+      {/* Mobile FAB — opens quick-add sheet on mobile, above bottom nav */}
+      <ExpenseQuickAddFab
+        groupId={id}
+        groupName={group.name}
+        currency={group.defaultCurrency}
+        members={members}
+        groupStartDate={group.startDate}
+        groupEndDate={group.endDate}
+      />
 
       {expenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

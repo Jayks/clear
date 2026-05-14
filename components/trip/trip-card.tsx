@@ -4,6 +4,7 @@ import { Users, Sparkles, MapPin, Home } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import { formatDate } from "@/lib/utils";
 import { TripCardShareButtons } from "./trip-card-share-buttons";
+import { TripCardQuickAdd } from "./trip-card-quick-add";
 
 interface TripCardProps {
   group: Group;
@@ -72,6 +73,13 @@ export function TripCard({ group, memberCount }: TripCardProps) {
           {memberCount} {memberCount === 1 ? (isNest ? "mate" : "member") : (isNest ? "mates" : "members")}
         </div>
         <div className="flex items-center gap-1">
+          <TripCardQuickAdd
+            groupId={group.id}
+            groupName={group.name}
+            currency={group.defaultCurrency}
+            groupStartDate={group.startDate}
+            groupEndDate={group.endDate}
+          />
           <TripCardShareButtons url={summaryUrl} tripName={group.name} />
         </div>
       </div>

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
+import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,6 +28,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0891B2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e7490" },
+  ],
 };
 
 export default function RootLayout({
@@ -36,6 +41,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${fraunces.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <ServiceWorkerRegistration />
           {/* Decorative background blobs */}
           <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
             <div className="absolute -top-48 -right-48 w-[600px] h-[600px] rounded-full bg-cyan-300/20 dark:bg-cyan-900/15 blur-3xl" />

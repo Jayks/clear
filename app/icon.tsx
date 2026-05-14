@@ -11,18 +11,17 @@ export default function Icon() {
           width: 32,
           height: 32,
           borderRadius: 8,
-          background: "#FFFDF8",
-          border: "1.5px solid #E8DDC9",
+          background: "linear-gradient(135deg, #06B6D4, #14B8A6)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: 20,
           fontWeight: 800,
-          color: "#C97B5C",
+          color: "white",
           letterSpacing: "-0.5px",
         }}
       >
-        W
+        C
       </div>
     ),
     { ...size }

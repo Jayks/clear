@@ -73,14 +73,14 @@ Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `mi
 
 ### Auth pattern — always use `getCurrentUser()`, never raw `getUser()`
 
-`lib/db/queries/auth.ts` exports a React-`cache()`-wrapped `getCurrentUser()` that uses `getSession()` (reads JWT from cookie, no network). Safe because `proxy.ts` middleware calls `getUser()` on every request first to validate and refresh the session.
+`lib/db/queries/auth.ts` exports a React-`cache()`-wrapped `getCurrentUser()` that calls `getUser()` (validates JWT against Supabase Auth). React `cache()` deduplicates it — only one network call per server-side render regardless of how many components call it.
 
 ```typescript
-// ✅ correct — deduplicated across layout + all query functions, no extra network call
+// ✅ correct — deduplicated across layout + all query functions, one validated network call
 import { getCurrentUser } from "@/lib/db/queries/auth";
 const user = await getCurrentUser();
 
-// ❌ wrong — fires an independent network round trip to Supabase auth servers
+// ❌ wrong — fires an independent undeduped network round trip on every call site
 const supabase = await createClient();
 const { data: { user } } = await supabase.auth.getUser();
 ```
@@ -290,7 +290,7 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 
 ### Navigation
 - **Desktop**: sticky top — logo (Clear), Groups, Insights, ThemeToggle, avatar dropdown (Take the tour, Sign out)
-- **Mobile**: icon-only top nav + fixed `MobileNav` bottom (Groups, Insights). Content gets `pb-24`.
+- **Mobile**: icon-only top nav + fixed `MobileNav` bottom (Groups, Insights). Content gets `pb-24`. Expenses page adds a cyan FAB (fixed `bottom-24 right-4`, `md:hidden`) for Add Expense.
 
 ### Motion
 - Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger 30–50ms via `AnimatedList`
@@ -357,7 +357,7 @@ clear/
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
-│   ├── expense/  (expense-card, expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
+│   ├── expense/  (expense-card, swipeable-expense-card [swipe-to-delete on touch devices], expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
 │   ├── trip/     (trip-card [data-tour attrs], cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
@@ -411,6 +411,8 @@ Server components and query functions call `getCurrentUser()` from `lib/db/queri
 - **CategoryValue**: 15 categories across trip + nest — defined in `lib/parser/parse-expense.ts`. AI actions validate against this union type.
 - **Form props**: expense/edit forms use `group: Group` (not `trip`). The `computeTripInsights` function is the one exception — call it with `{ trip: group }`.
 - **Templates excluded from totals**: always filter `eq(expenses.isTemplate, false)` in any query that computes spend or balances.
+- **Mobile tap targets**: all back/nav links use `min-h-[44px]`; expense card action buttons `w-11 h-11 sm:w-7 sm:h-7`; split editor number inputs use `inputMode="decimal"` (or `"numeric"` for shares).
+- **Multi-item flex rows on mobile**: rows combining info text + multiple action buttons (e.g. template section) use `flex-col sm:flex-row` — info on the top row with `flex-1 min-w-0`, amount + actions on the bottom row indented to align. Avoids a single `flex` row leaving zero space for text on narrow screens.
 
 ---
 

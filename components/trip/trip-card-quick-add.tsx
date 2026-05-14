@@ -31,6 +31,7 @@ export function TripCardQuickAdd({
           setOpen(true);
         }}
         aria-label={`Add expense to ${groupName}`}
+        data-tour="trip-card-add-btn"
         className="h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 shadow-sm shadow-cyan-500/25 active:scale-95 transition-all"
       >
         <Plus className="w-3.5 h-3.5" />

@@ -27,7 +27,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
             "Clear computes the minimum number of payments to clear all debts. Mark payments done or pay directly via UPI.",
         },
         {
-          target: "[data-tour='trip-kpis']",
+          target: "[data-tour='trip-charts']",
           page: `${base}/insights`,
           title: "Insights",
           description:
@@ -63,7 +63,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
         "This pre-loaded trip lets you explore the travel features with real data — expenses, balances, settlements, and AI-powered insights.",
     },
 
-    // 4 — Sample nest card (NEW)
+    // 4 — Sample nest card
     {
       target: "[data-tour='demo-nest']",
       page: "/groups",
@@ -72,13 +72,22 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
         "This pre-loaded nest shows shared tab features: recurring expense templates for rent, electricity and WiFi — log each month with one tap, then settle up.",
     },
 
-    // 5–8 — Inside the demo trip
+    // 5 — Quick-add button on a group card
+    {
+      target: "[data-tour='trip-card-add-btn']",
+      page: "/groups",
+      title: "Quick-add an expense",
+      description:
+        "Tap Add on any group card to log an expense in seconds — type what you spent and Clear parses the amount, payer, and split automatically.",
+    },
+
+    // 6–9 — Inside the demo trip
     ...tripSteps,
 
-    // 9 — All-groups insights nav
+    // 10 — All-groups insights charts
     {
-      target: "[data-tour='nav-insights']",
-      page: "/groups",
+      target: "[data-tour='all-insights-charts']",
+      page: "/insights",
       title: "Insights across all groups",
       description:
         "A portfolio view across every trip and nest — total spend, category habits, your most frequent companions, and smarter patterns over time.",

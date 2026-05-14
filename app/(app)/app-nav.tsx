@@ -12,10 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, Compass, BarChart2, LayoutGrid, LayoutDashboard, Sparkles } from "lucide-react";
+import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles } from "lucide-react";
 import { useTour } from "@/components/tour/tour-context";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { ClearLogo } from "@/components/shared/clear-logo";
 
 const NAV_LINKS = [
   { href: "/groups",   label: "Groups",   icon: LayoutGrid, tourId: "nav-trips"    },
@@ -47,13 +48,12 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
     <header className="sticky top-0 z-50 glass-nav">
       <div className="max-w-7xl mx-auto px-6 md:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/groups" className="flex items-center gap-2 group shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 group-hover:shadow-cyan-500/50 transition-shadow">
-            <Compass className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
-            Clear
-          </span>
+        <Link href="/groups" className="flex items-center shrink-0">
+          <ClearLogo
+            iconSize={28}
+            wordmarkClassName="text-xl text-slate-800 dark:text-slate-100"
+            className="flex items-center gap-2 group"
+          />
         </Link>
 
         {/* Nav links — hidden on mobile (bottom nav handles it), icon + label on desktop */}

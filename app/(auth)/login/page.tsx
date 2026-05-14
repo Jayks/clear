@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import LoginForm from "./login-form";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { ClearLogo } from "@/components/shared/clear-logo";
 
 export default async function LoginPage({
   searchParams,
@@ -25,9 +26,11 @@ export default async function LoginPage({
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 mb-4 shadow-lg shadow-cyan-500/25">
-            <span className="text-white text-2xl" style={{ fontFamily: "var(--font-fraunces)" }}>C</span>
-          </div>
+          <ClearLogo
+            iconSize={56}
+            showWordmark={false}
+            className="justify-center mb-4"
+          />
           <h1
             className="text-4xl text-slate-800 dark:text-slate-100"
             style={{ fontFamily: "var(--font-fraunces)" }}

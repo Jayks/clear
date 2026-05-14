@@ -145,7 +145,7 @@ export function QuickAddSheet({
           onDragEnd={(_, info) => {
             if (info.offset.y > 80 || info.velocity.y > 400) onClose();
           }}
-          className="fixed bottom-0 left-0 right-0 z-[51] glass rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col cursor-grab active:cursor-grabbing"
+          className="fixed bottom-0 left-0 right-0 z-[51] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-700/60 rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col cursor-grab active:cursor-grabbing"
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">

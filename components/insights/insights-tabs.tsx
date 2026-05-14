@@ -94,13 +94,13 @@ function TripsInsightsContent({ data, fmt, primaryCurrency }: {
 
       {/* Charts */}
       {data.tripCount > 1 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" data-tour="all-insights-charts">
           <TripsSpendBar data={data.byTrip} />
           <CategoryDonut data={data.topCategories} currency={primaryCurrency} />
         </div>
       )}
       {data.tripCount === 1 && (
-        <div className="mb-6 max-w-sm">
+        <div className="mb-6 max-w-sm" data-tour="all-insights-charts">
           <CategoryDonut data={data.topCategories} currency={primaryCurrency} />
         </div>
       )}
@@ -171,7 +171,7 @@ function NestsInsightsContent({ data, fmt }: {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" data-tour="all-insights-charts">
         <MonthlySpendBar data={data.monthlyTrend} currency="INR" />
         <CategoryDonut data={data.topCategories} currency="INR" />
       </div>

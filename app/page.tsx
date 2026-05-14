@@ -6,6 +6,7 @@ import {
   LayoutGrid, CalendarCheck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
 
 const HERO_IMAGE    = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85";
 const NEST_IMAGE    = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1920&q=85";
@@ -81,14 +82,11 @@ export default function LandingPage() {
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav className="glass-nav sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-md shadow-cyan-500/25">
-              <span className="text-white text-base font-bold" style={{ fontFamily: "var(--font-fraunces)" }}>C</span>
-            </div>
-            <span className="text-lg font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
-              Clear
-            </span>
-          </div>
+          <ClearLogo
+            iconSize={32}
+            wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100"
+            className="flex items-center gap-2.5"
+          />
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link href="/login" className="hidden sm:block text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
@@ -588,7 +586,7 @@ export default function LandingPage() {
           <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
           <div className="relative z-10">
             <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6 border border-white/30">
-              <span className="text-white text-2xl font-bold" style={{ fontFamily: "var(--font-fraunces)" }}>C</span>
+              <ClearIcon size={40} />
             </div>
             <h2 className="text-4xl sm:text-5xl text-white mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
               Ready to get clear?
@@ -608,10 +606,11 @@ export default function LandingPage() {
       <footer className="border-t border-white/40 dark:border-slate-700/40 bg-white/20 dark:bg-slate-900/20 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center">
-              <span className="text-white text-sm font-bold" style={{ fontFamily: "var(--font-fraunces)" }}>C</span>
-            </div>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200" style={{ fontFamily: "var(--font-fraunces)" }}>Clear</span>
+            <ClearLogo
+              iconSize={28}
+              wordmarkClassName="text-sm font-semibold text-slate-700 dark:text-slate-200"
+              className="flex items-center gap-2"
+            />
             <span className="text-slate-300 dark:text-slate-600">·</span>
             <span className="text-xs text-slate-400 dark:text-slate-500">Split it. Clear it.</span>
           </div>

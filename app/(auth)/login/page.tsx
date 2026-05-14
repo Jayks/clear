@@ -26,14 +26,14 @@ export default async function LoginPage({
 
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-10">
+        <div className="flex flex-col items-center mb-10">
           <ClearLogo
-            iconSize={56}
+            iconSize={72}
             showWordmark={false}
-            className="justify-center mb-4"
+            className="mb-5"
           />
           <h1
-            className="text-4xl text-slate-800 dark:text-slate-100"
+            className="text-5xl text-slate-800 dark:text-slate-100"
             style={{ fontFamily: "var(--font-fraunces)" }}
           >
             Clear

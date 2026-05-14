@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -7,6 +8,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 
 const HERO_IMAGE    = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85";
 const NEST_IMAGE    = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1920&q=85";
@@ -75,7 +77,10 @@ const tickerItems = [
   "Trekking groups", "Monthly rent", "Celebrations", "Family vacations",
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const user = await getCurrentUser();
+  if (user) redirect("/groups");
+
   return (
     <div className="overflow-x-hidden">
 

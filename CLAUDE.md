@@ -95,6 +95,20 @@ The `(app)/layout.tsx` and all `lib/db/queries/*.ts` files use `getCurrentUser()
 
 `QuickAddSheet` manages its own `createPortal` (renders at `document.body`) and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render the component from the parent, and never wrap it in an external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment) so exit animations work correctly. Members are lazy-fetched on first `isOpen=true` via a `fetchedRef`.
 
+### Login page — `intent` param for signup vs sign-in copy
+
+`app/(auth)/login/page.tsx` accepts an `intent=signup` search param. When present, the card shows "Create your account" / "Free to get started — no credit card needed." instead of the default "Sign in to Clear" / "Split expenses with anyone, anywhere." The `returnTo=/join/...` condition takes priority over `intent`.
+
+Convention: all "Get started" / "Start for free" CTAs on the marketing page link to `/login?intent=signup`. "Sign in" links go to `/login` (no param). Never add an `intent` param to sign-in links.
+
+### iOS apple-touch-icon
+
+Served via `metadata.icons.apple` in `app/layout.tsx`, pointing to `/api/pwa-icon?size=192`. Do NOT use `app/apple-icon.tsx` — the App Router file convention for apple icons does not work with Turbopack in Next.js 16.
+
+### Sign-out redirect
+
+`handleSignOut()` in `app/(app)/app-nav.tsx` redirects to `/` (marketing page) after sign-out. This is intentional — users land on the marketing page where they can re-sign in via "Sign in" or "Get started". Do not change this to `/login`.
+
 ### Supabase publishable key
 
 Uses new `sb_publishable_*` format for `NEXT_PUBLIC_SUPABASE_ANON_KEY` — @supabase/ssr handles it.

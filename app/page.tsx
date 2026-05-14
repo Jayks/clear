@@ -59,7 +59,7 @@ const steps = [
     n: "03",
     icon: Receipt,
     title: "Log expenses",
-    body: "One-off or recurring. Split equally, by amount, percentage, or shares.",
+    body: "Tap Add on any group card — type what you spent and Clear parses the amount, payer, and split. Or open the full form for more control.",
   },
   {
     n: "04",
@@ -92,7 +92,7 @@ export default function LandingPage() {
             <Link href="/login" className="hidden sm:block text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
               Sign in
             </Link>
-            <Link href="/login" className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5">
+            <Link href="/login?intent=signup" className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5">
               Get started <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -114,7 +114,7 @@ export default function LandingPage() {
             <div className="flex-1 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-8 shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 animate-pulse shrink-0" />
-                Trips & shared tabs · Free forever
+                Trips & shared tabs · Free to get started
               </div>
 
               <h1 className="text-5xl sm:text-6xl lg:text-[66px] xl:text-[72px] font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-7" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -130,7 +130,7 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-10">
-                <Link href="/login" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
+                <Link href="/login?intent=signup" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
                   Start for free <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a href="#how-it-works" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 glass text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 font-medium text-base py-3.5 px-9 rounded-2xl transition-all hover:shadow-md">
@@ -139,7 +139,7 @@ export default function LandingPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2">
-                {["Google sign-in", "No credit card", "Free forever"].map((t) => (
+                {["Google sign-in", "No credit card", "Free to get started", "Installs on iOS & Android"].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5 text-sm text-slate-400 dark:text-slate-300">
                     <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" /> {t}
                   </span>
@@ -412,7 +412,7 @@ export default function LandingPage() {
           {[
             "Recurring templates", "Monthly grouping", "QR code invites",
             "Guest members", "Real-time sync", "Per-group insights",
-            "Portfolio view", "UPI pay links", "CSV export", "AI expense parsing",
+            "Portfolio view", "UPI pay links", "CSV export", "Quick-add with AI", "Installs on any device",
           ].map((pill) => (
             <span key={pill} className="glass-sm rounded-full px-4 py-1.5 text-sm text-slate-600 dark:text-slate-300 border border-white/60 dark:border-slate-700/40">
               {pill}
@@ -592,9 +592,9 @@ export default function LandingPage() {
               Ready to get clear?
             </h2>
             <p className="text-teal-100 text-lg mb-10 max-w-sm mx-auto">
-              Create a trip or a nest in seconds. No subscriptions, no catch.
+              Create a trip or a nest in seconds. No credit card required.
             </p>
-            <Link href="/login" className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl shadow-teal-900/30 transition-all hover:-translate-y-0.5">
+            <Link href="/login?intent=signup" className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl shadow-teal-900/30 transition-all hover:-translate-y-0.5">
               Get started free <ArrowRight className="w-4 h-4" />
             </Link>
             <p className="text-teal-200/70 text-sm mt-5">Google sign-in · No credit card · Takes 30 seconds</p>

@@ -7,14 +7,15 @@ import { ClearLogo } from "@/components/shared/clear-logo";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; returnTo?: string }>;
+  searchParams: Promise<{ error?: string; returnTo?: string; intent?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (user) redirect("/groups");
 
-  const { error, returnTo } = await searchParams;
+  const { error, returnTo, intent } = await searchParams;
+  const isSignup = intent === "signup";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -45,11 +46,17 @@ export default async function LoginPage({
         {/* Glass card */}
         <div className="glass rounded-2xl p-8">
           <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-1">
-            {returnTo?.startsWith("/join") ? "Sign in to join the group" : "Sign in to Clear"}
+            {returnTo?.startsWith("/join")
+              ? "Sign in to join the group"
+              : isSignup
+              ? "Create your account"
+              : "Sign in to Clear"}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
             {returnTo?.startsWith("/join")
               ? "You'll be taken directly to the group invitation after signing in."
+              : isSignup
+              ? "Free to get started — no credit card needed."
               : "Split expenses with anyone, anywhere."}
           </p>
 

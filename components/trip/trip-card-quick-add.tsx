@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
 
 interface Props {
@@ -32,23 +31,20 @@ export function TripCardQuickAdd({
           setOpen(true);
         }}
         aria-label={`Add expense to ${groupName}`}
-        title="Quick add expense"
-        className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 transition-colors"
+        className="h-8 px-3 rounded-full flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 shadow-sm shadow-cyan-500/25 active:scale-95 transition-all"
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-3.5 h-3.5" />
+        Add
       </button>
-      <AnimatePresence>
-        {open && (
-          <QuickAddSheet
-            groupId={groupId}
-            groupName={groupName}
-            currency={currency}
-            groupStartDate={groupStartDate}
-            groupEndDate={groupEndDate}
-            onClose={() => setOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      <QuickAddSheet
+        groupId={groupId}
+        groupName={groupName}
+        currency={currency}
+        isOpen={open}
+        groupStartDate={groupStartDate}
+        groupEndDate={groupEndDate}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 }

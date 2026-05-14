@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { QuickAddSheet } from "./quick-add-sheet";
 
@@ -35,19 +34,16 @@ export function ExpenseQuickAddFab({
       >
         <Plus className="w-6 h-6 text-white" />
       </button>
-      <AnimatePresence>
-        {open && (
-          <QuickAddSheet
-            groupId={groupId}
-            groupName={groupName}
-            currency={currency}
-            members={members}
-            groupStartDate={groupStartDate}
-            groupEndDate={groupEndDate}
-            onClose={() => setOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      <QuickAddSheet
+        groupId={groupId}
+        groupName={groupName}
+        currency={currency}
+        isOpen={open}
+        members={members}
+        groupStartDate={groupStartDate}
+        groupEndDate={groupEndDate}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 }

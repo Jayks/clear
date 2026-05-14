@@ -6,10 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export const getCurrentUser = cache(async () => {
   const supabase = await createClient();
-  // getUser() validates the JWT against Supabase Auth. React cache() deduplicates this
-  // across the render tree so only one network call is made per server-side render.
-  const { data: { user } } = await supabase.auth.getUser();
-  return user ?? null;
+  // getSession() reads the JWT from the cookie locally — no network round-trip.
+  // Safe because proxy.ts (middleware) already called getUser() to validate the token
+  // before any server component runs. React cache() deduplicates across the render tree.
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user ?? null;
 });
 
 export async function getMembership(groupId: string, userId: string) {

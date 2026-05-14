@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db/client";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { and, eq, inArray } from "drizzle-orm";
@@ -10,8 +10,7 @@ import { seedDemoGroup } from "@/lib/demo/seed-demo-trip";
 import { seedDemoNest } from "@/lib/demo/seed-demo-nest";
 
 export async function ensureDemoGroup() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return;
 
   // Fetch all demo groups for this user

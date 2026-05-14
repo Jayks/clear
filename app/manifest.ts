@@ -5,6 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Clear — Split it. Clear it.",
     short_name: "Clear",
     description: "Group expense splitting for trips and households.",
+    id: "/",
+    scope: "/",
     start_url: "/groups",
     display: "standalone",
     background_color: "#EFF6FF",
@@ -15,6 +17,13 @@ export default function manifest(): MetadataRoute.Manifest {
         src: "/api/pwa-icon?size=192",
         sizes: "192x192",
         type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/api/pwa-icon?size=512",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
       },
       {
         src: "/api/pwa-icon?size=512",

@@ -4,21 +4,29 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { AddExpenseForm } from "./add-expense-form";
 
-export default async function NewExpensePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function NewExpensePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const [{ id }, { from }] = await Promise.all([params, searchParams]);
   const data = await getGroupWithMembers(id);
   if (!data) notFound();
 
   const { group, members } = data;
+  const backHref = from === "groups" ? "/groups" : `/groups/${id}/expenses`;
+  const backLabel = from === "groups" ? "Back to groups" : "Back to expenses";
 
   return (
     <div className="max-w-xl mx-auto">
       <Link
-        href={`/groups/${id}/expenses`}
+        href={backHref}
         className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to expenses
+        {backLabel}
       </Link>
 
       <h1 className="text-2xl text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>

@@ -348,19 +348,36 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 ### Quick-add sheet (bottom sheet)
 Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — **not** the `.glass` class. The `.glass` class (60% opacity) is too transparent when the sheet sits over the dark backdrop overlay. The sheet needs a near-solid surface.
 
-### Group card action buttons — image overlay pattern
-`TripCard` has **no footer**. All controls float on the cover image.
+### Group card action buttons — two-wrapper structure (critical)
 
-**Top-left badges** (`absolute top-3 left-3 z-10`): type badge (`[📍 Trip]` or `[🏠 Nest]`) + member count badge (`[👥 N]`). Both use `bg-black/40 backdrop-blur-sm` pill style. Consistent across all cards — no extra badges here.
+`TripCard` uses **two nested wrappers** to keep action buttons outside the `<Link>` while preserving the glass/rounded visual:
 
-**Top-right buttons** (`absolute top-3 right-3 z-10`): Add (`+`), Share, QR, and Quick-nav (`⋯`) — four buttons, all the same frosted-glass style:
+```
+<div>  ← outer: positioning context, hover effects, touch handlers. NO overflow-hidden.
+  <div class="glass rounded-2xl overflow-hidden">  ← inner: visual surface, clips image + ribbon
+    <Link href="/groups/[id]">  ← image area only
+      badges, ribbon, title/dates
+    </Link>
+  </div>
+  <div class="absolute top-3 right-3 z-10">  ← action buttons on OUTER div, outside Link
+    TripCardQuickAdd / TripCardShareButtons / ⋯ button
+  </div>
+  TripCardNavSheet
+</div>
+```
+
+**Why this matters:** React portals (QuickAddSheet, QR Dialog) bubble synthetic events through the React component tree, not the DOM tree. If these components are React-parented inside a `<Link>`, any click inside their portals reaches the Link and triggers navigation. Keeping all portal-spawning components outside the Link eliminates this entirely — no `e.stopPropagation()` patches needed.
+
+**Top-left badges** (`absolute top-3 left-3 z-10`, on image div inside Link): type badge + member count badge. Both `bg-black/40 backdrop-blur-sm` pill style. Same across all cards.
+
+**Top-right buttons** (`absolute top-3 right-3 z-10`, on outer div): Add (`+`), Share, QR, `⋯` — all the same frosted-glass style:
 ```
 bg-black/30 hover:bg-black/50 backdrop-blur-md text-white w-8 h-8 rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all
 ```
 
-**Sample ribbon** (demo cards only): diagonal amber strip at the bottom-right corner (`absolute`, `rotate-[-45deg]`, `bg-amber-500/90`, `pointer-events-none`). Clipped naturally by the card's `overflow-hidden rounded-2xl`. Text: `SAMPLE` (all-caps, `tracking-widest`).
+**Sample ribbon** (demo cards only): diagonal amber strip (`absolute bottom-[22px] right-[-30px] rotate-[-45deg]`, `pointer-events-none`). Clipped by the inner div's `overflow-hidden`. Text: `SAMPLE`.
 
-**Quick-nav sheet** (`TripCardNavSheet`): portal + AnimatePresence bottom sheet. Opens via `⋯` button click (desktop + mobile) or long-press anywhere on the card body (mobile, 500 ms). Shows four destinations — Members, Expenses, Settle Up, Insights — each as a tappable row with a cyan gradient icon. Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` (same as QuickAddSheet). `pointer-events-none` on ribbon, `WebkitTouchCallout: none` + `select-none` on card wrapper to suppress iOS image long-press menu and text selection.
+**Quick-nav sheet** (`TripCardNavSheet`): portal + AnimatePresence bottom sheet. Opens via `⋯` click or 500 ms long-press on card body. Four destinations: Members, Expenses, Settle Up, Insights. Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl`.
 
 ### Share button — join URL, not summary URL
 `TripCardShareButtons` shares `/join/[shareToken]` (invite page) so recipients can join the group. It does **not** share `/summary/[shareToken]` (the AI trip story). Uses the `Share2` lucide icon (standard OS share icon). The QR dialog encodes the join URL with copy text "Copy invite link" / "Scan to join this group".
@@ -482,6 +499,9 @@ Server components and query functions call `getCurrentUser()` from `lib/db/queri
 - **Mobile-first**: grids `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, multi-action rows `flex-col gap sm:flex-row`.
 - **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` for any type-specific label, flag, or category list.
 - **Date-range props**: name as `groupStartDate`/`groupEndDate` in components, `groupStart`/`groupEnd` in `DateContext`.
+- **Shared constants in `lib/utils.ts`**: `DEFAULT_CURRENCY` (`"INR"`), `SUPPORTED_CURRENCIES` (9-currency array), `CHART_AXIS_TICK` (`{ fontSize: 10, fill: "#94A3B8" }`). Import from here — never redeclare inline.
+- **`CATEGORY_VALUES`** exported from `lib/categories.ts` — deduped union of all trip + nest category value strings, typed as `[string, ...string[]]` for `z.enum()`. AI action Zod schemas use this instead of hardcoded arrays.
+- **`?from=groups` on expense new page**: `app/(app)/groups/[id]/expenses/new/page.tsx` reads `searchParams.from`. If `"groups"`, back button says "Back to groups" → `/groups`. Default is "Back to expenses" → `/groups/${id}/expenses`. The QuickAddSheet "Full form →" link passes `?from=groups` so users land back on the groups page.
 - **CategoryValue**: 16 categories across trip + nest (incl. `tour_package`) — defined in `lib/parser/parse-expense.ts`. AI actions validate against this union type.
 - **customCategory**: when `category === "other"`, a free-text `customCategory` field is required in `addExpenseSchema` (`.superRefine()` guard). Stored in `expenses.custom_category`. Display in `ExpenseCard` when non-null.
 - **Expense dates**: no trip date range restriction — users may log pre-booked expenses (flights, hotels) dated before the trip start.

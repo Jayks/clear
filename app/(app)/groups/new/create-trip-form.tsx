@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createGroupSchema, type CreateGroupInput } from "@/lib/validations/trip";
@@ -13,8 +14,7 @@ import { Upload, Loader2 } from "lucide-react";
 import { parseItineraryFromFile } from "@/app/actions/parse-itinerary";
 import { GROUP_CONFIG } from "@/lib/group-config";
 import type { GroupType } from "@/lib/group-config";
-
-const CURRENCIES = ["INR", "USD", "EUR", "GBP", "SGD", "AED", "JPY", "CAD", "AUD"];
+import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 
 export function CreateTripForm() {
   const router = useRouter();
@@ -225,7 +225,7 @@ export function CreateTripForm() {
             {...register("defaultCurrency")}
             className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
           >
-            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         {config.showBudget && (
@@ -246,13 +246,21 @@ export function CreateTripForm() {
         )}
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full py-2.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-      >
-        {submitting ? "Creating…" : `Create ${config.labels.singular.toLowerCase()}`}
-      </button>
+      <div className="flex gap-3">
+        <Link
+          href="/groups"
+          className="flex-1 py-2.5 text-center text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+        >
+          Cancel
+        </Link>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 py-2.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {submitting ? "Creating…" : `Create ${config.labels.singular.toLowerCase()}`}
+        </button>
+      </div>
     </form>
   );
 }

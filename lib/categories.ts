@@ -62,5 +62,13 @@ export const CATEGORY_HEX: Record<string, string> = {
   other:         "#64748B",
 };
 
+// All valid category value strings — used by AI action Zod schemas
+export const CATEGORY_VALUES = [
+  ...new Set([
+    ...TRIP_CATEGORIES.map((c) => c.value),
+    ...NEST_CATEGORIES.map((c) => c.value),
+  ]),
+] as [string, ...string[]];
+
 // Legacy export — components that haven't migrated yet
 export const CATEGORIES = TRIP_CATEGORIES;

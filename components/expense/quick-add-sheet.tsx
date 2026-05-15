@@ -212,7 +212,7 @@ export function QuickAddSheet({
                     )}
                   </button>
                   <Link
-                    href={`/groups/${groupId}/expenses/new`}
+                    href={`/groups/${groupId}/expenses/new?from=groups`}
                     onClick={onClose}
                     className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors whitespace-nowrap"
                   >

@@ -2,7 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { DaySpend } from "@/lib/insights/trip-insights";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, CHART_AXIS_TICK } from "@/lib/utils";
 
 interface Props {
   data: DaySpend[];
@@ -38,13 +38,13 @@ export function DailySpendBar({ data, currency }: Props) {
         <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 10, fill: "#94A3B8" }}
+            tick={CHART_AXIS_TICK}
             axisLine={false}
             tickLine={false}
             interval={data.length > 8 ? Math.floor(data.length / 6) : 0}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: "#94A3B8" }}
+            tick={CHART_AXIS_TICK}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}

@@ -2,7 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { TripSummary } from "@/lib/insights/all-trips-insights";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, CHART_AXIS_TICK } from "@/lib/utils";
 
 interface Props {
   data: TripSummary[];
@@ -36,13 +36,13 @@ export function TripsSpendBar({ data }: Props) {
         <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
           <XAxis
             dataKey="name"
-            tick={{ fontSize: 10, fill: "#94A3B8" }}
+            tick={CHART_AXIS_TICK}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v: string) => v.length > 10 ? v.slice(0, 10) + "…" : v}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: "#94A3B8" }}
+            tick={CHART_AXIS_TICK}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}

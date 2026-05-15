@@ -3,18 +3,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { ParsedExpense, CategoryValue } from "@/lib/parser/parse-expense";
+import { CATEGORY_VALUES } from "@/lib/categories";
 
 const responseSchema = z.object({
   description: z.string().optional().default(""),
   amount: z.number().positive().nullable().optional(),
-  category: z
-    .enum([
-      "food", "accommodation", "transport", "sightseeing", "shopping", "activities", "groceries", "tour_package",
-      "rent", "utilities", "subscriptions", "healthcare", "maintenance", "supplies",
-      "other",
-    ])
-    .optional()
-    .default("other"),
+  category: z.enum(CATEGORY_VALUES).optional().default("other"),
   paidByMemberId: z.string().nullable().optional(),
   splitMemberIds: z.array(z.string()).nullable().optional(),
   splitCount: z.union([z.number().int().positive(), z.null()]).optional(),

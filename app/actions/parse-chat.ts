@@ -3,6 +3,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { CategoryValue } from "@/lib/parser/parse-expense";
+import { CATEGORY_VALUES } from "@/lib/categories";
 
 export interface ChatParsedExpense {
   description: string;
@@ -18,13 +19,7 @@ export interface ChatParsedExpense {
 const itemSchema = z.object({
   description: z.string().min(1),
   amount: z.number().positive(),
-  category: z
-    .enum([
-      "food", "accommodation", "transport", "sightseeing", "shopping", "activities", "groceries", "tour_package",
-      "rent", "utilities", "subscriptions", "healthcare", "maintenance", "supplies",
-      "other",
-    ])
-    .default("other"),
+  category: z.enum(CATEGORY_VALUES).default("other"),
   paidByMemberId: z.string().nullable().optional(),
   splitMemberIds: z.array(z.string()).nullable().optional(),
   splitCount: z.number().int().positive().nullable().optional(),

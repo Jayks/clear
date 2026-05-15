@@ -5,9 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const DEFAULT_CURRENCY = "INR";
+export const SUPPORTED_CURRENCIES = ["INR", "USD", "EUR", "GBP", "SGD", "AED", "JPY", "CAD", "AUD"] as const;
+export const CHART_AXIS_TICK = { fontSize: 10, fill: "#94A3B8" } as const;
+
 export function formatCurrency(
   amount: number,
-  currency = "INR",
+  currency = DEFAULT_CURRENCY,
   locale = "en-IN"
 ): string {
   return new Intl.NumberFormat(locale, {

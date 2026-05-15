@@ -44,8 +44,10 @@ export function TripCard({ group, memberCount }: TripCardProps) {
   }
 
   return (
+    // Outer div: positioning context for action buttons, hover effects, touch handlers.
+    // No overflow-hidden here — that lives on the inner glass div so buttons aren't clipped.
     <div
-      className={`group/card glass rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-200 hover:-translate-y-0.5 select-none${group.isDemo ? " ring-2 ring-amber-400/40" : ""}`}
+      className="group/card relative hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-200 hover:-translate-y-0.5 select-none"
       data-tour={group.isDemo ? (isNest ? "demo-nest" : "demo-trip") : undefined}
       onTouchStart={startLongPress}
       onTouchEnd={cancelLongPress}
@@ -53,84 +55,89 @@ export function TripCard({ group, memberCount }: TripCardProps) {
       onTouchCancel={cancelLongPress}
       style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
     >
-      <Link
-        href={`/groups/${group.id}`}
-        className="block"
-        onClick={(e) => {
-          if (suppressNextClick.current) {
-            e.preventDefault();
-            suppressNextClick.current = false;
-          }
-        }}
-      >
-        <div className="h-44 relative">
-          {group.coverPhotoUrl ? (
-            <Image
-              src={group.coverPhotoUrl}
-              alt={group.name}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-              className="object-cover"
-            />
-          ) : (
-            <div className={`w-full h-full bg-gradient-to-br ${isNest ? "from-teal-500 to-emerald-500" : "from-cyan-500 to-teal-500"}`} />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
+      {/* Inner div: glass surface + overflow-hidden for image clipping and ribbon */}
+      <div className={`glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : ""}`}>
+        <Link
+          href={`/groups/${group.id}`}
+          className="block"
+          onClick={(e) => {
+            if (suppressNextClick.current) {
+              e.preventDefault();
+              suppressNextClick.current = false;
+            }
+          }}
+        >
+          <div className="h-44 relative">
+            {group.coverPhotoUrl ? (
+              <Image
+                src={group.coverPhotoUrl}
+                alt={group.name}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                className="object-cover"
+              />
+            ) : (
+              <div className={`w-full h-full bg-gradient-to-br ${isNest ? "from-teal-500 to-emerald-500" : "from-cyan-500 to-teal-500"}`} />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
 
-          {/* Type + member count badges — top left */}
-          <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
-              {isNest ? <Home className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
-              {isNest ? "Nest" : "Trip"}
-            </span>
-            <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
-              <Users className="w-3 h-3" />
-              {memberCount}
-            </span>
-          </div>
-
-          {/* Sample ribbon — bottom-right corner diagonal */}
-          {group.isDemo && (
-            <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
-              SAMPLE
+            {/* Type + member count badges — top left */}
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                {isNest ? <Home className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+                {isNest ? "Nest" : "Trip"}
+              </span>
+              <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                <Users className="w-3 h-3" />
+                {memberCount}
+              </span>
             </div>
-          )}
 
-          {/* Action buttons — top right */}
-          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
-            <TripCardQuickAdd
-              groupId={group.id}
-              groupName={group.name}
-              currency={group.defaultCurrency}
-              groupStartDate={group.startDate}
-              groupEndDate={group.endDate}
-            />
-            <TripCardShareButtons url={joinUrl} groupName={group.name} />
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsNavOpen(true); }}
-              className={floatBtn}
-              aria-label="Quick navigation"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-          </div>
+            {/* Sample ribbon — bottom-right corner diagonal, clipped by overflow-hidden */}
+            {group.isDemo && (
+              <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
+                SAMPLE
+              </div>
+            )}
 
-          <div className="absolute bottom-3 left-4 right-4">
-            <h3 className="text-white text-xl truncate" style={{ fontFamily: "var(--font-fraunces)" }}>
-              {group.name}
-            </h3>
-            {isNest ? (
-              <p className="text-white/75 text-xs mt-0.5">Shared tab</p>
-            ) : (group.startDate || group.endDate) ? (
-              <p className="text-white/75 text-xs mt-0.5">
-                {group.startDate ? formatDate(group.startDate) : ""}
-                {group.startDate && group.endDate ? " → " : ""}
-                {group.endDate ? formatDate(group.endDate) : ""}
-              </p>
-            ) : null}
+            <div className="absolute bottom-3 left-4 right-4">
+              <h3 className="text-white text-xl truncate" style={{ fontFamily: "var(--font-fraunces)" }}>
+                {group.name}
+              </h3>
+              {isNest ? (
+                <p className="text-white/75 text-xs mt-0.5">Shared tab</p>
+              ) : (group.startDate || group.endDate) ? (
+                <p className="text-white/75 text-xs mt-0.5">
+                  {group.startDate ? formatDate(group.startDate) : ""}
+                  {group.startDate && group.endDate ? " → " : ""}
+                  {group.endDate ? formatDate(group.endDate) : ""}
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
+
+      {/* Action buttons — positioned on the outer div, outside the Link entirely.
+          This prevents React portal event bubbling (QuickAddSheet, QR Dialog) from
+          reaching the Link and triggering unwanted navigation. */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+        <TripCardQuickAdd
+          groupId={group.id}
+          groupName={group.name}
+          currency={group.defaultCurrency}
+          groupStartDate={group.startDate}
+          groupEndDate={group.endDate}
+        />
+        <TripCardShareButtons url={joinUrl} groupName={group.name} />
+        <button
+          onClick={() => setIsNavOpen(true)}
+          className={floatBtn}
+          aria-label="Quick navigation"
+        >
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
 
       <TripCardNavSheet
         isOpen={isNavOpen}

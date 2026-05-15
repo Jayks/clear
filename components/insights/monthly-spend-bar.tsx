@@ -1,7 +1,7 @@
 "use client";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, CHART_AXIS_TICK } from "@/lib/utils";
 
 export interface MonthSpend {
   label: string;   // "May '26"
@@ -61,12 +61,12 @@ export function MonthlySpendBar({ data, currency }: Props) {
         <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 10, fill: "#94A3B8" }}
+            tick={CHART_AXIS_TICK}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: "#94A3B8" }}
+            tick={CHART_AXIS_TICK}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}

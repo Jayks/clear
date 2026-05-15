@@ -30,8 +30,10 @@ export function TripCardShareButtons({ url, groupName }: Props) {
       try {
         await navigator.share({ title: groupName, text: `Join ${groupName} on Clear!`, url });
         return;
-      } catch {
-        // cancelled or unsupported — fall through to clipboard
+      } catch (err) {
+        // User dismissed the native share sheet — don't fall through to clipboard
+        if (err instanceof Error && err.name === "AbortError") return;
+        // Other errors (unsupported data etc.) — fall through to clipboard copy
       }
     }
     try {
@@ -87,6 +89,12 @@ export function TripCardShareButtons({ url, groupName }: Props) {
             className="w-full py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             Copy invite link
+          </button>
+          <button
+            onClick={() => setQrOpen(false)}
+            className="w-full py-2 text-sm font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+          >
+            Close
           </button>
         </DialogContent>
       </Dialog>

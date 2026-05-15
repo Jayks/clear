@@ -31,6 +31,16 @@ export function TripCard({ group, memberCount }: TripCardProps) {
   // Link's onClick block that click so a long-press opens the nav sheet instead
   // of navigating.
   const suppressNextClick = useRef(false);
+  // When the QR dialog closes on backdrop click, the backdrop disappears and the
+  // same click fires on whatever is at those coordinates — often the ⋯ button.
+  // Block the ⋯ button for 300 ms after the dialog closes to absorb that event.
+  const navBlockedRef = useRef(false);
+  function handleQrOpenChange(open: boolean) {
+    if (!open) {
+      navBlockedRef.current = true;
+      setTimeout(() => { navBlockedRef.current = false; }, 300);
+    }
+  }
 
   function startLongPress() {
     longPressTimer.current = setTimeout(() => {
@@ -132,9 +142,9 @@ export function TripCard({ group, memberCount }: TripCardProps) {
           groupStartDate={group.startDate}
           groupEndDate={group.endDate}
         />
-        <TripCardShareButtons url={joinUrl} groupName={group.name} />
+        <TripCardShareButtons url={joinUrl} groupName={group.name} onQrOpenChange={handleQrOpenChange} />
         <button
-          onClick={() => setIsNavOpen(true)}
+          onClick={() => { if (!navBlockedRef.current) setIsNavOpen(true); }}
           className={floatBtn}
           aria-label="Quick navigation"
         >

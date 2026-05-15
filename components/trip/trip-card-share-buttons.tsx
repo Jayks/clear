@@ -14,13 +14,19 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 interface Props {
   url: string;
   groupName: string;
+  onQrOpenChange?: (open: boolean) => void;
 }
 
 const btnClass = "w-8 h-8 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
-export function TripCardShareButtons({ url, groupName }: Props) {
+export function TripCardShareButtons({ url, groupName, onQrOpenChange }: Props) {
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+
+  function handleQrOpenChange(open: boolean) {
+    setQrOpen(open);
+    onQrOpenChange?.(open);
+  }
 
   async function handleShare(e: React.MouseEvent) {
     e.preventDefault();
@@ -49,7 +55,7 @@ export function TripCardShareButtons({ url, groupName }: Props) {
   function handleQr(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setQrOpen(true);
+    handleQrOpenChange(true);
   }
 
   return (
@@ -65,7 +71,7 @@ export function TripCardShareButtons({ url, groupName }: Props) {
         <QrCode className="w-4 h-4" />
       </button>
 
-      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+      <Dialog open={qrOpen} onOpenChange={handleQrOpenChange}>
         <DialogContent className="glass border-white/70 dark:border-slate-700/60 max-w-xs p-6 flex flex-col items-center gap-4">
           <h3
             className="text-slate-800 dark:text-slate-100 font-semibold text-base text-center"
@@ -91,7 +97,7 @@ export function TripCardShareButtons({ url, groupName }: Props) {
             Copy invite link
           </button>
           <button
-            onClick={() => setQrOpen(false)}
+            onClick={() => handleQrOpenChange(false)}
             className="w-full py-2 text-sm font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
             Close

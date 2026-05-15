@@ -31,12 +31,15 @@ export function TripCard({ group, memberCount }: TripCardProps) {
   // Link's onClick block that click so a long-press opens the nav sheet instead
   // of navigating.
   const suppressNextClick = useRef(false);
-  // When the QR dialog closes on backdrop click, the backdrop disappears and the
-  // same click fires on whatever is at those coordinates — often the ⋯ button.
-  // Block the ⋯ button for 300 ms after the dialog closes to absorb that event.
+  // When the QR dialog closes its backdrop unmounts before touchend fires.
+  // React stops processing synthetic events on unmounted elements, so the card's
+  // onTouchEnd={cancelLongPress} never runs — leaving the 500ms timer live.
+  // Explicitly cancel the timer here, and block the ⋯ button for 300ms to
+  // absorb the stray click event that fires after the backdrop disappears.
   const navBlockedRef = useRef(false);
   function handleQrOpenChange(open: boolean) {
     if (!open) {
+      cancelLongPress();
       navBlockedRef.current = true;
       setTimeout(() => { navBlockedRef.current = false; }, 300);
     }
@@ -132,9 +135,13 @@ export function TripCard({ group, memberCount }: TripCardProps) {
       </div>
 
       {/* Action buttons — positioned on the outer div, outside the Link entirely.
-          This prevents React portal event bubbling (QuickAddSheet, QR Dialog) from
-          reaching the Link and triggering unwanted navigation. */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+          onTouchStart stopPropagation prevents touches on these buttons (and their
+          portals — QuickAddSheet, QR Dialog) from bubbling to the outer card div's
+          startLongPress handler, which would otherwise start a 500ms nav-sheet timer. */}
+      <div
+        className="absolute top-3 right-3 z-10 flex items-center gap-1.5"
+        onTouchStart={(e) => e.stopPropagation()}
+      >
         <TripCardQuickAdd
           groupId={group.id}
           groupName={group.name}

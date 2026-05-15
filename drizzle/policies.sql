@@ -146,6 +146,11 @@ alter publication supabase_realtime add table settlements;
 alter publication supabase_realtime add table group_members;
 
 
+-- ── indexes ───────────────────────────────────────────────────────────────────
+-- Applied separately via drizzle/indexes.sql in Supabase SQL Editor.
+-- Not managed by drizzle-kit — run indexes.sql once alongside this file.
+
+
 -- ── display_name backfill ─────────────────────────────────────────────────────
 -- Run once after first users join
 

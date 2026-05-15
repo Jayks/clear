@@ -19,9 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ExpensesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, expenses] = await Promise.all([
+  const [data, expenses, templates] = await Promise.all([
     getGroupWithMembers(id),
     getExpenses(id),
+    getGroupTemplates(id),
   ]);
   if (!data) notFound();
 
@@ -29,8 +30,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   const isAdmin = currentMember?.role === "admin";
   const isNest = group.groupType === "nest";
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-
-  const templates = isNest ? await getGroupTemplates(id) : [];
+  const templateList = isNest ? templates : [];
 
   return (
     <div>
@@ -79,7 +79,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
       {/* Recurring templates — nest only */}
       {isNest && (
         <TemplateSection
-          templates={templates}
+          templates={templateList}
           members={members}
           groupId={id}
           currency={group.defaultCurrency}

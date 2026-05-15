@@ -1,24 +1,15 @@
 import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
-import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, desc, inArray, and, sql } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/db/queries/auth";
-
-async function assertMember(groupId: string, userId: string): Promise<boolean> {
-  const [row] = await db
-    .select()
-    .from(groupMembers)
-    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
-  return !!row;
-}
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
 export async function getExpenses(groupId: string) {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const isMember = await assertMember(groupId, user.id);
-  if (!isMember) return [];
+  const membership = await getMembership(groupId, user.id);
+  if (!membership) return [];
 
   return db
     .select()
@@ -31,8 +22,8 @@ export async function getGroupTemplates(groupId: string) {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const isMember = await assertMember(groupId, user.id);
-  if (!isMember) return [];
+  const membership = await getMembership(groupId, user.id);
+  if (!membership) return [];
 
   const templates = await db
     .select()
@@ -42,10 +33,31 @@ export async function getGroupTemplates(groupId: string) {
 
   if (templates.length === 0) return [];
 
-  const splits = await db
-    .select()
-    .from(expenseSplits)
-    .where(inArray(expenseSplits.expenseId, templates.map((t) => t.id)));
+  const now = new Date();
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+
+  const [splits, loggedThisMonth] = await Promise.all([
+    db
+      .select()
+      .from(expenseSplits)
+      .where(inArray(expenseSplits.expenseId, templates.map((t) => t.id))),
+    db
+      .select({
+        sourceTemplateId: expenses.sourceTemplateId,
+        expenseDate: expenses.expenseDate,
+      })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.groupId, groupId),
+          eq(expenses.isTemplate, false),
+          sql`${expenses.sourceTemplateId} = ANY(ARRAY[${sql.join(templates.map((t) => sql`${t.id}::uuid`), sql`, `)}])`,
+          sql`${expenses.expenseDate} >= ${monthStart}`,
+          sql`${expenses.expenseDate} <= ${monthEnd}`
+        )
+      ),
+  ]);
 
   const splitsByTemplate = new Map<string, typeof splits>();
   for (const s of splits) {
@@ -53,29 +65,6 @@ export async function getGroupTemplates(groupId: string) {
     arr.push(s);
     splitsByTemplate.set(s.expenseId, arr);
   }
-
-  // For each template, find the most recent logged instance this calendar month
-  const now = new Date();
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
-
-  const loggedThisMonth = templates.length > 0
-    ? await db
-        .select({
-          sourceTemplateId: expenses.sourceTemplateId,
-          expenseDate: expenses.expenseDate,
-        })
-        .from(expenses)
-        .where(
-          and(
-            eq(expenses.groupId, groupId),
-            eq(expenses.isTemplate, false),
-            sql`${expenses.sourceTemplateId} = ANY(ARRAY[${sql.join(templates.map((t) => sql`${t.id}::uuid`), sql`, `)}])`,
-            sql`${expenses.expenseDate} >= ${monthStart}`,
-            sql`${expenses.expenseDate} <= ${monthEnd}`
-          )
-        )
-    : [];
 
   const loggedMap = new Map<string, string>(); // templateId → expenseDate
   for (const row of loggedThisMonth) {
@@ -97,8 +86,8 @@ export async function getExpenseWithSplits(expenseId: string) {
   const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
   if (!expense) return null;
 
-  const isMember = await assertMember(expense.groupId, user.id);
-  if (!isMember) return null;
+  const membership = await getMembership(expense.groupId, user.id);
+  if (!membership) return null;
 
   const splits = await db
     .select()
@@ -117,8 +106,8 @@ export async function getTemplateWithSplits(templateId: string) {
   );
   if (!template) return null;
 
-  const isMember = await assertMember(template.groupId, user.id);
-  if (!isMember) return null;
+  const membership = await getMembership(template.groupId, user.id);
+  if (!membership) return null;
 
   const splits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, templateId));
@@ -143,11 +132,17 @@ export async function getMonthlyExpenseSummary(groupId: string) {
       )
     );
 
-  if (monthExpenses.length === 0) return { total: 0, byMember: {} as Record<string, number>, monthLabel: "", expenseIds: [] as string[] };
+  if (monthExpenses.length === 0) return { total: 0, byMember: {} as Record<string, number>, byPayer: {} as Record<string, number>, monthLabel: "", expenseIds: [] as string[] };
 
   const monthLabel = now.toLocaleString("en-IN", { month: "long", year: "numeric" });
   const total = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const expenseIds = monthExpenses.map((e) => e.id);
+
+  // Per-payer: amount paid this month
+  const byPayer: Record<string, number> = {};
+  for (const e of monthExpenses) {
+    byPayer[e.paidByMemberId] = (byPayer[e.paidByMemberId] ?? 0) + Number(e.amount);
+  }
 
   const splits = expenseIds.length > 0
     ? await db.select().from(expenseSplits).where(inArray(expenseSplits.expenseId, expenseIds))
@@ -159,15 +154,15 @@ export async function getMonthlyExpenseSummary(groupId: string) {
     byMember[s.memberId] = (byMember[s.memberId] ?? 0) + Number(s.shareAmount);
   }
 
-  return { total, byMember, monthLabel, expenseIds };
+  return { total, byMember, byPayer, monthLabel, expenseIds };
 }
 
 export async function getGroupExpensesWithSplits(groupId: string) {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const isMember = await assertMember(groupId, user.id);
-  if (!isMember) return [];
+  const membership = await getMembership(groupId, user.id);
+  if (!membership) return [];
 
   const groupExpenses = await db
     .select()

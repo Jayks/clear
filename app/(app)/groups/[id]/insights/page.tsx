@@ -1,15 +1,16 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/shared/skeleton";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupExpensesWithSplits } from "@/lib/db/queries/expenses";
-import { getOtherTripsSummary } from "@/lib/db/queries/insights";
 import { computeTripInsights } from "@/lib/insights/trip-insights";
 import { computeGroupRoles } from "@/lib/insights/group-roles";
-import { computeSpendTrajectory, computeCrossTripInsights } from "@/lib/insights/cross-trip";
+import { computeSpendTrajectory } from "@/lib/insights/cross-trip";
+import { CrossTripSection } from "./cross-trip-section";
 import { KpiCard } from "@/components/insights/kpi-card";
 import { SmartInsightCard } from "@/components/insights/smart-insight-card";
 import { GroupRolesCard } from "@/components/insights/group-roles-card";
 import { PaceTrackerCard } from "@/components/insights/pace-tracker-card";
-import { CrossTripCard } from "@/components/insights/cross-trip-card";
 import { AnimatedList } from "@/components/shared/animated-list";
 import { CategoryDonut } from "@/components/insights/category-donut";
 import { DailySpendBar } from "@/components/insights/daily-spend-bar";
@@ -22,10 +23,9 @@ import Link from "next/link";
 
 export default async function GroupInsightsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [tripData, expensesWithSplits, otherTrips] = await Promise.all([
+  const [tripData, expensesWithSplits] = await Promise.all([
     getGroupWithMembers(id),
     getGroupExpensesWithSplits(id),
-    getOtherTripsSummary(id),
   ]);
   if (!tripData) notFound();
 
@@ -79,20 +79,9 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
     budget: group.budget ? Number(group.budget) : null,
   }) : null;
 
-  const crossTripInsights = !isNest ? computeCrossTripInsights({
-    current: {
-      totalSpend: insights.totalSpend,
-      memberCount: members.length,
-      tripDays: insights.tripDays,
-      currency,
-      topCategory: insights.topCategory?.category ?? null,
-      topCategoryPct: insights.topCategory?.percentage ?? 0,
-      perPersonDaily: insights.tripDays > 0
-        ? Math.round(insights.perPerson / insights.tripDays)
-        : 0,
-    },
-    others: otherTrips,
-  }) : [];
+  const perPersonDaily = !isNest && insights.tripDays > 0
+    ? Math.round(insights.perPerson / insights.tripDays)
+    : 0;
 
   if (expensesWithSplits.length === 0) {
     return (
@@ -175,9 +164,20 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
         <GroupRolesCard data={groupRoles} />
       </div>
 
-      {/* Cross-group comparison — trip only */}
-      {!isNest && crossTripInsights.length > 0 && (
-        <CrossTripCard insights={crossTripInsights} />
+      {/* Cross-group comparison — trip only, streams in after main charts */}
+      {!isNest && (
+        <Suspense fallback={<Skeleton className="h-24 rounded-xl mb-6" />}>
+          <CrossTripSection
+            groupId={id}
+            totalSpend={insights.totalSpend}
+            memberCount={members.length}
+            tripDays={insights.tripDays}
+            currency={currency}
+            topCategory={insights.topCategory?.category ?? null}
+            topCategoryPct={insights.topCategory?.percentage ?? 0}
+            perPersonDaily={perPersonDaily}
+          />
+        </Suspense>
       )}
 
       {/* Plan vs Reality — trip only */}

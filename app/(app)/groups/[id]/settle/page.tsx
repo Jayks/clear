@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getBalances, getSettlements } from "@/lib/db/queries/balances";
-import { getGroupExpensesWithSplits, getMonthlyExpenseSummary } from "@/lib/db/queries/expenses";
+import { getMonthlyExpenseSummary } from "@/lib/db/queries/expenses";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { CountUp } from "@/components/shared/count-up";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/shared/skeleton";
+import { SettleBreakdownSection } from "./settle-breakdown-section";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -18,14 +21,12 @@ import { formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import { MarkPaidButton } from "./mark-paid-button";
 import { UpiPayButton } from "./upi-pay-button";
 import { WhatsAppRemindButton } from "./whatsapp-remind-button";
-import { SettlementBreakdown } from "@/components/settlement/settlement-breakdown";
 
 export default async function SettlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, settlementHistory, expensesWithSplits, { balances, suggestions }] = await Promise.all([
+  const [data, settlementHistory, { balances, suggestions }] = await Promise.all([
     getGroupWithMembers(id),
     getSettlements(id),
-    getGroupExpensesWithSplits(id),
     getBalances(id),
   ]);
   if (!data) notFound();
@@ -118,20 +119,14 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
             )}
-            {members.map((m) => {
-              const paid = expensesWithSplits
-                .filter((e) => e.expense.paidByMemberId === m.id && monthlySummary.expenseIds.includes(e.expense.id))
-                .reduce((s, e) => s + Number(e.expense.amount), 0);
-              if (paid === 0 || m.id !== currentMember?.id) return null;
-              return (
-                <div key={m.id}>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">You paid</p>
-                  <p className="text-base font-semibold text-emerald-600 dark:text-emerald-400 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
-                    {formatCurrency(paid, group.defaultCurrency)}
-                  </p>
-                </div>
-              );
-            })}
+            {currentMember && (monthlySummary.byPayer[currentMember.id] ?? 0) > 0 && (
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">You paid</p>
+                <p className="text-base font-semibold text-emerald-600 dark:text-emerald-400 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
+                  {formatCurrency(monthlySummary.byPayer[currentMember.id], group.defaultCurrency)}
+                </p>
+              </div>
+            )}
           </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
             Running balance below includes all months combined.
@@ -238,15 +233,17 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
         </>
       )}
 
-      {/* Breakdown */}
-      <SettlementBreakdown
-        expensesWithSplits={expensesWithSplits}
-        members={members}
-        balances={balances}
-        suggestions={suggestions}
-        currency={group.defaultCurrency}
-        pastSettlementsTotal={pastSettlementsTotal}
-      />
+      {/* Breakdown — streams in after balance grid */}
+      <Suspense fallback={<Skeleton className="h-24 rounded-xl mt-6" />}>
+        <SettleBreakdownSection
+          groupId={id}
+          members={members}
+          balances={balances}
+          suggestions={suggestions}
+          currency={group.defaultCurrency}
+          pastSettlementsTotal={pastSettlementsTotal}
+        />
+      </Suspense>
     </div>
   );
 }

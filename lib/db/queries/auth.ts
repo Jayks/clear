@@ -12,10 +12,10 @@ export const getCurrentUser = cache(async () => {
   return user ?? null;
 });
 
-export async function getMembership(groupId: string, userId: string) {
+export const getMembership = cache(async (groupId: string, userId: string) => {
   const [m] = await db
     .select()
     .from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
   return m ?? null;
-}
+});

@@ -69,11 +69,14 @@ if (process.env.NODE_ENV !== 'production') globalThis._pgClient = client;
 
 ### proxy.ts (Next.js 16)
 
-Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `middleware`).
+Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `middleware`). The `config.matcher` uses an explicit route list (`/groups/:path*`, `/insights/:path*`, `/admin/:path*`, `/join/:path*`, `/login`, `/`) — not the old catch-all regex. This limits the Supabase Auth call to only routes that need it.
 
 ### Auth pattern — always use `getCurrentUser()`, never raw `getUser()`
 
-`lib/db/queries/auth.ts` exports a React-`cache()`-wrapped `getCurrentUser()` that calls `getUser()` (validates JWT against Supabase Auth). React `cache()` deduplicates it — only one network call per server-side render regardless of how many components call it.
+`lib/db/queries/auth.ts` exports two React-`cache()`-wrapped helpers:
+
+- **`getCurrentUser()`** — calls `getUser()` (validates JWT against Supabase Auth). One network call per server render, deduplicated across the whole RSC tree.
+- **`getMembership(groupId, userId)`** — fetches a single `group_members` row. Also `cache()`-wrapped, so all query functions on the same page (e.g. `getGroupWithMembers`, `getExpenses`, `getBalances` fired in parallel) share one DB lookup instead of each firing their own.
 
 ```typescript
 // ✅ correct — deduplicated across layout + all query functions, one validated network call
@@ -418,6 +421,7 @@ clear/
 │   ├── validations/trip.ts + expense.ts (addExpenseSchema + addTemplateSchema) + settlement.ts
 │   ├── utils.ts
 ├── drizzle/policies.sql
+├── drizzle/indexes.sql          # DB indexes — apply manually in Supabase SQL Editor (not drizzle-kit)
 ├── drizzle.config.ts, proxy.ts
 ```
 
@@ -425,7 +429,7 @@ clear/
 
 ## 10. Auth & Realtime
 
-**Auth**: Google OAuth via Supabase. `proxy.ts` (middleware) calls `supabase.auth.getUser()` on every request — validates + refreshes the session cookie. Protected routes: `/groups`, `/join`, `/admin`.
+**Auth**: Google OAuth via Supabase. `proxy.ts` (middleware) calls `supabase.auth.getUser()` on protected routes only (explicit matcher — see proxy.ts gotcha above) — validates + refreshes the session cookie. Protected routes: `/groups`, `/insights`, `/join`, `/admin`.
 
 Server components and query functions call `getCurrentUser()` from `lib/db/queries/auth.ts`, which calls `supabase.auth.getUser()` (validates JWT against Supabase Auth server). React `cache()` deduplicates all calls within the same render tree — only one network round-trip per server render. `ensureDemoGroup()` also uses `getCurrentUser()` so it shares the cached result (no extra auth call).
 

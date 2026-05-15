@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, and, count, sql } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/db/queries/auth";
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
 export async function getGroups() {
   const user = await getCurrentUser();
@@ -47,11 +47,7 @@ export async function getGroupWithMembers(groupId: string) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const [membership] = await db
-    .select()
-    .from(groupMembers)
-    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, user.id)));
-
+  const membership = await getMembership(groupId, user.id);
   if (!membership) return null;
 
   const [[group], rawMembers] = await Promise.all([

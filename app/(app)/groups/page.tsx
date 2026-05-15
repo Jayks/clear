@@ -7,8 +7,7 @@ import { ensureDemoGroup } from "@/app/actions/demo";
 import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 
 export default async function GroupsPage() {
-  await ensureDemoGroup();
-  const [groups, archived] = await Promise.all([getGroups(), getArchivedGroups()]);
+  const [, groups, archived] = await Promise.all([ensureDemoGroup(), getGroups(), getArchivedGroups()]);
 
   return (
     <div>

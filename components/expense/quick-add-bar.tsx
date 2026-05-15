@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Zap, X, Sparkles, Loader2, CalendarDays, Mic, MicOff } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Zap, X, Sparkles, Loader2, CalendarDays } from "lucide-react";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import { parseExpenseText } from "@/lib/parser/parse-expense";
 import { parseExpenseWithAI } from "@/app/actions/parse-expense";
 import { getMemberName, formatCurrency, formatDate } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 
 type ParseMode = "ai" | "basic";
 
@@ -18,13 +17,24 @@ interface Props {
   groupStartDate?: string | null;
   groupEndDate?: string | null;
   onParsed: (result: ParsedExpense) => void;
+  // Voice input — owned by QuickAddSheet, passed down so the sheet controls the mic button
+  voiceTrigger?: { text: string; id: number } | null;
+  isListening?: boolean;
+  interimTranscript?: string;
+  // Increments each time the sheet opens; triggers a clear + focus of the input
+  resetTrigger?: number;
 }
 
-export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, onParsed }: Props) {
+export function QuickAddBar({
+  members, currency, groupStartDate, groupEndDate, onParsed,
+  voiceTrigger, isListening = false, interimTranscript = "",
+  resetTrigger,
+}: Props) {
   const [text, setText] = useState("");
   const [parsed, setParsed] = useState<ParsedExpense | null>(null);
   const [loading, setLoading] = useState(false);
   const [parseMode, setParseMode] = useState<ParseMode | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFill = useCallback(async (input?: string) => {
     const value = (input ?? text).trim();
@@ -49,10 +59,25 @@ export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, o
     setLoading(false);
   }, [text, members, groupStartDate, groupEndDate, onParsed]);
 
-  const { isSupported: micSupported, isListening, interimTranscript, start, stop } =
-    useSpeechRecognition({
-      onFinal: (transcript) => handleFill(transcript),
-    });
+  // Keep a stable ref so the voiceTrigger effect always calls the latest handleFill
+  const handleFillRef = useRef(handleFill);
+  useEffect(() => { handleFillRef.current = handleFill; }, [handleFill]);
+
+  // Fire when a new voice transcript arrives from the parent sheet
+  useEffect(() => {
+    if (voiceTrigger) handleFillRef.current(voiceTrigger.text);
+  }, [voiceTrigger?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear state and focus the input each time the sheet opens (resetTrigger > 0 skips initial mount)
+  useEffect(() => {
+    if (!resetTrigger) return;
+    setText("");
+    setParsed(null);
+    setParseMode(null);
+    // Delay so the sheet's spring animation settles before the keyboard appears
+    const t = setTimeout(() => inputRef.current?.focus(), 200);
+    return () => clearTimeout(t);
+  }, [resetTrigger]);
 
   function handleClear() {
     setText("");
@@ -67,6 +92,7 @@ export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, o
     }
   }
 
+  // Show interim transcript in the input while the user is speaking
   const displayText = isListening && interimTranscript ? interimTranscript : text;
 
   const payer = parsed?.paidByMemberId
@@ -78,7 +104,7 @@ export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, o
     (parsed.splitCount !== undefined || (parsed.splitMemberIds && parsed.splitMemberIds.length > 0));
 
   return (
-    <div className="mb-6 rounded-2xl border border-cyan-200 dark:border-cyan-900/50 bg-gradient-to-br from-cyan-50/80 to-teal-50/80 dark:from-cyan-950/40 dark:to-teal-950/40 p-4">
+    <div className="mb-4 rounded-2xl border border-cyan-200 dark:border-cyan-900/50 bg-gradient-to-br from-cyan-50/80 to-teal-50/80 dark:from-cyan-950/40 dark:to-teal-950/40 p-4">
       {/* Header row */}
       <div className="flex items-center gap-2 mb-3">
         <Zap className="w-3.5 h-3.5 text-cyan-500" />
@@ -86,7 +112,7 @@ export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, o
           Quick add
         </span>
         <span className="text-xs text-slate-400 dark:text-slate-500 normal-case font-normal tracking-normal">
-          — type or speak an expense
+          — type or speak
         </span>
 
         {parseMode === "ai" && (
@@ -105,41 +131,15 @@ export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, o
 
       {/* Input row */}
       <div className="flex gap-2">
-        <div className="relative flex-1">
-          <input
-            value={displayText}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={loading || isListening}
-            placeholder={isListening ? "Listening…" : "dinner 2400 raj yesterday split 4"}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-cyan-200 dark:border-cyan-900/50 bg-white/70 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60 pr-10"
-          />
-          {/* Mic button — inside the input on the right */}
-          {micSupported && (
-            <button
-              type="button"
-              onClick={isListening ? stop : start}
-              disabled={loading}
-              title={isListening ? "Stop recording" : "Speak an expense"}
-              className={`absolute right-2.5 top-1/2 -translate-y-1/2 transition-colors disabled:opacity-40 ${
-                isListening
-                  ? "text-red-500 hover:text-red-600"
-                  : "text-slate-400 hover:text-cyan-500"
-              }`}
-            >
-              {isListening ? (
-                <MicOff className="w-4 h-4" />
-              ) : (
-                <Mic className="w-4 h-4" />
-              )}
-              {/* Pulsing ring when listening */}
-              {isListening && (
-                <span className="absolute inset-0 rounded-full animate-ping bg-red-400 opacity-30" />
-              )}
-            </button>
-          )}
-        </div>
-
+        <input
+          ref={inputRef}
+          value={displayText}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={loading || isListening}
+          placeholder={isListening ? "Listening…" : "dinner 2400 raj yesterday split 4"}
+          className="flex-1 px-3 py-2 text-sm rounded-xl border border-cyan-200 dark:border-cyan-900/50 bg-white/70 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
+        />
         <button
           type="button"
           onClick={() => handleFill()}
@@ -156,14 +156,6 @@ export function QuickAddBar({ members, currency, groupStartDate, groupEndDate, o
           )}
         </button>
       </div>
-
-      {/* Listening indicator */}
-      {isListening && (
-        <p className="mt-2 text-xs text-red-500 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
-          Recording — speak your expense, then tap the mic to stop
-        </p>
-      )}
 
       {/* Chips row */}
       {parsed && (

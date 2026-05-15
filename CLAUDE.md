@@ -348,6 +348,16 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 ### Quick-add sheet (bottom sheet)
 Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — **not** the `.glass` class. The `.glass` class (60% opacity) is too transparent when the sheet sits over the dark backdrop overlay. The sheet needs a near-solid surface.
 
+### Group card action buttons — image overlay pattern
+The `+`, Share, and QR buttons on `TripCard` float in the **top-right corner of the cover image** (`absolute top-3 right-3 z-10`), not in the footer. All three use the same frosted-glass style so they work over any photo or gradient:
+```
+bg-black/30 hover:bg-black/50 backdrop-blur-md text-white w-8 h-8 rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all
+```
+The footer is minimal — `Users` icon + raw member count number only (no "members"/"mates" label text).
+
+### Share button — join URL, not summary URL
+`TripCardShareButtons` shares `/join/[shareToken]` (invite page) so recipients can join the group. It does **not** share `/summary/[shareToken]` (the AI trip story). Uses the `Share2` lucide icon (standard OS share icon). The QR dialog encodes the join URL with copy text "Copy invite link" / "Scan to join this group".
+
 ### Motion
 - Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger 30–50ms via `AnimatedList`
 - Balance numbers: `CountUp` (Framer Motion)

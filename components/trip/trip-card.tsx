@@ -13,7 +13,7 @@ interface TripCardProps {
 
 export function TripCard({ group, memberCount }: TripCardProps) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const summaryUrl = `${appUrl}/summary/${group.shareToken}`;
+  const joinUrl = `${appUrl}/join/${group.shareToken}`;
   const isNest = group.groupType === "nest";
 
   return (
@@ -36,7 +36,7 @@ export function TripCard({ group, memberCount }: TripCardProps) {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
 
-          {/* Badges */}
+          {/* Type + demo badges — top left */}
           <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
             {group.isDemo && (
               <span className="inline-flex items-center gap-1 bg-amber-500/90 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
@@ -48,6 +48,18 @@ export function TripCard({ group, memberCount }: TripCardProps) {
               {isNest ? <Home className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
               {isNest ? "Nest" : "Trip"}
             </span>
+          </div>
+
+          {/* Action buttons — top right, floating on image */}
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+            <TripCardQuickAdd
+              groupId={group.id}
+              groupName={group.name}
+              currency={group.defaultCurrency}
+              groupStartDate={group.startDate}
+              groupEndDate={group.endDate}
+            />
+            <TripCardShareButtons url={joinUrl} groupName={group.name} />
           </div>
 
           <div className="absolute bottom-3 left-4 right-4">
@@ -67,21 +79,9 @@ export function TripCard({ group, memberCount }: TripCardProps) {
         </div>
       </Link>
 
-      <div className="px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs">
-          <Users className="w-3.5 h-3.5" />
-          {memberCount} {memberCount === 1 ? (isNest ? "mate" : "member") : (isNest ? "mates" : "members")}
-        </div>
-        <div className="flex items-center gap-1">
-          <TripCardQuickAdd
-            groupId={group.id}
-            groupName={group.name}
-            currency={group.defaultCurrency}
-            groupStartDate={group.startDate}
-            groupEndDate={group.endDate}
-          />
-          <TripCardShareButtons url={summaryUrl} tripName={group.name} />
-        </div>
+      <div className="px-4 py-2.5 flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs">
+        <Users className="w-3.5 h-3.5" />
+        <span className="tabular">{memberCount}</span>
       </div>
     </div>
   );

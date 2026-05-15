@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link2, QrCode, Check } from "lucide-react";
+import { Share2, QrCode, Check } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 
@@ -13,29 +13,31 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface Props {
   url: string;
-  tripName: string;
+  groupName: string;
 }
 
-export function TripCardShareButtons({ url, tripName }: Props) {
+const btnClass = "w-8 h-8 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
+
+export function TripCardShareButtons({ url, groupName }: Props) {
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
-  async function handleShareLink(e: React.MouseEvent) {
+  async function handleShare(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
 
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: tripName, text: `Check out our trip — ${tripName}!`, url });
+        await navigator.share({ title: groupName, text: `Join ${groupName} on Clear!`, url });
         return;
       } catch {
-        // user cancelled or API unsupported — fall through to clipboard
+        // cancelled or unsupported — fall through to clipboard
       }
     }
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("Link copied!");
+      toast.success("Invite link copied!");
       setTimeout(() => setCopied(false), 2500);
     } catch {
       toast.error("Couldn't copy link");
@@ -50,49 +52,41 @@ export function TripCardShareButtons({ url, tripName }: Props) {
 
   return (
     <>
-      <button
-        onClick={handleShareLink}
-        title="Share trip summary"
-        className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-cyan-50 transition-colors"
-      >
+      <button onClick={handleShare} title="Share invite link" className={btnClass}>
         {copied
-          ? <Check className="w-3.5 h-3.5 text-teal-500" />
-          : <Link2 className="w-3.5 h-3.5" />
+          ? <Check className="w-4 h-4 text-teal-500" />
+          : <Share2 className="w-4 h-4" />
         }
       </button>
 
-      <button
-        onClick={handleQr}
-        title="Show QR code"
-        className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-cyan-50 transition-colors"
-      >
-        <QrCode className="w-3.5 h-3.5" />
+      <button onClick={handleQr} title="Show QR invite code" className={btnClass}>
+        <QrCode className="w-4 h-4" />
       </button>
 
       <Dialog open={qrOpen} onOpenChange={setQrOpen}>
-        <DialogContent className="glass border-white/70 max-w-xs p-6 flex flex-col items-center gap-4">
+        <DialogContent className="glass border-white/70 dark:border-slate-700/60 max-w-xs p-6 flex flex-col items-center gap-4">
           <h3
-            className="text-slate-800 font-semibold text-base text-center"
+            className="text-slate-800 dark:text-slate-100 font-semibold text-base text-center"
             style={{ fontFamily: "var(--font-fraunces)" }}
           >
-            {tripName}
+            {groupName}
           </h3>
           <div className="bg-white p-4 rounded-2xl shadow-sm">
             <QRCodeSVG value={url} size={200} fgColor="#0F172A" bgColor="#FFFFFF" level="M" />
           </div>
-          <p className="text-xs text-slate-500 text-center">Scan to open the trip summary</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">Scan to join this group</p>
           <button
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(url);
-                toast.success("Link copied!");
+                toast.success("Invite link copied!");
               } catch {
                 toast.error("Couldn't copy link");
               }
             }}
-            className="w-full py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+            className="w-full py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
-            Copy link
+            Copy invite link
           </button>
         </DialogContent>
       </Dialog>

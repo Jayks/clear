@@ -45,6 +45,7 @@ export function AddExpenseForm({ group, members }: Props) {
       currency: group.defaultCurrency,
       expenseDate: smartDefaultDate(group.startDate, group.endDate),
       category: "other",
+      customCategory: "",
       paidByMemberId: members[0]?.id ?? "",
       splitMode: "equal",
       splits: members.map((m) => ({ memberId: m.id })),
@@ -72,6 +73,7 @@ export function AddExpenseForm({ group, members }: Props) {
     if (parsed.paidByMemberId) setValue("paidByMemberId", parsed.paidByMemberId);
     setValue("expenseDate", parsed.expenseDate ?? smartDefaultDate(group.startDate, group.endDate));
     setValue("category", parsed.category);
+    setValue("customCategory", "");
 
     let nextIds: Set<string>;
     if (parsed.splitMemberIds && parsed.splitMemberIds.length > 0) {
@@ -90,14 +92,6 @@ export function AddExpenseForm({ group, members }: Props) {
   }
 
   async function onSubmit(data: AddExpenseInput) {
-    if (group.startDate && data.expenseDate < group.startDate) {
-      toast.error(`Date must be on or after ${group.startDate}`);
-      return;
-    }
-    if (group.endDate && data.expenseDate > group.endDate) {
-      toast.error(`Date must be on or before ${group.endDate}`);
-      return;
-    }
     if (data.endDate && data.endDate < data.expenseDate) {
       toast.error("Check-out date must be after check-in date");
       return;
@@ -170,14 +164,31 @@ export function AddExpenseForm({ group, members }: Props) {
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Category</label>
         <select
-          {...register("category")}
-          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+          {...register("category", {
+            onChange: (e) => { if (e.target.value !== "other") setValue("customCategory", ""); },
+          })}
+          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
         >
           {groupConfig.categories.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </select>
       </div>
+
+      {/* Custom category description — "Other" only */}
+      {category === "other" && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+            Specify <span className="text-red-400">*</span>
+          </label>
+          <input
+            {...register("customCategory")}
+            placeholder="e.g. Visa fees, Parking, Tips"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          />
+          {errors.customCategory && <p className="mt-1 text-xs text-red-500">{errors.customCategory.message}</p>}
+        </div>
+      )}
 
       {/* Date + Paid by */}
       <div className="grid grid-cols-2 gap-3">
@@ -188,9 +199,7 @@ export function AddExpenseForm({ group, members }: Props) {
           <input
             {...register("expenseDate")}
             type="date"
-            min={group.startDate ?? undefined}
-            max={group.endDate ?? undefined}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
           {errors.expenseDate && <p className="mt-1 text-xs text-red-500">{errors.expenseDate.message}</p>}
         </div>
@@ -198,7 +207,7 @@ export function AddExpenseForm({ group, members }: Props) {
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Paid by</label>
           <select
             {...register("paidByMemberId")}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
           >
             {members.map((m) => (
               <option key={m.id} value={m.id}>{getMemberName(m)}</option>
@@ -214,9 +223,7 @@ export function AddExpenseForm({ group, members }: Props) {
           <input
             {...register("endDate")}
             type="date"
-            min={group.startDate ?? undefined}
-            max={group.endDate ?? undefined}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
           {errors.endDate && <p className="mt-1 text-xs text-red-500">{errors.endDate.message}</p>}
         </div>

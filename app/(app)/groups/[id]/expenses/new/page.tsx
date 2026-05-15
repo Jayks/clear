@@ -12,7 +12,7 @@ export default async function NewExpensePage({ params }: { params: Promise<{ id:
   const { group, members } = data;
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl mx-auto">
       <Link
         href={`/groups/${id}/expenses`}
         className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"

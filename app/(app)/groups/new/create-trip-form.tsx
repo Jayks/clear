@@ -7,8 +7,10 @@ import { createGroup } from "@/app/actions/groups";
 import { CoverPhotoPicker } from "@/components/trip/cover-photo-picker";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useWarnBeforeLeave } from "@/hooks/use-warn-before-leave";
+import { Upload, Loader2 } from "lucide-react";
+import { parseItineraryFromFile } from "@/app/actions/parse-itinerary";
 import { GROUP_CONFIG } from "@/lib/group-config";
 import type { GroupType } from "@/lib/group-config";
 
@@ -17,6 +19,8 @@ const CURRENCIES = ["INR", "USD", "EUR", "GBP", "SGD", "AED", "JPY", "CAD", "AUD
 export function CreateTripForm() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -32,6 +36,7 @@ export function CreateTripForm() {
   useWarnBeforeLeave(isDirty);
   const coverPhotoUrl = watch("coverPhotoUrl");
   const groupType = (watch("groupType") ?? "trip") as GroupType;
+  const itinerary = watch("itinerary") ?? "";
   const config = GROUP_CONFIG[groupType];
 
   function selectType(type: GroupType) {
@@ -40,6 +45,37 @@ export function CreateTripForm() {
       setValue("startDate", "");
       setValue("endDate", "");
       setValue("itinerary", "");
+    }
+  }
+
+  async function handleItineraryUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File is too large (max 10 MB)");
+      return;
+    }
+    const mimeType = file.type === "application/pdf" ? "application/pdf" : "text/plain";
+    setUploadingDoc(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const result = await parseItineraryFromFile({ base64, mimeType, fileName: file.name });
+      if (result.ok) {
+        setValue("itinerary", result.text, { shouldDirty: true });
+        toast.success("Itinerary extracted successfully");
+      } else {
+        toast.error(result.error);
+      }
+    } catch {
+      toast.error("Failed to read the file");
+    } finally {
+      setUploadingDoc(false);
     }
   }
 
@@ -128,15 +164,33 @@ export function CreateTripForm() {
       {/* Trip-only: itinerary */}
       {config.showItinerary && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-            Trip plan <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — helps AI write your trip story)</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              Trip plan <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — helps AI write your trip story)</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingDoc}
+              className="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50 transition-colors"
+            >
+              {uploadingDoc
+                ? <><Loader2 className="w-3 h-3 animate-spin" />Parsing…</>
+                : <><Upload className="w-3 h-3" />Upload document</>}
+            </button>
+            <input ref={fileInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={handleItineraryUpload} />
+          </div>
           <textarea
             {...register("itinerary")}
-            rows={4}
+            rows={6}
             placeholder={"Day 1: Arrive Chennai, check in\nDay 2: Mahabalipuram – Shore Temple\n..."}
             className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
           />
+          <div className="flex justify-end mt-1">
+            <span className={`text-xs tabular ${itinerary.length > 10000 ? "text-red-500" : "text-slate-400 dark:text-slate-500"}`}>
+              {itinerary.length.toLocaleString()} / 10,000
+            </span>
+          </div>
         </div>
       )}
 

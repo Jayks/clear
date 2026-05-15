@@ -10,6 +10,7 @@ export type CategoryValue =
   | "shopping"
   | "activities"
   | "groceries"
+  | "tour_package"
   // Nest categories
   | "rent"
   | "utilities"

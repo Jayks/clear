@@ -52,6 +52,7 @@ function buildExpenseInput(
     paidByMemberId,
     description: parsed.description,
     category: parsed.category ?? "other",
+    customCategory: "",
     amount: parsed.amount,
     currency,
     expenseDate: parsed.expenseDate ?? today,

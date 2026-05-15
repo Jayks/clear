@@ -9,7 +9,7 @@ export const createGroupSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   budget: z.number().positive().optional(),
-  itinerary: z.string().max(2000).optional(),
+  itinerary: z.string().max(10000).optional(),
 }).refine(
   (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,
   { message: "End date must be on or after start date", path: ["endDate"] }

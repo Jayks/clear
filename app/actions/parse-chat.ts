@@ -20,7 +20,7 @@ const itemSchema = z.object({
   amount: z.number().positive(),
   category: z
     .enum([
-      "food", "accommodation", "transport", "sightseeing", "shopping", "activities", "groceries",
+      "food", "accommodation", "transport", "sightseeing", "shopping", "activities", "groceries", "tour_package",
       "rent", "utilities", "subscriptions", "healthcare", "maintenance", "supplies",
       "other",
     ])
@@ -65,7 +65,7 @@ Return ONLY a valid JSON array — no markdown, no explanation:
   {
     "description": string,
     "amount": number,
-    "category": "food"|"accommodation"|"transport"|"sightseeing"|"shopping"|"activities"|"groceries"|"other",
+    "category": "food"|"accommodation"|"transport"|"sightseeing"|"shopping"|"activities"|"groceries"|"tour_package"|"rent"|"utilities"|"subscriptions"|"healthcare"|"maintenance"|"supplies"|"other",
     "paidByMemberId": string | null,
     "splitMemberIds": string[] | null,
     "splitCount": number | null,
@@ -84,7 +84,7 @@ Rules:
 - Match payer names to member IDs from <members> (case-insensitive, partial first name ok); null if unclear
 - Splitting: named members → splitMemberIds; count only ("split 4") → splitCount; "everyone"/"all" → both null
 - Dates: resolve relative mentions ("yesterday", "Monday", "Jan 10") to YYYY-MM-DD; null if not mentioned
-- Category: infer from keywords (dinner/lunch→food, cab/uber→transport, hotel/hostel→accommodation, etc.)
+- Category: infer from keywords (dinner/lunch→food, cab/uber→transport, hotel/hostel→accommodation, tour package/booked tour/package tour→tour_package, etc.)
 - Skip non-expense messages (greetings, reactions, plans with no money mentioned)
 - Return [] if no expenses found`,
         messages: [{

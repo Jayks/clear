@@ -9,6 +9,7 @@ export const expenses = pgTable("expenses", {
   paidByMemberId: uuid("paid_by_member_id").notNull().references(() => groupMembers.id),
   description: text("description").notNull(),
   category: text("category").notNull(),
+  customCategory: text("custom_category"),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   currency: text("currency").notNull(),
   expenseDate: date("expense_date").notNull(),

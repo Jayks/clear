@@ -27,7 +27,7 @@ export async function addExpense(input: AddExpenseInput) {
   const parsed = addExpenseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" } as const;
 
-  const { groupId, paidByMemberId, description, category, amount, currency, expenseDate, endDate, notes, splitMode, splits } = parsed.data;
+  const { groupId, paidByMemberId, description, category, customCategory, amount, currency, expenseDate, endDate, notes, splitMode, splits } = parsed.data;
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member" } as const;
@@ -48,6 +48,7 @@ export async function addExpense(input: AddExpenseInput) {
       paidByMemberId,
       description,
       category,
+      customCategory: customCategory ?? null,
       amount: String(amount),
       currency,
       expenseDate,
@@ -81,7 +82,7 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
   const parsed = addExpenseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" } as const;
 
-  const { groupId, paidByMemberId, description, category, amount, currency, expenseDate, endDate, notes, splitMode, splits } = parsed.data;
+  const { groupId, paidByMemberId, description, category, customCategory, amount, currency, expenseDate, endDate, notes, splitMode, splits } = parsed.data;
 
   const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
   if (!expense) return { ok: false, error: "Not found" } as const;
@@ -105,6 +106,7 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
   try {
     await db.update(expenses).set({
       paidByMemberId, description, category,
+      customCategory: customCategory ?? null,
       amount: String(amount), currency, expenseDate,
       endDate: endDate || null,
       notes: notes || null,

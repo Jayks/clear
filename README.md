@@ -18,10 +18,12 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 
 - **Quick-add expenses** — type a natural description from any group card; AI parses the amount, payer, and split automatically
 - **Four split modes** — equal, exact amount, percentage, or shares
+- **16 expense categories** — including Tour Package for trips; "Other" prompts a free-text description
 - **Minimum-transaction settlement** — greedy optimizer computes the fewest payments to clear all debts
 - **UPI pay** — direct payment links on the settle-up page
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
+- **Trip plan upload** — upload a PDF or .txt itinerary and have it auto-filled in the trip form
 - **Onboarding tour** — 10-step guided walkthrough with spotlight and swipe-to-dismiss sheet
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
@@ -42,6 +44,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 | Auth | Supabase Auth (Google OAuth) |
 | Realtime | Supabase Realtime |
 | AI | Anthropic claude-haiku-4-5-20251001 |
+| PDF parsing | pdf-parse 1.1.1 (server-side, no AI) |
 | Deployment | Vercel |
 
 ---

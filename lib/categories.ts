@@ -1,6 +1,6 @@
 import {
   Utensils, Hotel, Car, Camera, ShoppingBag, Ticket, ShoppingCart, MoreHorizontal,
-  Home, Zap, CreditCard, Heart, Wrench, Package,
+  Home, Zap, CreditCard, Heart, Wrench, Package, Backpack,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -20,6 +20,7 @@ export const TRIP_CATEGORIES: Category[] = [
   { value: "shopping",      label: "Shopping",      icon: ShoppingBag,   color: "bg-pink-100 dark:bg-pink-900/30",      textColor: "text-pink-600 dark:text-pink-400"   },
   { value: "activities",    label: "Activities",    icon: Ticket,        color: "bg-green-100 dark:bg-green-900/30",    textColor: "text-green-600 dark:text-green-400" },
   { value: "groceries",     label: "Groceries",     icon: ShoppingCart,  color: "bg-lime-100 dark:bg-lime-900/30",      textColor: "text-lime-600 dark:text-lime-400"   },
+  { value: "tour_package",  label: "Tour Package",  icon: Backpack,      color: "bg-indigo-100 dark:bg-indigo-900/30",  textColor: "text-indigo-600 dark:text-indigo-400" },
   { value: "other",         label: "Other",         icon: MoreHorizontal,color: "bg-slate-100 dark:bg-slate-700",       textColor: "text-slate-500 dark:text-slate-400" },
 ];
 
@@ -51,6 +52,7 @@ export const CATEGORY_HEX: Record<string, string> = {
   shopping:      "#DB2777",
   activities:    "#16A34A",
   groceries:     "#65A30D",
+  tour_package:  "#4F46E5",
   rent:          "#2563EB",
   utilities:     "#CA8A04",
   subscriptions: "#9333EA",

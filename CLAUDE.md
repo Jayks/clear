@@ -41,6 +41,7 @@
 | Deployment | Vercel | |
 
 **Dev tools**: `tsx`, `dotenv`, `vitest`, `puppeteer-core`
+**PDF parsing**: `pdf-parse 1.1.1` (server-side, no AI) — see gotcha below.
 
 **Do NOT add**: NextAuth, Prisma, Redux, MUI, Chakra, Bootstrap, styled-components, tRPC, Pusher/Ably.
 
@@ -135,6 +136,18 @@ net = totalPaid - totalOwed + settlementsSent - settlementsReceived
 ```
 `settlementsSent` adds (reduces debt); `settlementsReceived` subtracts (shrinks receivable).
 
+### pdf-parse — import from `lib/`, never from `index.js`
+
+`pdf-parse@1.1.1`'s `index.js` has `isDebugMode = !module.parent`. In Turbopack's server bundle `module.parent` is `undefined`, so debug mode fires and `readFileSync` crashes on a missing test file, preventing module load entirely. Always bypass `index.js`:
+
+```typescript
+// ✅ correct — bypasses the debug-mode crash
+const pdfParse: (buf: Buffer) => Promise<{ text: string }> = require("pdf-parse/lib/pdf-parse.js");
+
+// ❌ wrong — crashes in Turbopack server bundle
+import pdfParse from "pdf-parse";
+```
+
 ### Anthropic SDK — instantiate inside the function
 
 ```typescript
@@ -211,7 +224,7 @@ group_type: enum('trip', 'nest') default 'trip'
 default_currency: text default 'INR'
 start_date, end_date: date          -- trips only (optional for nests)
 budget: numeric(12,2)               -- optional
-itinerary: text                     -- trips only (AI narrative + adherence)
+itinerary: text                     -- trips only (AI narrative + adherence); max 10,000 chars (Zod-only, DB is unlimited text)
 is_archived: boolean default false
 is_demo: boolean default false      -- seeded sample group; pinned first
 created_by: uuid
@@ -234,6 +247,7 @@ UNIQUE: (group_id, user_id)
 ```
 id, group_id fk->groups(cascade), paid_by_member_id fk->group_members
 description: text, category: text   -- text, not enum (validated by Zod + GROUP_CONFIG)
+custom_category: text nullable      -- free-text label shown when category = 'other'
 amount: numeric(12,2), currency: text, expense_date: date, end_date: date, notes: text
 is_template: boolean default false  -- recurring expense template (nest)
 recurrence: text                    -- 'monthly' | 'weekly' (templates only)
@@ -278,7 +292,7 @@ GROUP_CONFIG = {
 }
 ```
 
-**Trip categories**: food, accommodation, transport, sightseeing, shopping, activities, groceries, other
+**Trip categories**: food, accommodation, transport, sightseeing, shopping, activities, groceries, tour_package, other
 **Nest categories**: rent, utilities, groceries, subscriptions, food, healthcare, maintenance, supplies, other
 
 Use `getGroupConfig(group.groupType)` in components — never `group.groupType === 'trip'` inline checks.
@@ -395,7 +409,7 @@ clear/
 │   ├── api/groups/[id]/export/route.ts    # CSV download
 │   └── actions/
 │       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts
-│       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts
+│       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
@@ -451,7 +465,9 @@ Server components and query functions call `getCurrentUser()` from `lib/db/queri
 - **Mobile-first**: grids `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, multi-action rows `flex-col gap sm:flex-row`.
 - **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` for any type-specific label, flag, or category list.
 - **Date-range props**: name as `groupStartDate`/`groupEndDate` in components, `groupStart`/`groupEnd` in `DateContext`.
-- **CategoryValue**: 15 categories across trip + nest — defined in `lib/parser/parse-expense.ts`. AI actions validate against this union type.
+- **CategoryValue**: 16 categories across trip + nest (incl. `tour_package`) — defined in `lib/parser/parse-expense.ts`. AI actions validate against this union type.
+- **customCategory**: when `category === "other"`, a free-text `customCategory` field is required in `addExpenseSchema` (`.superRefine()` guard). Stored in `expenses.custom_category`. Display in `ExpenseCard` when non-null.
+- **Expense dates**: no trip date range restriction — users may log pre-booked expenses (flights, hotels) dated before the trip start.
 - **Form props**: expense/edit forms use `group: Group` (not `trip`). The `computeTripInsights` function is the one exception — call it with `{ trip: group }`.
 - **Templates excluded from totals**: always filter `eq(expenses.isTemplate, false)` in any query that computes spend or balances.
 - **Mobile tap targets**: all back/nav links use `min-h-[44px]`; expense card action buttons `w-11 h-11 sm:w-7 sm:h-7`; split editor number inputs use `inputMode="decimal"` (or `"numeric"` for shares).

@@ -27,7 +27,8 @@ export function optimizeSettlements(balances: MemberBalance[]): Transaction[] {
     if (rounded < 0)  debtors.push({ memberId, amount: Math.abs(rounded) });
   }
 
-  // Sort descending by amount for greedy matching
+  // Sort descending so the largest debts are paired first. This keeps both
+  // lists in step and guarantees the minimum number of transactions.
   creditors.sort((a, b) => b.amount - a.amount);
   debtors.sort((a, b) => b.amount - a.amount);
 

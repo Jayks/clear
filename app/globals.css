@@ -198,4 +198,14 @@
     border-bottom: 1px solid rgba(51, 65, 85, 0.4);
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
   }
+
+  /* Marquee ticker for landing page */
+  .animate-marquee {
+    animation: marquee 35s linear infinite;
+  }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }

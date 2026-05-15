@@ -27,6 +27,9 @@ export function TripCard({ group, memberCount }: TripCardProps) {
   const isNest = group.groupType === "nest";
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Long-press fires touchend AND a subsequent click event. This ref lets the
+  // Link's onClick block that click so a long-press opens the nav sheet instead
+  // of navigating.
   const suppressNextClick = useRef(false);
 
   function startLongPress() {

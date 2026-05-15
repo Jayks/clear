@@ -74,6 +74,7 @@ export function computeTripInsights(params: {
   // Trip duration
   let tripDays = 1;
   if (trip.startDate && trip.endDate) {
+    // +1 for inclusive range (same-day trip = 1 day); Math.max(1, …) prevents division-by-zero when dates are absent.
     tripDays = Math.max(1, differenceInDays(parseISO(trip.endDate), parseISO(trip.startDate)) + 1);
   }
   const dailyAverage = r2(totalSpend / tripDays);

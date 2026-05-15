@@ -61,7 +61,7 @@ const steps = [
     n: "03",
     icon: Receipt,
     title: "Log expenses",
-    body: "Tap Add on any group card — type what you spent and Clear parses the amount, payer, and split. Or open the full form for more control.",
+    body: "Tap + on any card and type what you spent — AI parses the amount, payer, and split automatically. Or paste a group chat and import all expenses at once.",
   },
   {
     n: "04",
@@ -144,7 +144,7 @@ export default async function LandingPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2">
-                {["Google sign-in", "No credit card", "Free to get started", "Installs on iOS & Android"].map((t) => (
+                {["Google sign-in", "No credit card", "Free to get started", "Guided tour included", "Installs on iOS & Android"].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5 text-sm text-slate-400 dark:text-slate-300">
                     <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" /> {t}
                   </span>
@@ -297,8 +297,8 @@ export default async function LandingPage() {
 
       {/* ── Ticker ───────────────────────────────────────────────────────── */}
       <div className="py-5 overflow-hidden border-y border-white/60 dark:border-slate-700/40 bg-white/30 dark:bg-slate-900/20 backdrop-blur-sm">
-        <div className="flex gap-8 whitespace-nowrap">
-          <div className="flex gap-8 shrink-0 animate-none">
+        <div className="flex gap-8 whitespace-nowrap overflow-hidden">
+          <div className="flex gap-8 shrink-0 animate-marquee">
             {tickerItems.concat(tickerItems).map((label, i) => (
               <span key={i} className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400">
                 <span className="w-1 h-1 rounded-full bg-cyan-400 shrink-0" />
@@ -415,9 +415,10 @@ export default async function LandingPage() {
         {/* Feature pills */}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           {[
-            "Recurring templates", "Monthly grouping", "QR code invites",
-            "Guest members", "Real-time sync", "Per-group insights",
-            "Portfolio view", "UPI pay links", "CSV export", "Quick-add with AI", "Installs on any device",
+            "Quick-add with AI", "AI chat import", "Recurring templates",
+            "Monthly grouping", "QR code invites", "Guest members",
+            "Real-time sync", "Per-group insights", "Portfolio view",
+            "UPI pay links", "CSV export", "Card shortcuts", "Guided tour", "Installs on any device",
           ].map((pill) => (
             <span key={pill} className="glass-sm rounded-full px-4 py-1.5 text-sm text-slate-600 dark:text-slate-300 border border-white/60 dark:border-slate-700/40">
               {pill}
@@ -558,14 +559,12 @@ export default async function LandingPage() {
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="glass rounded-3xl px-8 py-10 flex flex-col lg:flex-row items-center gap-10">
           <div className="flex-1 text-center lg:text-left">
-            <div className="flex items-center justify-center lg:justify-start gap-1 mb-3">
-              {[...Array(5)].map((_, i) => <span key={i} className="text-amber-400 text-lg">★</span>)}
-            </div>
+            <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">No maths required</p>
             <p className="text-2xl sm:text-3xl text-slate-800 dark:text-slate-100 mb-3" style={{ fontFamily: "var(--font-fraunces)" }}>
-              "Finally, no more WhatsApp maths"
+              Stop doing the<br />arithmetic at 1 AM.
             </p>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Stop screenshotting receipts and doing mental arithmetic at 1 AM. Clear handles the numbers.
+            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+              Clear's settlement optimizer always finds the minimum number of payments to clear all debts — never more than one transfer per person, no matter how many expenses.
             </p>
           </div>
           <div className="flex-1 grid grid-cols-2 gap-3 w-full max-w-sm lg:max-w-none">

@@ -11,6 +11,7 @@ export async function parseItineraryFromFile(input: {
   mimeType: "application/pdf" | "text/plain";
   fileName: string;
 }): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  // Base64 encodes 3 bytes as 4 chars; ×3/4 estimates the original byte size.
   const byteSize = Math.round((input.base64.length * 3) / 4);
   if (byteSize > 10 * 1024 * 1024)
     return { ok: false, error: "File is too large (max 10 MB)." };

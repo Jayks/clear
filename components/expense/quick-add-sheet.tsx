@@ -76,6 +76,8 @@ export function QuickAddSheet({
   const [parsed, setParsed] = useState<ParsedExpense | null>(null);
   const [saving, startSave] = useTransition();
   const [mounted, setMounted] = useState(false);
+  // Ref (not state) so the "already fetched" flag survives isOpen toggles
+  // without triggering a re-render or re-fetch on subsequent opens.
   const fetchedRef = useRef(false);
 
   useEffect(() => {

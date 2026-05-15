@@ -48,6 +48,8 @@ export async function parseExpenseWithAI(
   const validMemberIds = new Set(memberContext.map((m) => m.id));
 
   try {
+    // Race against a 6 s timeout so the quick-add sheet never hangs.
+    // null response → caller falls back to the rule-based parser.
     const response = await Promise.race([
       client.messages.create({
         model: "claude-haiku-4-5-20251001",
@@ -109,7 +111,8 @@ ${memberList}
 
     const d = validated.data;
 
-    // Discard any member IDs the model returned that don't belong to this trip
+    // Guard against hallucinated or stale member IDs — the model may return IDs
+    // from a prior context window or invent ones that don't exist in this group.
     const safePaidBy = d.paidByMemberId && validMemberIds.has(d.paidByMemberId)
       ? d.paidByMemberId
       : null;

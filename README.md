@@ -17,6 +17,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 ## Features
 
 - **Quick-add expenses** — type a natural description from any group card; AI parses the amount, payer, and split automatically
+- **Quick-nav from card** — tap `⋯` or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights
 - **Four split modes** — equal, exact amount, percentage, or shares
 - **16 expense categories** — including Tour Package for trips; "Other" prompts a free-text description
 - **Minimum-transaction settlement** — greedy optimizer computes the fewest payments to clear all debts
@@ -139,4 +140,4 @@ lib/
 - **Server Actions** for all mutations — no REST routes for internal CRUD
 - **`getCurrentUser()`** — React-`cache()`-wrapped `getUser()` call; deduplicates auth across the render tree
 - **GROUP_CONFIG** — all trip/nest differences flow through `lib/group-config.ts`
-- **QuickAddSheet** — owns its own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop
+- **QuickAddSheet / TripCardNavSheet** — own their own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop. Cards have no footer — all controls (Add, Share, QR, `⋯`) float on the cover image

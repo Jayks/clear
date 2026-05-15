@@ -349,11 +349,18 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — **not** the `.glass` class. The `.glass` class (60% opacity) is too transparent when the sheet sits over the dark backdrop overlay. The sheet needs a near-solid surface.
 
 ### Group card action buttons — image overlay pattern
-The `+`, Share, and QR buttons on `TripCard` float in the **top-right corner of the cover image** (`absolute top-3 right-3 z-10`), not in the footer. All three use the same frosted-glass style so they work over any photo or gradient:
+`TripCard` has **no footer**. All controls float on the cover image.
+
+**Top-left badges** (`absolute top-3 left-3 z-10`): type badge (`[📍 Trip]` or `[🏠 Nest]`) + member count badge (`[👥 N]`). Both use `bg-black/40 backdrop-blur-sm` pill style. Consistent across all cards — no extra badges here.
+
+**Top-right buttons** (`absolute top-3 right-3 z-10`): Add (`+`), Share, QR, and Quick-nav (`⋯`) — four buttons, all the same frosted-glass style:
 ```
 bg-black/30 hover:bg-black/50 backdrop-blur-md text-white w-8 h-8 rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all
 ```
-The footer is minimal — `Users` icon + raw member count number only (no "members"/"mates" label text).
+
+**Sample ribbon** (demo cards only): diagonal amber strip at the bottom-right corner (`absolute`, `rotate-[-45deg]`, `bg-amber-500/90`, `pointer-events-none`). Clipped naturally by the card's `overflow-hidden rounded-2xl`. Text: `SAMPLE` (all-caps, `tracking-widest`).
+
+**Quick-nav sheet** (`TripCardNavSheet`): portal + AnimatePresence bottom sheet. Opens via `⋯` button click (desktop + mobile) or long-press anywhere on the card body (mobile, 500 ms). Shows four destinations — Members, Expenses, Settle Up, Insights — each as a tappable row with a cyan gradient icon. Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` (same as QuickAddSheet). `pointer-events-none` on ribbon, `WebkitTouchCallout: none` + `select-none` on card wrapper to suppress iOS image long-press menu and text selection.
 
 ### Share button — join URL, not summary URL
 `TripCardShareButtons` shares `/join/[shareToken]` (invite page) so recipients can join the group. It does **not** share `/summary/[shareToken]` (the AI trip story). Uses the `Share2` lucide icon (standard OS share icon). The QR dialog encodes the join URL with copy text "Copy invite link" / "Scan to join this group".
@@ -424,7 +431,7 @@ clear/
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
 │   ├── expense/  (expense-card, swipeable-expense-card [swipe-to-delete on touch devices], expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
-│   ├── trip/     (trip-card [data-tour attrs], cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
+│   ├── trip/     (trip-card [data-tour attrs], trip-card-nav-sheet [quick-nav bottom sheet], cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)

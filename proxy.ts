@@ -25,9 +25,12 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // try/catch: a Supabase Auth error must not false-redirect authenticated users.
+  // Page-level requirePlatformAdmin() is the authoritative security check.
+  let user = null as Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"];
+  try {
+    ({ data: { user } } = await supabase.auth.getUser());
+  } catch { /* pass through */ }
 
   const { pathname } = request.nextUrl;
 

@@ -1,15 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { isPlatformAdmin } from "@/lib/db/queries/admin";
 import Link from "next/link";
-import { LayoutDashboard, Users, Map, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { AdminNav } from "./admin-nav";
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user || !isPlatformAdmin(user.email)) redirect("/groups");
-
+// Layout is intentionally NOT async — the proxy middleware already validated the
+// JWT for /admin routes. Making the layout async would block the entire page
+// render (including loading.tsx) on a Supabase Auth network round-trip.
+// Each page query calls requirePlatformAdmin() which does the authoritative check.
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       {/* Admin top bar */}
@@ -27,29 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="ml-1 text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-medium px-2 py-0.5 rounded-full">
             Platform Admin
           </span>
-          <nav className="ml-auto flex items-center gap-1">
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Dashboard
-            </Link>
-            <Link
-              href="/admin/users"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <Users className="w-3.5 h-3.5" />
-              Users
-            </Link>
-            <Link
-              href="/admin/groups"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <Map className="w-3.5 h-3.5" />
-              Groups
-            </Link>
-          </nav>
+          <AdminNav />
         </div>
       </header>
 

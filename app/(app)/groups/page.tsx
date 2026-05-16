@@ -7,7 +7,13 @@ import { ensureDemoGroup } from "@/app/actions/demo";
 import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 
 export default async function GroupsPage() {
-  const [, groups, archived] = await Promise.all([ensureDemoGroup(), getGroups(), getArchivedGroups()]);
+  // ensureDemoGroup is best-effort — a Supabase timeout or transient error
+  // must never break the groups page. Swallow failures silently.
+  const [, groups, archived] = await Promise.all([
+    ensureDemoGroup().catch(() => {}),
+    getGroups().catch(() => []),
+    getArchivedGroups().catch(() => []),
+  ]);
 
   return (
     <div>

@@ -23,9 +23,9 @@ const client =
   globalThis._pgClient ??
   postgres(connectionString, {
     prepare: false,
-    max: process.env.NODE_ENV === "production" ? 3 : 1,
+    max: 3,
     idle_timeout: 20,    // seconds — release idle connections back to the pool
-    connect_timeout: 10, // seconds — fail fast rather than queue indefinitely
+    connect_timeout: 10, // seconds — fail fast if Supabase is unreachable
   });
 
 if (process.env.NODE_ENV !== "production") {

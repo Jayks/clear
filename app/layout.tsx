@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
 import { IOSInstallHint } from "@/components/shared/ios-install-hint";
+import { NavProgress } from "@/components/shared/nav-progress";
 import "./globals.css";
 
 const inter = Inter({
@@ -45,6 +46,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${fraunces.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <NavProgress />
           <ServiceWorkerRegistration />
           {/* Decorative background blobs */}
           <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">

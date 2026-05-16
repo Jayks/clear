@@ -112,6 +112,18 @@ The `(app)/layout.tsx` and all `lib/db/queries/*.ts` files use `getCurrentUser()
 
 **QuickAddSheet voice stale trigger** — `QuickAddBar` unmounts when the sheet closes (it lives inside `{isOpen && ...}`). On next open it remounts and its `voiceTrigger` effect fires immediately, seeing the stale transcript from the parent's state. Fix: `QuickAddSheet` clears `voiceTrigger` to `null` on close so the next mount sees nothing.
 
+### Admin dashboard patterns
+
+**Non-async layout** — `app/admin/layout.tsx` is a synchronous Server Component. Making it async would block `loading.tsx` from showing (the fallback can only render after the layout resolves). The proxy middleware already validates the JWT for every `/admin/:path*` request; `requirePlatformAdmin()` in each page query is the authoritative check.
+
+**Admin navigation** — `/admin` is outside the `/(app)` route group, so `router.push("/admin")` silently drops the navigation. Instead, `app-nav.tsx` uses `window.location.href = "/admin"` (full-page reload) with `window.dispatchEvent(new Event("navprogress"))` fired first so `NavProgress` starts before the page unloads.
+
+**`withAdminTimeout`** — all admin DB queries run inside `db.transaction()` with `SET LOCAL statement_timeout = 8000`. When a query exceeds 8 s, Postgres hard-cancels it and rolls back the transaction, immediately releasing the connection back to the pool. Without this, slow queries hold connections and starve other pages (e.g. groups) of DB access.
+
+**Admin query design** — `getAdminStats()` uses a single SQL round-trip (4 subqueries in one statement). `getAdminGroupList()` uses a JOIN aggregation instead of 4 correlated subqueries per row. `getAdminUserList()` is DB-only (no Supabase Admin API `listUsers()`) — built from `group_members` to avoid the slow/hanging Admin API. Users show by display name; emails are not available without `listUsers()`.
+
+**Supabase free-tier DB resilience** — `lib/db/client.ts` uses `max: 3`, `idle_timeout: 20`, `connect_timeout: 10`. The admin page has a 12-second resolving fallback (`Promise.race` against a timeout that resolves with empty data rather than rejecting) so the page always renders even if Supabase is degraded.
+
 ### Login page — `intent` param for signup vs sign-in copy
 
 `app/(auth)/login/page.tsx` accepts an `intent=signup` search param. When present, the card shows "Create your account" / "Free to get started — no credit card needed." instead of the default "Sign in to Clear" / "Split expenses with anyone, anywhere." The `returnTo=/join/...` condition takes priority over `intent`.
@@ -220,7 +232,7 @@ Components that accept optional date bounds use `groupStartDate`/`groupEndDate` 
 5. **Pure functions for math**: `lib/splits/compute.ts`, `lib/settle/optimize.ts` — never touch DB.
 6. **Shared Zod schemas**: same schema for form (zodResolver), server action input, and DB insert.
 7. **Optimistic UI via useState**: `removedIds: Set<string>` state, rolls back on server error.
-8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `app/(app)/groups/[id]/layout.tsx`.
+8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `app/(app)/groups/[id]/layout.tsx`. **Disabled in development** (`NODE_ENV !== 'production'`) — Realtime was consuming 85% of Supabase free-tier DB CPU via continuous `realtime.list_changes` polling, starving application queries. Active only in production (Vercel).
 9. **Auth via shared `getCurrentUser()`**: layout and all `lib/db/queries/*.ts` call `getCurrentUser()` from `lib/db/queries/auth.ts` — React-`cache()`-wrapped so the whole render tree shares 1 auth call. Never call `supabase.auth.getUser()` directly in server components or query functions.
 10. **GROUP_CONFIG pattern**: All group-type differences flow through `lib/group-config.ts` — never raw `group.type === 'trip'` checks scattered across files.
 
@@ -401,7 +413,7 @@ Icons scale with the button: `w-5 h-5 md:w-4 md:h-4`.
 ### Motion
 - Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger 30–50ms via `AnimatedList`
 - Balance numbers: `CountUp` (Framer Motion)
-- Navigation progress: `NavProgress` (`components/shared/nav-progress.tsx`) — thin cyan→teal bar at top, shown instantly on any link click, completes when pathname changes
+- Navigation progress: `NavProgress` (`components/shared/nav-progress.tsx`) — thin cyan→teal bar at top. Lives in root `app/layout.tsx` (not `(app)/layout.tsx`) so it persists across all route groups including `/admin`. Triggers on `<a>` clicks AND on a custom `navprogress` window event (dispatched before `window.location.href` navigations to cross-layout routes). Completes when `pathname` changes.
 
 ---
 

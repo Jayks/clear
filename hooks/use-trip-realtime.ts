@@ -14,6 +14,11 @@ export function useGroupRealtime(groupId: string) {
   }, [router]);
 
   useEffect(() => {
+    // Realtime is disabled in development to reduce Supabase free-tier load.
+    // realtime.list_changes was consuming 85% of all DB CPU due to continuous
+    // subscription polling — this starved application queries on the free tier.
+    if (process.env.NODE_ENV !== "production") return;
+
     const supabase = createClient();
 
     const channel = supabase

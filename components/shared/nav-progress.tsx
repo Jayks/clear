@@ -26,6 +26,14 @@ export function NavProgress() {
     return () => document.removeEventListener("click", handler);
   }, [pathname]);
 
+  // Programmatic navigations (e.g. window.location.href for cross-layout routes)
+  // dispatch this event so the bar still starts before the page unloads.
+  useEffect(() => {
+    const handler = () => setLoading(true);
+    window.addEventListener("navprogress", handler);
+    return () => window.removeEventListener("navprogress", handler);
+  }, []);
+
   return (
     <AnimatePresence>
       {loading && (

@@ -4,7 +4,6 @@ import { MobileNav } from "@/components/shared/mobile-nav";
 import { isPlatformAdmin } from "@/lib/db/queries/admin";
 import { TourProvider } from "@/components/tour/tour-context";
 import { getCurrentUser } from "@/lib/db/queries/auth";
-import { NavProgress } from "@/components/shared/nav-progress";
 
 export default async function AppLayout({
   children,
@@ -19,7 +18,6 @@ export default async function AppLayout({
 
   return (
     <TourProvider>
-      <NavProgress />
       <div className="min-h-screen flex flex-col">
         <AppNav user={user} isAdmin={isAdmin} />
         <main className="flex-1 p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">

@@ -23,11 +23,21 @@ const ROLE_CONFIG = {
   },
 } as const;
 
+const EMPTY_STATS = { totalUsers: 0, totalGroups: 0, totalExpenses: 0, totalSettled: 0 };
+
 export default async function AdminDashboardPage() {
-  const [stats, users, trips] = await Promise.all([
-    getAdminStats(),
-    getAdminUserList(),
-    getAdminGroupList(),
+  // withAdminTimeout in each query sets SET LOCAL statement_timeout = 8s, so
+  // slow queries are hard-cancelled by Postgres and release their connections.
+  // The 12s page-level fallback is a last-resort safety net.
+  const [stats, users, trips] = await Promise.race([
+    Promise.all([
+      getAdminStats().catch(() => EMPTY_STATS),
+      getAdminUserList().catch(() => [] as Awaited<ReturnType<typeof getAdminUserList>>),
+      getAdminGroupList().catch(() => [] as Awaited<ReturnType<typeof getAdminGroupList>>),
+    ]),
+    new Promise<[typeof EMPTY_STATS, never[], never[]]>((resolve) =>
+      setTimeout(() => resolve([EMPTY_STATS, [], []]), 12_000)
+    ),
   ]);
 
   const statCards = [

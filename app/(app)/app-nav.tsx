@@ -81,7 +81,6 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
 
         <ThemeToggle />
 
-
         {/* Avatar */}
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -104,7 +103,10 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
             <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />
             {isAdmin && (
               <DropdownMenuItem
-                onClick={() => router.push("/admin")}
+                onClick={() => {
+                  window.dispatchEvent(new Event("navprogress"));
+                  window.location.href = "/admin";
+                }}
                 className="cursor-pointer"
               >
                 <LayoutDashboard className="w-4 h-4 mr-2" />

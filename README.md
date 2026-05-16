@@ -24,6 +24,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **UPI pay** — direct payment links on the settle-up page
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
+- **Cover photo upload** — pick a photo from Unsplash or upload from your device (gallery on mobile, file browser on desktop); stored in Supabase Storage
 - **Trip plan upload** — upload a PDF or .txt itinerary and have it auto-filled in the trip form
 - **Onboarding tour** — 10-step guided walkthrough with spotlight and swipe-to-dismiss sheet
 - **PWA** — installable on iOS and Android, offline-capable service worker
@@ -85,6 +86,7 @@ pnpm dev
 3. Add `http://localhost:3000/**` to Authentication → URL Configuration → Redirect URLs
 4. Run `drizzle/policies.sql` in the SQL Editor to apply RLS policies
 5. Enable Realtime for tables: `expenses`, `expense_splits`, `settlements`, `group_members`
+6. Create a Storage bucket named `cover-photos` (public, 5 MB limit) and run the Storage RLS policies from CLAUDE.md
 
 ### Windows note
 

@@ -57,7 +57,7 @@
 
 ### CoverPhotoPicker — no `<form>` inside forms
 
-Search uses `<div>` (not `<form>`) with `type="button"` on the search button to prevent parent form submission.
+Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` (not `<form>`) with `type="button"` on the search button to prevent parent form submission. Upload tab uses a hidden `<input type="file" accept="image/*">` — triggers native gallery on iOS/Android, file browser on desktop. Flow: pick file → local `URL.createObjectURL` preview → "Use this photo" → `uploadCoverPhoto` server action (`app/actions/upload.ts`) converts FileReader base64 to `Buffer` and uploads to the `cover-photos` Supabase Storage public bucket → public URL flows through `onChange()` exactly like Unsplash URLs. 5 MB limit enforced client + server side. Object URL is revoked after upload or on dialog close.
 
 ### DB Singleton (prevents HMR connection exhaustion)
 
@@ -296,6 +296,28 @@ amount: numeric(12,2), currency, note, settled_at
 CHECK: from_member_id <> to_member_id
 ```
 
+### Supabase Storage — `cover-photos` bucket (run once)
+
+Create via Supabase dashboard → Storage → New bucket:
+- Name: `cover-photos` | Public: **Yes** | File size limit: `5242880` (5 MB)
+
+RLS policies (run in SQL Editor):
+```sql
+create policy "Authenticated users can upload cover photos"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'cover-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Public can read cover photos"
+on storage.objects for select to public
+using (bucket_id = 'cover-photos');
+
+create policy "Users can delete their own cover photos"
+on storage.objects for delete to authenticated
+using (bucket_id = 'cover-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+```
+
+Files are stored at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has `riyfedftffuqzxtcpdde.supabase.co` in `remotePatterns` for `next/image` support.
+
 ### Realtime setup (run once in SQL Editor)
 ```sql
 alter publication supabase_realtime add table expenses;
@@ -470,7 +492,7 @@ clear/
 │   ├── summary/[token]/page.tsx + opengraph-image.tsx
 │   ├── api/groups/[id]/export/route.ts    # CSV download
 │   └── actions/
-│       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts
+│       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
 ├── components/

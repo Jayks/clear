@@ -47,7 +47,7 @@ export function IOSInstallHint() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          className="fixed bottom-20 md:bottom-6 left-3 right-3 z-[60]"
+          className="fixed bottom-nav-safe md:bottom-6 left-3 right-3 z-[60]"
         >
           <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg shadow-black/10">
             {/* App icon */}

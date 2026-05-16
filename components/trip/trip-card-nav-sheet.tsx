@@ -23,6 +23,15 @@ const NAV_ITEMS = [
 export function TripCardNavSheet({ isOpen, onClose, groupId, groupName }: Props) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Prevent body scroll on iOS when the sheet is open. Uses a non-passive
+  // touchmove listener because React synthetic events can't call preventDefault.
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevent = (e: TouchEvent) => e.preventDefault();
+    document.addEventListener("touchmove", prevent, { passive: false });
+    return () => document.removeEventListener("touchmove", prevent);
+  }, [isOpen]);
   if (!mounted) return null;
 
   return createPortal(

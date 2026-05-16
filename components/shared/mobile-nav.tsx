@@ -15,10 +15,7 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass-nav border-t border-white/60 dark:border-slate-700/40">
-      <div
-        className="flex items-center justify-around h-16 px-4"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
+      <div className="flex items-center justify-around px-4 h-nav-safe">
         {NAV_ITEMS.map(({ href, label, icon: Icon, tourId }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (

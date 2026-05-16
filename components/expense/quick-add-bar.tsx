@@ -106,12 +106,12 @@ export function QuickAddBar({
   return (
     <div className="mb-4 rounded-2xl border border-cyan-200 dark:border-cyan-900/50 bg-gradient-to-br from-cyan-50/80 to-teal-50/80 dark:from-cyan-950/40 dark:to-teal-950/40 p-4">
       {/* Header row */}
-      <div className="flex items-center gap-2 mb-3">
-        <Zap className="w-3.5 h-3.5 text-cyan-500" />
-        <span className="text-xs font-semibold text-cyan-700 dark:text-cyan-400 uppercase tracking-wide">
+      <div className="flex items-center gap-2 mb-3 min-w-0">
+        <Zap className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+        <span className="text-xs font-semibold text-cyan-700 dark:text-cyan-400 uppercase tracking-wide shrink-0">
           Quick add
         </span>
-        <span className="text-xs text-slate-400 dark:text-slate-500 normal-case font-normal tracking-normal">
+        <span className="text-xs text-slate-400 dark:text-slate-500 normal-case font-normal tracking-normal truncate">
           — type or speak
         </span>
 
@@ -138,13 +138,13 @@ export function QuickAddBar({
           onKeyDown={handleKeyDown}
           disabled={loading || isListening}
           placeholder={isListening ? "Listening…" : "dinner 2400 raj yesterday split 4"}
-          className="flex-1 px-3 py-2 text-sm rounded-xl border border-cyan-200 dark:border-cyan-900/50 bg-white/70 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
+          className="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border border-cyan-200 dark:border-cyan-900/50 bg-white/70 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
         />
         <button
           type="button"
           onClick={() => handleFill()}
           disabled={loading || isListening}
-          className="px-4 py-2 text-sm font-medium bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white rounded-xl transition-all disabled:opacity-60 flex items-center gap-1.5 whitespace-nowrap"
+          className="shrink-0 px-4 py-2 text-sm font-medium bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white rounded-xl transition-all disabled:opacity-60 flex items-center gap-1.5 whitespace-nowrap"
         >
           {loading ? (
             <>
@@ -161,7 +161,7 @@ export function QuickAddBar({
       {parsed && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {parsed.description && (
-            <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium">
+            <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium max-w-[10rem] truncate">
               {parsed.description}
             </span>
           )}

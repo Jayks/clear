@@ -16,12 +16,16 @@ interface TripCardProps {
 }
 
 const LONG_PRESS_MS = 500;
+// iOS fingers drift slightly even while holding still; only cancel if truly scrolling.
+const MOVE_THRESHOLD = 8;
 
-const floatBtn =
-  "w-8 h-8 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
+// Desktop-only quick-nav button — long-press handles this on mobile
+const moreBtn =
+  "hidden md:flex w-8 h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
 export function TripCard({ group, memberCount }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isLongPressing, setIsLongPressing] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
   const isNest = group.groupType === "nest";
@@ -37,6 +41,8 @@ export function TripCard({ group, memberCount }: TripCardProps) {
   // Explicitly cancel the timer here, and block the ⋯ button for 300ms to
   // absorb the stray click event that fires after the backdrop disappears.
   const navBlockedRef = useRef(false);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+
   function handleQrOpenChange(open: boolean) {
     if (!open) {
       cancelLongPress();
@@ -45,14 +51,31 @@ export function TripCard({ group, memberCount }: TripCardProps) {
     }
   }
 
-  function startLongPress() {
+  function startLongPress(e: React.TouchEvent) {
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    setIsLongPressing(true);
     longPressTimer.current = setTimeout(() => {
       suppressNextClick.current = true;
+      setIsLongPressing(false);
+      // Vibration API: works on Android, silently unavailable on iOS Safari.
+      try { navigator.vibrate?.(12); } catch { /* not available */ }
       setIsNavOpen(true);
     }, LONG_PRESS_MS);
   }
 
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchStartPos.current) return;
+    const t = e.touches[0];
+    const moved =
+      Math.abs(t.clientX - touchStartPos.current.x) > MOVE_THRESHOLD ||
+      Math.abs(t.clientY - touchStartPos.current.y) > MOVE_THRESHOLD;
+    if (moved) cancelLongPress();
+  }
+
   function cancelLongPress() {
+    setIsLongPressing(false);
+    touchStartPos.current = null;
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -63,14 +86,18 @@ export function TripCard({ group, memberCount }: TripCardProps) {
     // Outer div: positioning context for action buttons, hover effects, touch handlers.
     // No overflow-hidden here — that lives on the inner glass div so buttons aren't clipped.
     <div
-      className="group/card relative hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-200 hover:-translate-y-0.5 select-none"
+      className={`group/card relative hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-0.5 select-none transition-all ${isLongPressing ? "scale-[0.97] duration-500" : "duration-200"}`}
       data-tour={group.isDemo ? (isNest ? "demo-nest" : "demo-trip") : undefined}
       onTouchStart={startLongPress}
       onTouchEnd={cancelLongPress}
-      onTouchMove={cancelLongPress}
+      onTouchMove={handleTouchMove}
       onTouchCancel={cancelLongPress}
-      style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
+      style={{ WebkitTouchCallout: "none", touchAction: "manipulation" } as React.CSSProperties}
     >
+      {/* Cyan ring that appears during long-press to signal the gesture is registered */}
+      {isLongPressing && (
+        <div className="absolute inset-0 z-20 rounded-2xl ring-2 ring-cyan-400/70 pointer-events-none" />
+      )}
       {/* Inner div: glass surface + overflow-hidden for image clipping and ribbon */}
       <div className={`glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : ""}`}>
         <Link
@@ -139,7 +166,7 @@ export function TripCard({ group, memberCount }: TripCardProps) {
           portals — QuickAddSheet, QR Dialog) from bubbling to the outer card div's
           startLongPress handler, which would otherwise start a 500ms nav-sheet timer. */}
       <div
-        className="absolute top-3 right-3 z-10 flex items-center gap-1.5"
+        className="absolute top-3 right-3 z-10 flex items-center gap-2 md:gap-1.5"
         onTouchStart={(e) => e.stopPropagation()}
       >
         <TripCardQuickAdd
@@ -152,7 +179,7 @@ export function TripCard({ group, memberCount }: TripCardProps) {
         <TripCardShareButtons url={joinUrl} groupName={group.name} onQrOpenChange={handleQrOpenChange} />
         <button
           onClick={() => { if (!navBlockedRef.current) setIsNavOpen(true); }}
-          className={floatBtn}
+          className={moreBtn}
           aria-label="Quick navigation"
         >
           <MoreHorizontal className="w-4 h-4" />

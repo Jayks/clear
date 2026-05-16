@@ -32,9 +32,9 @@ export function TripCardQuickAdd({
         }}
         aria-label={`Add expense to ${groupName}`}
         data-tour="trip-card-add-btn"
-        className="w-8 h-8 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all"
+        className="w-10 h-10 md:w-8 md:h-8 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all"
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5 md:w-4 md:h-4" />
       </button>
       <QuickAddSheet
         groupId={groupId}

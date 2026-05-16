@@ -99,6 +99,19 @@ The `(app)/layout.tsx` and all `lib/db/queries/*.ts` files use `getCurrentUser()
 
 `QuickAddSheet` manages its own `createPortal` (renders at `document.body`) and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render the component from the parent, and never wrap it in an external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment) so exit animations work correctly. Members are lazy-fetched on first `isOpen=true` via a `fetchedRef`.
 
+### iOS touch & safe-area patterns
+
+**Long-press on TripCard** — uses a `MOVE_THRESHOLD = 8px` before cancelling the 500ms timer (iOS fingers drift slightly while holding). `isLongPressing` state drives a `scale(0.97)` press-down animation + cyan ring. `touchAction: "manipulation"` removes the 300ms tap delay. `navigator.vibrate?.(12)` fires on completion (Android only; iOS Safari doesn't implement the Vibration API — the visual scale is the iOS equivalent).
+
+**Safe-area CSS utilities** (defined as top-level rules in `globals.css`, NOT inside `@layer utilities` — Turbopack rejects `@media` nested inside `@layer`):
+- `.h-nav-safe` — `height: calc(4rem + env(safe-area-inset-bottom, 0px))` + matching padding-bottom. Used on MobileNav's inner div so the bar extends into the home-indicator area rather than compressing nav items.
+- `.pb-safe-nav` — `padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px))`, overridden to `2rem` at `md`. Used on the app `<main>` to clear the nav bar.
+- `.bottom-nav-safe` — `bottom: calc(5rem + env(safe-area-inset-bottom, 0px))`. Used on the FAB and iOS install hint.
+
+**iOS body scroll-through** — `position: fixed` overlays don't block body scroll on iOS Safari. Both `TripCardNavSheet` and `QuickAddSheet` prevent this via a non-passive DOM `touchmove` listener (React synthetic events can't call `preventDefault()`). QuickAddSheet exempts its own scrollable body div via a `scrollBodyRef` ref.
+
+**QuickAddSheet voice stale trigger** — `QuickAddBar` unmounts when the sheet closes (it lives inside `{isOpen && ...}`). On next open it remounts and its `voiceTrigger` effect fires immediately, seeing the stale transcript from the parent's state. Fix: `QuickAddSheet` clears `voiceTrigger` to `null` on close so the next mount sees nothing.
+
 ### Login page — `intent` param for signup vs sign-in copy
 
 `app/(auth)/login/page.tsx` accepts an `intent=signup` search param. When present, the card shows "Create your account" / "Free to get started — no credit card needed." instead of the default "Sign in to Clear" / "Split expenses with anyone, anywhere." The `returnTo=/join/...` condition takes priority over `intent`.
@@ -111,7 +124,7 @@ Served via `metadata.icons.apple` in `app/layout.tsx`, pointing to `/api/pwa-ico
 
 ### iOS PWA install hint
 
-`components/shared/ios-install-hint.tsx` — detects iOS Safari (not Chrome/Firefox on iOS), checks not already in standalone mode, checks localStorage `clear_ios_hint_dismissed`. Shows a dismissable glassmorphic bottom banner instructing users to tap Share → "Add to Home Screen". Rendered in root `app/layout.tsx`. Positioned `bottom-20 md:bottom-6` to clear the MobileNav on mobile.
+`components/shared/ios-install-hint.tsx` — detects iOS Safari (not Chrome/Firefox on iOS), checks not already in standalone mode, checks localStorage `clear_ios_hint_dismissed`. Shows a dismissable glassmorphic bottom banner instructing users to tap Share → "Add to Home Screen". Rendered in root `app/layout.tsx`. Positioned `bottom-nav-safe md:bottom-6` to clear the MobileNav (including safe-area-inset-bottom) on mobile.
 
 ### PWA manifest required fields
 
@@ -343,7 +356,7 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 
 ### Navigation
 - **Desktop**: sticky top — `ClearLogo` (28 px), Groups, Insights, ThemeToggle, avatar dropdown (Take the tour, Sign out)
-- **Mobile**: icon-only top nav + fixed `MobileNav` bottom (Groups, Insights). Content gets `pb-24`. Expenses page adds a cyan FAB (fixed `bottom-24 right-4`, `md:hidden`) for Add Expense.
+- **Mobile**: icon-only top nav + fixed `MobileNav` bottom (Groups, Insights). Content uses `.pb-safe-nav` (= `calc(6rem + env(safe-area-inset-bottom, 0px))`, desktop override to `2rem`). Expenses page adds a cyan FAB (`bottom-nav-safe right-4 md:hidden`) for Add Expense. MobileNav inner div uses `.h-nav-safe` (= `calc(4rem + env(safe-area-inset-bottom, 0px))`) so the nav bar correctly extends into the home-indicator area instead of compressing content inside a fixed `h-16`.
 
 ### Quick-add sheet (bottom sheet)
 Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — **not** the `.glass` class. The `.glass` class (60% opacity) is too transparent when the sheet sits over the dark backdrop overlay. The sheet needs a near-solid surface.
@@ -370,14 +383,17 @@ Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — **not** the `.glass
 
 **Top-left badges** (`absolute top-3 left-3 z-10`, on image div inside Link): type badge + member count badge. Both `bg-black/40 backdrop-blur-sm` pill style. Same across all cards.
 
-**Top-right buttons** (`absolute top-3 right-3 z-10`, on outer div): Add (`+`), Share, QR, `⋯` — all the same frosted-glass style:
+**Top-right buttons** (`absolute top-3 right-3 z-10 gap-2 md:gap-1.5`, on outer div): Add (`+`), Share, QR — and `⋯` on desktop only (`hidden md:flex`). Mobile uses long-press for quick-nav; the `⋯` would clutter the smaller button strip. Button style:
 ```
-bg-black/30 hover:bg-black/50 backdrop-blur-md text-white w-8 h-8 rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all
+bg-black/30 hover:bg-black/50 backdrop-blur-md text-white
+w-10 h-10 md:w-8 md:h-8   ← bigger tap target on mobile
+rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all
 ```
+Icons scale with the button: `w-5 h-5 md:w-4 md:h-4`.
 
 **Sample ribbon** (demo cards only): diagonal amber strip (`absolute bottom-[22px] right-[-30px] rotate-[-45deg]`, `pointer-events-none`). Clipped by the inner div's `overflow-hidden`. Text: `SAMPLE`.
 
-**Quick-nav sheet** (`TripCardNavSheet`): portal + AnimatePresence bottom sheet. Opens via `⋯` click or 500 ms long-press on card body. Four destinations: Members, Expenses, Settle Up, Insights. Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl`.
+**Quick-nav sheet** (`TripCardNavSheet`): portal + AnimatePresence bottom sheet. Opens via `⋯` click (desktop) or 500 ms long-press on card body (all). Four destinations: Members, Expenses, Settle Up, Insights. Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl`. Both this sheet and `QuickAddSheet` add a non-passive `touchmove` listener while open to prevent iOS body scroll-through behind the overlay.
 
 ### Share button — join URL, not summary URL
 `TripCardShareButtons` shares `/join/[shareToken]` (invite page) so recipients can join the group. It does **not** share `/summary/[shareToken]` (the AI trip story). Uses the `Share2` lucide icon (standard OS share icon). The QR dialog encodes the join URL with copy text "Copy invite link" / "Scan to join this group".

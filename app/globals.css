@@ -203,6 +203,24 @@
   .animate-marquee {
     animation: marquee 35s linear infinite;
   }
+
+}
+
+/* Safe-area-aware nav utilities (outside @layer to avoid Turbopack @media nesting issues).
+   The mobile nav bar is 4rem of content + env(safe-area-inset-bottom) for the
+   iPhone home indicator. All elements that sit above it use these classes. */
+.h-nav-safe {
+  height: calc(4rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pb-safe-nav {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .pb-safe-nav { padding-bottom: 2rem; }
+}
+.bottom-nav-safe {
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
 @keyframes marquee {

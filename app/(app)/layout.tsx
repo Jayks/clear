@@ -22,8 +22,7 @@ export default async function AppLayout({
       <NavProgress />
       <div className="min-h-screen flex flex-col">
         <AppNav user={user} isAdmin={isAdmin} />
-        {/* pb-24 on mobile leaves room above the bottom nav */}
-        <main className="flex-1 p-6 pb-24 md:pb-8 md:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">
           {children}
         </main>
         <MobileNav />

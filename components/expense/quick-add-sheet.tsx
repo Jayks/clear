@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff } from "lucide-react";
@@ -86,6 +86,7 @@ export function QuickAddSheet({
   // Ref (not state) so the "already fetched" flag survives isOpen toggles
   // without triggering a re-render or re-fetch on subsequent opens.
   const fetchedRef = useRef(false);
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
 
   const { isSupported: micSupported, isListening, interimTranscript, start, stop } =
     useSpeechRecognition({
@@ -108,11 +109,29 @@ export function QuickAddSheet({
     });
   }, [isOpen, groupId, initialMembers]);
 
-  // Track each open to trigger clear + focus in QuickAddBar
+  // Track each open to trigger clear + focus in QuickAddBar.
+  // On close, also clear voiceTrigger — QuickAddBar unmounts/remounts on each
+  // open, and its voiceTrigger effect runs on mount, so a stale trigger would
+  // immediately re-fire the previous transcript on the next open.
   useEffect(() => {
-    if (isOpen) setOpenCount((c) => c + 1);
-    else if (isListening) stop();
+    if (isOpen) {
+      setOpenCount((c) => c + 1);
+    } else {
+      if (isListening) stop();
+      setVoiceTrigger(null);
+    }
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Prevent body scroll on iOS when open, but allow scroll inside the sheet body.
+  const preventBodyScroll = useCallback((e: TouchEvent) => {
+    if (scrollBodyRef.current?.contains(e.target as Node)) return;
+    e.preventDefault();
+  }, []);
+  useEffect(() => {
+    if (!isOpen) return;
+    document.addEventListener("touchmove", preventBodyScroll, { passive: false });
+    return () => document.removeEventListener("touchmove", preventBodyScroll);
+  }, [isOpen, preventBodyScroll]);
 
   function handleSave() {
     if (!parsed || !members) return;
@@ -205,6 +224,7 @@ export function QuickAddSheet({
 
           {/* Body */}
           <div
+            ref={scrollBodyRef}
             className="flex-1 overflow-y-auto px-5 pt-4 pb-6 min-h-0"
             onPointerDown={(e) => e.stopPropagation()}
           >

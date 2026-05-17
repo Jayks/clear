@@ -99,7 +99,7 @@ export function TripCard({ group, memberCount }: TripCardProps) {
         <div className="absolute inset-0 z-20 rounded-2xl ring-2 ring-cyan-400/70 pointer-events-none" />
       )}
       {/* Inner div: glass surface + overflow-hidden for image clipping and ribbon */}
-      <div className={`glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : ""}`}>
+      <div className={`glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : group.isArchived ? " ring-2 ring-slate-400/30" : ""}`}>
         <Link
           href={`/groups/${group.id}`}
           className="block"
@@ -136,10 +136,15 @@ export function TripCard({ group, memberCount }: TripCardProps) {
               </span>
             </div>
 
-            {/* Sample ribbon — bottom-right corner diagonal, clipped by overflow-hidden */}
+            {/* Diagonal ribbon — bottom-right corner, clipped by overflow-hidden */}
             {group.isDemo && (
               <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
                 SAMPLE
+              </div>
+            )}
+            {group.isArchived && !group.isDemo && (
+              <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-slate-500/80 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
+                ARCHIVED
               </div>
             )}
 

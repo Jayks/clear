@@ -1,6 +1,6 @@
 import { Plus, Archive, LayoutGrid } from "lucide-react";
 import Link from "next/link";
-import { getGroups, getArchivedGroups } from "@/lib/db/queries/groups";
+import { getAllGroups } from "@/lib/db/queries/groups";
 import { TripCard } from "@/components/trip/trip-card";
 import { AnimatedList } from "@/components/shared/animated-list";
 import { ensureDemoGroup } from "@/app/actions/demo";
@@ -9,10 +9,9 @@ import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 export default async function GroupsPage() {
   // ensureDemoGroup is best-effort — a Supabase timeout or transient error
   // must never break the groups page. Swallow failures silently.
-  const [, groups, archived] = await Promise.all([
+  const [, { active: groups, archived }] = await Promise.all([
     ensureDemoGroup().catch(() => {}),
-    getGroups().catch(() => []),
-    getArchivedGroups().catch(() => []),
+    getAllGroups().catch(() => ({ active: [], archived: [] })),
   ]);
 
   return (

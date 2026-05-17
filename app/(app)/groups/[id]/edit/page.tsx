@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function EditGroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const data = await getGroupWithMembers(id);
+  const data = await getGroupWithMembers(id, { full: true });
   if (!data) notFound();
 
   const { group, currentMember } = data;

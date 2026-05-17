@@ -8,7 +8,7 @@ import { addGuestSchema } from "@/lib/validations/trip";
 import { eq, and } from "drizzle-orm";
 import { getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
   const supabase = await createClient();
@@ -35,6 +35,7 @@ export async function addGuestMember(input: { groupId: string; guestName: string
       role: "member",
     }).returning();
 
+    revalidateTag(`group-${groupId}`, "max");
     revalidatePath(`/groups/${groupId}/members`);
     return { ok: true, member } as const;
   } catch {
@@ -55,6 +56,7 @@ export async function removeMember(groupId: string, memberId: string) {
     await db.delete(groupMembers).where(
       and(eq(groupMembers.id, memberId), eq(groupMembers.groupId, groupId))
     );
+    revalidateTag(`group-${groupId}`, "max");
     revalidatePath(`/groups/${groupId}/members`);
     return { ok: true } as const;
   } catch {
@@ -85,6 +87,7 @@ export async function joinGroup(token: string) {
       role: "member",
     });
 
+    revalidateTag(`group-${group.id}`, "max");
     revalidatePath("/groups");
     revalidatePath(`/groups/${group.id}`, "layout");
     return { ok: true, groupId: group.id } as const;

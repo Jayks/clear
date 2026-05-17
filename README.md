@@ -141,5 +141,7 @@ lib/
 - **Server-first** — RSC by default; `"use client"` only for state, effects, charts
 - **Server Actions** for all mutations — no REST routes for internal CRUD
 - **`getCurrentUser()`** — React-`cache()`-wrapped `getUser()` call; deduplicates auth across the render tree
+- **`unstable_cache`** — group row + members list cached server-side per group (tag `group-${groupId}`); invalidated on any group or member mutation via `revalidateTag`
+- **`getBalances()`** — single SQL CTE round-trip (4 aggregates + members in one query)
 - **GROUP_CONFIG** — all trip/nest differences flow through `lib/group-config.ts`
 - **QuickAddSheet / TripCardNavSheet** — own their own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop. Cards have no footer — Add, Share, and QR float on the cover image (`w-10 h-10` on mobile for iOS tap targets); `⋯` is desktop-only (`hidden md:flex`), long-press opens the nav sheet on mobile

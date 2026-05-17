@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
-import { getExpenses } from "@/lib/db/queries/expenses";
+import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
 import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -22,9 +22,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, expenses] = await Promise.all([
+  const [data, totalSpent] = await Promise.all([
     getGroupWithMembers(id),
-    getExpenses(id),
+    getGroupTotalSpent(id),
   ]);
   if (!data) notFound();
 
@@ -34,7 +34,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const isNest = group.groupType === "nest";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
-  const totalSpent = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
   return (
     <div>

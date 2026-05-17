@@ -1,8 +1,12 @@
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
+import type { Group } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, and, count, inArray, sql } from "drizzle-orm";
+import { eq, and, count, inArray, sql, getTableColumns } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
+
+const { itinerary: _itinerary, ...groupCoreColumns } = getTableColumns(groups);
 
 async function getUserGroupIds(userId: string): Promise<string[]> {
   const rows = await db
@@ -60,17 +64,62 @@ export async function getArchivedGroups() {
   return groupRows.map((group) => ({ group, memberCount: countMap.get(group.id) ?? 0 }));
 }
 
-export async function getGroupWithMembers(groupId: string) {
+export async function getAllGroups() {
+  const user = await getCurrentUser();
+  if (!user) return { active: [], archived: [] };
+
+  const groupIds = await getUserGroupIds(user.id);
+  if (groupIds.length === 0) return { active: [], archived: [] };
+
+  const [groupRows, countMap] = await Promise.all([
+    db.select().from(groups)
+      .where(inArray(groups.id, groupIds))
+      .orderBy(
+        sql`case when ${groups.isDemo} then 0 else 1 end`,
+        sql`case when ${groups.startDate} >= current_date then 0 else 1 end`,
+        sql`case when ${groups.startDate} >= current_date then ${groups.startDate} end asc`,
+        sql`case when ${groups.startDate} < current_date or ${groups.startDate} is null then ${groups.createdAt} end desc`
+      ),
+    getMemberCounts(groupIds),
+  ]);
+
+  const active: { group: Group; memberCount: number }[] = [];
+  const archived: { group: Group; memberCount: number }[] = [];
+  for (const group of groupRows) {
+    const item = { group, memberCount: countMap.get(group.id) ?? 0 };
+    if (group.isArchived) archived.push(item);
+    else active.push(item);
+  }
+  archived.sort((a, b) => new Date(b.group.createdAt).getTime() - new Date(a.group.createdAt).getTime());
+  return { active, archived };
+}
+
+export async function getGroupWithMembers(groupId: string, opts: { full?: boolean } = {}) {
   const user = await getCurrentUser();
   if (!user) return null;
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return null;
 
-  const [[group], rawMembers] = await Promise.all([
-    db.select().from(groups).where(eq(groups.id, groupId)),
-    db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId)).orderBy(groupMembers.joinedAt),
-  ]);
+  const full = opts.full ?? false;
+  const fetchGroupData = unstable_cache(
+    async () => {
+      const groupQuery = full
+        ? db.select().from(groups).where(eq(groups.id, groupId))
+        : db.select({ ...groupCoreColumns, itinerary: sql<string | null>`null` }).from(groups).where(eq(groups.id, groupId));
+
+      const [groupRows, rawMembers] = await Promise.all([
+        groupQuery,
+        db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId)).orderBy(groupMembers.joinedAt),
+      ]);
+      return { groupRows: groupRows as unknown as Group[], rawMembers };
+    },
+    ['group-with-members', groupId, full ? 'full' : 'basic'],
+    { tags: [`group-${groupId}`] }
+  );
+
+  const { groupRows, rawMembers } = await fetchGroupData();
+  const group = groupRows[0];
 
   if (!group) return null;
 

@@ -24,7 +24,7 @@ import Link from "next/link";
 export default async function GroupInsightsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [tripData, expensesWithSplits] = await Promise.all([
-    getGroupWithMembers(id),
+    getGroupWithMembers(id, { full: true }),
     getGroupExpensesWithSplits(id),
   ]);
   if (!tripData) notFound();

@@ -8,7 +8,7 @@ import { createGroupSchema, type CreateGroupInput } from "@/lib/validations/trip
 import { eq, sql } from "drizzle-orm";
 import { getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function createGroup(input: CreateGroupInput) {
   const supabase = await createClient();
@@ -74,6 +74,7 @@ export async function updateGroup(groupId: string, input: CreateGroupInput) {
       itinerary: itinerary || null,
     }).where(eq(groups.id, groupId));
 
+    revalidateTag(`group-${groupId}`, "max");
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidatePath("/groups");
     return { ok: true } as const;
@@ -93,6 +94,7 @@ export async function archiveGroup(groupId: string, archive: boolean) {
 
   try {
     await db.update(groups).set({ isArchived: archive }).where(eq(groups.id, groupId));
+    revalidateTag(`group-${groupId}`, "max");
     revalidatePath("/groups");
     revalidatePath(`/groups/${groupId}`, "layout");
     return { ok: true } as const;
@@ -135,6 +137,7 @@ export async function regenerateShareToken(groupId: string) {
       .where(eq(groups.id, groupId))
       .returning();
 
+    revalidateTag(`group-${groupId}`, "max");
     revalidatePath(`/groups/${groupId}/members`);
     return { ok: true, shareToken: updated.shareToken } as const;
   } catch {

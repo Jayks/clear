@@ -189,15 +189,39 @@ Strip markdown fences before `JSON.parse` — Haiku wraps JSON in ` ```json ``` 
 const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
 ```
 
-### `getGroupWithMembers` — parallel group + members fetch
+### `getGroupWithMembers` — cached fetch, itinerary excluded by default
 
-After the membership check, group row and members list are fetched in parallel:
+Accepts an optional `opts: { full?: boolean }` parameter (default `false`). When `full` is false, the `itinerary` column is replaced with `null` in the SELECT (saves KB of AI text on 8 of 10 group subpages). Only pass `{ full: true }` on pages that actually render itinerary:
+
 ```typescript
-const [[group], rawMembers] = await Promise.all([
-  db.select().from(groups).where(eq(groups.id, groupId)),
-  db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId)).orderBy(groupMembers.joinedAt),
-]);
+// ✅ insights and edit pages — need itinerary
+getGroupWithMembers(id, { full: true })
+
+// ✅ all other group subpages — itinerary is null, not fetched
+getGroupWithMembers(id)
 ```
+
+The DB fetch (group row + members) is wrapped in `unstable_cache` tagged `group-${groupId}`. The cache is indefinite (no TTL) and invalidated only by explicit `revalidateTag`. Auth and membership checks run before the cache — unauthorised callers never reach the cached data.
+
+### Group cache invalidation — `revalidateTag` required on mutations
+
+`getGroupWithMembers` caches its DB fetch under the tag `group-${groupId}`. Every server action that mutates the group row or members list **must** call `revalidateTag` to bust the cache. Next.js 16 changed the signature — two arguments are required:
+
+```typescript
+import { revalidateTag } from "next/cache";
+revalidateTag(`group-${groupId}`, "max");  // ✅ Next.js 16
+revalidateTag(`group-${groupId}`);          // ❌ deprecated single-arg form — TS error
+```
+
+Actions that must call this: `updateGroup`, `archiveGroup`, `regenerateShareToken` (`app/actions/groups.ts`); `addGuestMember`, `removeMember`, `joinGroup` (`app/actions/members.ts`). Any new action that writes to `groups` or `group_members` must also call it.
+
+### `getAllGroups()` replaces `getGroups()` + `getArchivedGroups()`
+
+`lib/db/queries/groups.ts` exports `getAllGroups()` which fetches active + archived groups in one query (one `getUserGroupIds` round-trip instead of two). Returns `{ active, archived }`. Use this on the groups page — do not call the old individual functions.
+
+### `getBalances()` — single CTE round-trip
+
+Rewrote from 5 parallel queries to one SQL `WITH` statement (4 CTEs → LEFT JOINed onto `group_members`). Each CTE's aggregate column must have a **unique alias** (`paid_total`, `owed_total`, `sent_total`, `received_total`) — Postgres raises "column reference is ambiguous" if all four are named `total`. The outer SELECT uses `COALESCE(cte.column, '0')` to handle non-members.
 
 ### Group member count — correlated subquery
 
@@ -425,7 +449,9 @@ rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all
 ```
 Icons scale with the button: `w-5 h-5 md:w-4 md:h-4`.
 
-**Sample ribbon** (demo cards only): diagonal amber strip (`absolute bottom-[22px] right-[-30px] rotate-[-45deg]`, `pointer-events-none`). Clipped by the inner div's `overflow-hidden`. Text: `SAMPLE`.
+**Diagonal ribbons** — bottom-right corner, clipped by the inner div's `overflow-hidden`. Same position and sizing (`absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg]`), `pointer-events-none`:
+- **Demo cards** (`isDemo`): amber — `bg-amber-500/90`, inner div gets `ring-2 ring-amber-400/40`. Text: `SAMPLE`.
+- **Archived cards** (`isArchived && !isDemo`): slate — `bg-slate-500/80`, inner div gets `ring-2 ring-slate-400/30`. Text: `ARCHIVED`.
 
 **Quick-nav sheet** (`TripCardNavSheet`): portal + AnimatePresence bottom sheet. Opens via `⋯` click (desktop) or 500 ms long-press on card body (all). Four destinations: Members, Expenses, Settle Up, Insights. Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl`. Both this sheet and `QuickAddSheet` add a non-passive `touchmove` listener while open to prevent iOS body scroll-through behind the overlay.
 
@@ -485,8 +511,8 @@ clear/
 │   │           ├── layout.tsx (RealtimeRefresh), page.tsx
 │   │           ├── edit/page.tsx + edit-trip-form.tsx
 │   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, templates/new/, templates/[templateId]/edit/
-│   │           ├── members/page.tsx + forms/buttons
-│   │           ├── settle/page.tsx, loading.tsx, mark-paid-button, upi-pay-button
+│   │           ├── members/page.tsx, loading.tsx + forms/buttons
+│   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, mark-paid-button, upi-pay-button
 │   │           └── insights/page.tsx + loading.tsx
 │   ├── join/[token]/page.tsx + join-button.tsx
 │   ├── summary/[token]/page.tsx + opengraph-image.tsx
@@ -543,6 +569,7 @@ Server components and query functions call `getCurrentUser()` from `lib/db/queri
 - **Dates**: `date` type (no time). Format with `formatDate()`. For recurring expense logging: always first of current month (`YYYY-MM-01`).
 - **Member names**: always `getMemberName(member)` → `displayName ?? guestName ?? "Member"`.
 - **revalidatePath**: always `revalidatePath('/groups/${groupId}', 'layout')` — layout variant invalidates whole subtree.
+- **revalidateTag**: always two args in Next.js 16 — `revalidateTag('group-${groupId}', 'max')`. Required on every server action that mutates `groups` or `group_members` rows (see group cache invalidation gotcha above).
 - **File names**: kebab-case. No barrel files — import from actual file.
 - **Fraunces font**: `style={{ fontFamily: "var(--font-fraunces)" }}` — never Tailwind class.
 - **Dark mode**: every colour class needs a `dark:` counterpart.

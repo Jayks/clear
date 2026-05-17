@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
@@ -5,6 +6,14 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { eq, sum, count, inArray, and, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/db/queries/auth";
+
+const getUserGroupIds = cache(async (userId: string): Promise<string[]> => {
+  const rows = await db
+    .select({ groupId: groupMembers.groupId })
+    .from(groupMembers)
+    .where(eq(groupMembers.userId, userId));
+  return rows.map((r) => r.groupId);
+});
 import { computeAllTripsInsights } from "@/lib/insights/all-trips-insights";
 import { computeAllNestsInsights } from "@/lib/insights/all-nests-insights";
 import type { TripSummary } from "@/lib/insights/all-trips-insights";
@@ -14,19 +23,17 @@ export async function getAllTripsInsightsData() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const memberships = await db
-    .select({ groupId: groupMembers.groupId })
-    .from(groupMembers)
-    .where(eq(groupMembers.userId, user.id));
+  const allGroupIds = await getUserGroupIds(user.id);
+  if (allGroupIds.length === 0) return null;
 
-  if (memberships.length === 0) return null;
-  const allGroupIds = memberships.map((m) => m.groupId);
+  const tripGroupSubquery = db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(and(inArray(groups.id, allGroupIds), eq(groups.groupType, "trip")));
 
-  const [tripGroups, allMembers] = await Promise.all([
-    db.select().from(groups).where(
-      and(inArray(groups.id, allGroupIds), eq(groups.groupType, "trip"))
-    ),
-    db.select().from(groupMembers).where(inArray(groupMembers.groupId, allGroupIds)),
+  const [tripGroups, tripMembers] = await Promise.all([
+    db.select().from(groups).where(and(inArray(groups.id, allGroupIds), eq(groups.groupType, "trip"))),
+    db.select().from(groupMembers).where(inArray(groupMembers.groupId, tripGroupSubquery)),
   ]);
 
   if (tripGroups.length === 0) return null;
@@ -46,7 +53,7 @@ export async function getAllTripsInsightsData() {
       name: group.name,
       totalSpend: Number(t?.total ?? 0),
       expenseCount: Number(t?.cnt ?? 0),
-      memberCount: allMembers.filter((m) => m.groupId === group.id).length,
+      memberCount: tripMembers.filter((m) => m.groupId === group.id).length,
       currency: group.defaultCurrency,
     };
   });
@@ -60,7 +67,6 @@ export async function getAllTripsInsightsData() {
   const categoryTotals: Record<string, number> = {};
   for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
 
-  const tripMembers = allMembers.filter((m) => tripIds.includes(m.groupId));
   return computeAllTripsInsights({ trips: tripGroups, summaries, categoryTotals, allMembers: tripMembers, currentUserId: user.id });
 }
 
@@ -68,19 +74,17 @@ export async function getAllNestsInsightsData() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const memberships = await db
-    .select({ groupId: groupMembers.groupId })
-    .from(groupMembers)
-    .where(eq(groupMembers.userId, user.id));
+  const allGroupIds = await getUserGroupIds(user.id);
+  if (allGroupIds.length === 0) return null;
 
-  if (memberships.length === 0) return null;
-  const allGroupIds = memberships.map((m) => m.groupId);
+  const nestGroupSubquery = db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(and(inArray(groups.id, allGroupIds), eq(groups.groupType, "nest")));
 
-  const [nestGroups, allMembers] = await Promise.all([
-    db.select().from(groups).where(
-      and(inArray(groups.id, allGroupIds), eq(groups.groupType, "nest"))
-    ),
-    db.select().from(groupMembers).where(inArray(groupMembers.groupId, allGroupIds)),
+  const [nestGroups, nestMembers] = await Promise.all([
+    db.select().from(groups).where(and(inArray(groups.id, allGroupIds), eq(groups.groupType, "nest"))),
+    db.select().from(groupMembers).where(inArray(groupMembers.groupId, nestGroupSubquery)),
   ]);
 
   if (nestGroups.length === 0) return null;
@@ -103,7 +107,6 @@ export async function getAllNestsInsightsData() {
   const categoryTotals: Record<string, number> = {};
   for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
 
-  const nestMembers = allMembers.filter((m) => nestIds.includes(m.groupId));
   return computeAllNestsInsights({ nests: nestGroups, allExpenses, categoryTotals, allMembers: nestMembers, currentUserId: user.id });
 }
 

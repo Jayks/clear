@@ -1,8 +1,23 @@
 import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
-import { eq, desc, inArray, and, sql } from "drizzle-orm";
+import { eq, desc, inArray, and, sql, sum } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
+
+export async function getGroupTotalSpent(groupId: string): Promise<number> {
+  const user = await getCurrentUser();
+  if (!user) return 0;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership) return 0;
+
+  const [row] = await db
+    .select({ total: sum(expenses.amount) })
+    .from(expenses)
+    .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)));
+
+  return Number(row?.total ?? 0);
+}
 
 export async function getExpenses(groupId: string) {
   const user = await getCurrentUser();
@@ -121,7 +136,7 @@ export async function getMonthlyExpenseSummary(groupId: string) {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
   const monthExpenses = await db
-    .select()
+    .select({ id: expenses.id, amount: expenses.amount, paidByMemberId: expenses.paidByMemberId })
     .from(expenses)
     .where(
       and(
@@ -167,7 +182,7 @@ export async function getGroupExpensesWithSplits(groupId: string) {
   const groupExpenses = await db
     .select()
     .from(expenses)
-    .where(eq(expenses.groupId, groupId))
+    .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))
     .orderBy(desc(expenses.expenseDate), desc(expenses.createdAt));
 
   if (groupExpenses.length === 0) return [];

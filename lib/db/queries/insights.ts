@@ -86,17 +86,22 @@ export async function getAllNestsInsightsData() {
   if (nestGroups.length === 0) return null;
   const nestIds = nestGroups.map((g) => g.id);
 
-  // All non-template expenses across all nests
-  const allExpenses = await db
-    .select()
-    .from(expenses)
-    .where(and(inArray(expenses.groupId, nestIds), eq(expenses.isTemplate, false)))
-    .orderBy(expenses.expenseDate);
+  const nestWhere = and(inArray(expenses.groupId, nestIds), eq(expenses.isTemplate, false));
+
+  // Fetch only the columns computeAllNestsInsights actually reads; aggregate categories in DB
+  const [allExpenses, catRows] = await Promise.all([
+    db.select({
+      groupId: expenses.groupId,
+      amount: expenses.amount,
+      expenseDate: expenses.expenseDate,
+      sourceTemplateId: expenses.sourceTemplateId,
+    }).from(expenses).where(nestWhere).orderBy(expenses.expenseDate),
+    db.select({ category: expenses.category, total: sum(expenses.amount) })
+      .from(expenses).where(nestWhere).groupBy(expenses.category),
+  ]);
 
   const categoryTotals: Record<string, number> = {};
-  for (const e of allExpenses) {
-    categoryTotals[e.category] = (categoryTotals[e.category] ?? 0) + Number(e.amount);
-  }
+  for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
 
   const nestMembers = allMembers.filter((m) => nestIds.includes(m.groupId));
   return computeAllNestsInsights({ nests: nestGroups, allExpenses, categoryTotals, allMembers: nestMembers, currentUserId: user.id });

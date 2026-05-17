@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, X, ChevronDown } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Search, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { CATEGORIES } from "@/lib/categories";
@@ -22,15 +22,20 @@ interface Props {
   groupByMonth?: boolean;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth }: Props) {
-  const [search, setSearch]         = useState("");
-  const [category, setCategory]     = useState<string | null>(null);
-  const [payerId, setPayerId]        = useState<string | null>(null);
-  const [dateFrom, setDateFrom]      = useState("");
-  const [dateTo, setDateTo]          = useState("");
-  const [sort, setSort]              = useState<SortOption>("date-desc");
-  // Optimistically removed expense IDs — disappear instantly, restore on error
-  const [removedIds, setRemovedIds]  = useState<Set<string>>(new Set());
+  const [search, setSearch]        = useState("");
+  const [category, setCategory]    = useState<string | null>(null);
+  const [payerId, setPayerId]       = useState<string | null>(null);
+  const [dateFrom, setDateFrom]     = useState("");
+  const [dateTo, setDateTo]         = useState("");
+  const [sort, setSort]             = useState<SortOption>("date-desc");
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters or sort change
+  useEffect(() => { setCurrentPage(1); }, [search, category, payerId, dateFrom, dateTo, sort]);
 
   function optimisticDelete(expenseId: string) {
     setRemovedIds((prev) => new Set([...prev, expenseId]));
@@ -72,6 +77,11 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
 
     return result;
   }, [expenses, removedIds, search, category, payerId, dateFrom, dateTo, sort]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const page = Math.min(currentPage, Math.max(1, totalPages));
+  const pageStart = (page - 1) * ITEMS_PER_PAGE;
+  const pageItems = filtered.slice(pageStart, pageStart + ITEMS_PER_PAGE);
 
   const filteredTotal = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
   const isFiltered = !!(search || category || payerId || dateFrom || dateTo);
@@ -199,9 +209,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
       {/* ── Results bar ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-3 px-0.5">
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          {isFiltered
-            ? `${filtered.length} of ${expenses.length} expenses`
-            : `${expenses.length} expenses`}
+          {isFiltered ? `${filtered.length} matching` : `${expenses.length} expenses`}
         </p>
         <p
           className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular"
@@ -218,7 +226,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
         </div>
       ) : groupByMonth ? (
         <MonthGroupedList
-          expenses={filtered}
+          expenses={pageItems}
           members={members}
           currentUserId={currentUserId}
           isAdmin={isAdmin}
@@ -228,7 +236,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
         />
       ) : (
         <div className="space-y-2">
-          {filtered.map((expense) => (
+          {pageItems.map((expense) => (
             <SwipeableExpenseCard
               key={expense.id}
               expense={expense}
@@ -239,6 +247,31 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
               onDeleteFail={restoreDelete}
             />
           ))}
+        </div>
+      )}
+
+      {/* ── Pagination ──────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-0.5">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Prev
+          </button>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {pageStart + 1}–{Math.min(pageStart + ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
+          </span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            Next
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

@@ -146,6 +146,29 @@ alter publication supabase_realtime add table settlements;
 alter publication supabase_realtime add table group_members;
 
 
+-- ── storage: cover-photos bucket ─────────────────────────────────────────────
+-- Run once after creating the cover-photos bucket in Supabase dashboard.
+-- Bucket settings: Name = cover-photos | Public = Yes | File size limit = 5 MB
+
+create policy "Authenticated users can upload cover photos"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'cover-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Public can read cover photos"
+  on storage.objects for select to public
+  using (bucket_id = 'cover-photos');
+
+create policy "Users can delete their own cover photos"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'cover-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+
 -- ── indexes ───────────────────────────────────────────────────────────────────
 -- Applied separately via drizzle/indexes.sql in Supabase SQL Editor.
 -- Not managed by drizzle-kit — run indexes.sql once alongside this file.

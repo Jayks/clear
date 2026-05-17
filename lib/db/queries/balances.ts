@@ -18,13 +18,9 @@ export interface MemberBalanceRow {
 }
 
 export async function getBalances(groupId: string) {
-  const members = await db
-    .select()
-    .from(groupMembers)
-    .where(eq(groupMembers.groupId, groupId));
-
-  // 4 aggregated queries regardless of member count (replaces n*4 individual queries)
-  const [paidRows, owedRows, sentRows, receivedRows] = await Promise.all([
+  // All 5 queries are independent — fire them simultaneously
+  const [members, paidRows, owedRows, sentRows, receivedRows] = await Promise.all([
+    db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId)),
     db
       .select({ memberId: expenses.paidByMemberId, total: sum(expenses.amount) })
       .from(expenses)

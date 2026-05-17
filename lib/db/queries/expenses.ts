@@ -11,7 +11,7 @@ export async function getExpenses(groupId: string) {
   const membership = await getMembership(groupId, user.id);
   if (!membership) return [];
 
-  return db
+  return await db
     .select()
     .from(expenses)
     .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))

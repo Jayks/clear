@@ -1,46 +1,63 @@
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, and, count, sql } from "drizzle-orm";
+import { eq, and, count, inArray, sql } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
+
+async function getUserGroupIds(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ groupId: groupMembers.groupId })
+    .from(groupMembers)
+    .where(eq(groupMembers.userId, userId));
+  return rows.map((r) => r.groupId);
+}
+
+async function getMemberCounts(groupIds: string[]): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ groupId: groupMembers.groupId, cnt: count() })
+    .from(groupMembers)
+    .where(inArray(groupMembers.groupId, groupIds))
+    .groupBy(groupMembers.groupId);
+  return new Map(rows.map((r) => [r.groupId, Number(r.cnt)]));
+}
 
 export async function getGroups() {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const rows = await db
-    .select({
-      group: groups,
-      memberCount: sql<number>`(select count(*) from group_members where group_members.group_id = ${groups.id})`,
-    })
-    .from(groups)
-    .innerJoin(groupMembers, eq(groups.id, groupMembers.groupId))
-    .where(and(eq(groupMembers.userId, user.id), eq(groups.isArchived, false)))
-    .groupBy(groups.id)
-    .orderBy(
-      sql`case when ${groups.isDemo} then 0 else 1 end`,
-      sql`case when ${groups.startDate} >= current_date then 0 else 1 end`,
-      sql`case when ${groups.startDate} >= current_date then ${groups.startDate} end asc`,
-      sql`case when ${groups.startDate} < current_date or ${groups.startDate} is null then ${groups.createdAt} end desc`
-    );
+  const groupIds = await getUserGroupIds(user.id);
+  if (groupIds.length === 0) return [];
 
-  return rows;
+  const [groupRows, countMap] = await Promise.all([
+    db.select().from(groups)
+      .where(and(inArray(groups.id, groupIds), eq(groups.isArchived, false)))
+      .orderBy(
+        sql`case when ${groups.isDemo} then 0 else 1 end`,
+        sql`case when ${groups.startDate} >= current_date then 0 else 1 end`,
+        sql`case when ${groups.startDate} >= current_date then ${groups.startDate} end asc`,
+        sql`case when ${groups.startDate} < current_date or ${groups.startDate} is null then ${groups.createdAt} end desc`
+      ),
+    getMemberCounts(groupIds),
+  ]);
+
+  return groupRows.map((group) => ({ group, memberCount: countMap.get(group.id) ?? 0 }));
 }
 
 export async function getArchivedGroups() {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  return db
-    .select({
-      group: groups,
-      memberCount: sql<number>`(select count(*) from group_members where group_members.group_id = ${groups.id})`,
-    })
-    .from(groups)
-    .innerJoin(groupMembers, eq(groups.id, groupMembers.groupId))
-    .where(and(eq(groupMembers.userId, user.id), eq(groups.isArchived, true)))
-    .groupBy(groups.id)
-    .orderBy(sql`${groups.createdAt} desc`);
+  const groupIds = await getUserGroupIds(user.id);
+  if (groupIds.length === 0) return [];
+
+  const [groupRows, countMap] = await Promise.all([
+    db.select().from(groups)
+      .where(and(inArray(groups.id, groupIds), eq(groups.isArchived, true)))
+      .orderBy(sql`${groups.createdAt} desc`),
+    getMemberCounts(groupIds),
+  ]);
+
+  return groupRows.map((group) => ({ group, memberCount: countMap.get(group.id) ?? 0 }));
 }
 
 export async function getGroupWithMembers(groupId: string) {

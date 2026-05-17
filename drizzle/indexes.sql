@@ -33,3 +33,8 @@ create index if not exists idx_expense_splits_member
 -- Covers: WHERE group_id=? in settlements
 create index if not exists idx_settlements_group
   on settlements (group_id);
+
+-- For getAllTripsInsightsData, getAllNestsInsightsData — WHERE user_id=? membership scan
+-- The composite (group_id, user_id) index is not used when filtering by user_id alone
+create index if not exists idx_group_members_user
+  on group_members (user_id);

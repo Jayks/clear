@@ -24,16 +24,16 @@ import { WhatsAppRemindButton } from "./whatsapp-remind-button";
 
 export default async function SettlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, settlementHistory, { balances, suggestions }] = await Promise.all([
+  const [data, settlementHistory, { balances, suggestions }, monthlySummary] = await Promise.all([
     getGroupWithMembers(id),
     getSettlements(id),
     getBalances(id),
+    getMonthlyExpenseSummary(id),
   ]);
   if (!data) notFound();
 
   const { group, members, currentMember } = data;
   const isNest = group.groupType === "nest";
-  const monthlySummary = isNest ? await getMonthlyExpenseSummary(id) : null;
   const isAdmin = currentMember?.role === "admin";
   const pastSettlementsTotal = settlementHistory.reduce((sum, s) => sum + Number(s.amount), 0);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

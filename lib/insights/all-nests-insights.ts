@@ -1,8 +1,14 @@
 import { getCategory, CATEGORY_HEX } from "@/lib/categories";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
-import type { Expense } from "@/lib/db/schema/expenses";
 import type { MonthSpend } from "@/components/insights/monthly-spend-bar";
+
+type NestExpense = {
+  groupId: string;
+  amount: string;
+  expenseDate: string;
+  sourceTemplateId: string | null;
+};
 
 export interface NestSummary {
   nestId: string;
@@ -30,7 +36,7 @@ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 
 export function computeAllNestsInsights(params: {
   nests: Group[];
-  allExpenses: Expense[];
+  allExpenses: NestExpense[];
   categoryTotals: Record<string, number>;
   allMembers: GroupMember[];
   currentUserId: string;

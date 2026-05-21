@@ -66,7 +66,7 @@ if (process.env.NODE_ENV !== 'production') globalThis._pgClient = client;
 
 ### proxy.ts (Next.js 16)
 
-Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `middleware`). The `config.matcher` uses an explicit route list (`/groups/:path*`, `/insights/:path*`, `/admin/:path*`, `/join/:path*`, `/login`, `/`) — not the old catch-all regex. Protected routes: `/groups`, `/insights`, `/join`, `/admin`.
+Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `middleware`). The `config.matcher` uses an explicit route list (`/groups/:path*`, `/insights/:path*`, `/admin/:path*`, `/login`, `/`) — not the old catch-all regex. Protected routes: `/groups`, `/insights`, `/admin`. `/join` is **public** — unauthenticated users see the invite preview; the join action itself guards auth.
 
 ### Auth pattern — always use `getCurrentUser()`, never raw `getUser()`
 
@@ -115,9 +115,15 @@ Manages its own `createPortal` and `AnimatePresence` internally. Always pass `is
 
 **`withAdminTimeout`** — all admin queries run in `db.transaction()` with `SET LOCAL statement_timeout = 8000`. Hard-cancels slow queries, releases connections immediately.
 
-**Admin query design** — `getAdminStats()`: single SQL round-trip (4 subqueries). `getAdminGroupList()`: JOIN aggregation. `getAdminUserList()`: DB-only from `group_members`, no Supabase `listUsers()` — users show by display name; emails not available without `listUsers()`.
+**Admin query design** — `getAdminStats()`: single SQL round-trip (4 subqueries). `getAdminGroupList()`: JOIN aggregation (includes `isDemo` flag). `getAdminUserList()`: DB-only from `group_members`, no Supabase `listUsers()` — users show by display name; emails not available without `listUsers()`.
+
+**Admin delete** — `app/actions/admin.ts` exports `adminDeleteGroup(groupId)` and `adminDeleteUser(userId)`. Group delete cascades via FK. User delete removes `group_members` rows then calls Supabase Admin API. Guards: demo groups and platform admins cannot be deleted (platform admin check uses Supabase Admin API email lookup since `getAdminUserList` has no emails).
 
 **DB resilience** — `lib/db/client.ts`: `max:3`, `idle_timeout:20`, `connect_timeout:10`. Admin page uses `Promise.race` against a 12s resolving fallback (never rejects).
+
+### AI action rate limiting
+
+`lib/rate-limit.ts` exports `checkAiRateLimit(userId): boolean` — 20 AI calls/hour per user, shared across all AI features. All four AI actions (`parse-expense.ts`, `narrative.ts`, `parse-chat.ts`, `trip-adherence.ts`) call `getCurrentUser()` then `checkAiRateLimit(user.id)` before invoking Anthropic. In-memory store (best-effort on serverless). `parseExpenseWithAI` returns `null` on rate limit (falls back to rule-based parser); others return `{ ok: false, error: "Rate limit exceeded..." }`.
 
 ### Login page — `intent` param
 
@@ -199,7 +205,11 @@ Must call on: `updateGroup`, `archiveGroup`, `regenerateShareToken` (groups.ts);
 
 `lib/db/queries/groups.ts` exports `getAllGroups()` — one query, returns `{ active, archived }`.
 
-### `getBalances()` — single CTE round-trip
+### `getBalances()` — cached, currency-filtered CTE
+
+Signature: `getBalances(groupId, defaultCurrency)`. Filters paid/owed CTEs to `defaultCurrency` expenses only. Returns `{ balances, suggestions, hasMixedCurrencies }` — `hasMixedCurrencies` is true when the group has any expense in a non-default currency (triggers a warning banner on the settle page).
+
+Wrapped in `unstable_cache` tagged `balances-${groupId}`. Must call `revalidateTag('balances-${groupId}', 'max')` in every action that touches expenses or settlements: `addExpense`, `updateExpense`, `duplicateExpense`, `deleteExpense`, `logFromTemplate`, `autoLogDueTemplates`, `recordSettlement`, `deleteSettlement`.
 
 4 CTEs → LEFT JOINed onto `group_members`. Aliases must be unique (`paid_total`, `owed_total`, `sent_total`, `received_total`) — Postgres raises "column reference is ambiguous" if all named `total`. Outer SELECT uses `COALESCE(cte.column, '0')`.
 
@@ -232,7 +242,7 @@ Components: `groupStartDate`/`groupEndDate`. AI `DateContext`: `groupStart`/`gro
 5. **Pure functions for math**: `lib/splits/compute.ts`, `lib/settle/optimize.ts` — never touch DB.
 6. **Shared Zod schemas**: same schema for form (zodResolver), server action input, and DB insert.
 7. **Optimistic UI via useState**: `removedIds: Set<string>` state, rolls back on server error.
-8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `hooks/use-trip-realtime.ts` — subscribes to expenses, settlements, group_members, expense_splits. Mounted via `RealtimeRefresh` in `app/(app)/groups/[id]/layout.tsx`. **Disabled in dev** (was consuming 85% of Supabase free-tier CPU). Production only.
+8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `hooks/use-trip-realtime.ts` — subscribes to expenses, settlements, group_members, expense_splits. All four subscriptions filter by `group_id=eq.${groupId}` (expense_splits gained a `group_id` column for this). Mounted via `RealtimeRefresh` in `app/(app)/groups/[id]/layout.tsx`. **Disabled in dev** (was consuming 85% of Supabase free-tier CPU). Production only.
 9. **Auth via shared `getCurrentUser()`**: React-`cache()`-wrapped, shared across whole render tree. Never call `supabase.auth.getUser()` directly in server components or query functions.
 10. **GROUP_CONFIG pattern**: All type differences via `lib/group-config.ts` — never raw `group.type === 'trip'` checks scattered across files.
 
@@ -282,7 +292,9 @@ created_by_user_id: uuid, created_at, updated_at
 
 ### expense_splits
 ```
-id, expense_id fk->expenses(cascade), member_id fk->group_members(cascade)
+id
+group_id: uuid nullable fk->groups(cascade)   -- added for realtime filtering; always populated on new inserts
+expense_id fk->expenses(cascade), member_id fk->group_members(cascade)
 share_amount: numeric(12,2)
 split_type: enum('equal','exact','percentage','shares')
 split_value: numeric(12,4)
@@ -447,6 +459,7 @@ Templates (`is_template = true`) excluded from all balance calculations.
 - Logged instances: `is_template=false`, `source_template_id=<id>`, `expense_date=first of current month`
 - `getGroupTemplates()` returns each template with `loggedThisMonth` + `lastLoggedDate`
 - Double-logging prevented: button disabled once logged this month
+- **Auto-log on page load**: `autoLogDueTemplates(groupId)` in `app/actions/expenses.ts` is called on the nest group overview page (`app/(app)/groups/[id]/page.tsx`) — logs any due templates automatically. Best-effort (wrapped in `.catch(() => {})`). Only fires for nest groups.
 
 ### Split computation (`lib/splits/compute.ts`)
 Four modes → `SplitResult[]` with `shareAmount` + `splitValue`:
@@ -486,6 +499,7 @@ clear/
 │   └── actions/
 │       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
+│       ├── admin.ts                       # adminDeleteGroup, adminDeleteUser (platform admin only)
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
@@ -508,9 +522,10 @@ clear/
 │   ├── splits/compute.ts + compute.test.ts
 │   ├── settle/optimize.ts + optimize.test.ts
 │   ├── validations/trip.ts + expense.ts (addExpenseSchema + addTemplateSchema) + settlement.ts
+│   ├── rate-limit.ts                    # in-memory AI rate limiter (20 calls/hr per user)
 │   ├── utils.ts
 ├── drizzle/policies.sql, indexes.sql    # indexes applied manually in Supabase SQL Editor
-├── drizzle.config.ts, proxy.ts
+├── drizzle.config.ts, proxy.ts, vercel.json  # vercel.json: cron for /api/health keep-alive
 ```
 
 ---
@@ -569,7 +584,7 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 
 ---
 
-## 13. Onboarding Tour (10 steps)
+## 13. Onboarding Tour (6 steps)
 
 `getTourSteps(demoTripId)` in `lib/tour/steps.ts`:
 1. Welcome modal — "Trips for travel, Nests for home"
@@ -577,11 +592,7 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 3. `[data-tour='demo-trip']` — Sample Trip card (`components/trip/trip-card.tsx`)
 4. `[data-tour='demo-nest']` — Sample Nest card (`components/trip/trip-card.tsx`)
 5. `[data-tour='trip-card-add-btn']` — Quick-add button (`components/trip/trip-card-quick-add.tsx`)
-6. `[data-tour='trip-quick-actions']` — Quick-actions (`app/(app)/groups/[id]/page.tsx`)
-7. `[data-tour='expense-add-btn']` — Add expense (`app/(app)/groups/[id]/expenses/page.tsx`)
-8. `[data-tour='settle-suggestions']` — Settle up (`app/(app)/groups/[id]/settle/page.tsx`)
-9. `[data-tour='trip-charts']` — Chart grid (`app/(app)/groups/[id]/insights/page.tsx`)
-10. `[data-tour='all-insights-charts']` — All-groups charts (`components/insights/insights-tabs.tsx`, all 3 chart grid divs)
+6. `[data-tour='settle-suggestions']` — Settle up (`app/(app)/groups/[id]/settle/page.tsx`)
 
 Tour localStorage key: `clear_tour_done`. Replayable from avatar dropdown.
 

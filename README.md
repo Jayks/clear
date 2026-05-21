@@ -26,7 +26,8 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
 - **Cover photo upload** — pick a photo from Unsplash or upload from your device (gallery on mobile, file browser on desktop); stored in Supabase Storage
 - **Trip plan upload** — upload a PDF or .txt itinerary and have it auto-filled in the trip form
-- **Onboarding tour** — 10-step guided walkthrough with spotlight and swipe-to-dismiss sheet
+- **Onboarding tour** — 6-step guided walkthrough with spotlight and swipe-to-dismiss sheet
+- **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
 - **Realtime** — Supabase Realtime pushes expense/settlement changes to all open sessions

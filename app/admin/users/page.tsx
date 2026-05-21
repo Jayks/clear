@@ -1,6 +1,7 @@
 import { getAdminUserList } from "@/lib/db/queries/admin";
 import { formatDate } from "@/lib/utils";
 import { Shield, Briefcase, UserCircle2, Users } from "lucide-react";
+import { DeleteUserButton } from "./delete-user-button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Users — Clear Admin" };
@@ -82,6 +83,7 @@ export default async function AdminUsersPage() {
                 <th className="text-right px-5 py-3.5 font-medium hidden md:table-cell">Trips owned</th>
                 <th className="text-right px-5 py-3.5 font-medium hidden lg:table-cell">Trips joined</th>
                 <th className="text-right px-5 py-3.5 font-medium">Joined</th>
+                <th className="px-5 py-3.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/60 dark:divide-slate-700/40">
@@ -140,6 +142,13 @@ export default async function AdminUsersPage() {
                     {/* Joined date */}
                     <td className="px-5 py-3 text-right text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                       {formatDate(u.joinedAt)}
+                    </td>
+
+                    {/* Actions — hidden for platform admins (guarded server-side too) */}
+                    <td className="px-3 py-3 text-right">
+                      {u.role !== "platform_admin" && (
+                        <DeleteUserButton userId={u.id} displayName={u.displayName} />
+                      )}
                     </td>
                   </tr>
                 );

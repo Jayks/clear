@@ -35,9 +35,9 @@ export function useGroupRealtime(groupId: string) {
         event: "*", schema: "public", table: "group_members",
         filter: `group_id=eq.${groupId}`,
       }, debouncedRefresh)
-      // expense_splits has no group_id column — listen broadly, debounce absorbs noise
       .on("postgres_changes", {
         event: "*", schema: "public", table: "expense_splits",
+        filter: `group_id=eq.${groupId}`,
       }, debouncedRefresh)
       .subscribe();
 

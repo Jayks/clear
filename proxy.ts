@@ -36,7 +36,6 @@ export async function proxy(request: NextRequest) {
 
   const isProtected =
     pathname.startsWith("/groups") ||
-    pathname.startsWith("/join") ||
     pathname.startsWith("/admin");
 
   // Redirect unauthenticated users to login, preserving the destination
@@ -63,7 +62,6 @@ export const config = {
     "/groups/:path*",
     "/insights/:path*",
     "/admin/:path*",
-    "/join/:path*",
     "/login",
     "/",
   ],

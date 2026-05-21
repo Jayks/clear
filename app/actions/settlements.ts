@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { settlements } from "@/lib/db/schema/settlements";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, and, inArray } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { recordSettlementSchema, type RecordSettlementInput } from "@/lib/validations/settlement";
 
@@ -37,6 +37,7 @@ export async function recordSettlement(input: RecordSettlementInput) {
     });
 
     revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to record settlement" } as const;
@@ -56,6 +57,7 @@ export async function deleteSettlement(settlementId: string, groupId: string) {
       and(eq(settlements.id, settlementId), eq(settlements.groupId, groupId))
     );
     revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to delete settlement" } as const;

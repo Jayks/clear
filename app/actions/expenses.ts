@@ -8,7 +8,8 @@ import { addExpenseSchema, addTemplateSchema, type AddExpenseInput, type AddTemp
 import { computeSplits } from "@/lib/splits/compute";
 import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
-import { revalidatePath } from "next/cache";
+import { getGroupTemplates } from "@/lib/db/queries/expenses";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 async function validateSplitMembers(groupId: string, splits: { memberId: string }[]) {
   const ids = [...new Set(splits.map((s) => s.memberId))];
@@ -57,6 +58,7 @@ export async function addExpense(input: AddExpenseInput) {
 
     await db.insert(expenseSplits).values(
       result.splits.map((s) => ({
+        groupId,
         expenseId: expense.id,
         memberId: s.memberId,
         shareAmount: String(s.shareAmount),
@@ -66,6 +68,7 @@ export async function addExpense(input: AddExpenseInput) {
     );
 
     revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
     return { ok: true, expenseId: expense.id } as const;
   } catch {
     return { ok: false, error: "Failed to add expense" } as const;
@@ -113,6 +116,7 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
     await db.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
     await db.insert(expenseSplits).values(
       result.splits.map((s) => ({
+        groupId,
         expenseId,
         memberId: s.memberId,
         shareAmount: String(s.shareAmount),
@@ -122,6 +126,7 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
     );
 
     revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to update expense" } as const;
@@ -161,6 +166,7 @@ export async function duplicateExpense(expenseId: string) {
     if (originalSplits.length > 0) {
       await db.insert(expenseSplits).values(
         originalSplits.map((s) => ({
+          groupId: expense.groupId,
           expenseId: newExpense.id,
           memberId: s.memberId,
           shareAmount: s.shareAmount,
@@ -171,6 +177,7 @@ export async function duplicateExpense(expenseId: string) {
     }
 
     revalidatePath(`/groups/${expense.groupId}/expenses`);
+    revalidateTag(`balances-${expense.groupId}`, "max");
     return { ok: true, expenseId: newExpense.id } as const;
   } catch {
     return { ok: false, error: "Failed to duplicate expense" } as const;
@@ -192,6 +199,7 @@ export async function deleteExpense(expenseId: string, groupId: string) {
   try {
     await db.delete(expenses).where(eq(expenses.id, expenseId));
     revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to delete expense" } as const;
@@ -240,6 +248,7 @@ export async function createExpenseTemplate(input: AddTemplateInput) {
 
     await db.insert(expenseSplits).values(
       result.splits.map((s) => ({
+        groupId,
         expenseId: template.id,
         memberId: s.memberId,
         shareAmount: String(s.shareAmount),
@@ -292,6 +301,7 @@ export async function logFromTemplate(templateId: string) {
     if (templateSplits.length > 0) {
       await db.insert(expenseSplits).values(
         templateSplits.map((s) => ({
+          groupId: template.groupId,
           expenseId: logged.id,
           memberId: s.memberId,
           shareAmount: s.shareAmount,
@@ -302,6 +312,7 @@ export async function logFromTemplate(templateId: string) {
     }
 
     revalidatePath(`/groups/${template.groupId}`, "layout");
+    revalidateTag(`balances-${template.groupId}`, "max");
     return { ok: true, expenseId: logged.id } as const;
   } catch {
     return { ok: false, error: "Failed to log expense" } as const;
@@ -347,6 +358,7 @@ export async function updateTemplate(templateId: string, input: AddTemplateInput
     await db.delete(expenseSplits).where(eq(expenseSplits.expenseId, templateId));
     await db.insert(expenseSplits).values(
       result.splits.map((s) => ({
+        groupId: template.groupId,
         expenseId: templateId,
         memberId: s.memberId,
         shareAmount: String(s.shareAmount),
@@ -360,6 +372,57 @@ export async function updateTemplate(templateId: string, input: AddTemplateInput
   } catch {
     return { ok: false, error: "Failed to update template" } as const;
   }
+}
+
+export async function autoLogDueTemplates(groupId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership) return;
+
+  const templates = await getGroupTemplates(groupId);
+  const due = templates.filter((t) => !t.loggedThisMonth);
+  if (due.length === 0) return;
+
+  const now = new Date();
+  const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+  for (const { template, splits } of due) {
+    try {
+      const [logged] = await db.insert(expenses).values({
+        groupId: template.groupId,
+        paidByMemberId: template.paidByMemberId,
+        description: template.description,
+        category: template.category,
+        amount: template.amount,
+        currency: template.currency,
+        expenseDate: firstOfMonth,
+        notes: template.notes,
+        isTemplate: false,
+        sourceTemplateId: template.id,
+        createdByUserId: user.id,
+      }).returning();
+
+      if (splits.length > 0) {
+        await db.insert(expenseSplits).values(
+          splits.map((s) => ({
+            groupId: template.groupId,
+            expenseId: logged.id,
+            memberId: s.memberId,
+            shareAmount: s.shareAmount,
+            splitType: s.splitType,
+            splitValue: s.splitValue,
+          }))
+        );
+      }
+    } catch {
+      // Skip this template — don't block page load on a single failure
+    }
+  }
+
+  revalidatePath(`/groups/${groupId}`, "layout");
+  revalidateTag(`balances-${groupId}`, "max");
 }
 
 export async function deleteTemplate(templateId: string) {

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
+import { autoLogDueTemplates } from "@/app/actions/expenses";
 import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -30,8 +31,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
   const { group, members, currentMember } = data;
   const isAdmin = currentMember?.role === "admin";
-  const config = getGroupConfig(group.groupType);
   const isNest = group.groupType === "nest";
+
+  if (isNest) await autoLogDueTemplates(group.id).catch(() => {});
+  const config = getGroupConfig(group.groupType);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
 

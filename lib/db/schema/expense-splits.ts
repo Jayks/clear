@@ -1,5 +1,6 @@
 import { pgTable, uuid, numeric, pgEnum, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { groups } from "./groups";
 import { expenses } from "./expenses";
 import { groupMembers } from "./group-members";
 
@@ -14,6 +15,7 @@ export const expenseSplits = pgTable(
   "expense_splits",
   {
     id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    groupId: uuid("group_id").references(() => groups.id, { onDelete: "cascade" }),
     expenseId: uuid("expense_id").notNull().references(() => expenses.id, { onDelete: "cascade" }),
     memberId: uuid("member_id").notNull().references(() => groupMembers.id, { onDelete: "cascade" }),
     shareAmount: numeric("share_amount", { precision: 12, scale: 2 }).notNull(),

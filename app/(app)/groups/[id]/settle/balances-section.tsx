@@ -8,7 +8,7 @@ import { SettleBreakdownSection } from "./settle-breakdown-section";
 import { MarkPaidButton } from "./mark-paid-button";
 import { UpiPayButton } from "./upi-pay-button";
 import { WhatsAppRemindButton } from "./whatsapp-remind-button";
-import { TrendingUp, TrendingDown, Minus, ArrowRight, CheckCircle2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 
@@ -31,8 +31,8 @@ export async function BalancesSection({
   settleUrl,
   isNest,
 }: Props) {
-  const [{ balances, suggestions }, settlementHistory, monthlySummary] = await Promise.all([
-    getBalances(groupId),
+  const [{ balances, suggestions, hasMixedCurrencies }, settlementHistory, monthlySummary] = await Promise.all([
+    getBalances(groupId, currency),
     getSettlements(groupId),
     getMonthlyExpenseSummary(groupId),
   ]);
@@ -50,6 +50,16 @@ export async function BalancesSection({
       <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
         Balances
       </h2>
+
+      {hasMixedCurrencies && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 mb-4">
+          <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            This group has expenses in multiple currencies. Balances shown in {currency} only — other-currency expenses are excluded.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-8">
         {balances.map((b) => {
           const isPositive = b.net > 0;

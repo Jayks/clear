@@ -9,13 +9,19 @@ interface Props {
   token: string;
   groupType: string;
   groupLabel: string;
+  isLoggedIn: boolean;
 }
 
-export function JoinButton({ token, groupType, groupLabel }: Props) {
+export function JoinButton({ token, groupLabel, isLoggedIn }: Props) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleJoin() {
+    if (!isLoggedIn) {
+      router.push(`/login?returnTo=/join/${token}`);
+      return;
+    }
+
     setLoading(true);
     const result = await joinGroup(token);
     setLoading(false);
@@ -34,7 +40,7 @@ export function JoinButton({ token, groupType, groupLabel }: Props) {
       disabled={loading}
       className="w-full py-2.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
     >
-      {loading ? "Joining…" : `Join this ${groupLabel.toLowerCase()}`}
+      {loading ? "Joining…" : isLoggedIn ? `Join this ${groupLabel.toLowerCase()}` : "Sign in to join"}
     </button>
   );
 }

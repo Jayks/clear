@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import { computeSplits } from "@/lib/splits/compute";
 import type { GroupMember } from "@/lib/db/schema/group-members";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getMemberName } from "@/lib/utils";
 
 interface SplitEditorProps {
   members: GroupMember[];
@@ -26,7 +26,7 @@ const MODES: { value: SplitMode; label: string }[] = [
 ];
 
 function memberLabel(m: GroupMember): string {
-  return m.guestName ?? "Member";
+  return getMemberName(m);
 }
 
 export function SplitEditor({ members, amount, currency, mode, onModeChange, onSplitsChange, error, initialValues, initialSelectedIds }: SplitEditorProps) {

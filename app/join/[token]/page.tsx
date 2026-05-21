@@ -1,6 +1,6 @@
 import { getGroupByToken } from "@/lib/db/queries/groups";
 import { createClient } from "@/lib/supabase/server";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Users, MapPin, Home } from "lucide-react";
 import { JoinButton } from "./join-button";
 import { formatDate } from "@/lib/utils";
@@ -17,10 +17,6 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/login?next=/join/${token}`);
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -71,12 +67,12 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
               <p className="text-slate-600 dark:text-slate-300 text-sm mb-5">{group.description}</p>
             )}
 
-            <JoinButton token={token} groupType={group.groupType} groupLabel={config.labels.singular} />
+            <JoinButton token={token} groupType={group.groupType} groupLabel={config.labels.singular} isLoggedIn={!!user} />
           </div>
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-4">
-          You&apos;re signed in as {user.email}
+          {user ? `Signed in as ${user.email}` : "You'll be asked to sign in before joining."}
         </p>
       </div>
     </div>

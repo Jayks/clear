@@ -6,32 +6,11 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
   const tripSteps: TourStep[] = base
     ? [
         {
-          target: "[data-tour='trip-quick-actions']",
-          page: base,
-          title: "Inside a trip",
-          description:
-            "Jump to Members, Expenses, Settle up, or Insights — everything about this group in one place.",
-        },
-        {
-          target: "[data-tour='expense-add-btn']",
-          page: `${base}/expenses`,
-          title: "Log expenses",
-          description:
-            "Every expense shows who paid and how it's split. Hit Add to log one — choose equal split, exact amounts, percentages, or shares.",
-        },
-        {
           target: "[data-tour='settle-suggestions']",
           page: `${base}/settle`,
           title: "Settle up",
           description:
             "Clear computes the minimum number of payments to clear all debts. Mark payments done or pay directly via UPI.",
-        },
-        {
-          target: "[data-tour='trip-charts']",
-          page: `${base}/insights`,
-          title: "Insights",
-          description:
-            "Spending by category, daily patterns, member contributions — and smart observations about your group's habits.",
         },
       ]
     : [];
@@ -81,16 +60,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
         "Tap Add on any group card to log an expense in seconds — type what you spent and Clear parses the amount, payer, and split automatically.",
     },
 
-    // 6–9 — Inside the demo trip
+    // 6 — Settle up (inside demo trip)
     ...tripSteps,
-
-    // 10 — All-groups insights charts
-    {
-      target: "[data-tour='all-insights-charts']",
-      page: "/insights",
-      title: "Insights across all groups",
-      description:
-        "A portfolio view across every trip and nest — total spend, category habits, your most frequent companions, and smarter patterns over time.",
-    },
   ];
 }

@@ -4,6 +4,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import type { ParsedExpense, CategoryValue } from "@/lib/parser/parse-expense";
 import { CATEGORY_VALUES } from "@/lib/categories";
+import { getCurrentUser } from "@/lib/db/queries/auth";
+import { checkAiRateLimit } from "@/lib/rate-limit";
 
 const responseSchema = z.object({
   description: z.string().optional().default(""),
@@ -27,6 +29,9 @@ export async function parseExpenseWithAI(
   memberContext: { id: string; name: string }[],
   dateContext: DateContext
 ): Promise<ParsedExpense | null> {
+  const user = await getCurrentUser();
+  if (!user || !checkAiRateLimit(user.id)) return null;
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     console.warn("[parse-expense] ANTHROPIC_API_KEY not set — falling back to rule-based parser");

@@ -118,6 +118,7 @@ export async function getAdminGroupList() {
         startDate:       groups.startDate,
         endDate:         groups.endDate,
         isArchived:      groups.isArchived,
+        isDemo:          groups.isDemo,
         createdAt:       groups.createdAt,
         memberCount:     sql<number>`count(distinct ${groupMembers.id})`,
         expenseCount:    sql<number>`count(distinct ${expenses.id})`,

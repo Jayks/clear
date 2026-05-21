@@ -3,7 +3,8 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { settlements } from "@/lib/db/schema/settlements";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, sum, and, desc, sql } from "drizzle-orm";
+import { eq, ne, sum, and, desc, sql } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
 import { optimizeSettlements } from "@/lib/settle/optimize";
 import { getMemberName } from "@/lib/utils";
 
@@ -17,11 +18,22 @@ export interface MemberBalanceRow {
   net: number; // positive = owed money, negative = owes money
 }
 
-export async function getBalances(groupId: string) {
+export async function getBalances(groupId: string, defaultCurrency: string) {
+  const fetchBalances = unstable_cache(
+    async () => {
+      return _computeBalances(groupId, defaultCurrency);
+    },
+    ['balances', groupId, defaultCurrency],
+    { tags: [`balances-${groupId}`] }
+  );
+  return fetchBalances();
+}
+
+async function _computeBalances(groupId: string, defaultCurrency: string) {
   const paidCte = db.$with('paid').as(
     db.select({ memberId: expenses.paidByMemberId, paidTotal: sum(expenses.amount).as('paid_total') })
       .from(expenses)
-      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))
+      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false), eq(expenses.currency, defaultCurrency)))
       .groupBy(expenses.paidByMemberId)
   );
 
@@ -29,7 +41,7 @@ export async function getBalances(groupId: string) {
     db.select({ memberId: expenseSplits.memberId, owedTotal: sum(expenseSplits.shareAmount).as('owed_total') })
       .from(expenseSplits)
       .innerJoin(expenses, eq(expenseSplits.expenseId, expenses.id))
-      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))
+      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false), eq(expenses.currency, defaultCurrency)))
       .groupBy(expenseSplits.memberId)
   );
 
@@ -83,7 +95,15 @@ export async function getBalances(groupId: string) {
   });
 
   const suggestions = optimizeSettlements(balances.map((r) => ({ memberId: r.memberId, net: r.net })));
-  return { balances, suggestions };
+
+  const [mixedRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(expenses)
+    .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false), ne(expenses.currency, defaultCurrency)));
+
+  const hasMixedCurrencies = Number(mixedRow?.count ?? 0) > 0;
+
+  return { balances, suggestions, hasMixedCurrencies };
 }
 
 export async function getSettlements(groupId: string) {

@@ -1,6 +1,7 @@
 import { getAdminGroupList } from "@/lib/db/queries/admin";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Map, Archive, Users, Receipt, TrendingUp } from "lucide-react";
+import { DeleteGroupButton } from "./delete-group-button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Trips — Clear Admin" };
@@ -67,6 +68,7 @@ export default async function AdminTripsPage() {
                       <th className="text-right px-5 py-3.5 font-medium hidden md:table-cell">Expenses</th>
                       <th className="text-right px-5 py-3.5 font-medium hidden lg:table-cell">Total spend</th>
                       <th className="text-right px-5 py-3.5 font-medium">Created</th>
+                      <th className="px-5 py-3.5" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100/60 dark:divide-slate-700/40">
@@ -142,6 +144,13 @@ export default async function AdminTripsPage() {
                           {/* Created */}
                           <td className="px-5 py-3 text-right text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                             {formatDate(t.createdAt!)}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-3 py-3 text-right">
+                            {!t.isDemo && (
+                              <DeleteGroupButton groupId={t.id} groupName={t.name} />
+                            )}
                           </td>
                         </tr>
                       );

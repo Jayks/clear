@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "powershell",
+      "args": ["-NoProfile", "-File", ".claude/start-mcp-github.ps1"]
+    }
+  }
+}

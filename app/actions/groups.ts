@@ -1,18 +1,16 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { createGroupSchema, type CreateGroupInput } from "@/lib/validations/trip";
 import { eq, sql } from "drizzle-orm";
-import { getMembership } from "@/lib/db/queries/auth";
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function createGroup(input: CreateGroupInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = createGroupSchema.safeParse(input);
@@ -49,8 +47,7 @@ export async function createGroup(input: CreateGroupInput) {
 }
 
 export async function updateGroup(groupId: string, input: CreateGroupInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = createGroupSchema.safeParse(input);
@@ -84,8 +81,7 @@ export async function updateGroup(groupId: string, input: CreateGroupInput) {
 }
 
 export async function archiveGroup(groupId: string, archive: boolean) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const membership = await getMembership(groupId, user.id);
@@ -104,8 +100,7 @@ export async function archiveGroup(groupId: string, archive: boolean) {
 }
 
 export async function deleteGroup(groupId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const membership = await getMembership(groupId, user.id);
@@ -114,6 +109,7 @@ export async function deleteGroup(groupId: string) {
 
   try {
     await db.delete(groups).where(eq(groups.id, groupId));
+    revalidateTag(`group-${groupId}`, "max");
     revalidatePath("/groups");
     return { ok: true } as const;
   } catch {
@@ -122,8 +118,7 @@ export async function deleteGroup(groupId: string) {
 }
 
 export async function regenerateShareToken(groupId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const membership = await getMembership(groupId, user.id);

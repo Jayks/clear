@@ -1,17 +1,15 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db/client";
 import { settlements } from "@/lib/db/schema/settlements";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getMembership } from "@/lib/db/queries/auth";
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { recordSettlementSchema, type RecordSettlementInput } from "@/lib/validations/settlement";
 
 export async function recordSettlement(input: RecordSettlementInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = recordSettlementSchema.safeParse(input);
@@ -46,8 +44,7 @@ export async function recordSettlement(input: RecordSettlementInput) {
 }
 
 export async function deleteSettlement(settlementId: string, groupId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const membership = await getMembership(groupId, user.id);

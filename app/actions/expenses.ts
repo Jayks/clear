@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
@@ -8,7 +7,7 @@ import { groupMembers } from "@/lib/db/schema/group-members";
 import { addExpenseSchema, addTemplateSchema, type AddExpenseInput, type AddTemplateInput } from "@/lib/validations/expense";
 import { computeSplits } from "@/lib/splits/compute";
 import { eq, and, inArray } from "drizzle-orm";
-import { getMembership } from "@/lib/db/queries/auth";
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { revalidatePath } from "next/cache";
 
 async function validateSplitMembers(groupId: string, splits: { memberId: string }[]) {
@@ -20,8 +19,7 @@ async function validateSplitMembers(groupId: string, splits: { memberId: string 
 }
 
 export async function addExpense(input: AddExpenseInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = addExpenseSchema.safeParse(input);
@@ -75,8 +73,7 @@ export async function addExpense(input: AddExpenseInput) {
 }
 
 export async function updateExpense(expenseId: string, input: AddExpenseInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = addExpenseSchema.safeParse(input);
@@ -132,8 +129,7 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
 }
 
 export async function duplicateExpense(expenseId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
@@ -182,8 +178,7 @@ export async function duplicateExpense(expenseId: string) {
 }
 
 export async function deleteExpense(expenseId: string, groupId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
@@ -204,8 +199,7 @@ export async function deleteExpense(expenseId: string, groupId: string) {
 }
 
 export async function createExpenseTemplate(input: AddTemplateInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = addTemplateSchema.safeParse(input);
@@ -262,8 +256,7 @@ export async function createExpenseTemplate(input: AddTemplateInput) {
 }
 
 export async function logFromTemplate(templateId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const [template] = await db.select().from(expenses).where(
@@ -316,8 +309,7 @@ export async function logFromTemplate(templateId: string) {
 }
 
 export async function updateTemplate(templateId: string, input: AddTemplateInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = addTemplateSchema.safeParse(input);
@@ -371,8 +363,7 @@ export async function updateTemplate(templateId: string, input: AddTemplateInput
 }
 
 export async function deleteTemplate(templateId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const [template] = await db.select().from(expenses).where(

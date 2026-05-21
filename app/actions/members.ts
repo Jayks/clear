@@ -1,18 +1,16 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { addGuestSchema } from "@/lib/validations/trip";
 import { eq, and } from "drizzle-orm";
-import { getMembership } from "@/lib/db/queries/auth";
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const parsed = addGuestSchema.safeParse(input);
@@ -44,8 +42,7 @@ export async function addGuestMember(input: { groupId: string; guestName: string
 }
 
 export async function removeMember(groupId: string, memberId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const membership = await getMembership(groupId, user.id);
@@ -65,8 +62,7 @@ export async function removeMember(groupId: string, memberId: string) {
 }
 
 export async function joinGroup(token: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
   const [group] = await db.select().from(groups).where(eq(groups.shareToken, token));

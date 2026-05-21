@@ -1,6 +1,7 @@
 {
   "mcpServers": {
     "github": {
+      "type": "stdio",
       "command": "powershell",
       "args": ["-NoProfile", "-File", ".claude/start-mcp-github.ps1"]
     }

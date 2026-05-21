@@ -7,4 +7,6 @@ if (-not $match) {
     exit 1
 }
 $env:GITHUB_PERSONAL_ACCESS_TOKEN = $match.Matches[0].Groups[1].Value
-cmd /c "npx -y @modelcontextprotocol/server-github@latest"
+# Use local install to avoid npx download timeout; --use-system-ca fixes Windows TLS cert issue
+$env:NODE_OPTIONS = "--use-system-ca"
+& ".\node_modules\.bin\mcp-server-github.CMD"

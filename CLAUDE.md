@@ -8,9 +8,6 @@
 
 **Clear** — shared expense tracking for trips and households. Members log expenses, app computes minimum-transaction settlements. Deployed on Vercel + Supabase (free tier).
 
-**Tagline**: *Split it. Clear it.*
-**Design**: Glassmorphic, cyan/teal palette, frosted-glass cards.
-
 **Two group types:**
 - **Trip** — multi-day travel. Has dates, itinerary, AI narrative, budget adherence, travel categories.
 - **Nest** — ongoing household. Has recurring expense templates, monthly grouping, household categories. No dates/itinerary.
@@ -41,7 +38,6 @@
 | Deployment | Vercel | |
 
 **Dev tools**: `tsx`, `dotenv`, `vitest`, `puppeteer-core`
-**PDF parsing**: `pdf-parse 1.1.1` (server-side, no AI) — see gotcha below.
 
 **Do NOT add**: NextAuth, Prisma, Redux, MUI, Chakra, Bootstrap, styled-components, tRPC, Pusher/Ably.
 
@@ -57,7 +53,7 @@
 
 ### CoverPhotoPicker — no `<form>` inside forms
 
-Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` (not `<form>`) with `type="button"` on the search button to prevent parent form submission. Upload tab uses a hidden `<input type="file" accept="image/*">` — triggers native gallery on iOS/Android, file browser on desktop. Flow: pick file → local `URL.createObjectURL` preview → "Use this photo" → `uploadCoverPhoto` server action (`app/actions/upload.ts`) converts FileReader base64 to `Buffer` and uploads to the `cover-photos` Supabase Storage public bucket → public URL flows through `onChange()` exactly like Unsplash URLs. 5 MB limit enforced client + server side. Object URL is revoked after upload or on dialog close.
+Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` with `type="button"` on the search button to prevent parent form submission. Upload uses `<input type="file" accept="image/*">`. Flow: pick → `URL.createObjectURL` preview → `uploadCoverPhoto` action (`app/actions/upload.ts`) → base64 Buffer → `cover-photos` bucket → public URL via `onChange()`. 5 MB limit enforced client + server. Revoke object URL on upload or close.
 
 ### DB Singleton (prevents HMR connection exhaustion)
 
@@ -70,85 +66,82 @@ if (process.env.NODE_ENV !== 'production') globalThis._pgClient = client;
 
 ### proxy.ts (Next.js 16)
 
-Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `middleware`). The `config.matcher` uses an explicit route list (`/groups/:path*`, `/insights/:path*`, `/admin/:path*`, `/join/:path*`, `/login`, `/`) — not the old catch-all regex. This limits the Supabase Auth call to only routes that need it.
+Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `middleware`). The `config.matcher` uses an explicit route list (`/groups/:path*`, `/insights/:path*`, `/admin/:path*`, `/join/:path*`, `/login`, `/`) — not the old catch-all regex. Protected routes: `/groups`, `/insights`, `/join`, `/admin`.
 
 ### Auth pattern — always use `getCurrentUser()`, never raw `getUser()`
 
 `lib/db/queries/auth.ts` exports two React-`cache()`-wrapped helpers:
-
-- **`getCurrentUser()`** — calls `getUser()` (validates JWT against Supabase Auth). One network call per server render, deduplicated across the whole RSC tree.
-- **`getMembership(groupId, userId)`** — fetches a single `group_members` row. Also `cache()`-wrapped, so all query functions on the same page (e.g. `getGroupWithMembers`, `getExpenses`, `getBalances` fired in parallel) share one DB lookup instead of each firing their own.
+- **`getCurrentUser()`** — validates JWT against Supabase Auth. Deduplicated across the RSC tree.
+- **`getMembership(groupId, userId)`** — cached single `group_members` row lookup.
 
 ```typescript
-// ✅ correct — deduplicated across layout + all query functions, one validated network call
+// ✅ correct — deduplicated, one validated network call per render
 import { getCurrentUser } from "@/lib/db/queries/auth";
 const user = await getCurrentUser();
 
-// ❌ wrong — fires an independent undeduped network round trip on every call site
+// ❌ wrong — independent undeduped round trip on every call site
 const supabase = await createClient();
 const { data: { user } } = await supabase.auth.getUser();
 ```
 
-The `(app)/layout.tsx` and all `lib/db/queries/*.ts` files use `getCurrentUser()`. `ensureDemoGroup()` (server action called from groups page) also uses `getCurrentUser()` so it shares the cached result rather than making a 3rd auth call. Do NOT switch `getCurrentUser()` to `getSession()` — Supabase warns it is insecure (cookie-only, no server validation).
+All layout and `lib/db/queries/*.ts` files use `getCurrentUser()`. `ensureDemoGroup()` also uses it (shares cache). Never switch to `getSession()` — cookie-only, no server validation.
 
 ### Windows dev — TLS certificate fix
 
-`.npmrc` contains `node-options=--use-system-ca` so all `pnpm` scripts (dev, build, test) use the Windows system CA store instead of Node.js's bundled CA. Required because Node.js 24's bundled CA was missing Supabase's intermediate cert (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Do not remove this line.
+`.npmrc` contains `node-options=--use-system-ca` — required because Node.js 24's bundled CA was missing Supabase's intermediate cert (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Do not remove.
 
 ### QuickAddSheet — portal + `isOpen` prop pattern
 
-`QuickAddSheet` manages its own `createPortal` (renders at `document.body`) and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render the component from the parent, and never wrap it in an external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment) so exit animations work correctly. Members are lazy-fetched on first `isOpen=true` via a `fetchedRef`.
+Manages its own `createPortal` and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render from parent, never wrap in external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment). Members lazy-fetched on first `isOpen=true` via `fetchedRef`.
 
 ### iOS touch & safe-area patterns
 
-**Long-press on TripCard** — uses a `MOVE_THRESHOLD = 8px` before cancelling the 500ms timer (iOS fingers drift slightly while holding). `isLongPressing` state drives a `scale(0.97)` press-down animation + cyan ring. `touchAction: "manipulation"` removes the 300ms tap delay. `navigator.vibrate?.(12)` fires on completion (Android only; iOS Safari doesn't implement the Vibration API — the visual scale is the iOS equivalent).
+**Long-press on TripCard** — 500ms timer, `MOVE_THRESHOLD=8px` (iOS fingers drift). `isLongPressing` → `scale(0.97)` + cyan ring. `touchAction:"manipulation"` removes 300ms tap delay. `navigator.vibrate?.(12)` fires on Android only.
 
-**Safe-area CSS utilities** (defined as top-level rules in `globals.css`, NOT inside `@layer utilities` — Turbopack rejects `@media` nested inside `@layer`):
-- `.h-nav-safe` — `height: calc(4rem + env(safe-area-inset-bottom, 0px))` + matching padding-bottom. Used on MobileNav's inner div so the bar extends into the home-indicator area rather than compressing nav items.
-- `.pb-safe-nav` — `padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px))`, overridden to `2rem` at `md`. Used on the app `<main>` to clear the nav bar.
-- `.bottom-nav-safe` — `bottom: calc(5rem + env(safe-area-inset-bottom, 0px))`. Used on the FAB and iOS install hint.
+**Safe-area CSS utilities** (top-level in `globals.css`, NOT inside `@layer` — Turbopack rejects `@media` nested inside `@layer`):
+- `.h-nav-safe` — `height: calc(4rem + env(safe-area-inset-bottom, 0px))` + padding-bottom. MobileNav inner div.
+- `.pb-safe-nav` — `padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px))`, overridden to `2rem` at `md`. App `<main>`.
+- `.bottom-nav-safe` — `bottom: calc(5rem + env(safe-area-inset-bottom, 0px))`. FAB + iOS install hint.
 
-**iOS body scroll-through** — `position: fixed` overlays don't block body scroll on iOS Safari. Both `TripCardNavSheet` and `QuickAddSheet` prevent this via a non-passive DOM `touchmove` listener (React synthetic events can't call `preventDefault()`). QuickAddSheet exempts its own scrollable body div via a `scrollBodyRef` ref.
+**iOS body scroll-through** — `position:fixed` overlays don't block scroll on iOS Safari. `TripCardNavSheet` and `QuickAddSheet` use non-passive DOM `touchmove` listener (React synthetic events can't call `preventDefault()`). QuickAddSheet exempts its scrollable div via `scrollBodyRef`.
 
-**QuickAddSheet voice stale trigger** — `QuickAddBar` unmounts when the sheet closes (it lives inside `{isOpen && ...}`). On next open it remounts and its `voiceTrigger` effect fires immediately, seeing the stale transcript from the parent's state. Fix: `QuickAddSheet` clears `voiceTrigger` to `null` on close so the next mount sees nothing.
+**QuickAddSheet voice stale trigger** — `QuickAddBar` unmounts on close; on reopen it sees stale transcript. Fix: `QuickAddSheet` clears `voiceTrigger` to `null` on close.
 
 ### Admin dashboard patterns
 
-**Non-async layout** — `app/admin/layout.tsx` is a synchronous Server Component. Making it async would block `loading.tsx` from showing (the fallback can only render after the layout resolves). The proxy middleware already validates the JWT for every `/admin/:path*` request; `requirePlatformAdmin()` in each page query is the authoritative check.
+**Non-async layout** — `app/admin/layout.tsx` is synchronous so `loading.tsx` works. `requirePlatformAdmin()` in each page query is the authoritative auth check.
 
-**Admin navigation** — `/admin` is outside the `/(app)` route group, so `router.push("/admin")` silently drops the navigation. Instead, `app-nav.tsx` uses `window.location.href = "/admin"` (full-page reload) with `window.dispatchEvent(new Event("navprogress"))` fired first so `NavProgress` starts before the page unloads.
+**Admin navigation** — `/admin` is outside `/(app)`, so `router.push("/admin")` silently fails. Use `window.location.href = "/admin"` with `window.dispatchEvent(new Event("navprogress"))` first so `NavProgress` starts before the page unloads.
 
-**`withAdminTimeout`** — all admin DB queries run inside `db.transaction()` with `SET LOCAL statement_timeout = 8000`. When a query exceeds 8 s, Postgres hard-cancels it and rolls back the transaction, immediately releasing the connection back to the pool. Without this, slow queries hold connections and starve other pages (e.g. groups) of DB access.
+**`withAdminTimeout`** — all admin queries run in `db.transaction()` with `SET LOCAL statement_timeout = 8000`. Hard-cancels slow queries, releases connections immediately.
 
-**Admin query design** — `getAdminStats()` uses a single SQL round-trip (4 subqueries in one statement). `getAdminGroupList()` uses a JOIN aggregation instead of 4 correlated subqueries per row. `getAdminUserList()` is DB-only (no Supabase Admin API `listUsers()`) — built from `group_members` to avoid the slow/hanging Admin API. Users show by display name; emails are not available without `listUsers()`.
+**Admin query design** — `getAdminStats()`: single SQL round-trip (4 subqueries). `getAdminGroupList()`: JOIN aggregation. `getAdminUserList()`: DB-only from `group_members`, no Supabase `listUsers()` — users show by display name; emails not available without `listUsers()`.
 
-**Supabase free-tier DB resilience** — `lib/db/client.ts` uses `max: 3`, `idle_timeout: 20`, `connect_timeout: 10`. The admin page has a 12-second resolving fallback (`Promise.race` against a timeout that resolves with empty data rather than rejecting) so the page always renders even if Supabase is degraded.
+**DB resilience** — `lib/db/client.ts`: `max:3`, `idle_timeout:20`, `connect_timeout:10`. Admin page uses `Promise.race` against a 12s resolving fallback (never rejects).
 
-### Login page — `intent` param for signup vs sign-in copy
+### Login page — `intent` param
 
-`app/(auth)/login/page.tsx` accepts an `intent=signup` search param. When present, the card shows "Create your account" / "Free to get started — no credit card needed." instead of the default "Sign in to Clear" / "Split expenses with anyone, anywhere." The `returnTo=/join/...` condition takes priority over `intent`.
-
-Convention: all "Get started" / "Start for free" CTAs on the marketing page link to `/login?intent=signup`. "Sign in" links go to `/login` (no param). Never add an `intent` param to sign-in links.
+`intent=signup` → shows signup copy. `returnTo=/join/...` takes priority. All "Get started" CTAs link to `/login?intent=signup`; sign-in links never include `intent`.
 
 ### iOS apple-touch-icon
 
-Served via `metadata.icons.apple` in `app/layout.tsx`, pointing to `/api/pwa-icon?size=192`. Do NOT use `app/apple-icon.tsx` — the App Router file convention for apple icons does not work with Turbopack in Next.js 16.
+Use `metadata.icons.apple` in `app/layout.tsx` → `/api/pwa-icon?size=192`. Do NOT use `app/apple-icon.tsx` — doesn't work with Turbopack in Next.js 16.
 
 ### iOS PWA install hint
 
-`components/shared/ios-install-hint.tsx` — detects iOS Safari (not Chrome/Firefox on iOS), checks not already in standalone mode, checks localStorage `clear_ios_hint_dismissed`. Shows a dismissable glassmorphic bottom banner instructing users to tap Share → "Add to Home Screen". Rendered in root `app/layout.tsx`. Positioned `bottom-nav-safe md:bottom-6` to clear the MobileNav (including safe-area-inset-bottom) on mobile.
+`components/shared/ios-install-hint.tsx` — detects iOS Safari, checks standalone mode + `clear_ios_hint_dismissed`. Rendered in root layout. Position: `bottom-nav-safe md:bottom-6`.
 
 ### PWA manifest required fields
 
-`app/manifest.ts` must include `id: "/"` and `scope: "/"` — Chrome on Android requires `id` to identify the app; without it, Android shows an "older version" privacy warning. The 512×512 icon needs two separate entries: one with `purpose: "any"` and one with `purpose: "maskable"`. Do not collapse them into a single entry.
+`app/manifest.ts` must include `id:"/"` and `scope:"/"` (Chrome Android requires `id`). 512×512 icon needs two separate entries: `purpose:"any"` and `purpose:"maskable"`.
 
 ### Sign-out redirect
 
-`handleSignOut()` in `app/(app)/app-nav.tsx` redirects to `/` (marketing page) after sign-out. This is intentional — users land on the marketing page where they can re-sign in via "Sign in" or "Get started". Do not change this to `/login`.
+`handleSignOut()` redirects to `/` (marketing page). Do not change to `/login`.
 
 ### Supabase publishable key
 
-Uses new `sb_publishable_*` format for `NEXT_PUBLIC_SUPABASE_ANON_KEY` — @supabase/ssr handles it.
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` uses `sb_publishable_*` format — @supabase/ssr handles it.
 
 ### Drizzle config needs dotenv
 
@@ -163,7 +156,7 @@ net = totalPaid - totalOwed + settlementsSent - settlementsReceived
 
 ### pdf-parse — import from `lib/`, never from `index.js`
 
-`pdf-parse@1.1.1`'s `index.js` has `isDebugMode = !module.parent`. In Turbopack's server bundle `module.parent` is `undefined`, so debug mode fires and `readFileSync` crashes on a missing test file, preventing module load entirely. Always bypass `index.js`:
+`index.js` triggers debug mode in Turbopack (`module.parent` is `undefined`), crashing on a missing test file:
 
 ```typescript
 // ✅ correct — bypasses the debug-mode crash
@@ -191,37 +184,24 @@ const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,
 
 ### `getGroupWithMembers` — cached fetch, itinerary excluded by default
 
-Accepts an optional `opts: { full?: boolean }` parameter (default `false`). When `full` is false, the `itinerary` column is replaced with `null` in the SELECT (saves KB of AI text on 8 of 10 group subpages). Only pass `{ full: true }` on pages that actually render itinerary:
-
-```typescript
-// ✅ insights and edit pages — need itinerary
-getGroupWithMembers(id, { full: true })
-
-// ✅ all other group subpages — itinerary is null, not fetched
-getGroupWithMembers(id)
-```
-
-The DB fetch (group row + members) is wrapped in `unstable_cache` tagged `group-${groupId}`. The cache is indefinite (no TTL) and invalidated only by explicit `revalidateTag`. Auth and membership checks run before the cache — unauthorised callers never reach the cached data.
+`opts: { full?: boolean }` (default `false`). When false, `itinerary` is `null` in SELECT. Pass `{ full: true }` only on insights and edit pages. Cached via `unstable_cache` tagged `group-${groupId}`, no TTL — invalidated by `revalidateTag` only. Auth/membership check runs before the cache.
 
 ### Group cache invalidation — `revalidateTag` required on mutations
 
-`getGroupWithMembers` caches its DB fetch under the tag `group-${groupId}`. Every server action that mutates the group row or members list **must** call `revalidateTag` to bust the cache. Next.js 16 changed the signature — two arguments are required:
-
 ```typescript
-import { revalidateTag } from "next/cache";
 revalidateTag(`group-${groupId}`, "max");  // ✅ Next.js 16
 revalidateTag(`group-${groupId}`);          // ❌ deprecated single-arg form — TS error
 ```
 
-Actions that must call this: `updateGroup`, `archiveGroup`, `regenerateShareToken` (`app/actions/groups.ts`); `addGuestMember`, `removeMember`, `joinGroup` (`app/actions/members.ts`). Any new action that writes to `groups` or `group_members` must also call it.
+Must call on: `updateGroup`, `archiveGroup`, `regenerateShareToken` (groups.ts); `addGuestMember`, `removeMember`, `joinGroup` (members.ts). Any new action writing to `groups` or `group_members`.
 
 ### `getAllGroups()` replaces `getGroups()` + `getArchivedGroups()`
 
-`lib/db/queries/groups.ts` exports `getAllGroups()` which fetches active + archived groups in one query (one `getUserGroupIds` round-trip instead of two). Returns `{ active, archived }`. Use this on the groups page — do not call the old individual functions.
+`lib/db/queries/groups.ts` exports `getAllGroups()` — one query, returns `{ active, archived }`.
 
 ### `getBalances()` — single CTE round-trip
 
-Rewrote from 5 parallel queries to one SQL `WITH` statement (4 CTEs → LEFT JOINed onto `group_members`). Each CTE's aggregate column must have a **unique alias** (`paid_total`, `owed_total`, `sent_total`, `received_total`) — Postgres raises "column reference is ambiguous" if all four are named `total`. The outer SELECT uses `COALESCE(cte.column, '0')` to handle non-members.
+4 CTEs → LEFT JOINed onto `group_members`. Aliases must be unique (`paid_total`, `owed_total`, `sent_total`, `received_total`) — Postgres raises "column reference is ambiguous" if all named `total`. Outer SELECT uses `COALESCE(cte.column, '0')`.
 
 ### Group member count — correlated subquery
 
@@ -231,19 +211,15 @@ memberCount: sql<number>`(select count(*) from group_members where group_members
 
 ### `computeTripInsights` still uses `trip` in its interface
 
-The function signature predates the rename. Always call it as:
-```typescript
-const insights = computeTripInsights({ trip: group, members, expensesWithSplits });
-```
-Do NOT rename the parameter — it would break the destructuring inside the function.
+Always call as: `computeTripInsights({ trip: group, members, expensesWithSplits })`. Do not rename.
 
 ### Summary page is trips-only
 
-`/summary/[token]` returns 404 for nests (`group.groupType === "nest"`). The AI narrative and shareable trip story are trip-exclusive features. Do not add a nest summary equivalent without discussion.
+`/summary/[token]` returns 404 for nests. Do not add a nest equivalent without discussion.
 
 ### Date-range props naming
 
-Components that accept optional date bounds use `groupStartDate`/`groupEndDate` (not `tripStartDate`/`tripEndDate`). The AI `DateContext` interface uses `groupStart`/`groupEnd`. Keep this consistent.
+Components: `groupStartDate`/`groupEndDate`. AI `DateContext`: `groupStart`/`groupEnd`.
 
 ---
 
@@ -256,9 +232,9 @@ Components that accept optional date bounds use `groupStartDate`/`groupEndDate` 
 5. **Pure functions for math**: `lib/splits/compute.ts`, `lib/settle/optimize.ts` — never touch DB.
 6. **Shared Zod schemas**: same schema for form (zodResolver), server action input, and DB insert.
 7. **Optimistic UI via useState**: `removedIds: Set<string>` state, rolls back on server error.
-8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `app/(app)/groups/[id]/layout.tsx`. **Disabled in development** (`NODE_ENV !== 'production'`) — Realtime was consuming 85% of Supabase free-tier DB CPU via continuous `realtime.list_changes` polling, starving application queries. Active only in production (Vercel).
-9. **Auth via shared `getCurrentUser()`**: layout and all `lib/db/queries/*.ts` call `getCurrentUser()` from `lib/db/queries/auth.ts` — React-`cache()`-wrapped so the whole render tree shares 1 auth call. Never call `supabase.auth.getUser()` directly in server components or query functions.
-10. **GROUP_CONFIG pattern**: All group-type differences flow through `lib/group-config.ts` — never raw `group.type === 'trip'` checks scattered across files.
+8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `hooks/use-trip-realtime.ts` — subscribes to expenses, settlements, group_members, expense_splits. Mounted via `RealtimeRefresh` in `app/(app)/groups/[id]/layout.tsx`. **Disabled in dev** (was consuming 85% of Supabase free-tier CPU). Production only.
+9. **Auth via shared `getCurrentUser()`**: React-`cache()`-wrapped, shared across whole render tree. Never call `supabase.auth.getUser()` directly in server components or query functions.
+10. **GROUP_CONFIG pattern**: All type differences via `lib/group-config.ts` — never raw `group.type === 'trip'` checks scattered across files.
 
 ---
 
@@ -271,9 +247,9 @@ Schema files in `lib/db/schema/`. RLS in `drizzle/policies.sql`.
 id, name, description, cover_photo_url
 group_type: enum('trip', 'nest') default 'trip'
 default_currency: text default 'INR'
-start_date, end_date: date          -- trips only (optional for nests)
+start_date, end_date: date          -- trips only
 budget: numeric(12,2)               -- optional
-itinerary: text                     -- trips only (AI narrative + adherence); max 10,000 chars (Zod-only, DB is unlimited text)
+itinerary: text                     -- trips only; max 10,000 chars (Zod-only, DB is unlimited)
 is_archived: boolean default false
 is_demo: boolean default false      -- seeded sample group; pinned first
 created_by: uuid
@@ -296,11 +272,11 @@ UNIQUE: (group_id, user_id)
 ```
 id, group_id fk->groups(cascade), paid_by_member_id fk->group_members
 description: text, category: text   -- text, not enum (validated by Zod + GROUP_CONFIG)
-custom_category: text nullable      -- free-text label shown when category = 'other'
+custom_category: text nullable      -- free-text label when category = 'other'
 amount: numeric(12,2), currency: text, expense_date: date, end_date: date, notes: text
-is_template: boolean default false  -- recurring expense template (nest)
+is_template: boolean default false  -- recurring template (nest)
 recurrence: text                    -- 'monthly' | 'weekly' (templates only)
-source_template_id: uuid nullable   -- stamps which template produced a logged instance
+source_template_id: uuid nullable
 created_by_user_id: uuid, created_at, updated_at
 ```
 
@@ -340,7 +316,7 @@ on storage.objects for delete to authenticated
 using (bucket_id = 'cover-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 ```
 
-Files are stored at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has `riyfedftffuqzxtcpdde.supabase.co` in `remotePatterns` for `next/image` support.
+Files at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has `riyfedftffuqzxtcpdde.supabase.co` in `remotePatterns`.
 
 ### Realtime setup (run once in SQL Editor)
 ```sql
@@ -374,8 +350,7 @@ Use `getGroupConfig(group.groupType)` in components — never `group.groupType =
 
 ### Palette
 ```css
-/* Primary */
---primary: #0891B2;          /* cyan-600 */
+--primary: #0891B2;  /* cyan-600 */
 /* Gradient: from-cyan-500 to-teal-500 (#06B6D4 → #14B8A6) */
 /* Background: linear-gradient(135deg, #EFF6FF, #ECFEFF, #F0FDFA, #ECFDF5) fixed */
 ```
@@ -407,89 +382,80 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 - Inputs: `border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60`
 
 ### Brand components
-- `ClearLogo` (`components/shared/clear-logo.tsx`) — gradient icon box (C-arc + split-coin SVG mark) + optional "Clear" wordmark. Props: `iconSize`, `showWordmark`, `wordmarkClassName`, `className`.
-- `ClearIcon` — just the white SVG paths (no background box), for use inside custom coloured/glass containers (e.g. the landing CTA frosted-glass box).
-- Icon gradient: `linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)` — 3-stop, sky→cyan→teal. Use inline style (not Tailwind) to maintain exact stops.
-- PWA icons generated by `app/api/pwa-icon/route.ts` (192 + 512 px, edge runtime). Favicon by `app/icon.tsx` (32 px). Both use the same SVG design via `React.createElement` / JSX + `ImageResponse`.
+- `ClearLogo` (`components/shared/clear-logo.tsx`) — gradient icon box (C-arc + split-coin SVG mark) + optional wordmark. Props: `iconSize`, `showWordmark`, `wordmarkClassName`, `className`.
+- `ClearIcon` — SVG paths only (no background box), for custom coloured/glass containers.
+- Icon gradient: `linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)` — use inline style (not Tailwind) to maintain exact stops.
+- PWA icons: `app/api/pwa-icon/route.ts` (192+512px, edge). Favicon: `app/icon.tsx` (32px).
 
 ### Navigation
-- **Desktop**: sticky top — `ClearLogo` (28 px), Groups, Insights, ThemeToggle, avatar dropdown (Take the tour, Sign out)
-- **Mobile**: icon-only top nav + fixed `MobileNav` bottom (Groups, Insights). Content uses `.pb-safe-nav` (= `calc(6rem + env(safe-area-inset-bottom, 0px))`, desktop override to `2rem`). Expenses page adds a cyan FAB (`bottom-nav-safe right-4 md:hidden`) for Add Expense. MobileNav inner div uses `.h-nav-safe` (= `calc(4rem + env(safe-area-inset-bottom, 0px))`) so the nav bar correctly extends into the home-indicator area instead of compressing content inside a fixed `h-16`.
+- **Desktop**: sticky top — `ClearLogo` (28px), Groups, Insights, ThemeToggle, avatar dropdown (Take the tour, Sign out).
+- **Mobile**: icon-only top nav + fixed `MobileNav` bottom. Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page. MobileNav inner div uses `.h-nav-safe`.
 
-### Quick-add sheet (bottom sheet)
-Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — **not** the `.glass` class. The `.glass` class (60% opacity) is too transparent when the sheet sits over the dark backdrop overlay. The sheet needs a near-solid surface.
+### Quick-add sheet
+Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — NOT `.glass` (60% opacity is too transparent over the dark backdrop overlay).
 
 ### Group card action buttons — two-wrapper structure (critical)
 
-`TripCard` uses **two nested wrappers** to keep action buttons outside the `<Link>` while preserving the glass/rounded visual:
+`TripCard` uses two nested wrappers to keep action buttons outside the `<Link>`:
 
 ```
-<div>  ← outer: positioning context, hover effects, touch handlers. NO overflow-hidden.
-  <div class="glass rounded-2xl overflow-hidden">  ← inner: visual surface, clips image + ribbon
+<div>  ← outer: positioning, hover, touch handlers. NO overflow-hidden.
+  <div class="glass rounded-2xl overflow-hidden">  ← inner: clips image + ribbon
     <Link href="/groups/[id]">  ← image area only
       badges, ribbon, title/dates
     </Link>
   </div>
-  <div class="absolute top-3 right-3 z-10">  ← action buttons on OUTER div, outside Link
+  <div class="absolute top-3 right-3 z-10">  ← buttons on OUTER div, outside Link
     TripCardQuickAdd / TripCardShareButtons / ⋯ button
   </div>
   TripCardNavSheet
 </div>
 ```
 
-**Why this matters:** React portals (QuickAddSheet, QR Dialog) bubble synthetic events through the React component tree, not the DOM tree. If these components are React-parented inside a `<Link>`, any click inside their portals reaches the Link and triggers navigation. Keeping all portal-spawning components outside the Link eliminates this entirely — no `e.stopPropagation()` patches needed.
+React portals bubble events through the React tree, not the DOM tree — portal-spawning components (QuickAddSheet, QR Dialog) must be React-parented outside the `<Link>` to avoid triggering navigation on portal clicks. No `e.stopPropagation()` patches needed.
 
-**Top-left badges** (`absolute top-3 left-3 z-10`, on image div inside Link): type badge + member count badge. Both `bg-black/40 backdrop-blur-sm` pill style. Same across all cards.
+**Top-left badges** (`absolute top-3 left-3 z-10` on image div inside Link): type badge + member count. `bg-black/40 backdrop-blur-sm` pill style.
 
-**Top-right buttons** (`absolute top-3 right-3 z-10 gap-2 md:gap-1.5`, on outer div): Add (`+`), Share, QR — and `⋯` on desktop only (`hidden md:flex`). Mobile uses long-press for quick-nav; the `⋯` would clutter the smaller button strip. Button style:
-```
-bg-black/30 hover:bg-black/50 backdrop-blur-md text-white
-w-10 h-10 md:w-8 md:h-8   ← bigger tap target on mobile
-rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all
-```
-Icons scale with the button: `w-5 h-5 md:w-4 md:h-4`.
+**Top-right buttons** (`absolute top-3 right-3 z-10 gap-2 md:gap-1.5`, on outer div): Add, Share, QR — `⋯` desktop-only (`hidden md:flex`). Style: `bg-black/30 hover:bg-black/50 backdrop-blur-md text-white w-10 h-10 md:w-8 md:h-8 rounded-xl shadow-sm shadow-black/20 active:scale-95 transition-all`. Icons: `w-5 h-5 md:w-4 md:h-4`.
 
-**Diagonal ribbons** — bottom-right corner, clipped by the inner div's `overflow-hidden`. Same position and sizing (`absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg]`), `pointer-events-none`:
-- **Demo cards** (`isDemo`): amber — `bg-amber-500/90`, inner div gets `ring-2 ring-amber-400/40`. Text: `SAMPLE`.
-- **Archived cards** (`isArchived && !isDemo`): slate — `bg-slate-500/80`, inner div gets `ring-2 ring-slate-400/30`. Text: `ARCHIVED`.
+**Diagonal ribbons** (`absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg]`, `pointer-events-none`):
+- Demo: `bg-amber-500/90`, inner div `ring-2 ring-amber-400/40`. Text: `SAMPLE`.
+- Archived: `bg-slate-500/80`, inner div `ring-2 ring-slate-400/30`. Text: `ARCHIVED`.
 
-**Quick-nav sheet** (`TripCardNavSheet`): portal + AnimatePresence bottom sheet. Opens via `⋯` click (desktop) or 500 ms long-press on card body (all). Four destinations: Members, Expenses, Settle Up, Insights. Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl`. Both this sheet and `QuickAddSheet` add a non-passive `touchmove` listener while open to prevent iOS body scroll-through behind the overlay.
+**TripCardNavSheet** — portal + AnimatePresence bottom sheet. Opens via `⋯` click (desktop) or 500ms long-press (all). Four destinations: Members, Expenses, Settle Up, Insights. Same `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` background. Non-passive `touchmove` listener prevents iOS body scroll-through.
 
 ### Share button — join URL, not summary URL
-`TripCardShareButtons` shares `/join/[shareToken]` (invite page) so recipients can join the group. It does **not** share `/summary/[shareToken]` (the AI trip story). Uses the `Share2` lucide icon (standard OS share icon). The QR dialog encodes the join URL with copy text "Copy invite link" / "Scan to join this group".
+`TripCardShareButtons` shares `/join/[shareToken]`. QR encodes same URL with "Copy invite link" / "Scan to join this group".
 
 ### Motion
-- Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger 30–50ms via `AnimatedList`
+- Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger via `AnimatedList`
 - Balance numbers: `CountUp` (Framer Motion)
-- Navigation progress: `NavProgress` (`components/shared/nav-progress.tsx`) — thin cyan→teal bar at top. Lives in root `app/layout.tsx` (not `(app)/layout.tsx`) so it persists across all route groups including `/admin`. Triggers on `<a>` clicks AND on a custom `navprogress` window event (dispatched before `window.location.href` navigations to cross-layout routes). Completes when `pathname` changes.
+- `NavProgress` (`components/shared/nav-progress.tsx`) — cyan→teal bar at top. Lives in root `app/layout.tsx`. Triggers on `<a>` clicks + custom `navprogress` window event (dispatched before `window.location.href` navigations to cross-layout routes).
 
 ---
 
 ## 8. Key Algorithms
 
 ### Balance formula
-```typescript
+```
 net = totalPaid - totalOwed + settlementsSent - settlementsReceived
 ```
-Templates (`is_template = true`) are **excluded** from all balance calculations.
+Templates (`is_template = true`) excluded from all balance calculations.
 
 ### Recurring expenses (nest only)
-- Templates: `is_template = true`, `recurrence = 'monthly'|'weekly'`
-- Logged instances: `is_template = false`, `source_template_id = <template_id>`, `expense_date = first of current month`
+- Templates: `is_template=true`, `recurrence='monthly'|'weekly'`
+- Logged instances: `is_template=false`, `source_template_id=<id>`, `expense_date=first of current month`
 - `getGroupTemplates()` returns each template with `loggedThisMonth` + `lastLoggedDate`
 - Double-logging prevented: button disabled once logged this month
 
 ### Split computation (`lib/splits/compute.ts`)
-Four modes returning `SplitResult[]` with `shareAmount` + `splitValue`:
-- `equal`: divide evenly among member IDs
-- `exact`: amount per member (must sum to total)
-- `percentage`: % per member (must sum to 100)
-- `shares`: share count per member (total > 0)
+Four modes → `SplitResult[]` with `shareAmount` + `splitValue`:
+- `equal`: divide evenly; `exact`: sum must equal total; `percentage`: sum must equal 100; `shares`: total > 0
 
 Rounding: `Math.round(n * 100) / 100`. Remainder to first row. **16 Vitest tests — all must pass.**
 
 ### Settlement optimizer (`lib/settle/optimize.ts`)
-Greedy: split members into creditors/debtors by net, sort desc, match top pairs, emit min transactions. **6 Vitest tests.**
+Greedy: creditors/debtors by net, sort desc, match top pairs, emit min transactions. **6 Vitest tests.**
 
 ---
 
@@ -523,8 +489,8 @@ clear/
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
-│   ├── expense/  (expense-card, swipeable-expense-card [swipe-to-delete on touch devices], expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
-│   ├── trip/     (trip-card [data-tour attrs], trip-card-nav-sheet [quick-nav bottom sheet], cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
+│   ├── expense/  (expense-card, swipeable-expense-card [swipe-to-delete on touch], expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
+│   ├── trip/     (trip-card [data-tour attrs], trip-card-nav-sheet, cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
@@ -536,60 +502,47 @@ clear/
 │   ├── supabase/server.ts, client.ts, admin.ts
 │   ├── demo/seed-demo-trip.ts + seed-demo-nest.ts
 │   ├── tour/types.ts + steps.ts         # 10-step tour (trip + nest cards)
-│   ├── group-config.ts                  # GROUP_CONFIG — type-aware feature flags + categories
-│   ├── categories.ts                    # TRIP_CATEGORIES + NEST_CATEGORIES + getCategory()
+│   ├── group-config.ts, categories.ts
 │   ├── insights/trip-insights.ts + all-trips-insights.ts + all-nests-insights.ts + group-roles.ts
 │   ├── parser/parse-expense.ts
 │   ├── splits/compute.ts + compute.test.ts
 │   ├── settle/optimize.ts + optimize.test.ts
 │   ├── validations/trip.ts + expense.ts (addExpenseSchema + addTemplateSchema) + settlement.ts
 │   ├── utils.ts
-├── drizzle/policies.sql
-├── drizzle/indexes.sql          # DB indexes — apply manually in Supabase SQL Editor (not drizzle-kit)
+├── drizzle/policies.sql, indexes.sql    # indexes applied manually in Supabase SQL Editor
 ├── drizzle.config.ts, proxy.ts
 ```
 
 ---
 
-## 10. Auth & Realtime
-
-**Auth**: Google OAuth via Supabase. `proxy.ts` (middleware) calls `supabase.auth.getUser()` on protected routes only (explicit matcher — see proxy.ts gotcha above) — validates + refreshes the session cookie. Protected routes: `/groups`, `/insights`, `/join`, `/admin`.
-
-Server components and query functions call `getCurrentUser()` from `lib/db/queries/auth.ts`, which calls `supabase.auth.getUser()` (validates JWT against Supabase Auth server). React `cache()` deduplicates all calls within the same render tree — only one network round-trip per server render. `ensureDemoGroup()` also uses `getCurrentUser()` so it shares the cached result (no extra auth call).
-
-**Realtime**: `useGroupRealtime(groupId)` in `hooks/use-trip-realtime.ts` — subscribes to expenses, settlements, group_members, expense_splits → calls `router.refresh()`. Mounted via `RealtimeRefresh` in `app/(app)/groups/[id]/layout.tsx`.
-
----
-
-## 11. Coding Conventions
+## 10. Coding Conventions
 
 - **TypeScript strict**. No `any`. Use `unknown` and narrow.
 - **Server actions** return `{ ok: true, data }` or `{ ok: false, error }`. Never throw to client.
 - **Money**: `numeric(12,2)` in DB, `number` in TS. Format with `formatCurrency()`.
-- **Dates**: `date` type (no time). Format with `formatDate()`. For recurring expense logging: always first of current month (`YYYY-MM-01`).
+- **Dates**: `date` type (no time). Format with `formatDate()`. Recurring: always first of month (`YYYY-MM-01`).
 - **Member names**: always `getMemberName(member)` → `displayName ?? guestName ?? "Member"`.
 - **revalidatePath**: always `revalidatePath('/groups/${groupId}', 'layout')` — layout variant invalidates whole subtree.
-- **revalidateTag**: always two args in Next.js 16 — `revalidateTag('group-${groupId}', 'max')`. Required on every server action that mutates `groups` or `group_members` rows (see group cache invalidation gotcha above).
+- **revalidateTag**: always two args — `revalidateTag('group-${groupId}', 'max')`.
 - **File names**: kebab-case. No barrel files — import from actual file.
 - **Fraunces font**: `style={{ fontFamily: "var(--font-fraunces)" }}` — never Tailwind class.
 - **Dark mode**: every colour class needs a `dark:` counterpart.
 - **Mobile-first**: grids `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`, multi-action rows `flex-col gap sm:flex-row`.
-- **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` for any type-specific label, flag, or category list.
-- **Date-range props**: name as `groupStartDate`/`groupEndDate` in components, `groupStart`/`groupEnd` in `DateContext`.
-- **Shared constants in `lib/utils.ts`**: `DEFAULT_CURRENCY` (`"INR"`), `SUPPORTED_CURRENCIES` (9-currency array), `CHART_AXIS_TICK` (`{ fontSize: 10, fill: "#94A3B8" }`). Import from here — never redeclare inline.
-- **`CATEGORY_VALUES`** exported from `lib/categories.ts` — deduped union of all trip + nest category value strings, typed as `[string, ...string[]]` for `z.enum()`. AI action Zod schemas use this instead of hardcoded arrays.
-- **`?from=groups` on expense new page**: `app/(app)/groups/[id]/expenses/new/page.tsx` reads `searchParams.from`. If `"groups"`, back button says "Back to groups" → `/groups`. Default is "Back to expenses" → `/groups/${id}/expenses`. The QuickAddSheet "Full form →" link passes `?from=groups` so users land back on the groups page.
-- **CategoryValue**: 16 categories across trip + nest (incl. `tour_package`) — defined in `lib/parser/parse-expense.ts`. AI actions validate against this union type.
-- **customCategory**: when `category === "other"`, a free-text `customCategory` field is required in `addExpenseSchema` (`.superRefine()` guard). Stored in `expenses.custom_category`. Display in `ExpenseCard` when non-null.
-- **Expense dates**: no trip date range restriction — users may log pre-booked expenses (flights, hotels) dated before the trip start.
-- **Form props**: expense/edit forms use `group: Group` (not `trip`). The `computeTripInsights` function is the one exception — call it with `{ trip: group }`.
-- **Templates excluded from totals**: always filter `eq(expenses.isTemplate, false)` in any query that computes spend or balances.
-- **Mobile tap targets**: all back/nav links use `min-h-[44px]`; expense card action buttons `w-11 h-11 sm:w-7 sm:h-7`; split editor number inputs use `inputMode="decimal"` (or `"numeric"` for shares).
-- **Multi-item flex rows on mobile**: rows combining info text + multiple action buttons (e.g. template section) use `flex-col sm:flex-row` — info on the top row with `flex-1 min-w-0`, amount + actions on the bottom row indented to align. Avoids a single `flex` row leaving zero space for text on narrow screens.
+- **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` — never `group.groupType === 'trip'` inline checks.
+- **Date-range props**: `groupStartDate`/`groupEndDate` in components, `groupStart`/`groupEnd` in `DateContext`.
+- **Shared constants in `lib/utils.ts`**: `DEFAULT_CURRENCY` (`"INR"`), `SUPPORTED_CURRENCIES` (9-currency array), `CHART_AXIS_TICK` (`{ fontSize: 10, fill: "#94A3B8" }`). Import here — never redeclare inline.
+- **`CATEGORY_VALUES`** from `lib/categories.ts` — deduped union typed as `[string, ...string[]]` for `z.enum()`. Use in AI action Zod schemas.
+- **`?from=groups` on expense new page**: `searchParams.from === "groups"` → back button → `/groups`. QuickAddSheet "Full form →" passes `?from=groups`.
+- **customCategory**: required when `category === "other"` (`.superRefine()` guard in `addExpenseSchema`). Stored in `expenses.custom_category`.
+- **Expense dates**: no trip date range restriction — pre-booked expenses (flights, hotels) dated before trip start are allowed.
+- **Form props**: use `group: Group` (not `trip`). Exception: `computeTripInsights({ trip: group, ... })`.
+- **Templates excluded from totals**: always filter `eq(expenses.isTemplate, false)`.
+- **Mobile tap targets**: back/nav links `min-h-[44px]`; expense card buttons `w-11 h-11 sm:w-7 sm:h-7`; split inputs `inputMode="decimal"` (or `"numeric"` for shares).
+- **Multi-item flex rows on mobile**: `flex-col sm:flex-row` — info `flex-1 min-w-0`, amount + actions on bottom row indented.
 
 ---
 
-## 12. Environment Variables
+## 11. Environment Variables
 
 ```
 NEXT_PUBLIC_SUPABASE_URL
@@ -605,79 +558,62 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 
 ---
 
-## 13. Demo Data Seeding
+## 12. Demo Data Seeding
 
 `ensureDemoGroup()` (`app/actions/demo.ts`) — called on groups page load:
 - Seeds **Goa 2025 · Sample** (trip, `is_demo=true`) — 8 expenses, all 4 split modes, 5 members
 - Seeds **Mumbai Flat · Sample** (nest, `is_demo=true`) — 7 recurring templates, 4 months of expenses (Feb–May 2026), partial settlements
 - Detects stale nest seed by description string and re-seeds automatically
-- Trip card: `data-tour="demo-trip"` | Nest card: `data-tour="demo-nest"` (tour targets both)
+- Trip card: `data-tour="demo-trip"` | Nest card: `data-tour="demo-nest"`
 - Demo groups pinned first (`ORDER BY is_demo DESC`)
 
 ---
 
-## 14. Onboarding Tour (10 steps)
+## 13. Onboarding Tour (10 steps)
 
 `getTourSteps(demoTripId)` in `lib/tour/steps.ts`:
 1. Welcome modal — "Trips for travel, Nests for home"
-2. New group button (`[data-tour='new-trip-btn']`, `/groups`)
-3. Sample Trip card (`[data-tour='demo-trip']`, `/groups`)
-4. Sample Nest card (`[data-tour='demo-nest']`, `/groups`)
-5. Quick-add button on a group card (`[data-tour='trip-card-add-btn']`, `/groups`)
-6. Trip quick-actions (`[data-tour='trip-quick-actions']`, `/groups/[id]`)
-7. Add expense (`[data-tour='expense-add-btn']`, `/groups/[id]/expenses`)
-8. Settle up (`[data-tour='settle-suggestions']`, `/groups/[id]/settle`)
-9. Trip chart grid (`[data-tour='trip-charts']`, `/groups/[id]/insights`) — CategoryDonut + DailySpendBar
-10. All-groups insights charts (`[data-tour='all-insights-charts']`, `/insights`)
-
-**All `data-tour` targets:**
-| Attribute | File |
-|---|---|
-| `new-trip-btn` | `app/(app)/groups/page.tsx` |
-| `demo-trip` | `components/trip/trip-card.tsx` |
-| `demo-nest` | `components/trip/trip-card.tsx` |
-| `trip-card-add-btn` | `components/trip/trip-card-quick-add.tsx` |
-| `trip-quick-actions` | `app/(app)/groups/[id]/page.tsx` |
-| `expense-add-btn` | `app/(app)/groups/[id]/expenses/page.tsx` |
-| `settle-suggestions` | `app/(app)/groups/[id]/settle/page.tsx` |
-| `trip-charts` | `app/(app)/groups/[id]/insights/page.tsx` |
-| `all-insights-charts` | `components/insights/insights-tabs.tsx` (all 3 chart grid divs) |
-| `nav-trips` / `nav-insights` | `app-nav.tsx` + `mobile-nav.tsx` (nav links, not currently tour targets) |
+2. `[data-tour='new-trip-btn']` — New group button (`app/(app)/groups/page.tsx`)
+3. `[data-tour='demo-trip']` — Sample Trip card (`components/trip/trip-card.tsx`)
+4. `[data-tour='demo-nest']` — Sample Nest card (`components/trip/trip-card.tsx`)
+5. `[data-tour='trip-card-add-btn']` — Quick-add button (`components/trip/trip-card-quick-add.tsx`)
+6. `[data-tour='trip-quick-actions']` — Quick-actions (`app/(app)/groups/[id]/page.tsx`)
+7. `[data-tour='expense-add-btn']` — Add expense (`app/(app)/groups/[id]/expenses/page.tsx`)
+8. `[data-tour='settle-suggestions']` — Settle up (`app/(app)/groups/[id]/settle/page.tsx`)
+9. `[data-tour='trip-charts']` — Chart grid (`app/(app)/groups/[id]/insights/page.tsx`)
+10. `[data-tour='all-insights-charts']` — All-groups charts (`components/insights/insights-tabs.tsx`, all 3 chart grid divs)
 
 Tour localStorage key: `clear_tour_done`. Replayable from avatar dropdown.
 
-**Tour UX behaviour**: The popover is always visible (even while navigating between pages). During loading, the description area shows a spinner; the Next button is disabled until the target element is found. The "Taking a moment…" hint appears after 1.5 s (not 3 s). When `demoTripId` is first resolved, all 4 inner trip pages are prefetched at once.
+**Tour UX**: Popover always visible during navigation. Loading: spinner in description, Next disabled until target found. "Taking a moment…" hint after 1.5s (not 3s). All 4 inner trip pages prefetched when `demoTripId` first resolves.
 
-**Auto-launch timing**: The tour does NOT start immediately on mount. It polls for `[data-tour='new-trip-btn']` (300 ms initial delay, then every 250 ms) before setting `active = true`. This prevents the blank full-screen blur that occurred when the tour launched before `ensureDemoGroup()` had finished seeding and the RSC had rendered the page content. Do not change this to an immediate launch.
+**Auto-launch**: Polls for `[data-tour='new-trip-btn']` (300ms initial delay, then every 250ms) before setting `active=true`. Do not change to immediate launch — prevents blank blur before `ensureDemoGroup()` finishes seeding.
 
 ---
 
-## 15. Insights Architecture
+## 14. Insights Architecture
 
-### Per-group insights (`/groups/[id]/insights`)
-Type-aware page:
+### Per-group (`/groups/[id]/insights`)
 - **Trip**: total/per-person/daily KPIs, PaceTracker, CategoryDonut, DailySpendBar, MemberContributions, GroupRoles, CrossTripCard, AdherenceCard, SmartInsights
 - **Nest**: this-month/last-month/per-person KPIs, CategoryDonut, MonthlySpendBar (stacked recurring+adhoc), MemberContributions, GroupRoles, SmartInsights
 
-### All-groups insights (`/insights`) — tabbed
-- **Trips tab**: "Your travel story" — total spend, trip count, companions, TripsSpendBar, CategoryDonut, smart insights, per-trip links
-- **Nests tab**: "Your household spending" — monthly average, total, housemates, MonthlySpendBar, CategoryDonut, smart insights, per-nest links
-- Shows tab switcher only if user has both trips and nests
+### All-groups (`/insights`) — tabbed
+- **Trips tab**: total spend, trip count, companions, TripsSpendBar, CategoryDonut, smart insights, per-trip links
+- **Nests tab**: monthly average, total, housemates, MonthlySpendBar, CategoryDonut, smart insights, per-nest links
+- Tab switcher shows only if user has both trips and nests
 
-**Query optimizations in `lib/db/queries/insights.ts`**:
-- `getAllTripsInsightsData`: per-trip expense totals fetched in a single `GROUP BY group_id` query (not 1 query per trip)
-- `getAllNestsInsightsData`: category totals derived in-memory from the expenses already fetched (no second DB query)
+**Query optimizations**: `getAllTripsInsightsData` uses single `GROUP BY group_id` query (not 1 per trip). `getAllNestsInsightsData` derives category totals in-memory from already-fetched expenses.
 
 ---
 
-## 16. Deployment
+## 15. Deployment
 
 **Repo**: https://github.com/Jayks/clear.git (master)
 **Deployment**: Vercel (pending — new Supabase project needs wiring)
 
 ---
 
-## 17. Key Scripts
+## 16. Key Scripts
 
 ```bash
 pnpm dev / build / typecheck
@@ -687,13 +623,11 @@ pnpm seed                # Goa trip — 10 members, 30 expenses (requires 1 exis
 pnpm seed:temple         # South India temple tour — 20 members
 ```
 
-**Puppeteer scripts** (for upcoming user manual):
-- `scripts/take-screenshots.js` — captures 16 app screenshots (needs `pnpm dev` + `cookies.json`)
-- `scripts/generate-manual-pdf.js` — generates PDF from HTML manual source
+**Puppeteer scripts**: `scripts/take-screenshots.js` (16 screenshots, needs `pnpm dev` + `cookies.json`), `scripts/generate-manual-pdf.js`.
 
 ---
 
-## 18. Working Style
+## 17. Working Style
 
 - **Ask before scope creep** — new deps, new feature areas, skipping sections.
 - **Run `pnpm typecheck && pnpm test` before declaring done**.

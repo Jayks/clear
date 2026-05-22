@@ -15,7 +15,7 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="ml-auto flex items-center gap-1">
+    <nav className="flex items-center gap-1 py-1.5 w-max">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
         const active = pathname === href;
         return (
@@ -23,7 +23,7 @@ export function AdminNav() {
             key={href}
             href={href}
             className={cn(
-              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
+              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap",
               active
                 ? "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400"
                 : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800"

@@ -63,16 +63,17 @@ export default async function GroupsPage() {
           {groups.length > 0 && (
             <>
               <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {groups.map(({ group, memberCount }) => {
+                {groups.map(({ group, memberCount }, index) => {
                   const memberId = memberIds[group.id];
                   return (
                     <TripCard
                       key={group.id}
                       group={group}
                       memberCount={Number(memberCount)}
+                      priority={index < 2}
                       balanceBadge={
                         memberId ? (
-                          <Suspense fallback={
+                          <Suspense key={group.id} fallback={
                             <div className="px-4 py-2 border-t border-white/20 dark:border-slate-700/30">
                               <span className="text-xs text-slate-300 dark:text-slate-600">···</span>
                             </div>

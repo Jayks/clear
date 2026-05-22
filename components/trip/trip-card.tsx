@@ -14,6 +14,7 @@ interface TripCardProps {
   group: Group;
   memberCount: number;
   balanceBadge?: React.ReactNode;
+  priority?: boolean;
 }
 
 const LONG_PRESS_MS = 500;
@@ -24,7 +25,7 @@ const MOVE_THRESHOLD = 8;
 const moreBtn =
   "hidden md:flex w-8 h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
-export function TripCard({ group, memberCount, balanceBadge }: TripCardProps) {
+export function TripCard({ group, memberCount, balanceBadge, priority = false }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -128,6 +129,7 @@ export function TripCard({ group, memberCount, balanceBadge }: TripCardProps) {
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 className="object-cover"
+                priority={priority}
               />
             ) : (
               <div className={`w-full h-full bg-gradient-to-br ${isNest ? "from-teal-500 to-emerald-500" : "from-cyan-500 to-teal-500"}`} />

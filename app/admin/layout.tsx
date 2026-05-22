@@ -11,20 +11,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen">
       {/* Admin top bar */}
       <header className="glass-nav sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
+        {/* Branding row */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <Link
             href="/groups"
-            className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm transition-colors"
+            className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm transition-colors shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to app
+            <span className="hidden sm:inline">Back to app</span>
           </Link>
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Clear Admin</span>
-          <span className="ml-1 text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-medium px-2 py-0.5 rounded-full">
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 shrink-0">Clear Admin</span>
+          <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-medium px-2 py-0.5 rounded-full shrink-0">
             Platform Admin
           </span>
-          <AdminNav />
+        </div>
+        {/* Nav strip — scrollable on mobile */}
+        <div className="border-t border-white/40 dark:border-slate-700/40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 overflow-x-auto">
+            <AdminNav />
+          </div>
         </div>
       </header>
 

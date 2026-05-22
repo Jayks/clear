@@ -1,6 +1,8 @@
 import { getAdminStats, getAdminUserList, getAdminGroupList } from "@/lib/db/queries/admin";
+import { getVisitorNotificationsEnabled } from "@/lib/db/queries/settings";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Users, Map, Receipt, TrendingUp, Shield, Briefcase, UserCircle2 } from "lucide-react";
+import { Users, Map, Receipt, TrendingUp, Shield, Briefcase, UserCircle2, Bell } from "lucide-react";
+import { VisitorNotificationsToggle } from "./visitor-notifications-toggle";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Admin Dashboard — Clear" };
@@ -29,14 +31,15 @@ export default async function AdminDashboardPage() {
   // withAdminTimeout in each query sets SET LOCAL statement_timeout = 8s, so
   // slow queries are hard-cancelled by Postgres and release their connections.
   // The 12s page-level fallback is a last-resort safety net.
-  const [stats, users, trips] = await Promise.race([
+  const [stats, users, trips, visitorNotificationsEnabled] = await Promise.race([
     Promise.all([
       getAdminStats().catch(() => EMPTY_STATS),
       getAdminUserList().catch(() => [] as Awaited<ReturnType<typeof getAdminUserList>>),
       getAdminGroupList().catch(() => [] as Awaited<ReturnType<typeof getAdminGroupList>>),
+      getVisitorNotificationsEnabled().catch(() => true),
     ]),
-    new Promise<[typeof EMPTY_STATS, never[], never[]]>((resolve) =>
-      setTimeout(() => resolve([EMPTY_STATS, [], []]), 12_000)
+    new Promise<[typeof EMPTY_STATS, never[], never[], boolean]>((resolve) =>
+      setTimeout(() => resolve([EMPTY_STATS, [], [], true]), 12_000)
     ),
   ]);
 
@@ -70,7 +73,7 @@ export default async function AdminDashboardPage() {
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{s.label}</p>
             <p
-              className="text-2xl font-semibold text-slate-800 dark:text-slate-100 tabular"
+              className="text-lg sm:text-2xl font-semibold text-slate-800 dark:text-slate-100 tabular truncate"
               style={s.isAmount ? { fontFamily: "var(--font-fraunces)" } : undefined}
             >
               {s.value}
@@ -134,6 +137,25 @@ export default async function AdminDashboardPage() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Settings */}
+      <div>
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
+          Settings
+        </h2>
+        <div className="glass rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shrink-0 shadow-sm">
+            <Bell className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Visitor notifications</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Send a Telegram message when an authenticated user opens the app (once per session).
+            </p>
+          </div>
+          <VisitorNotificationsToggle initialEnabled={visitorNotificationsEnabled} />
         </div>
       </div>
 

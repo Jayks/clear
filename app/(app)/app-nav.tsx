@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles } from "lucide-react";
+import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Bell, BellOff } from "lucide-react";
 import { useTour } from "@/components/tour/tour-context";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { usePushSubscription } from "@/hooks/use-push-subscription";
 
 const NAV_LINKS = [
   { href: "/groups",   label: "Groups",   icon: LayoutGrid, tourId: "nav-trips"    },
@@ -27,6 +28,7 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
   const router = useRouter();
   const pathname = usePathname();
   const { start: startTour, isCompleted: tourCompleted } = useTour();
+  const { isSupported, permission, isSubscribed, isLoading: pushLoading, subscribe, unsubscribe } = usePushSubscription();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -123,6 +125,31 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
               <Sparkles className="w-4 h-4 mr-2" />
               Take the tour
             </DropdownMenuItem>
+            {isSupported && permission !== "denied" && (
+              <DropdownMenuItem
+                onClick={isSubscribed ? unsubscribe : subscribe}
+                disabled={pushLoading}
+                className="cursor-pointer"
+              >
+                {isSubscribed ? (
+                  <>
+                    <BellOff className="w-4 h-4 mr-2" />
+                    Mute notifications
+                  </>
+                ) : (
+                  <>
+                    <Bell className="w-4 h-4 mr-2" />
+                    Turn on notifications
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
+            {isSupported && permission === "denied" && (
+              <DropdownMenuItem disabled className="opacity-50 cursor-default">
+                <BellOff className="w-4 h-4 mr-2" />
+                Notifications blocked
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />
             <DropdownMenuItem
               onClick={handleSignOut}

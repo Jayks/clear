@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, pgEnum, unique, check } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, pgEnum, unique, check, boolean } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { groups } from "./groups";
 
@@ -14,6 +14,7 @@ export const groupMembers = pgTable(
     displayName: text("display_name"),
     role: memberRoleEnum("role").notNull().default("member"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().default(sql`now()`),
+    notificationsMuted: boolean("notifications_muted").notNull().default(false),
   },
   (table) => [
     unique("unique_group_user").on(table.groupId, table.userId),

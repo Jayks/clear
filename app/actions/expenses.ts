@@ -10,6 +10,8 @@ import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { getGroupTemplates } from "@/lib/db/queries/expenses";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { sendExpenseNotification } from "@/lib/notifications/send-expense-notification";
+import { sendPushToMembers } from "@/lib/notifications/send-push-notification";
 
 async function validateSplitMembers(groupId: string, splits: { memberId: string }[]) {
   const ids = [...new Set(splits.map((s) => s.memberId))];
@@ -69,6 +71,20 @@ export async function addExpense(input: AddExpenseInput) {
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
+
+    const notifyParams = {
+      groupId,
+      description,
+      amount,
+      currency,
+      actorName: membership.displayName ?? "A member",
+      actorUserId: user.id,
+    };
+    Promise.all([
+      sendExpenseNotification(notifyParams).catch(() => {}),
+      sendPushToMembers(notifyParams).catch(() => {}),
+    ]);
+
     return { ok: true, expenseId: expense.id } as const;
   } catch {
     return { ok: false, error: "Failed to add expense" } as const;

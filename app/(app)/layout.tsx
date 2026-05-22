@@ -4,6 +4,7 @@ import { MobileNav } from "@/components/shared/mobile-nav";
 import { isPlatformAdmin } from "@/lib/db/queries/admin";
 import { TourProvider } from "@/components/tour/tour-context";
 import { getCurrentUser } from "@/lib/db/queries/auth";
+import { PushPermissionPrompt } from "@/components/shared/push-permission-prompt";
 
 export default async function AppLayout({
   children,
@@ -24,6 +25,7 @@ export default async function AppLayout({
           {children}
         </main>
         <MobileNav />
+        <PushPermissionPrompt />
       </div>
     </TourProvider>
   );

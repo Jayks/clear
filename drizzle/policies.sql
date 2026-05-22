@@ -4,11 +4,12 @@
 -- ============================================================
 
 -- Enable RLS on all tables
-alter table groups          enable row level security;
-alter table group_members   enable row level security;
-alter table expenses        enable row level security;
-alter table expense_splits  enable row level security;
-alter table settlements     enable row level security;
+alter table groups             enable row level security;
+alter table group_members      enable row level security;
+alter table expenses           enable row level security;
+alter table expense_splits     enable row level security;
+alter table settlements        enable row level security;
+alter table push_subscriptions enable row level security;
 
 
 -- ── groups ───────────────────────────────────────────────────────────────────
@@ -135,6 +136,14 @@ create policy "settlements: member access" on settlements
         and group_members.user_id = auth.uid()
     )
   );
+
+
+-- ── push_subscriptions ───────────────────────────────────────────────────────
+
+create policy "Users manage own push subscriptions"
+  on push_subscriptions for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
 
 
 -- ── realtime ──────────────────────────────────────────────────────────────────

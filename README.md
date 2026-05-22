@@ -33,6 +33,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Onboarding tour** — 7-step walkthrough (4 default + 3 extended) with spotlight, celebration, and a nest-specific 2-step overlay for recurring templates
 - **Progress nudges** — first-time expense and group creation each show a contextual next-step prompt (shown once)
 - **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in
+- **Notifications** — email and web push alerts when group members log expenses; one-click email unsubscribe; per-group mute toggle in the avatar menu
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
 - **Realtime** — Supabase Realtime pushes expense/settlement changes to all open sessions
@@ -77,6 +78,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=Clear
 ANTHROPIC_API_KEY=
 PLATFORM_ADMIN_EMAIL=                 # comma-separated, guards /admin
+
+# Email notifications
+RESEND_API_KEY=
+RESEND_FROM=                          # e.g. "Clear <notifications@yourdomain.com>"
+RESEND_UNSUBSCRIBE_SECRET=            # random 32-char string
+
+# Web push notifications
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_EMAIL=                          # mailto:you@yourdomain.com
 ```
 
 ```bash
@@ -93,6 +104,7 @@ pnpm dev
 4. Run `drizzle/policies.sql` in the SQL Editor to apply RLS policies
 5. Enable Realtime for tables: `expenses`, `expense_splits`, `settlements`, `group_members`
 6. Create a Storage bucket named `cover-photos` (public, 5 MB limit) and run the Storage RLS policies from CLAUDE.md
+7. Generate VAPID keys: `node -e "const wp=require('web-push');console.log(wp.generateVAPIDKeys())"` and add to `.env.local`
 
 ### Windows note
 

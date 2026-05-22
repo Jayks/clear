@@ -37,6 +37,8 @@
 | Theme | next-themes 0.4 | ThemeProvider in root layout |
 | Deployment | Vercel | |
 
+**Notifications**: `web-push 3.6.7` (server-only, dynamic import required — see gotchas)
+
 **Dev tools**: `tsx`, `dotenv`, `vitest`, `puppeteer-core`
 
 **Do NOT add**: NextAuth, Prisma, Redux, MUI, Chakra, Bootstrap, styled-components, tRPC, Pusher/Ably.
@@ -181,6 +183,31 @@ const pdfParse: (buf: Buffer) => Promise<{ text: string }> = require("pdf-parse/
 import pdfParse from "pdf-parse";
 ```
 
+### Resend — use `fetch`, never the SDK
+
+The `resend` npm package v6 pulls in `svix` as a dependency, which uses Node.js streams incompatibly with this environment, crashing the Turbopack worker and causing a 404 on any page that imports the action chain. Use the Resend HTTP API directly:
+
+```typescript
+await fetch("https://api.resend.com/emails", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+  body: JSON.stringify({ from: process.env.RESEND_FROM, to, subject, html }),
+});
+```
+
+### `web-push` — dynamic import only
+
+Static `import webpush from "web-push"` in any file reachable from a page component causes a Turbopack worker crash (persistent 404). Always use dynamic import inside the function body:
+
+```typescript
+import type webpushType from "web-push";
+
+export async function sendPushToMembers(...) {
+  const webpush = ((await import("web-push")) as unknown as { default: typeof webpushType }).default;
+  webpush.setVapidDetails(...);
+}
+```
+
 ### Anthropic SDK — instantiate inside the function
 
 ```typescript
@@ -247,7 +274,7 @@ Components: `groupStartDate`/`groupEndDate`. AI `DateContext`: `groupStart`/`gro
 1. **Server-first**: RSC by default. `"use client"` only for state, effects, browser APIs, charts.
 2. **Server Actions for mutations**: `app/actions/*.ts`. No REST routes for internal CRUD.
 3. **Drizzle only for DB reads/writes**. Supabase JS only for Auth + Realtime.
-4. **RLS everywhere**: All 5 tables. `drizzle/policies.sql` is the source of truth.
+4. **RLS everywhere**: All 6 tables (incl. `push_subscriptions`). `drizzle/policies.sql` is the source of truth.
 5. **Pure functions for math**: `lib/splits/compute.ts`, `lib/settle/optimize.ts` — never touch DB.
 6. **Shared Zod schemas**: same schema for form (zodResolver), server action input, and DB insert.
 7. **Optimistic UI via useState**: `removedIds: Set<string>` state, rolls back on server error.
@@ -283,6 +310,7 @@ user_id: uuid nullable
 guest_name: text nullable
 display_name: text nullable
 role: enum('admin','member') default 'member'
+notifications_muted: boolean default false   -- per-group email + push opt-out
 CHECK: exactly one of (user_id, guest_name)
 UNIQUE: (group_id, user_id)
 ```
@@ -318,6 +346,18 @@ id, group_id, from_member_id, to_member_id fk->group_members
 amount: numeric(12,2), currency, note, settled_at
 CHECK: from_member_id <> to_member_id
 ```
+
+### push_subscriptions
+```
+id
+user_id: uuid fk->auth.users(cascade)
+endpoint: text NOT NULL
+p256dh: text NOT NULL
+auth: text NOT NULL
+created_at: timestamptz
+UNIQUE: (user_id, endpoint)
+```
+RLS: users read/write only their own rows. Schema: `lib/db/schema/push-subscriptions.ts`.
 
 ### Supabase Storage — `cover-photos` bucket (run once)
 
@@ -512,6 +552,11 @@ clear/
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
 │       ├── admin.ts                       # adminDeleteGroup, adminDeleteUser (platform admin only)
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
+│   ├── api/
+│   │   ├── groups/[id]/export/route.ts    # CSV download
+│   │   ├── push/subscribe/route.ts        # save push subscription
+│   │   ├── push/unsubscribe/route.ts      # remove push subscription
+│   │   └── unsubscribe/route.ts           # email unsubscribe (HMAC-verified)
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
 │   ├── expense/  (expense-card, swipeable-expense-card [swipe-to-delete on touch + tap-to-detail], expense-detail-sheet, expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
@@ -519,9 +564,9 @@ clear/
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
-│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo [ClearLogo + ClearIcon], ios-install-hint, long-press-hint, nest-hint)
+│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo [ClearLogo + ClearIcon], ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
 ├── hooks/
-│   ├── use-trip-realtime.ts (exports useGroupRealtime), use-warn-before-leave.ts, use-speech-recognition.ts
+│   ├── use-trip-realtime.ts (exports useGroupRealtime), use-warn-before-leave.ts, use-speech-recognition.ts, use-push-subscription.ts
 ├── lib/
 │   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth).ts  # auth.ts exports getCurrentUser (cached)
 │   ├── supabase/server.ts, client.ts, admin.ts
@@ -534,6 +579,10 @@ clear/
 │   ├── settle/optimize.ts + optimize.test.ts
 │   ├── validations/trip.ts + expense.ts (addExpenseSchema + addTemplateSchema) + settlement.ts
 │   ├── rate-limit.ts                    # in-memory AI rate limiter (20 calls/hr per user)
+│   ├── notifications/
+│   │   ├── expense-email.ts             # plain-HTML email template (subject + html)
+│   │   ├── send-expense-notification.ts # fire-and-forget email via Resend HTTP API
+│   │   └── send-push-notification.ts    # fire-and-forget web push via web-push (dynamic import)
 │   ├── utils.ts
 ├── drizzle/policies.sql, indexes.sql    # indexes applied manually in Supabase SQL Editor
 ├── drizzle.config.ts, proxy.ts, vercel.json  # vercel.json: cron for /api/health keep-alive
@@ -580,6 +629,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=Clear
 ANTHROPIC_API_KEY
 PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
+
+# Email notifications (Resend)
+RESEND_API_KEY                       # re_... from Resend dashboard
+RESEND_FROM                          # e.g. "Clear <notifications@yourdomain.com>"
+RESEND_UNSUBSCRIBE_SECRET            # random 32-char string for HMAC signing
+
+# Web push notifications (VAPID)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY         # generated once via: node -e "require('web-push').generateVAPIDKeys()..."
+VAPID_PRIVATE_KEY
+VAPID_EMAIL                          # mailto:you@yourdomain.com
 ```
 
 ---
@@ -662,7 +721,7 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 ## 18. Deployment
 
 **Repo**: https://github.com/Jayks/clear.git (master)
-**Deployment**: Vercel (pending — new Supabase project needs wiring)
+**Deployment**: Vercel (live). Add all env vars (incl. VAPID + Resend) in Vercel dashboard → Settings → Environment Variables. Set `NEXT_PUBLIC_APP_URL` to the production URL.
 
 ---
 

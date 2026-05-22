@@ -4,7 +4,7 @@ import Image from "next/image";
 import {
   ArrowRight, Users, TrendingDown, CheckCircle2,
   MapPin, Home, Receipt, Zap, DivideSquare, RefreshCw,
-  LayoutGrid, CalendarCheck,
+  LayoutGrid, CalendarCheck, Bell,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
@@ -144,7 +144,7 @@ export default async function LandingPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2">
-                {["Google sign-in", "No credit card", "Free to get started", "Guided tour included", "Installs on iOS & Android"].map((t) => (
+                {["Google sign-in", "No credit card", "Free to get started", "Email & push alerts", "Installs on iOS & Android"].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5 text-sm text-slate-400 dark:text-slate-300">
                     <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" /> {t}
                   </span>
@@ -417,7 +417,8 @@ export default async function LandingPage() {
           {[
             "Quick-add with AI", "AI chat import", "Recurring templates",
             "Monthly grouping", "QR code invites", "Guest members",
-            "Real-time sync", "Per-group insights", "Portfolio view",
+            "Real-time sync", "Email & push alerts", "Balance at a glance",
+            "Expense search", "Per-group insights", "Portfolio view",
             "UPI pay links", "CSV export", "Card shortcuts", "Guided tour", "Installs on any device",
           ].map((pill) => (
             <span key={pill} className="glass-sm rounded-full px-4 py-1.5 text-sm text-slate-600 dark:text-slate-300 border border-white/60 dark:border-slate-700/40">
@@ -552,6 +553,96 @@ export default async function LandingPage() {
               Someone opts out of the expensive restaurant. Kids go half. One flatmate pays more rent for the bigger room. Clear handles all of it.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* ── Notifications showcase ───────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+
+          {/* Left: copy */}
+          <div className="flex-1 text-center lg:text-left">
+            <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Notifications</p>
+            <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
+              Know the moment
+              <br />
+              <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                money moves.
+              </span>
+            </h2>
+            <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto lg:mx-0 mb-6">
+              Every time a group member logs an expense, everyone gets notified — by email and as an instant push alert on their phone. No more "did you add that taxi yet?"
+            </p>
+            <ul className="space-y-3 text-left max-w-md mx-auto lg:mx-0">
+              {[
+                { icon: "📧", label: "Email alerts", desc: "Delivered to your inbox with a direct link back to the group" },
+                { icon: "🔔", label: "Push notifications", desc: "Instant alerts on Android and installed iOS PWA — even when the app is closed" },
+                { icon: "🔕", label: "Per-group mute", desc: "Silence any group from the menu — email and push together" },
+              ].map((item) => (
+                <li key={item.label} className="flex items-start gap-3">
+                  <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                  <div>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label} </span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{item.desc}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right: notification mockup */}
+          <div className="flex-1 w-full max-w-sm">
+            <div className="glass rounded-2xl p-6 shadow-xl shadow-cyan-500/10">
+              {/* Phone top bar */}
+              <div className="flex items-center justify-between mb-5">
+                <span className="text-xs text-slate-400">9:41 AM</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                  <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                  <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                </div>
+              </div>
+
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Notifications</p>
+
+              {/* Push notifications */}
+              {[
+                { group: "Goa 2025", actor: "Priya", desc: "Welcome dinner", amount: "₹4,500", ago: "just now" },
+                { group: "Goa 2025", actor: "Raj", desc: "Airport taxi", amount: "₹2,000", ago: "2m ago" },
+                { group: "Mumbai Flat", actor: "Anil", desc: "Electricity bill", amount: "₹1,800", ago: "1h ago" },
+              ].map((n, i) => (
+                <div key={i} className={`flex items-start gap-3 rounded-2xl p-3.5 mb-2 last:mb-0 ${i === 0 ? "bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/50" : "bg-white/60 dark:bg-slate-800/60"}`}>
+                  <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)" }}>
+                    <Bell className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">Clear · {n.group}</p>
+                      <span className="text-[10px] text-slate-400 shrink-0">{n.ago}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                      {n.actor} logged <span className="font-medium text-slate-700 dark:text-slate-200">{n.amount}</span> for {n.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {/* Email preview */}
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/40">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Also in your inbox</p>
+                <div className="glass-sm rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                    <span className="text-sm">📧</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">[Goa 2025] Priya logged ₹4,500 for Welcome dinner</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Clear · View in app →</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 

@@ -53,7 +53,7 @@
 
 ### CoverPhotoPicker — no `<form>` inside forms
 
-Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` with `type="button"` on the search button to prevent parent form submission. Upload uses `<input type="file" accept="image/*">`. Flow: pick → `URL.createObjectURL` preview → `uploadCoverPhoto` action (`app/actions/upload.ts`) → base64 Buffer → `cover-photos` bucket → public URL via `onChange()`. 5 MB limit enforced client + server. Revoke object URL on upload or close.
+Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` with `type="button"` on the search button to prevent parent form submission. Upload uses `<input type="file" accept="image/*">`. Flow: pick → `URL.createObjectURL` preview → `getSignedUploadUrl` action (`app/actions/upload.ts`) returns `{ path, token, publicUrl }` → browser calls `supabase.storage.uploadToSignedUrl()` directly (raw file, never passes through Vercel) → `onChange(publicUrl)`. 5 MB limit enforced client-side. Revoke object URL on upload or close. **No base64 encoding** — avoids Vercel's 4.5 MB serverless body limit.
 
 ### DB Singleton (prevents HMR connection exhaustion)
 

@@ -2,7 +2,8 @@
 
 import { useState, useTransition, useEffect, useRef } from "react";
 import { searchUnsplash } from "@/app/actions/unsplash";
-import { uploadCoverPhoto } from "@/app/actions/upload";
+import { getSignedUploadUrl } from "@/app/actions/upload";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { UnsplashPhoto } from "@/lib/unsplash";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -67,28 +68,33 @@ export function CoverPhotoPicker({ value, onChange }: CoverPhotoPickerProps) {
   function handleUpload() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image is too large (max 5 MB)");
+      return;
+    }
     startUploadTransition(async () => {
       try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(",")[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const result = await uploadCoverPhoto({
-          base64,
-          mimeType: file.type,
-          fileName: file.name,
-        });
-        if (result.ok) {
-          if (previewUrl) URL.revokeObjectURL(previewUrl);
-          onChange(result.url);
-          setOpen(false);
-          setPreviewUrl(null);
-          if (fileInputRef.current) fileInputRef.current.value = "";
-        } else {
-          toast.error(result.error);
+        // 1. Server validates auth + generates a signed upload URL (tiny payload)
+        const result = await getSignedUploadUrl({ mimeType: file.type, fileName: file.name });
+        if (!result.ok) { toast.error(result.error); return; }
+
+        // 2. Browser uploads raw file directly to Supabase — never touches Vercel
+        const supabase = createClient();
+        const { error } = await supabase.storage
+          .from("cover-photos")
+          .uploadToSignedUrl(result.path, result.token, file, { contentType: file.type });
+
+        if (error) {
+          toast.error("Upload failed. Please try again.");
+          return;
         }
+
+        // 3. Use the pre-computed public URL returned with the signed URL
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        onChange(result.publicUrl);
+        setOpen(false);
+        setPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       } catch {
         toast.error("Failed to upload image. Please try again.");
       }

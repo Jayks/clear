@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/db/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const BUCKET = "cover-photos";
-const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
   "image/jpeg",
   "image/png",
@@ -13,20 +12,23 @@ const ALLOWED_MIME = new Set([
   "image/avif",
 ]);
 
-export async function uploadCoverPhoto(input: {
-  base64: string;
+/**
+ * Generates a Supabase Storage signed upload URL.
+ * The client uses this to PUT the raw file directly to Supabase,
+ * bypassing Vercel's 4.5 MB serverless body limit entirely.
+ */
+export async function getSignedUploadUrl(input: {
   mimeType: string;
   fileName: string;
-}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+}): Promise<
+  | { ok: true; path: string; token: string; publicUrl: string }
+  | { ok: false; error: string }
+> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
   if (!ALLOWED_MIME.has(input.mimeType))
     return { ok: false, error: "Only JPEG, PNG, WebP, GIF, and AVIF are supported." };
-
-  const buffer = Buffer.from(input.base64, "base64");
-  if (buffer.byteLength > MAX_BYTES)
-    return { ok: false, error: "Image is too large (max 5 MB)." };
 
   const ext = input.mimeType.split("/")[1] ?? "jpg";
   const slug =
@@ -39,15 +41,13 @@ export async function uploadCoverPhoto(input: {
   const path = `${user.id}/${Date.now()}-${slug}.${ext}`;
 
   const supabase = await createClient();
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, buffer, { contentType: input.mimeType, upsert: false });
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path);
 
-  if (error) {
-    console.error("[uploadCoverPhoto]", error);
-    return { ok: false, error: "Upload failed. Please try again." };
+  if (error || !data) {
+    console.error("[getSignedUploadUrl]", error);
+    return { ok: false, error: "Could not prepare upload. Please try again." };
   }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return { ok: true, url: data.publicUrl };
+  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return { ok: true, path, token: data.token, publicUrl: urlData.publicUrl };
 }

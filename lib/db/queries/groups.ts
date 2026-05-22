@@ -25,44 +25,6 @@ async function getMemberCounts(groupIds: string[]): Promise<Map<string, number>>
   return new Map(rows.map((r) => [r.groupId, Number(r.cnt)]));
 }
 
-export async function getGroups() {
-  const user = await getCurrentUser();
-  if (!user) return [];
-
-  const groupIds = await getUserGroupIds(user.id);
-  if (groupIds.length === 0) return [];
-
-  const [groupRows, countMap] = await Promise.all([
-    db.select().from(groups)
-      .where(and(inArray(groups.id, groupIds), eq(groups.isArchived, false)))
-      .orderBy(
-        sql`case when ${groups.isDemo} then 0 else 1 end`,
-        sql`case when ${groups.startDate} >= current_date then 0 else 1 end`,
-        sql`case when ${groups.startDate} >= current_date then ${groups.startDate} end asc`,
-        sql`case when ${groups.startDate} < current_date or ${groups.startDate} is null then ${groups.createdAt} end desc`
-      ),
-    getMemberCounts(groupIds),
-  ]);
-
-  return groupRows.map((group) => ({ group, memberCount: countMap.get(group.id) ?? 0 }));
-}
-
-export async function getArchivedGroups() {
-  const user = await getCurrentUser();
-  if (!user) return [];
-
-  const groupIds = await getUserGroupIds(user.id);
-  if (groupIds.length === 0) return [];
-
-  const [groupRows, countMap] = await Promise.all([
-    db.select().from(groups)
-      .where(and(inArray(groups.id, groupIds), eq(groups.isArchived, true)))
-      .orderBy(sql`${groups.createdAt} desc`),
-    getMemberCounts(groupIds),
-  ]);
-
-  return groupRows.map((group) => ({ group, memberCount: countMap.get(group.id) ?? 0 }));
-}
 
 export async function getAllGroups() {
   const user = await getCurrentUser();

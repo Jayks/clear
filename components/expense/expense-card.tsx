@@ -6,6 +6,7 @@ import { DeleteExpenseButton } from "./delete-expense-button";
 import { DuplicateExpenseButton } from "./duplicate-expense-button";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -19,6 +20,20 @@ interface ExpenseCardProps {
 export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete, onDeleteFail }: ExpenseCardProps) {
   const payer = members.find((m) => m.id === expense.paidByMemberId);
   const payerName = payer ? getMemberName(payer) : "Member";
+  const creator = members.find((m) => m.userId === expense.createdByUserId);
+  const creatorName = creator ? getMemberName(creator) : null;
+  const sameEditor = expense.updatedByUserId === expense.createdByUserId;
+  const editor = expense.updatedByUserId && !sameEditor
+    ? members.find((m) => m.userId === expense.updatedByUserId)
+    : null;
+  const editorName = editor ? getMemberName(editor) : null;
+  const editSuffix = expense.updatedByUserId
+    ? sameEditor
+      ? ` · edited ${formatDistanceToNow(expense.updatedAt, { addSuffix: true })}`
+      : editorName
+        ? ` · edited by ${editorName} ${formatDistanceToNow(expense.updatedAt, { addSuffix: true })}`
+        : ` · edited ${formatDistanceToNow(expense.updatedAt, { addSuffix: true })}`
+    : "";
   const canEdit = expense.createdByUserId === currentUserId || isAdmin;
   const dateDisplay =
     expense.category === "accommodation" && expense.endDate
@@ -40,6 +55,12 @@ export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {payerName} · {dateDisplay}
           </p>
+          {creatorName && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              {`Added by ${creatorName} · ${formatDistanceToNow(expense.createdAt, { addSuffix: true })}`}
+              {editSuffix && <span className="opacity-60">{editSuffix}</span>}
+            </p>
+          )}
         </div>
         {/* Amount shown inline with description on desktop */}
         <p className="hidden sm:block text-base font-semibold text-slate-800 dark:text-slate-100 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>

@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { QrCode } from "lucide-react";
+import { toast } from "sonner";
 
 const QRCodeSVG = dynamic(
   () => import("qrcode.react").then((m) => ({ default: m.QRCodeSVG })),
   { ssr: false, loading: () => <div className="w-[200px] h-[200px] rounded-xl bg-slate-100 animate-pulse" /> }
 );
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { QrCode } from "lucide-react";
-import { toast } from "sonner";
 
 export function QRInvite({ url }: { url: string }) {
   const [open, setOpen] = useState(false);

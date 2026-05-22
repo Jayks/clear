@@ -143,7 +143,17 @@ export function QuickAddSheet({
     startSave(async () => {
       const result = await addExpense(input);
       if (result.ok) {
-        toast.success("Expense added");
+        const isFirst = !localStorage.getItem("first_expense_added");
+        if (isFirst) {
+          localStorage.setItem("first_expense_added", "1");
+          toast.success("First expense logged!", {
+            description: "Ready to settle up with the group?",
+            action: { label: "Settle up →", onClick: () => { window.location.href = `/groups/${groupId}/settle`; } },
+            duration: 6000,
+          });
+        } else {
+          toast.success("Expense added");
+        }
         onClose();
       } else {
         toast.error(result.error ?? "Failed to save expense");
@@ -175,6 +185,7 @@ export function QuickAddSheet({
       {isOpen && (
         <motion.div
           key="sheet"
+          data-tour="quick-add-open"
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}

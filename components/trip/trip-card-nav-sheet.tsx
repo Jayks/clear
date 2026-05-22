@@ -47,6 +47,7 @@ export function TripCardNavSheet({ isOpen, onClose, groupId, groupName }: Props)
           />
 
           <motion.div
+            data-tour="demo-nav-sheet"
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}

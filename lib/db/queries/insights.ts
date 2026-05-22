@@ -6,6 +6,10 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { eq, sum, count, inArray, and, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/db/queries/auth";
+import { computeAllTripsInsights } from "@/lib/insights/all-trips-insights";
+import { computeAllNestsInsights } from "@/lib/insights/all-nests-insights";
+import type { TripSummary } from "@/lib/insights/all-trips-insights";
+import type { OtherTripSummary } from "@/lib/insights/cross-trip";
 
 const getUserGroupIds = cache(async (userId: string): Promise<string[]> => {
   const rows = await db
@@ -14,10 +18,6 @@ const getUserGroupIds = cache(async (userId: string): Promise<string[]> => {
     .where(eq(groupMembers.userId, userId));
   return rows.map((r) => r.groupId);
 });
-import { computeAllTripsInsights } from "@/lib/insights/all-trips-insights";
-import { computeAllNestsInsights } from "@/lib/insights/all-nests-insights";
-import type { TripSummary } from "@/lib/insights/all-trips-insights";
-import type { OtherTripSummary } from "@/lib/insights/cross-trip";
 
 export async function getAllTripsInsightsData() {
   const user = await getCurrentUser();

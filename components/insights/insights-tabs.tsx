@@ -106,14 +106,16 @@ function TripsInsightsContent({ data, fmt, primaryCurrency }: {
       )}
 
       {/* Smart insights */}
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-        What stands out
-      </h2>
-      <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
-        {data.smartInsights.map((s, i) => (
-          <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
-        ))}
-      </AnimatedList>
+      <div data-tour="all-insights-trips">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
+          What stands out
+        </h2>
+        <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
+          {data.smartInsights.map((s, i) => (
+            <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
+          ))}
+        </AnimatedList>
+      </div>
 
       {/* Per-trip links */}
       <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">

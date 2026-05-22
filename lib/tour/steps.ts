@@ -1,27 +1,50 @@
 import type { TourStep } from "./types";
 
+export const DEFAULT_STEP_COUNT = 4;
+
 export function getTourSteps(demoTripId: string | null): TourStep[] {
   const base = demoTripId ? `/groups/${demoTripId}` : null;
 
-  const tripSteps: TourStep[] = base
+  const extendedSteps: TourStep[] = base
     ? [
         {
-          target: "[data-tour='settle-suggestions']",
-          page: `${base}/settle`,
-          title: "Settle up",
+          target: "[data-tour='expense-list-header']",
+          page: `${base}/expenses`,
+          title: "Search and filter",
           description:
-            "Clear computes the minimum number of payments to clear all debts. Mark payments done or pay directly via UPI.",
+            "Every expense in one place — search by description or category, filter by payer or date, and sort any way you like.",
+          phase: "extended",
+          isSampleData: true,
+        },
+        {
+          target: "[data-tour='insights-charts']",
+          page: `${base}/insights`,
+          title: "See where the money went",
+          description:
+            "Charts break down spending by category and day so you can see exactly what the trip cost and where it went.",
+          phase: "extended",
+          isSampleData: true,
+        },
+        {
+          target: "[data-tour='all-insights-trips']",
+          page: "/insights",
+          title: "Your spending story",
+          description:
+            "Across every trip and home — compare spending, spot patterns, and see who your most frequent travel companions are.",
+          phase: "extended",
+          isSampleData: true,
         },
       ]
     : [];
 
   return [
-    // 1 — Welcome
+    // 1 — Welcome modal
     {
       target: null,
       title: "Welcome to Clear",
       description:
-        "Clear tracks shared expenses for two kinds of groups — Trips for travel, and Nests for shared tabs. Split costs, settle up with the fewest payments, and see where the money goes.",
+        "Clear tracks shared expenses for two kinds of groups — Trips for travel, and Nests for shared homes. Split costs fairly, settle up with the fewest payments, and see where the money goes.",
+      phase: "default",
     },
 
     // 2 — New group button
@@ -30,37 +53,32 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
       page: "/groups",
       title: "Create a group",
       description:
-        "Hit New group to get started. Choose Trip for a holiday or Nest for a flat — then invite everyone via link or QR code.",
+        "Tap New group to get started. Choose Trip for a holiday or Nest for a flat — then invite everyone via link or QR code.",
+      phase: "default",
     },
 
-    // 3 — Sample trip card
-    {
-      target: "[data-tour='demo-trip']",
-      page: "/groups",
-      title: "Sample Trip — Goa 2025",
-      description:
-        "This pre-loaded trip lets you explore the travel features with real data — expenses, balances, settlements, and AI-powered insights.",
-    },
-
-    // 4 — Sample nest card
-    {
-      target: "[data-tour='demo-nest']",
-      page: "/groups",
-      title: "Sample Nest — Mumbai Flat",
-      description:
-        "This pre-loaded nest shows shared tab features: recurring expense templates for rent, electricity and WiFi — log each month with one tap, then settle up.",
-    },
-
-    // 5 — Quick-add button on a group card
+    // 3 — Quick-add (interactive — auto-advances when sheet opens)
     {
       target: "[data-tour='trip-card-add-btn']",
       page: "/groups",
       title: "Quick-add an expense",
       description:
-        "Tap Add on any group card to log an expense in seconds — type what you spent and Clear parses the amount, payer, and split automatically.",
+        "Tap Add on any group card and type what you spent — Clear parses the amount, payer, and split automatically. Try it now.",
+      phase: "default",
+      interactive: true,
     },
 
-    // 6 — Settle up (inside demo trip)
-    ...tripSteps,
+    // 4 — Nav sheet (opened programmatically via custom event)
+    {
+      target: "[data-tour='demo-nav-sheet']",
+      page: "/groups",
+      title: "Your group hub",
+      description: "",
+      phase: "default",
+      navLegend: true,
+    },
+
+    // 5-7 — Extended tour
+    ...extendedSteps,
   ];
 }

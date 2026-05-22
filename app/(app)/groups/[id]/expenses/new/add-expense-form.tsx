@@ -104,7 +104,17 @@ export function AddExpenseForm({ group, members }: Props) {
       toast.error(result.error);
       return;
     }
-    toast.success("Expense added!");
+    const isFirst = !localStorage.getItem("first_expense_added");
+    if (isFirst) {
+      localStorage.setItem("first_expense_added", "1");
+      toast.success("First expense logged!", {
+        description: "Ready to settle up with the group?",
+        action: { label: "Settle up →", onClick: () => router.push(`/groups/${group.id}/settle`) },
+        duration: 6000,
+      });
+    } else {
+      toast.success("Expense added!");
+    }
     router.push(`/groups/${group.id}/expenses`);
   }
 

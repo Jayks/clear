@@ -1,18 +1,27 @@
 import { Plus, Archive, LayoutGrid } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { getAllGroups } from "@/lib/db/queries/groups";
+import { getCurrentUser } from "@/lib/db/queries/auth";
+import { getUserMemberIds } from "@/lib/db/queries/auth";
 import { TripCard } from "@/components/trip/trip-card";
+import { GroupBalanceBadge } from "@/components/trip/group-balance-badge";
 import { AnimatedList } from "@/components/shared/animated-list";
 import { ensureDemoGroup } from "@/app/actions/demo";
 import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
+import { LongPressHint } from "@/components/shared/long-press-hint";
 
 export default async function GroupsPage() {
-  // ensureDemoGroup is best-effort — a Supabase timeout or transient error
-  // must never break the groups page. Swallow failures silently.
-  const [, { active: groups, archived }] = await Promise.all([
+  const [, { active: groups, archived }, user] = await Promise.all([
     ensureDemoGroup().catch(() => {}),
     getAllGroups().catch(() => ({ active: [], archived: [] })),
+    getCurrentUser(),
   ]);
+
+  const allIds = [...groups, ...archived].map((g) => g.group.id);
+  const memberIds = user && allIds.length > 0
+    ? await getUserMemberIds(allIds, user.id)
+    : {};
 
   return (
     <div>
@@ -52,11 +61,36 @@ export default async function GroupsPage() {
       ) : (
         <>
           {groups.length > 0 && (
-            <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {groups.map(({ group, memberCount }) => (
-                <TripCard key={group.id} group={group} memberCount={Number(memberCount)} />
-              ))}
-            </AnimatedList>
+            <>
+              <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {groups.map(({ group, memberCount }) => {
+                  const memberId = memberIds[group.id];
+                  return (
+                    <TripCard
+                      key={group.id}
+                      group={group}
+                      memberCount={Number(memberCount)}
+                      balanceBadge={
+                        memberId ? (
+                          <Suspense fallback={
+                            <div className="px-4 py-2 border-t border-white/20 dark:border-slate-700/30">
+                              <span className="text-xs text-slate-300 dark:text-slate-600">···</span>
+                            </div>
+                          }>
+                            <GroupBalanceBadge
+                              groupId={group.id}
+                              memberId={memberId}
+                              currency={group.defaultCurrency}
+                            />
+                          </Suspense>
+                        ) : undefined
+                      }
+                    />
+                  );
+                })}
+              </AnimatedList>
+              <LongPressHint demoTripId={groups.find((g) => g.group.isDemo && g.group.groupType === "trip")?.group.id ?? null} />
+            </>
           )}
 
           {archived.length > 0 && (

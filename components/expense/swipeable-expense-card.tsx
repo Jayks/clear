@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { deleteExpense } from "@/app/actions/expenses";
 import { toast } from "sonner";
 import { ExpenseCard } from "./expense-card";
+import { ExpenseDetailSheet } from "./expense-detail-sheet";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 
@@ -30,6 +31,7 @@ export function SwipeableExpenseCard(props: Props) {
   // As the card slides left, the zone slides in proportionally so they never overlap.
   const deleteZoneX = useTransform(x, (v) => REVEAL_WIDTH + v);
   const [isOpen, setIsOpen] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const isDragging = useRef(false);
 
   useEffect(() => {
@@ -85,9 +87,23 @@ export function SwipeableExpenseCard(props: Props) {
     });
   }
 
-  // Non-touch or no delete permission: plain card, no swipe wrapper
+  // Non-touch or no delete permission: plain card with tap-to-detail
   if (!isTouchDevice || !canDelete) {
-    return <ExpenseCard {...props} />;
+    return (
+      <>
+        <div onClick={() => setShowDetail(true)} className="cursor-pointer">
+          <ExpenseCard {...props} />
+        </div>
+        <ExpenseDetailSheet
+          expense={expense}
+          members={props.members}
+          currentUserId={props.currentUserId}
+          isAdmin={props.isAdmin}
+          isOpen={showDetail}
+          onClose={() => setShowDetail(false)}
+        />
+      </>
+    );
   }
 
   return (
@@ -102,10 +118,22 @@ export function SwipeableExpenseCard(props: Props) {
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         style={{ x, touchAction: "pan-y" }}
-        onClick={() => { if (isOpen && !isDragging.current) snapTo(0); }}
+        onClick={() => {
+          if (isDragging.current) return;
+          if (isOpen) { snapTo(0); return; }
+          setShowDetail(true);
+        }}
       >
         <ExpenseCard {...props} />
       </motion.div>
+      <ExpenseDetailSheet
+        expense={expense}
+        members={props.members}
+        currentUserId={props.currentUserId}
+        isAdmin={props.isAdmin}
+        isOpen={showDetail}
+        onClose={() => setShowDetail(false)}
+      />
 
       {/* Delete zone — starts outside the right edge, slides in as card moves left */}
       <motion.div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Users, MapPin, Home, MoreHorizontal } from "lucide-react";
@@ -13,6 +13,7 @@ import { TripCardNavSheet } from "./trip-card-nav-sheet";
 interface TripCardProps {
   group: Group;
   memberCount: number;
+  balanceBadge?: React.ReactNode;
 }
 
 const LONG_PRESS_MS = 500;
@@ -23,7 +24,7 @@ const MOVE_THRESHOLD = 8;
 const moreBtn =
   "hidden md:flex w-8 h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
-export function TripCard({ group, memberCount }: TripCardProps) {
+export function TripCard({ group, memberCount, balanceBadge }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -42,6 +43,15 @@ export function TripCard({ group, memberCount }: TripCardProps) {
   // absorb the stray click event that fires after the backdrop disappears.
   const navBlockedRef = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+
+  // Tour: programmatically open nav sheet via custom event dispatched by tour-context
+  useEffect(() => {
+    function onTourOpen(e: Event) {
+      if ((e as CustomEvent).detail === group.id) setIsNavOpen(true);
+    }
+    window.addEventListener("open-demo-navsheet", onTourOpen);
+    return () => window.removeEventListener("open-demo-navsheet", onTourOpen);
+  }, [group.id]);
 
   function handleQrOpenChange(open: boolean) {
     if (!open) {
@@ -99,7 +109,7 @@ export function TripCard({ group, memberCount }: TripCardProps) {
         <div className="absolute inset-0 z-20 rounded-2xl ring-2 ring-cyan-400/70 pointer-events-none" />
       )}
       {/* Inner div: glass surface + overflow-hidden for image clipping and ribbon */}
-      <div className={`glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : group.isArchived ? " ring-2 ring-slate-400/30" : ""}`}>
+      <div className={`relative glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : group.isArchived ? " ring-2 ring-slate-400/30" : ""}`}>
         <Link
           href={`/groups/${group.id}`}
           className="block"
@@ -136,17 +146,6 @@ export function TripCard({ group, memberCount }: TripCardProps) {
               </span>
             </div>
 
-            {/* Diagonal ribbon — bottom-right corner, clipped by overflow-hidden */}
-            {group.isDemo && (
-              <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
-                SAMPLE
-              </div>
-            )}
-            {group.isArchived && !group.isDemo && (
-              <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-slate-500/80 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
-                ARCHIVED
-              </div>
-            )}
 
             <div className="absolute bottom-3 left-4 right-4">
               <h3 className="text-white text-xl truncate" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -164,6 +163,18 @@ export function TripCard({ group, memberCount }: TripCardProps) {
             </div>
           </div>
         </Link>
+        {balanceBadge}
+        {/* Diagonal ribbon — now relative to the full card (image + badge), stays consistent */}
+        {group.isDemo && (
+          <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
+            SAMPLE
+          </div>
+        )}
+        {group.isArchived && !group.isDemo && (
+          <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-slate-500/80 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
+            ARCHIVED
+          </div>
+        )}
       </div>
 
       {/* Action buttons — positioned on the outer div, outside the Link entirely.

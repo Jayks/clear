@@ -151,7 +151,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
       )}
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="trip-charts">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="insights-charts">
         <CategoryDonut data={insights.byCategory} currency={currency} />
         {isNest
           ? <MonthlySpendBar data={monthlyData} currency={currency} />

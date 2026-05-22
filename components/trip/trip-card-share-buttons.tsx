@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Share2, QrCode, Check } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const QRCodeSVG = dynamic(
   () => import("qrcode.react").then((m) => ({ default: m.QRCodeSVG })),
   { ssr: false, loading: () => <div className="w-[200px] h-[200px] rounded-xl bg-slate-100 animate-pulse" /> }
 );
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface Props {
   url: string;

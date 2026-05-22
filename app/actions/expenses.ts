@@ -110,6 +110,7 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
       amount: String(amount), currency, expenseDate,
       endDate: endDate || null,
       notes: notes || null,
+      updatedByUserId: user.id,
       updatedAt: new Date(),
     }).where(eq(expenses.id, expenseId));
 
@@ -423,6 +424,19 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
 
   revalidatePath(`/groups/${groupId}`, "layout");
   revalidateTag(`balances-${groupId}`, "max");
+}
+
+export async function fetchExpenseSplitsAction(expenseId: string) {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
+  if (!expense) return null;
+
+  const membership = await getMembership(expense.groupId, user.id);
+  if (!membership) return null;
+
+  return await db.select().from(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
 }
 
 export async function deleteTemplate(templateId: string) {

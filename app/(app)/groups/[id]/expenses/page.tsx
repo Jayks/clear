@@ -9,6 +9,7 @@ import { ExpenseFilters } from "@/components/expense/expense-filters";
 import { ChatImportDialog } from "@/components/expense/chat-import-dialog";
 import { ExpenseQuickAddFab } from "@/components/expense/expense-quick-add-fab";
 import { TemplateSection } from "./template-section";
+import { NestHint } from "@/components/shared/nest-hint";
 import { formatCurrency } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -77,6 +78,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
       </div>
 
       {/* Recurring templates — nest only */}
+      {isNest && <NestHint />}
       {isNest && (
         <TemplateSection
           templates={templateList}

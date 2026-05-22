@@ -88,7 +88,17 @@ export function CreateTripForm() {
       toast.error("Failed to create group. Please try again.");
       return;
     }
-    toast.success(`${config.labels.singular} created!`);
+    const isFirst = !localStorage.getItem("first_group_created");
+    if (isFirst) {
+      localStorage.setItem("first_group_created", "1");
+      toast.success(`${config.labels.singular} created!`, {
+        description: "Invite your group to get started.",
+        action: { label: "Add expenses →", onClick: () => router.push(`/groups/${result.groupId}/expenses/new`) },
+        duration: 6000,
+      });
+    } else {
+      toast.success(`${config.labels.singular} created!`);
+    }
     router.push(`/groups/${result.groupId}`);
   }
 

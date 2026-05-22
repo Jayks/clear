@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { db } from "@/lib/db/client";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 
 export const getCurrentUser = cache(async () => {
@@ -19,3 +19,13 @@ export const getMembership = cache(async (groupId: string, userId: string) => {
     .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
   return m ?? null;
 });
+
+/** Returns a map of groupId → memberId for the current user across multiple groups. */
+export async function getUserMemberIds(groupIds: string[], userId: string): Promise<Record<string, string>> {
+  if (groupIds.length === 0) return {};
+  const rows = await db
+    .select({ groupId: groupMembers.groupId, id: groupMembers.id })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.userId, userId), inArray(groupMembers.groupId, groupIds)));
+  return Object.fromEntries(rows.map((r) => [r.groupId, r.id]));
+}

@@ -38,7 +38,7 @@ export function TemplateSection({ templates, members, groupId, currency, isAdmin
   }
 
   return (
-    <div className="mb-6">
+    <div className="mb-6" data-tour="templates-section">
       {/* Header */}
       <button
         onClick={() => setExpanded((v) => !v)}

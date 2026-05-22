@@ -19,6 +19,7 @@ export const expenses = pgTable("expenses", {
   recurrence: text("recurrence"),
   sourceTemplateId: uuid("source_template_id"),
   createdByUserId: uuid("created_by_user_id").notNull(),
+  updatedByUserId: uuid("updated_by_user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
 });

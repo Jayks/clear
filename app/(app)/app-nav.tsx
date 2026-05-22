@@ -26,7 +26,7 @@ const NAV_LINKS = [
 export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { start: startTour } = useTour();
+  const { start: startTour, isCompleted: tourCompleted } = useTour();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -86,7 +86,10 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
           <DropdownMenuTrigger
             render={<button className="min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-full" />}
           >
-            <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-white shadow-sm">
+            <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-white shadow-sm relative">
+              {!tourCompleted && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-500 ring-2 ring-white dark:ring-slate-900 z-10" />
+              )}
               <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name ?? "User"} />
               <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-teal-500 text-white text-sm font-medium">
                 {initials}

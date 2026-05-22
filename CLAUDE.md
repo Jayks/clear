@@ -70,9 +70,10 @@ Next.js 16 renamed `middleware.ts` → `proxy.ts` with a `proxy` export (not `mi
 
 ### Auth pattern — always use `getCurrentUser()`, never raw `getUser()`
 
-`lib/db/queries/auth.ts` exports two React-`cache()`-wrapped helpers:
-- **`getCurrentUser()`** — validates JWT against Supabase Auth. Deduplicated across the RSC tree.
-- **`getMembership(groupId, userId)`** — cached single `group_members` row lookup.
+`lib/db/queries/auth.ts` exports:
+- **`getCurrentUser()`** — React-`cache()`-wrapped, validates JWT against Supabase Auth. Deduplicated across the RSC tree.
+- **`getMembership(groupId, userId)`** — React-`cache()`-wrapped single `group_members` row lookup.
+- **`getUserMemberIds(groupIds, userId)`** — batch lookup returning `Record<groupId, memberId>`. One query for N groups. Used on the groups page to load balance badges efficiently.
 
 ```typescript
 // ✅ correct — deduplicated, one validated network call per render
@@ -85,6 +86,14 @@ const { data: { user } } = await supabase.auth.getUser();
 ```
 
 All layout and `lib/db/queries/*.ts` files use `getCurrentUser()`. `ensureDemoGroup()` also uses it (shares cache). Never switch to `getSession()` — cookie-only, no server validation.
+
+### Turbopack — imports after module-level code crash the worker
+
+Any `import` statement that appears after a `const`, `function`, or other module-level code causes Turbopack to abort the worker on **fresh** compilation. The file may compile fine from a warm cache but crashes after a dep change forces a recompile, manifesting as a persistent 404 with `exit code 4294967295`. Keep **all** `import` statements at the very top of every file, before any code.
+
+Common trigger: `const X = dynamic(...)` or `const X = cache(...)` placed before a subsequent `import`.
+
+Use `scripts/find-bad-imports.mjs` (`node scripts/find-bad-imports.mjs`) to scan the project for this pattern.
 
 ### Windows dev — TLS certificate fix
 
@@ -287,7 +296,9 @@ amount: numeric(12,2), currency: text, expense_date: date, end_date: date, notes
 is_template: boolean default false  -- recurring template (nest)
 recurrence: text                    -- 'monthly' | 'weekly' (templates only)
 source_template_id: uuid nullable
-created_by_user_id: uuid, created_at, updated_at
+created_by_user_id: uuid
+updated_by_user_id: uuid nullable   -- set by updateExpense(); null on create
+created_at: timestamptz, updated_at: timestamptz
 ```
 
 ### expense_splits
@@ -503,19 +514,19 @@ clear/
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
-│   ├── expense/  (expense-card, swipeable-expense-card [swipe-to-delete on touch], expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
-│   ├── trip/     (trip-card [data-tour attrs], trip-card-nav-sheet, cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
+│   ├── expense/  (expense-card, swipeable-expense-card [swipe-to-delete on touch + tap-to-detail], expense-detail-sheet, expense-filters [groupByMonth prop], split-editor, quick-add-bar, chat-import-dialog, ...)
+│   ├── trip/     (trip-card [data-tour attrs, balanceBadge prop], trip-card-nav-sheet, group-balance-badge [async RSC], cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
-│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo [ClearLogo + ClearIcon], ios-install-hint)
+│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo [ClearLogo + ClearIcon], ios-install-hint, long-press-hint, nest-hint)
 ├── hooks/
 │   ├── use-trip-realtime.ts (exports useGroupRealtime), use-warn-before-leave.ts, use-speech-recognition.ts
 ├── lib/
 │   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth).ts  # auth.ts exports getCurrentUser (cached)
 │   ├── supabase/server.ts, client.ts, admin.ts
 │   ├── demo/seed-demo-trip.ts + seed-demo-nest.ts
-│   ├── tour/types.ts + steps.ts         # 10-step tour (trip + nest cards)
+│   ├── tour/types.ts + steps.ts         # 7-step tour (4 default + 3 extended)
 │   ├── group-config.ts, categories.ts
 │   ├── insights/trip-insights.ts + all-trips-insights.ts + all-nests-insights.ts + group-roles.ts
 │   ├── parser/parse-expense.ts
@@ -584,25 +595,56 @@ PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
 
 ---
 
-## 13. Onboarding Tour (6 steps)
+## 13. Onboarding Tour (7 steps — 4 default + 3 extended)
 
-`getTourSteps(demoTripId)` in `lib/tour/steps.ts`:
-1. Welcome modal — "Trips for travel, Nests for home"
-2. `[data-tour='new-trip-btn']` — New group button (`app/(app)/groups/page.tsx`)
-3. `[data-tour='demo-trip']` — Sample Trip card (`components/trip/trip-card.tsx`)
-4. `[data-tour='demo-nest']` — Sample Nest card (`components/trip/trip-card.tsx`)
-5. `[data-tour='trip-card-add-btn']` — Quick-add button (`components/trip/trip-card-quick-add.tsx`)
-6. `[data-tour='settle-suggestions']` — Settle up (`app/(app)/groups/[id]/settle/page.tsx`)
+`getTourSteps(demoTripId)` in `lib/tour/steps.ts`. `DEFAULT_STEP_COUNT = 4`.
 
-Tour localStorage key: `clear_tour_done`. Replayable from avatar dropdown.
+**Default tour (stays on /groups page):**
+1. `target: null` — Welcome modal with visual Trip vs Nest comparison
+2. `[data-tour='new-trip-btn']` — New group button
+3. `[data-tour='trip-card-add-btn']` — Quick-add (interactive: auto-advances 1s after `[data-tour='quick-add-open']` appears)
+4. `[data-tour='demo-nav-sheet']` — Nav sheet opened via `window.dispatchEvent(new CustomEvent('open-demo-navsheet', { detail: demoTripId }))`. Popover shows mini-legend of 4 destinations (`navLegend: true`). Ends with "Done / Show me more →".
 
-**Tour UX**: Popover always visible during navigation. Loading: spinner in description, Next disabled until target found. "Taking a moment…" hint after 1.5s (not 3s). All 4 inner trip pages prefetched when `demoTripId` first resolves.
+**Extended tour (opt-in, navigates into demo group):**
+5. `[data-tour='expense-list-header']` — Expenses page: search + filters + first 2 cards. `isSampleData: true`.
+6. `[data-tour='insights-charts']` — Per-group insights: CategoryDonut + DailySpendBar. `isSampleData: true`.
+7. `[data-tour='all-insights-trips']` — All-groups insights: Smart Insights section. `isSampleData: true`. Finishing navigates to `/groups` and triggers celebration card.
 
-**Auto-launch**: Polls for `[data-tour='new-trip-btn']` (300ms initial delay, then every 250ms) before setting `active=true`. Do not change to immediate launch — prevents blank blur before `ensureDemoGroup()` finishes seeding.
+**localStorage keys**: `clear_tour_done` (main tour), `clear_nest_hint_done` (nest 2-step overlay), `clear_longpress_hint_done` (mobile long-press tip), `first_expense_added`, `first_group_created` (progress nudges).
+
+**Tour UX**:
+- Spotlight ring pulses (`scale: [1, 1.03, 1]` repeat). Dots: 4 in default mode, expands to 7 when extended starts. Completed dots shown in light cyan.
+- Escape key exits at any step. Avatar shows cyan dot badge until `clear_tour_done` is set.
+- `CelebrationCard` renders on tour completion (🎉 animation, "Create your first group" CTA, "Let's go" → `/groups`).
+- `LongPressHint` — one-time toast below demo card on touch devices (2.5s delay, 4s auto-dismiss).
+- `NestHint` — 2-step overlay on nest expenses page for first-time visitors (`[data-tour='templates-section']` → `[data-tour='log-template-btn']`).
+
+**Auto-launch**: Polls for `[data-tour='new-trip-btn']` (300ms delay, then 250ms interval). Do not change to immediate — prevents blank blur before `ensureDemoGroup()` seeding.
+
+**TripCard** listens for `open-demo-navsheet` custom event via `useEffect` and opens its nav sheet programmatically. `[data-tour='quick-add-open']` is on the `QuickAddSheet` motion.div when visible.
 
 ---
 
-## 14. Insights Architecture
+## 14. Group Card Balance Badge
+
+`components/trip/group-balance-badge.tsx` — async server component, renders as a strip at the bottom of each active `TripCard`.
+
+- **Four states**: "You owe ₹X" (amber) / "You're owed ₹X" (emerald) / "All settled ✓" (muted emerald, only when expenses exist) / "No expenses yet" (muted slate) / "Multi-currency group" (muted, when `hasMixedCurrencies`).
+- Wrapped in `<Suspense fallback={<···>}>` on the groups page — cards render instantly, badge streams in.
+- Groups page fetches all member IDs in one query via `getUserMemberIds(groupIds, userId)` from `lib/db/queries/auth.ts`, passes `memberId` to each badge.
+- Archived cards do not receive a badge.
+- `TripCard` accepts `balanceBadge?: React.ReactNode`. The ribbon (`SAMPLE`/`ARCHIVED`) is on the inner glass div (which now wraps image + badge) so it covers the full card height consistently.
+
+## 15. Expense Detail Sheet
+
+`components/expense/expense-detail-sheet.tsx` — bottom sheet shown when tapping an expense card body.
+
+- Rendered inside `SwipeableExpenseCard` (self-contained). On non-touch devices, wraps `ExpenseCard` with `onClick`.
+- Shows: category icon, description, date, amount, payer, notes, split breakdown (fetched on demand via `fetchExpenseSplitsAction`), audit trail.
+- Edit button (if `canEdit`) links to the edit page. Escape key closes.
+- `fetchExpenseSplitsAction` in `app/actions/expenses.ts` — auth-checked, returns `ExpenseSplit[]` for the given expense.
+
+## 17. Insights Architecture
 
 ### Per-group (`/groups/[id]/insights`)
 - **Trip**: total/per-person/daily KPIs, PaceTracker, CategoryDonut, DailySpendBar, MemberContributions, GroupRoles, CrossTripCard, AdherenceCard, SmartInsights
@@ -617,14 +659,14 @@ Tour localStorage key: `clear_tour_done`. Replayable from avatar dropdown.
 
 ---
 
-## 15. Deployment
+## 18. Deployment
 
 **Repo**: https://github.com/Jayks/clear.git (master)
 **Deployment**: Vercel (pending — new Supabase project needs wiring)
 
 ---
 
-## 16. Key Scripts
+## 19. Key Scripts
 
 ```bash
 pnpm dev / build / typecheck
@@ -638,7 +680,7 @@ pnpm seed:temple         # South India temple tour — 20 members
 
 ---
 
-## 17. Working Style
+## 20. Working Style
 
 - **Ask before scope creep** — new deps, new feature areas, skipping sections.
 - **Run `pnpm typecheck && pnpm test` before declaring done**.

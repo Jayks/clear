@@ -18,15 +18,20 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 
 - **Quick-add expenses** — type a natural description from any group card; AI parses the amount, payer, and split automatically
 - **Quick-nav from card** — long-press any group card (or tap `⋯` on desktop) to jump directly to Members, Expenses, Settle Up, or Insights
+- **Expense detail** — tap any expense card to see the full split breakdown, notes, and audit trail in a bottom sheet
+- **Expense search** — instant search across description and category; filters and pagination compose naturally
+- **Expense audit trail** — every card and edit page shows who logged the expense and who last edited it, with relative timestamps
 - **Four split modes** — equal, exact amount, percentage, or shares
 - **16 expense categories** — including Tour Package for trips; "Other" prompts a free-text description
 - **Minimum-transaction settlement** — greedy optimizer computes the fewest payments to clear all debts
 - **UPI pay** — direct payment links on the settle-up page
+- **Balance at a glance** — every group card shows your net position (owe / owed / settled / no expenses yet), streaming in without blocking the page
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
-- **Cover photo upload** — pick a photo from Unsplash or upload from your device (gallery on mobile, file browser on desktop); stored in Supabase Storage
+- **Cover photo upload** — pick a photo from Unsplash or upload from your device; stored in Supabase Storage
 - **Trip plan upload** — upload a PDF or .txt itinerary and have it auto-filled in the trip form
-- **Onboarding tour** — 6-step guided walkthrough with spotlight and swipe-to-dismiss sheet
+- **Onboarding tour** — 7-step walkthrough (4 default + 3 extended) with spotlight, celebration, and a nest-specific 2-step overlay for recurring templates
+- **Progress nudges** — first-time expense and group creation each show a contextual next-step prompt (shown once)
 - **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
@@ -146,3 +151,4 @@ lib/
 - **`getBalances()`** — single SQL CTE round-trip (4 aggregates + members in one query)
 - **GROUP_CONFIG** — all trip/nest differences flow through `lib/group-config.ts`
 - **QuickAddSheet / TripCardNavSheet** — own their own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop. Cards have no footer — Add, Share, and QR float on the cover image (`w-10 h-10` on mobile for iOS tap targets); `⋯` is desktop-only (`hidden md:flex`), long-press opens the nav sheet on mobile
+- **GroupBalanceBadge** — async RSC streamed into each active TripCard via `Suspense`; batch-loads all member IDs in one query (`getUserMemberIds`), then calls cached `getBalances` per group

@@ -15,6 +15,7 @@ import { parseItineraryFromFile } from "@/app/actions/parse-itinerary";
 import { GROUP_CONFIG } from "@/lib/group-config";
 import type { GroupType } from "@/lib/group-config";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 export function CreateTripForm() {
   const router = useRouter();
@@ -88,6 +89,7 @@ export function CreateTripForm() {
       toast.error("Failed to create group. Please try again.");
       return;
     }
+    trackEvent("group_created", { group_type: groupType });
     const isFirst = !localStorage.getItem("first_group_created");
     if (isFirst) {
       localStorage.setItem("first_group_created", "1");

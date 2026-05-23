@@ -5,7 +5,10 @@ import { ThemeProvider } from "next-themes";
 import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
 import { IOSInstallHint } from "@/components/shared/ios-install-hint";
 import { NavProgress } from "@/components/shared/nav-progress";
+import Script from "next/script";
 import "./globals.css";
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const inter = Inter({
   variable: "--font-inter",
@@ -59,6 +62,17 @@ export default function RootLayout({
           <Toaster richColors position="bottom-right" />
           <IOSInstallHint />
         </ThemeProvider>
+        {GA_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+            <Script id="ga-init" strategy="afterInteractive">{`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_ID}', { send_page_view: true });
+            `}</Script>
+          </>
+        )}
       </body>
     </html>
   );

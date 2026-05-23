@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import type { Group } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, and, count, inArray, sql, getTableColumns } from "drizzle-orm";
+import { eq, and, count, inArray, sql, getTableColumns, isNull } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
@@ -107,10 +107,16 @@ export async function getGroupByToken(token: string) {
 
   if (!group) return null;
 
-  const [{ memberCount }] = await db
-    .select({ memberCount: count(groupMembers.id) })
-    .from(groupMembers)
-    .where(eq(groupMembers.groupId, group.id));
+  const [memberCountResult, unclaimedGuests] = await Promise.all([
+    db
+      .select({ memberCount: count(groupMembers.id) })
+      .from(groupMembers)
+      .where(eq(groupMembers.groupId, group.id)),
+    db
+      .select({ id: groupMembers.id, guestName: groupMembers.guestName })
+      .from(groupMembers)
+      .where(and(eq(groupMembers.groupId, group.id), isNull(groupMembers.userId))),
+  ]);
 
-  return { group, memberCount };
+  return { group, memberCount: memberCountResult[0].memberCount, unclaimedGuests };
 }

@@ -1,6 +1,7 @@
 import { getGroupByToken } from "@/lib/db/queries/groups";
+import { getMembership } from "@/lib/db/queries/auth";
 import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Users, MapPin, Home } from "lucide-react";
 import { JoinButton } from "./join-button";
 import { formatDate } from "@/lib/utils";
@@ -11,12 +12,22 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
   const result = await getGroupByToken(token);
   if (!result) notFound();
 
-  const { group, memberCount } = result;
+  const { group, memberCount, unclaimedGuests } = result;
   const config = getGroupConfig(group.groupType);
   const isNest = group.groupType === "nest";
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const membership = await getMembership(group.id, user.id);
+    if (membership) redirect(`/groups/${group.id}`);
+  }
+
+  const userDisplayName =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    user?.email?.split("@")[0] ??
+    null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -67,7 +78,14 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
               <p className="text-slate-600 dark:text-slate-300 text-sm mb-5">{group.description}</p>
             )}
 
-            <JoinButton token={token} groupType={group.groupType} groupLabel={config.labels.singular} isLoggedIn={!!user} />
+            <JoinButton
+              token={token}
+              groupType={group.groupType}
+              groupLabel={config.labels.singular}
+              isLoggedIn={!!user}
+              unclaimedGuests={unclaimedGuests}
+              userDisplayName={userDisplayName}
+            />
           </div>
         </div>
 

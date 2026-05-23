@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { addGuestSchema } from "@/lib/validations/trip";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -58,6 +58,43 @@ export async function removeMember(groupId: string, memberId: string) {
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to remove member" } as const;
+  }
+}
+
+export async function claimGuestMember(token: string, guestMemberId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const [group] = await db.select({ id: groups.id }).from(groups).where(eq(groups.shareToken, token));
+  if (!group) return { ok: false, error: "Invalid invite link" } as const;
+
+  try {
+    await db.transaction(async (tx) => {
+      const [guest] = await tx
+        .select({ id: groupMembers.id })
+        .from(groupMembers)
+        .where(and(eq(groupMembers.id, guestMemberId), eq(groupMembers.groupId, group.id), isNull(groupMembers.userId)));
+      if (!guest) throw new Error("Guest slot not found or already claimed");
+
+      const [existing] = await tx
+        .select({ id: groupMembers.id })
+        .from(groupMembers)
+        .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, user.id)));
+      if (existing) throw new Error("You're already a member of this group");
+
+      await tx
+        .update(groupMembers)
+        .set({ userId: user.id, guestName: null, displayName: extractDisplayName(user) })
+        .where(eq(groupMembers.id, guestMemberId));
+    });
+
+    revalidateTag(`group-${group.id}`, "max");
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${group.id}`, "layout");
+    return { ok: true, groupId: group.id } as const;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Failed to claim";
+    return { ok: false, error: msg } as const;
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { recordSettlement } from "@/app/actions/settlements";
+import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Check } from "lucide-react";
@@ -21,7 +22,10 @@ export function MarkPaidButton({ groupId, fromMemberId, toMemberId, amount, curr
     const result = await recordSettlement({ groupId, fromMemberId, toMemberId, amount, currency });
     setLoading(false);
     if (!result.ok) toast.error(result.error);
-    else toast.success("Payment recorded!");
+    else {
+      trackEvent("settlement_recorded", { currency });
+      toast.success("Payment recorded!");
+    }
   }
 
   return (

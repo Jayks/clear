@@ -10,6 +10,7 @@ import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import { QuickAddBar } from "./quick-add-bar";
 import { addExpense } from "@/app/actions/expenses";
+import { trackEvent } from "@/lib/analytics";
 import { getGroupMembersForQuickAdd } from "@/app/actions/quick-add";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { AddExpenseInput } from "@/lib/validations/expense";
@@ -143,6 +144,7 @@ export function QuickAddSheet({
     startSave(async () => {
       const result = await addExpense(input);
       if (result.ok) {
+        trackEvent("expense_added", { source: "quick_add" });
         const isFirst = !localStorage.getItem("first_expense_added");
         if (isFirst) {
           localStorage.setItem("first_expense_added", "1");

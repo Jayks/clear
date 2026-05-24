@@ -46,6 +46,7 @@ export function CreateTripForm() {
       setValue("startDate", "");
       setValue("endDate", "");
       setValue("itinerary", "");
+      setValue("budget", undefined);
     }
   }
 
@@ -82,11 +83,19 @@ export function CreateTripForm() {
 
   async function onSubmit(data: CreateGroupInput) {
     setSubmitting(true);
-    const result = await createGroup(data);
+    let result: Awaited<ReturnType<typeof createGroup>>;
+    try {
+      result = await createGroup(data);
+    } catch (e) {
+      setSubmitting(false);
+      toast.error("Failed to create group. Please try again.");
+      console.error("[createGroup]", e);
+      return;
+    }
     setSubmitting(false);
 
     if (!result.ok) {
-      toast.error("Failed to create group. Please try again.");
+      toast.error(result.error ?? "Failed to create group. Please try again.");
       return;
     }
     trackEvent("group_created", { group_type: groupType });

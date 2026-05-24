@@ -5,6 +5,8 @@ import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import { computeSplits } from "@/lib/splits/compute";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { formatCurrency, getMemberName } from "@/lib/utils";
+import { Lock } from "lucide-react";
+import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 
 interface SplitEditorProps {
   members: GroupMember[];
@@ -16,6 +18,7 @@ interface SplitEditorProps {
   error?: string;
   initialValues?: Record<string, number>;      // memberId → raw splitValue
   initialSelectedIds?: Set<string>;
+  canUseNonEqual?: boolean;
 }
 
 const MODES: { value: SplitMode; label: string }[] = [
@@ -29,11 +32,12 @@ function memberLabel(m: GroupMember): string {
   return getMemberName(m);
 }
 
-export function SplitEditor({ members, amount, currency, mode, onModeChange, onSplitsChange, error, initialValues, initialSelectedIds }: SplitEditorProps) {
+export function SplitEditor({ members, amount, currency, mode, onModeChange, onSplitsChange, error, initialValues, initialSelectedIds, canUseNonEqual = true }: SplitEditorProps) {
   const [values, setValues] = useState<Record<string, number>>(initialValues ?? {});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     initialSelectedIds ?? new Set(members.map((m) => m.id))
   );
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   // Recompute splits whenever inputs change
   useEffect(() => {
@@ -68,21 +72,29 @@ export function SplitEditor({ members, amount, currency, mode, onModeChange, onS
     <div>
       {/* Mode tabs */}
       <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden mb-3">
-        {MODES.map((m) => (
-          <button
-            key={m.value}
-            type="button"
-            onClick={() => onModeChange(m.value)}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
-              mode === m.value
-                ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white"
-                : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60"
-            }`}
-          >
-            {m.label}
-          </button>
-        ))}
+        {MODES.map((m) => {
+          const isLocked = !canUseNonEqual && m.value !== "equal";
+          return (
+            <button
+              key={m.value}
+              type="button"
+              onClick={() => {
+                if (isLocked) { setUpgradeOpen(true); return; }
+                onModeChange(m.value);
+              }}
+              className={`flex-1 py-2 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1 ${
+                mode === m.value
+                  ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white"
+                  : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60"
+              }`}
+            >
+              {isLocked && <Lock className="w-2.5 h-2.5 opacity-50" />}
+              {m.label}
+            </button>
+          );
+        })}
       </div>
+      <UpgradePrompt open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
 
       {/* Member rows */}
       <div className="space-y-2">

@@ -21,9 +21,10 @@ interface Props {
   members: GroupMember[];
   expense: Expense;
   splits: ExpenseSplit[];
+  canUseNonEqual?: boolean;
 }
 
-export function EditExpenseForm({ group, members, expense, splits }: Props) {
+export function EditExpenseForm({ group, members, expense, splits, canUseNonEqual = true }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
@@ -220,6 +221,7 @@ export function EditExpenseForm({ group, members, expense, splits }: Props) {
           onSplitsChange={handleSplitsChange}
           initialValues={initialValues}
           initialSelectedIds={initialSelectedIds}
+          canUseNonEqual={canUseNonEqual}
         />
         {errors.splits && <p className="mt-1 text-xs text-red-500">Select at least one member.</p>}
       </div>

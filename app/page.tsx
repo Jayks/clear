@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  ArrowRight, Users, TrendingDown, CheckCircle2,
-  MapPin, Home, Receipt, Zap, DivideSquare, RefreshCw,
-  LayoutGrid, CalendarCheck, Bell,
+  ArrowRight, Users, CheckCircle2, X,
+  MapPin, Home, Receipt, Zap, RefreshCw,
+  LayoutGrid, CalendarCheck, Bell, Sparkles,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
@@ -13,36 +13,6 @@ import { getCurrentUser } from "@/lib/db/queries/auth";
 const HERO_IMAGE    = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85";
 const NEST_IMAGE    = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1920&q=85";
 
-const features = [
-  {
-    icon: MapPin,
-    title: "Trips",
-    body: "Multi-day travel with your crew — hotels, dinners, taxis, activities. Log as you go and see the story of your trip in insights.",
-    gradient: "from-cyan-500 to-teal-500",
-    glow: "shadow-cyan-500/25",
-  },
-  {
-    icon: Home,
-    title: "Nests",
-    body: "Flat expenses, done right. Set recurring templates for rent, electricity, WiFi — log each month with one tap and settle monthly.",
-    gradient: "from-teal-500 to-emerald-500",
-    glow: "shadow-teal-500/25",
-  },
-  {
-    icon: DivideSquare,
-    title: "Split 4 ways",
-    body: "Equal split, exact amounts, percentages, or custom shares. Handle any scenario — someone opts out, kids go half, you name it.",
-    gradient: "from-blue-500 to-cyan-500",
-    glow: "shadow-blue-500/25",
-  },
-  {
-    icon: TrendingDown,
-    title: "Minimum payments",
-    body: "Our algorithm finds the fewest transactions to clear all debts — never more than one payment per person needed.",
-    gradient: "from-indigo-500 to-blue-500",
-    glow: "shadow-indigo-500/25",
-  },
-];
 
 const steps = [
   {
@@ -55,7 +25,7 @@ const steps = [
     n: "02",
     icon: Users,
     title: "Invite your people",
-    body: "Share a link or QR code. Everyone joins instantly — no app install needed.",
+    body: "Share a link or QR code. Everyone joins instantly — no account needed. Add guests by name; they claim their spot with Google later.",
   },
   {
     n: "03",
@@ -94,6 +64,9 @@ export default async function LandingPage() {
           />
           <div className="flex items-center gap-3">
             <ThemeToggle />
+            <Link href="/pricing" className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
+              Pricing
+            </Link>
             <Link href="/login" className="hidden sm:block text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
               Sign in
             </Link>
@@ -119,7 +92,7 @@ export default async function LandingPage() {
             <div className="flex-1 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-8 shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 animate-pulse shrink-0" />
-                Trips & shared tabs · Free to get started
+                Trips & shared tabs · 30-day Plus trial
               </div>
 
               <h1 className="text-5xl sm:text-6xl lg:text-[66px] xl:text-[72px] font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-7" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -138,13 +111,13 @@ export default async function LandingPage() {
                 <Link href="/login?intent=signup" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
                   Start for free <ArrowRight className="w-4 h-4" />
                 </Link>
-                <a href="#how-it-works" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 glass text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 font-medium text-base py-3.5 px-9 rounded-2xl transition-all hover:shadow-md">
-                  How it works
+                <a href="#why-clear" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 glass text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 font-medium text-base py-3.5 px-9 rounded-2xl transition-all hover:shadow-md">
+                  Why Clear?
                 </a>
               </div>
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2">
-                {["Google sign-in", "No credit card", "Free to get started", "Email & push alerts", "Installs on iOS & Android"].map((t) => (
+                {["Google sign-in", "No credit card", "Free plan · 30-day Plus trial", "Email & push alerts", "Installs on iOS & Android"].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5 text-sm text-slate-400 dark:text-slate-300">
                     <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" /> {t}
                   </span>
@@ -152,13 +125,32 @@ export default async function LandingPage() {
               </div>
             </div>
 
-            {/* Right — dual mockup */}
+            {/* Right — groups overview + expense detail */}
             <div className="flex-1 w-full max-w-[420px] lg:max-w-none">
 
-              {/* ── Mobile: stacked cards, no rotation ── */}
+              {/* ── Mobile: stacked ── */}
               <div className="flex flex-col gap-3 sm:hidden">
-                {/* Trip card */}
+                {/* Groups list */}
                 <div className="glass rounded-2xl p-4 shadow-xl">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your groups</p>
+                    <span className="text-[10px] text-slate-400">4 active</span>
+                  </div>
+                  {[
+                    { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
+                    { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
+                    { emoji: "✈️", name: "Manali Trip",   badge: "Settled ✓",          cls: "text-slate-400 bg-slate-50 dark:bg-slate-800/40" },
+                  ].map((g, i) => (
+                    <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{g.emoji}</div>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 flex-1">{g.name}</p>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${g.cls}`}>{g.badge}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Expense detail */}
+                <div className="glass rounded-2xl p-4" style={{ boxShadow: "0 12px 40px rgba(6,182,212,0.15)" }}>
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
@@ -167,54 +159,19 @@ export default async function LandingPage() {
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-sm shadow-sm">🏖️</div>
                   </div>
                   {[
-                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500", by: "Priya", n: 5 },
-                    { icon: "🏨", desc: "Hotel check-in", amount: "₹12,000", by: "You", n: 5 },
-                    { icon: "🚕", desc: "Airport taxi", amount: "₹2,000", by: "Raj", n: 5 },
+                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500",  by: "Priya" },
+                    { icon: "🏨", desc: "Hotel check-in",  amount: "₹12,000", by: "You"   },
+                    { icon: "🚕", desc: "Airport taxi",    amount: "₹2,000",  by: "Raj"   },
                   ].map((e, i) => (
                     <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
                       <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
-                        <p className="text-[10px] text-slate-400">{e.by} · {e.n} splits</p>
+                        <p className="text-[10px] text-slate-400">{e.by} · 5 splits</p>
                       </div>
                       <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">{e.amount}</p>
                     </div>
                   ))}
-                </div>
-
-                {/* Nest card */}
-                <div className="glass rounded-2xl p-4" style={{ boxShadow: "0 12px 40px rgba(20,184,166,0.15)" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recurring</p>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-0.5" style={{ fontFamily: "var(--font-fraunces)" }}>Mumbai Flat</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-400 flex items-center justify-center text-sm shadow-sm">🏠</div>
-                  </div>
-                  <div className="space-y-1.5">
-                    {[
-                      { icon: "🏠", label: "Monthly rent",  amount: "₹30,000", logged: true  },
-                      { icon: "⚡", label: "Electricity",    amount: "₹1,800",  logged: false },
-                      { icon: "📡", label: "WiFi broadband", amount: "₹999",    logged: false },
-                    ].map((t, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 rounded-xl px-2.5 py-1.5">
-                        <span className="text-sm shrink-0">{t.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{t.label}</p>
-                          <p className="text-[10px] text-slate-400">{t.amount}</p>
-                        </div>
-                        {t.logged ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-600 shrink-0">
-                            <CheckCircle2 className="w-3 h-3" /> May
-                          </span>
-                        ) : (
-                          <div className="h-5 px-1.5 rounded-md flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(135deg, #06B6D4, #14B8A6)" }}>
-                            <span className="text-[8px] font-bold text-white tracking-wide">LOG</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
 
@@ -222,64 +179,49 @@ export default async function LandingPage() {
               <div className="hidden sm:block relative" style={{ height: 460 }}>
                 <div className="absolute inset-6 rounded-3xl blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgba(6,182,212,0.18) 0%, rgba(20,184,166,0.12) 60%, transparent 100%)" }} />
 
-                {/* Trip expense card */}
-                <div className="absolute glass rounded-2xl p-5 shadow-xl w-[258px]" style={{ top: 16, left: 0, transform: "rotate(-3deg)", zIndex: 1 }}>
+                {/* Groups list card — behind, left */}
+                <div className="absolute glass rounded-2xl p-5 w-[262px]" style={{ top: 20, left: 0, transform: "rotate(-2.5deg)", zIndex: 1 }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your groups</p>
+                    <span className="text-[10px] text-slate-400">4 active</span>
+                  </div>
+                  {[
+                    { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
+                    { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
+                    { emoji: "✈️", name: "Manali Trip",   badge: "Settled ✓",          cls: "text-slate-400 bg-slate-50 dark:bg-slate-800/40" },
+                    { emoji: "🏕️", name: "Coorg Weekend", badge: "You owe ₹220",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
+                  ].map((g, i) => (
+                    <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{g.emoji}</div>
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 flex-1">{g.name}</p>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${g.cls}`}>{g.badge}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Expense detail card — front, right */}
+                <div className="absolute glass rounded-2xl p-5 w-[238px]" style={{ bottom: 0, right: 0, transform: "rotate(2.5deg)", zIndex: 2, boxShadow: "0 20px 60px rgba(6,182,212,0.18), 0 4px 16px rgba(0,0,0,0.08)" }}>
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
                       <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-base shadow-sm">🏖️</div>
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-base shadow-sm">🏖️</div>
                   </div>
                   {[
-                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500", by: "Priya", n: 5 },
-                    { icon: "🏨", desc: "Hotel check-in", amount: "₹12,000", by: "You", n: 5 },
-                    { icon: "🚕", desc: "Airport taxi", amount: "₹2,000", by: "Raj", n: 5 },
+                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500",  by: "Priya" },
+                    { icon: "🏨", desc: "Hotel check-in",  amount: "₹12,000", by: "You"   },
+                    { icon: "🚕", desc: "Airport taxi",    amount: "₹2,000",  by: "Raj"   },
                   ].map((e, i) => (
                     <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
-                      <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
+                      <div className="w-7 h-7 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
-                        <p className="text-[11px] text-slate-400">{e.by} · {e.n} splits</p>
+                        <p className="text-[11px] text-slate-400">{e.by} · 5 splits</p>
                       </div>
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0">{e.amount}</p>
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">{e.amount}</p>
                     </div>
                   ))}
-                </div>
-
-                {/* Nest template card */}
-                <div className="absolute glass rounded-2xl p-5 w-[232px] border border-white/90" style={{ bottom: 0, right: 0, transform: "rotate(2.5deg)", zIndex: 2, boxShadow: "0 20px 60px rgba(20,184,166,0.18), 0 4px 16px rgba(0,0,0,0.08)" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recurring</p>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-0.5" style={{ fontFamily: "var(--font-fraunces)" }}>Mumbai Flat</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-400 flex items-center justify-center text-base shadow-sm">🏠</div>
-                  </div>
-                  <div className="space-y-2">
-                    {[
-                      { icon: "🏠", label: "Monthly rent",   amount: "₹30,000", logged: true  },
-                      { icon: "⚡", label: "Electricity",     amount: "₹1,800",  logged: false },
-                      { icon: "📡", label: "WiFi broadband",  amount: "₹999",    logged: false },
-                    ].map((t, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-white/50 dark:bg-slate-800/50 rounded-xl px-2.5 py-2">
-                        <span className="text-sm shrink-0">{t.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 truncate">{t.label}</p>
-                          <p className="text-[10px] text-slate-400">{t.amount}</p>
-                        </div>
-                        {t.logged ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-600 shrink-0">
-                            <CheckCircle2 className="w-3 h-3" /> May
-                          </span>
-                        ) : (
-                          <div className="h-5 px-1.5 rounded-md flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(135deg, #06B6D4, #14B8A6)" }}>
-                            <span className="text-[8px] font-bold text-white tracking-wide">LOG</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Floating badge */}
@@ -309,8 +251,39 @@ export default async function LandingPage() {
         </div>
       </div>
 
+      {/* ── How it works ─────────────────────────────────────────────────── */}
+      <section id="how-it-works" className="max-w-6xl mx-auto px-6 py-24">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">How it works</p>
+          <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
+            Up and running in minutes
+          </h2>
+          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+            No setup, no onboarding form. Create a group and go.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 relative">
+          <div className="absolute top-[38px] left-[12.5%] right-[12.5%] h-px hidden lg:block" style={{ background: "linear-gradient(90deg, transparent, #A5F3FC 20%, #99F6E4 80%, transparent)" }} />
+          {steps.map((step) => (
+            <div key={step.n} className="glass rounded-2xl p-6 flex flex-col gap-4 relative">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg shrink-0 relative z-10" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
+                {step.n}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <step.icon className="w-4 h-4 text-cyan-500 shrink-0" />
+                  <h3 className="text-lg text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>{step.title}</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── Two kinds of groups ───────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
+      <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-14">
           <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Group types</p>
           <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -388,73 +361,68 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ─────────────────────────────────────────────────────── */}
-      <section id="features" className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="text-center mb-14">
-          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Features</p>
+      {/* ── Why Clear? ───────────────────────────────────────────────────── */}
+      <section id="why-clear" className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="text-center mb-12">
+          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Why Clear?</p>
           <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
-            Everything your group needs
+            Not just another
+            <br />
+            <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              expense splitter.
+            </span>
           </h2>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-            Whether you're settling a road trip or splitting the rent — Clear handles it.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {features.map((f) => (
-            <div key={f.title} className="glass rounded-2xl p-7 hover:shadow-xl transition-all hover:-translate-y-1 group">
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${f.gradient} flex items-center justify-center mb-5 shadow-lg ${f.glow} group-hover:scale-105 transition-transform`}>
-                <f.icon className="w-5 h-5 text-white" />
+        <div className="glass rounded-2xl overflow-hidden mb-10">
+          <div className="grid grid-cols-2 border-b border-slate-100 dark:border-slate-700/60">
+            <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60">
+              <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">Other apps</p>
+            </div>
+            <div className="px-6 py-4 bg-cyan-50/50 dark:bg-cyan-950/20">
+              <p className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">Clear ✦</p>
+            </div>
+          </div>
+          {[
+            {
+              them: "Type every field manually",
+              us:   "AI parses amount, payer and split in seconds",
+            },
+            {
+              them: "Everyone must create an account to join",
+              us:   "Add guests by name — they claim with Google later",
+            },
+            {
+              them: "Complex chains of IOUs between everyone",
+              us:   "Minimum transactions — one payment per person, guaranteed",
+            },
+            {
+              them: "Expenses pile up silently",
+              us:   "Email + push the moment any money moves",
+            },
+          ].map((row, i) => (
+            <div key={i} className={`grid grid-cols-2 border-b border-slate-100/60 dark:border-slate-700/40 last:border-0 ${i % 2 === 1 ? "bg-slate-50/30 dark:bg-slate-800/20" : ""}`}>
+              <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60 flex items-start gap-2.5">
+                <X className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-slate-400 dark:text-slate-500">{row.them}</p>
               </div>
-              <h3 className="text-xl text-slate-800 dark:text-slate-100 mb-3" style={{ fontFamily: "var(--font-fraunces)" }}>{f.title}</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.body}</p>
+              <div className="px-6 py-4 bg-cyan-50/20 dark:bg-cyan-950/10 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-slate-700 dark:text-slate-200">{row.us}</p>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Feature pills */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           {[
-            "Quick-add with AI", "AI chat import", "Recurring templates",
-            "Monthly grouping", "QR code invites", "Guest members",
-            "Real-time sync", "Email & push alerts", "Balance at a glance",
-            "Expense search", "Per-group insights", "Portfolio view",
-            "UPI pay links", "CSV export", "Card shortcuts", "Guided tour", "Installs on any device",
+            "AI expense parsing", "Chat import", "Voice input", "Recurring templates",
+            "Guest members", "QR code invites", "Per-group insights", "Email & push alerts",
+            "UPI pay links", "CSV export", "Expense audit trail", "Installs on any device",
           ].map((pill) => (
             <span key={pill} className="glass-sm rounded-full px-4 py-1.5 text-sm text-slate-600 dark:text-slate-300 border border-white/60 dark:border-slate-700/40">
               {pill}
             </span>
-          ))}
-        </div>
-      </section>
-
-      {/* ── How it works ─────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="text-center mb-14">
-          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">How it works</p>
-          <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
-            Up and running in minutes
-          </h2>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
-            No setup, no onboarding form. Create a group and go.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 relative">
-          <div className="absolute top-[38px] left-[12.5%] right-[12.5%] h-px hidden lg:block" style={{ background: "linear-gradient(90deg, transparent, #A5F3FC 20%, #99F6E4 80%, transparent)" }} />
-          {steps.map((step) => (
-            <div key={step.n} className="glass rounded-2xl p-6 flex flex-col gap-4 relative">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg shrink-0 relative z-10" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
-                {step.n}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <step.icon className="w-4 h-4 text-cyan-500 shrink-0" />
-                  <h3 className="text-lg text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>{step.title}</h3>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.body}</p>
-              </div>
-            </div>
           ))}
         </div>
       </section>
@@ -520,39 +488,89 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Split modes ───────────────────────────────────────────────────── */}
+      {/* ── AI features showcase ─────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-          <div className="flex-1 grid grid-cols-2 gap-3 w-full max-w-md order-2 lg:order-1">
-            {[
-              { mode: "Equal split",   example: "₹3,200 ÷ 4 = ₹800 each",              tag: "Most used", color: "from-cyan-500 to-teal-500" },
-              { mode: "Exact amounts", example: "You: ₹1,500 · Priya: ₹1,200 · ...",   tag: "Precise",   color: "from-teal-500 to-emerald-500" },
-              { mode: "Percentages",   example: "You 40% · Priya 30% · Raj 30%",        tag: "Flexible",  color: "from-blue-500 to-cyan-500" },
-              { mode: "Shares",        example: "Adults 2× · Kids 1× · Senior 1×",      tag: "Custom",    color: "from-indigo-500 to-blue-500" },
-            ].map((s) => (
-              <div key={s.mode} className="glass rounded-xl p-4">
-                <div className={`inline-flex items-center text-[9px] font-bold text-white uppercase tracking-widest px-2 py-0.5 rounded-full bg-gradient-to-br ${s.color} mb-3`}>
-                  {s.tag}
-                </div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>{s.mode}</p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">{s.example}</p>
-              </div>
-            ))}
-          </div>
 
-          <div className="flex-1 text-center lg:text-left order-1 lg:order-2">
-            <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Splitting</p>
+          {/* Left: copy */}
+          <div className="flex-1 text-center lg:text-left">
+            <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">AI-powered</p>
             <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
-              Every group is different.
+              Type it like you'd
               <br />
               <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                Split accordingly.
+                say it out loud.
               </span>
             </h2>
-            <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto lg:mx-0">
-              Someone opts out of the expensive restaurant. Kids go half. One flatmate pays more rent for the bigger room. Clear handles all of it.
+            <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto lg:mx-0 mb-6">
+              Describe an expense the way you'd text a friend — AI extracts the amount, payer, and split instantly. Or paste your whole group chat and import every expense at once.
             </p>
+            <ul className="space-y-3 text-left max-w-md mx-auto lg:mx-0">
+              {[
+                { icon: "✨", label: "Natural language", desc: "\"Priya paid 4500 for dinner split with all\" — done." },
+                { icon: "💬", label: "Chat import", desc: "Paste a WhatsApp or iMessage thread — AI picks out every expense." },
+                { icon: "🎤", label: "Voice input", desc: "Tap the mic and say the expense — no typing needed." },
+              ].map((item) => (
+                <li key={item.label} className="flex items-start gap-3">
+                  <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                  <div>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label} </span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{item.desc}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
+
+          {/* Right: AI parsing mockup */}
+          <div className="flex-1 w-full max-w-sm">
+            <div className="glass rounded-2xl p-6 shadow-xl shadow-cyan-500/10">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                </div>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Quick add</p>
+              </div>
+
+              <div className="glass-sm rounded-xl px-4 py-3 mb-3 border border-slate-200/60 dark:border-slate-700/40">
+                <p className="text-sm text-slate-700 dark:text-slate-200">Priya paid dinner at Taj 4500 split with Raj and Kiran</p>
+                <div className="flex items-center gap-1 mt-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-[10px] text-slate-400">Parsing…</span>
+                </div>
+              </div>
+
+              <div className="bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-100 dark:border-cyan-900/50 rounded-xl p-4 mb-3">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-cyan-600" />
+                  <span className="text-[10px] font-semibold text-cyan-600 uppercase tracking-wide">AI parsed</span>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { label: "Description", value: "Dinner at Taj" },
+                    { label: "Amount",      value: "₹4,500" },
+                    { label: "Paid by",     value: "Priya" },
+                    { label: "Split",       value: "Equal · 3 members" },
+                  ].map((row) => (
+                    <div key={row.label} className="flex items-center justify-between">
+                      <span className="text-xs text-slate-400">{row.label}</span>
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 glass-sm rounded-xl px-3.5 py-2.5 border border-white/60 dark:border-slate-700/40">
+                <span className="text-base shrink-0">💬</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-200">Chat import</p>
+                  <p className="text-[10px] text-slate-400 truncate">Paste thread → 6 expenses detected</p>
+                </div>
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -646,31 +664,194 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Social proof ─────────────────────────────────────────────────── */}
+      {/* ── Insights showcase ────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="glass rounded-3xl px-8 py-10 flex flex-col lg:flex-row items-center gap-10">
-          <div className="flex-1 text-center lg:text-left">
-            <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">No maths required</p>
-            <p className="text-2xl sm:text-3xl text-slate-800 dark:text-slate-100 mb-3" style={{ fontFamily: "var(--font-fraunces)" }}>
-              Stop doing the<br />arithmetic at 1 AM.
-            </p>
-            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-              Clear's settlement optimizer always finds the minimum number of payments to clear all debts — never more than one transfer per person, no matter how many expenses.
-            </p>
-          </div>
-          <div className="flex-1 grid grid-cols-2 gap-3 w-full max-w-sm lg:max-w-none">
-            {[
-              { icon: "🏖️", label: "Weekend trips" },
-              { icon: "🏠", label: "Flat expenses" },
-              { icon: "✈️", label: "International" },
-              { icon: "👨‍👩‍👧", label: "Shared tabs" },
-            ].map((item) => (
-              <div key={item.label} className="glass-sm rounded-xl px-4 py-3 flex items-center gap-2.5 border border-white/60">
-                <span className="text-xl">{item.icon}</span>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{item.label}</span>
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+
+          {/* Left: insights mockup */}
+          <div className="flex-1 w-full max-w-sm">
+            <div className="glass rounded-2xl p-6 shadow-xl shadow-cyan-500/10">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
+                  <p className="text-xs text-slate-400 mt-0.5">₹25,000 total · 5 members</p>
+                </div>
+                <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/30 px-2.5 py-1 rounded-full">Insights</span>
               </div>
-            ))}
+
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Spending by category</p>
+              <div className="space-y-2.5 mb-5">
+                {[
+                  { label: "Accommodation", pct: 48, amount: "₹12,000", color: "bg-cyan-500" },
+                  { label: "Food & drink",  pct: 28, amount: "₹7,000",  color: "bg-teal-500" },
+                  { label: "Transport",     pct: 16, amount: "₹4,000",  color: "bg-indigo-500" },
+                  { label: "Activities",    pct: 8,  amount: "₹2,000",  color: "bg-violet-500" },
+                ].map((c) => (
+                  <div key={c.label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{c.label}</span>
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{c.amount}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700/60">
+                      <div className={`h-1.5 rounded-full ${c.color}`} style={{ width: `${c.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Member contributions</p>
+              <div className="space-y-2">
+                {[
+                  { name: "Priya", amount: "₹8,000", pct: 96 },
+                  { name: "You",   amount: "₹6,000", pct: 72 },
+                  { name: "Raj",   amount: "₹4,000", pct: 48 },
+                  { name: "Anil",  amount: "₹4,000", pct: 48 },
+                  { name: "Meera", amount: "₹3,000", pct: 36 },
+                ].map((m) => (
+                  <div key={m.name} className="flex items-center gap-2.5">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 w-10 shrink-0">{m.name}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700/60">
+                      <div className="h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500" style={{ width: `${m.pct}%` }} />
+                    </div>
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300 shrink-0 w-14 text-right">{m.amount}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+
+          {/* Right: copy */}
+          <div className="flex-1 text-center lg:text-left">
+            <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Insights</p>
+            <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
+              See the full story
+              <br />
+              <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                of your spending.
+              </span>
+            </h2>
+            <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto lg:mx-0 mb-6">
+              Every group has a live analytics dashboard — see where the money went, who paid the most, and how spending tracked day by day.
+            </p>
+            <ul className="space-y-3 text-left max-w-md mx-auto lg:mx-0">
+              {[
+                { icon: "📊", label: "Category breakdown", desc: "Food, stays, transport, activities — see the split at a glance." },
+                { icon: "📈", label: "Daily spend chart",  desc: "Track spending across the trip and spot the big days." },
+                { icon: "👥", label: "Member contributions", desc: "Who fronted the most? See each person's share clearly." },
+                { icon: "✨", label: "AI trip narrative",  desc: "Clear writes a summary of your trip from the expense history." },
+              ].map((item) => (
+                <li key={item.label} className="flex items-start gap-3">
+                  <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                  <div>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label} </span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{item.desc}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── Settlement visualization ─────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="text-center mb-12">
+          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Settlement</p>
+          <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
+            One payment each.
+            <br />
+            <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              No chasing.
+            </span>
+          </h2>
+          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
+            Clear's algorithm collapses any tangle of shared expenses into the minimum number of transfers — no matter how many people.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_64px_1fr] gap-4 items-start max-w-3xl mx-auto">
+          {/* Before */}
+          <div className="glass rounded-2xl p-6">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Goa 2025 · 5 people · 8 expenses</p>
+            <div className="space-y-2 mb-4">
+              {[
+                { name: "Priya", paid: "₹8,000" },
+                { name: "You",   paid: "₹6,000" },
+                { name: "Raj",   paid: "₹4,000" },
+                { name: "Anil",  paid: "₹4,000" },
+                { name: "Meera", paid: "₹3,000" },
+              ].map((p) => (
+                <div key={p.name} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">{p.name} paid</span>
+                  <span className="font-medium text-slate-600 dark:text-slate-300">{p.paid}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 italic border-t border-slate-100 dark:border-slate-700/40 pt-3">How do we settle this fairly?</p>
+          </div>
+
+          {/* Arrow — desktop only */}
+          <div className="hidden sm:flex items-center justify-center pt-16">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
+              <ArrowRight className="w-5 h-5 text-white" />
+            </div>
+          </div>
+
+          {/* After */}
+          <div className="glass rounded-2xl p-6 border border-teal-200/40 dark:border-teal-800/30">
+            <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-4">Clear says — 3 transfers</p>
+            <div className="space-y-3 mb-4">
+              {[
+                { from: "Meera", to: "Priya", amount: "₹2,000" },
+                { from: "Raj",   to: "Priya", amount: "₹1,000" },
+                { from: "Anil",  to: "You",   amount: "₹1,000" },
+              ].map((t, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200 w-12 shrink-0">{t.from}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                  <span className="text-sm text-slate-600 dark:text-slate-300 flex-1">{t.to}</span>
+                  <span className="text-sm font-semibold text-teal-600 dark:text-teal-400 shrink-0">{t.amount}</span>
+                </div>
+              ))}
+              <div className="py-3" />
+            </div>
+            <div className="flex items-center gap-1.5 border-t border-teal-100 dark:border-teal-900/40 pt-3 mb-3">
+              <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+              <p className="text-xs font-semibold text-teal-600 dark:text-teal-400">Everyone's clear</p>
+            </div>
+            <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-800/60 rounded-xl px-3 py-2.5 border border-slate-100 dark:border-slate-700/40">
+              <span className="text-base shrink-0">💸</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-700 dark:text-slate-200">Pay Priya ₹2,000</p>
+                <p className="text-[10px] text-slate-400">Opens GPay · PhonePe · any UPI app</p>
+              </div>
+              <div className="shrink-0 text-[10px] font-bold text-white px-2.5 py-1 rounded-lg" style={{ background: "linear-gradient(135deg, #06B6D4, #14B8A6)" }}>
+                PAY →
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Plus teaser ──────────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-16">
+        <div className="glass rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-6 border border-violet-200/40 dark:border-violet-800/30">
+          <div className="text-center sm:text-left">
+            <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">
+              <span className="text-violet-500 font-bold text-sm">✦ Clear Plus</span>
+            </div>
+            <p className="text-slate-700 dark:text-slate-200 font-medium mb-1">
+              Need more room? Unlock unlimited groups, AI parsing, CSV export, and more.
+            </p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">From ₹49/mo · 30-day free trial · No credit card required.</p>
+          </div>
+          <Link
+            href="/pricing"
+            className="shrink-0 inline-flex items-center gap-2 bg-gradient-to-br from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-semibold text-sm py-2.5 px-6 rounded-xl shadow-md shadow-violet-500/20 transition-all hover:-translate-y-0.5 whitespace-nowrap"
+          >
+            See plans <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </section>
 
@@ -711,6 +892,7 @@ export default async function LandingPage() {
           </div>
           <div className="flex items-center gap-5 text-xs text-slate-400 dark:text-slate-500">
             <Link href="/login" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Sign in</Link>
+            <Link href="/pricing" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Pricing</Link>
             <Link href="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy</Link>
           </div>

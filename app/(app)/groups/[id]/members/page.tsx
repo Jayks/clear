@@ -12,6 +12,8 @@ import { ShareButton } from "../share-button";
 import { RemoveMemberButton } from "./remove-member-button";
 import { RegenerateTokenButton } from "./regenerate-token-button";
 import { getGroupConfig } from "@/lib/group-config";
+import { getMemberNudge } from "@/lib/subscription/gates";
+import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -21,7 +23,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function MembersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const data = await getGroupWithMembers(id);
+  const [data, memberNudge] = await Promise.all([
+    getGroupWithMembers(id),
+    getMemberNudge(id),
+  ]);
   if (!data) notFound();
 
   const { group, members, currentMember, currentUser } = data;
@@ -39,6 +44,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
         <ArrowLeft className="w-4 h-4" />
         Back to {config.labels.singular.toLowerCase()}
       </Link>
+      {memberNudge && <PlanNudgeBanner nudge={memberNudge} resource="members" />}
 
       <h1 className="text-2xl text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
         {config.labels.members}

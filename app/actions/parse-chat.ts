@@ -3,6 +3,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { checkAiRateLimit } from "@/lib/rate-limit";
+import { canUseAI } from "@/lib/subscription/gates";
 import { z } from "zod";
 import type { CategoryValue } from "@/lib/parser/parse-expense";
 import { CATEGORY_VALUES } from "@/lib/categories";
@@ -37,6 +38,7 @@ export async function parseChatExpenses(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
   if (!checkAiRateLimit(user.id)) return { ok: false, error: "Rate limit exceeded — 20 AI requests per hour." };
+  if (!(await canUseAI(user.id))) return { ok: false, error: "AI features require Clear Plus." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, error: "AI parsing is not configured." };

@@ -178,6 +178,14 @@ create policy "Users can delete their own cover photos"
   );
 
 
+-- ── subscriptions ────────────────────────────────────────────────────────────
+
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+-- Users read only their own row; all writes are service-role only (server actions)
+CREATE POLICY "subscriptions_select_own" ON subscriptions
+  FOR SELECT TO authenticated USING (user_id = auth.uid());
+
+
 -- ── indexes ───────────────────────────────────────────────────────────────────
 -- Applied separately via drizzle/indexes.sql in Supabase SQL Editor.
 -- Not managed by drizzle-kit — run indexes.sql once alongside this file.

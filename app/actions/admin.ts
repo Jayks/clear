@@ -3,7 +3,8 @@
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, count } from "drizzle-orm";
+import { subscriptions } from "@/lib/db/schema/subscriptions";
+import { eq, count, sql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/db/queries/admin";
@@ -104,6 +105,35 @@ async function requirePlatformAdminAction() {
   if (!isPlatformAdmin(user?.email)) throw new Error("Forbidden");
 }
 
+export async function adminSetUserPlan(userId: string, plan: "free" | "plus") {
+  try {
+    await requirePlatformAdminAction();
+  } catch {
+    return { ok: false, error: "Forbidden" } as const;
+  }
+
+  try {
+    await db.insert(subscriptions).values({
+      userId,
+      plan: plan === "plus" ? "plus" : "free",
+      status: plan === "plus" ? "active" : "cancelled",
+      adminOverride: true,
+    }).onConflictDoUpdate({
+      target: subscriptions.userId,
+      set: {
+        plan: plan === "plus" ? "plus" : "free",
+        status: plan === "plus" ? "active" : "cancelled",
+        adminOverride: true,
+        updatedAt: sql`now()`,
+      },
+    });
+    revalidatePath("/admin/users");
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to update plan" } as const;
+  }
+}
+
 export async function adminDeleteGroup(groupId: string) {
   try {
     await requirePlatformAdminAction();
@@ -122,6 +152,7 @@ export async function adminDeleteGroup(groupId: string) {
   try {
     await db.delete(groups).where(eq(groups.id, groupId));
     revalidatePath("/admin/groups");
+    revalidatePath("/groups");
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to delete group" } as const;

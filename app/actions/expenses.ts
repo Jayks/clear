@@ -12,6 +12,7 @@ import { getGroupTemplates } from "@/lib/db/queries/expenses";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sendExpenseNotification } from "@/lib/notifications/send-expense-notification";
 import { sendPushToMembers } from "@/lib/notifications/send-push-notification";
+import { canAddExpense, canUseNonEqualSplit, canUseTemplates } from "@/lib/subscription/gates";
 
 async function validateSplitMembers(groupId: string, splits: { memberId: string }[]) {
   const ids = [...new Set(splits.map((s) => s.memberId))];
@@ -44,6 +45,12 @@ export async function addExpense(input: AddExpenseInput) {
   if (!result.ok) return { ok: false, error: result.error } as const;
 
   try {
+    if (!(await canAddExpense(groupId)))
+      return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
+
+    if (splitMode !== "equal" && !(await canUseNonEqualSplit(groupId)))
+      return { ok: false, error: "Advanced splits require Clear Plus. Upgrade to use exact, percentage, or share splits." } as const;
+
     const [expense] = await db.insert(expenses).values({
       groupId,
       paidByMemberId,
@@ -293,6 +300,9 @@ export async function logFromTemplate(templateId: string) {
   const membership = await getMembership(template.groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member" } as const;
 
+  if (!(await canUseTemplates(template.groupId)))
+    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
+
   const templateSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, templateId));
 
@@ -397,6 +407,8 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return;
+
+  if (!(await canUseTemplates(groupId))) return;
 
   const templates = await getGroupTemplates(groupId);
   const due = templates.filter((t) => !t.loggedThisMonth);

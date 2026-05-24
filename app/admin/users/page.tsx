@@ -2,6 +2,7 @@ import { getAdminUserList } from "@/lib/db/queries/admin";
 import { formatDate } from "@/lib/utils";
 import { Shield, Briefcase, UserCircle2, Users } from "lucide-react";
 import { DeleteUserButton } from "./delete-user-button";
+import { PlanToggle } from "./plan-toggle";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Users — Clear Admin" };
@@ -12,18 +13,21 @@ const ROLE_CONFIG = {
     icon: Shield,
     badge: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50",
     row: "bg-red-50/30 dark:bg-red-900/10",
+    card: "border-l-2 border-red-300 dark:border-red-700",
   },
   group_owner: {
     label: "Group Owner",
     icon: Briefcase,
     badge: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/50",
     row: "",
+    card: "",
   },
   member: {
     label: "Member",
     icon: UserCircle2,
     badge: "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-600",
     row: "",
+    card: "",
   },
 } as const;
 
@@ -43,28 +47,30 @@ function avatarColor(id: string) {
 export default async function AdminUsersPage() {
   const users = await getAdminUserList();
 
-  const admins  = users.filter((u) => u.role === "platform_admin");
-  const owners  = users.filter((u) => u.role === "group_owner");
-  const members = users.filter((u) => u.role === "member");
+  const admins    = users.filter((u) => u.role === "platform_admin");
+  const owners    = users.filter((u) => u.groupsOwned > 0);
+  const members   = users.filter((u) => u.groupsJoined > 0);
+  const plusUsers = users.filter((u) => u.plan === "plus");
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
             Users
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{users.length} total accounts on the platform</p>
         </div>
-        {/* Role summary chips */}
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        {/* Summary chips */}
+        <div className="flex items-center gap-2 flex-wrap">
           {[
-            { label: "Platform admins", count: admins.length, cfg: ROLE_CONFIG.platform_admin },
-            { label: "Trip owners", count: owners.length, cfg: ROLE_CONFIG.group_owner },
-            { label: "Members", count: members.length, cfg: ROLE_CONFIG.member },
-          ].map(({ label, count, cfg }) => (
-            <div key={label} className="glass rounded-xl px-3 py-2 text-center min-w-[80px]">
+            { label: "Admins",     count: admins.length    },
+            { label: "Owners",     count: owners.length    },
+            { label: "Members",    count: members.length   },
+            { label: "Plus users", count: plusUsers.length },
+          ].map(({ label, count }) => (
+            <div key={label} className="glass rounded-xl px-3 py-2 text-center min-w-[72px]">
               <p className="text-lg font-semibold text-slate-800 dark:text-slate-100">{count}</p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">{label}</p>
             </div>
@@ -72,14 +78,59 @@ export default async function AdminUsersPage() {
         </div>
       </div>
 
-      {/* User table */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
+
+        {/* ── Mobile cards (hidden sm+) ───────────────────────────────── */}
+        <div className="sm:hidden divide-y divide-slate-100/60 dark:divide-slate-700/40">
+          {users.map((u) => {
+            const cfg = ROLE_CONFIG[u.role];
+            return (
+              <div key={u.id} className={`p-4 ${cfg.row} ${cfg.card}`}>
+                {/* Top row: avatar + name/email + role badge */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor(u.id)} flex items-center justify-center shrink-0 shadow-sm`}>
+                    <span className="text-white text-xs font-bold">
+                      {u.displayName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{u.displayName}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{u.email || "—"}</p>
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${cfg.badge}`}>
+                    {cfg.label}
+                  </span>
+                </div>
+
+                {/* Stats row */}
+                <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500 mb-3 flex-wrap">
+                  {u.groupsOwned > 0 && (
+                    <span className="text-cyan-700 dark:text-cyan-400 font-medium">{u.groupsOwned} owned</span>
+                  )}
+                  <span>{u.groupsJoined} joined</span>
+                  <span className="ml-auto">{formatDate(u.joinedAt)}</span>
+                </div>
+
+                {/* Bottom row: plan toggle + delete */}
+                <div className="flex items-center justify-between gap-2">
+                  <PlanToggle userId={u.id} currentPlan={u.plan} />
+                  {u.role !== "platform_admin" && (
+                    <DeleteUserButton userId={u.id} displayName={u.displayName} />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Desktop table (hidden on mobile) ───────────────────────── */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-500">
                 <th className="text-left px-5 py-3.5 font-medium">User</th>
-                <th className="text-left px-5 py-3.5 font-medium hidden sm:table-cell">Role</th>
+                <th className="text-left px-5 py-3.5 font-medium">Role</th>
+                <th className="text-left px-5 py-3.5 font-medium">Plan</th>
                 <th className="text-right px-5 py-3.5 font-medium hidden md:table-cell">Trips owned</th>
                 <th className="text-right px-5 py-3.5 font-medium hidden lg:table-cell">Trips joined</th>
                 <th className="text-right px-5 py-3.5 font-medium">Joined</th>
@@ -91,38 +142,28 @@ export default async function AdminUsersPage() {
                 const cfg = ROLE_CONFIG[u.role];
                 return (
                   <tr key={u.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors ${cfg.row}`}>
-                    {/* User cell */}
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(u.id)} flex items-center justify-center shrink-0 shadow-sm`}
-                        >
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(u.id)} flex items-center justify-center shrink-0 shadow-sm`}>
                           <span className="text-white text-xs font-bold">
                             {u.displayName.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-800 dark:text-slate-100 truncate max-w-[180px]">
-                            {u.displayName}
-                          </p>
+                          <p className="font-medium text-slate-800 dark:text-slate-100 truncate max-w-[180px]">{u.displayName}</p>
                           <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[180px]">{u.email}</p>
                         </div>
-                        {/* Role badge on mobile */}
-                        <span className={`sm:hidden ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>
-                          {cfg.label}
-                        </span>
                       </div>
                     </td>
-
-                    {/* Role */}
-                    <td className="px-5 py-3 hidden sm:table-cell">
+                    <td className="px-5 py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.badge}`}>
                         <cfg.icon className="w-3 h-3" />
                         {cfg.label}
                       </span>
                     </td>
-
-                    {/* Trips owned */}
+                    <td className="px-5 py-3">
+                      <PlanToggle userId={u.id} currentPlan={u.plan} />
+                    </td>
                     <td className="px-5 py-3 text-right tabular text-slate-700 dark:text-slate-200 font-medium hidden md:table-cell">
                       {u.groupsOwned > 0 ? (
                         <span className="inline-flex items-center gap-1 text-cyan-700 dark:text-cyan-400">
@@ -133,18 +174,12 @@ export default async function AdminUsersPage() {
                         <span className="text-slate-300 dark:text-slate-600">—</span>
                       )}
                     </td>
-
-                    {/* Trips joined */}
                     <td className="px-5 py-3 text-right tabular text-slate-600 dark:text-slate-300 hidden lg:table-cell">
                       {u.groupsJoined}
                     </td>
-
-                    {/* Joined date */}
                     <td className="px-5 py-3 text-right text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
                       {formatDate(u.joinedAt)}
                     </td>
-
-                    {/* Actions — hidden for platform admins (guarded server-side too) */}
                     <td className="px-3 py-3 text-right">
                       {u.role !== "platform_admin" && (
                         <DeleteUserButton userId={u.id} displayName={u.displayName} />

@@ -6,6 +6,7 @@ import type { ParsedExpense, CategoryValue } from "@/lib/parser/parse-expense";
 import { CATEGORY_VALUES } from "@/lib/categories";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { checkAiRateLimit } from "@/lib/rate-limit";
+import { canUseAI } from "@/lib/subscription/gates";
 
 const responseSchema = z.object({
   description: z.string().optional().default(""),
@@ -31,6 +32,7 @@ export async function parseExpenseWithAI(
 ): Promise<ParsedExpense | null> {
   const user = await getCurrentUser();
   if (!user || !checkAiRateLimit(user.id)) return null;
+  if (!(await canUseAI(user.id))) return null;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

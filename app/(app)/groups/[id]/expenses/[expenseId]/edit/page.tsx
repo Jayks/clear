@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenseWithSplits } from "@/lib/db/queries/expenses";
+import { canUseNonEqualSplit } from "@/lib/subscription/gates";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { EditExpenseForm } from "./edit-expense-form";
@@ -13,9 +14,10 @@ export default async function EditExpensePage({
 }) {
   const { id, expenseId } = await params;
 
-  const [groupData, expenseData] = await Promise.all([
+  const [groupData, expenseData, nonEqualAllowed] = await Promise.all([
     getGroupWithMembers(id),
     getExpenseWithSplits(expenseId),
+    canUseNonEqualSplit(id),
   ]);
 
   if (!groupData || !expenseData) notFound();
@@ -69,6 +71,7 @@ export default async function EditExpensePage({
           members={members}
           expense={expense}
           splits={splits}
+          canUseNonEqual={nonEqualAllowed}
         />
       </div>
     </div>

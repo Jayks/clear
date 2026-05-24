@@ -8,6 +8,7 @@ import { eq, sql } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { canCreateGroup } from "@/lib/subscription/gates";
 
 export async function createGroup(input: CreateGroupInput) {
   const user = await getCurrentUser();
@@ -19,6 +20,9 @@ export async function createGroup(input: CreateGroupInput) {
   const { name, description, coverPhotoUrl, defaultCurrency, groupType, startDate, endDate, budget, itinerary } = parsed.data;
 
   try {
+    if (!(await canCreateGroup(user.id)))
+      return { ok: false, error: "Free plan allows up to 4 active groups. Upgrade to Clear Plus for unlimited groups." } as const;
+
     const [group] = await db.insert(groups).values({
       name,
       description: description || null,

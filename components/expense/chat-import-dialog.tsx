@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquarePlus, Loader2, CheckCircle2, XCircle, Check, X } from "lucide-react";
+import { MessageSquarePlus, Loader2, CheckCircle2, XCircle, Check, X, Lock } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { parseChatExpenses, type ChatParsedExpense } from "@/app/actions/parse-chat";
+import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { addExpense } from "@/app/actions/expenses";
 import { getMemberName, formatCurrency, smartDefaultDate, formatDate } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
@@ -17,6 +18,7 @@ interface Props {
   defaultMemberId: string;
   groupStartDate: string | null;
   groupEndDate: string | null;
+  canUseAI?: boolean;
 }
 
 type RowStatus = "pending" | "adding" | "done" | "error";
@@ -51,9 +53,10 @@ function splitLabel(row: RowState, members: GroupMember[]): string {
 }
 
 export function ChatImportDialog({
-  groupId, members, currency, defaultMemberId, groupStartDate, groupEndDate,
+  groupId, members, currency, defaultMemberId, groupStartDate, groupEndDate, canUseAI = true,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [chatText, setChatText] = useState("");
   const [rows, setRows] = useState<RowState[]>([]);
   const [step, setStep] = useState<"input" | "preview" | "adding" | "done">("input");
@@ -169,13 +172,19 @@ export function ChatImportDialog({
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
-        title="Import from chat"
+        onClick={() => canUseAI ? setOpen(true) : setUpgradeOpen(true)}
+        title={canUseAI ? "Import from chat" : "Import from chat — requires Plus"}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl transition-colors"
       >
-        <MessageSquarePlus className="w-4 h-4" />
+        {canUseAI ? <MessageSquarePlus className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
         <span className="hidden sm:inline">Import chat</span>
+        {!canUseAI && (
+          <span className="hidden sm:inline-flex items-center bg-gradient-to-br from-cyan-500 to-teal-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+            Plus
+          </span>
+        )}
       </button>
+      <UpgradePrompt open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
 
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
         <DialogContent className="glass border-white/70 dark:border-slate-700/60 max-w-2xl w-[calc(100vw-2rem)] sm:w-full p-0 overflow-hidden">

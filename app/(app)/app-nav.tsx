@@ -12,23 +12,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Bell, BellOff } from "lucide-react";
+import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Settings } from "lucide-react";
 import { useTour } from "@/components/tour/tour-context";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
-import { usePushSubscription } from "@/hooks/use-push-subscription";
 
 const NAV_LINKS = [
   { href: "/groups",   label: "Groups",   icon: LayoutGrid, tourId: "nav-trips"    },
   { href: "/insights", label: "Insights", icon: BarChart2,  tourId: "nav-insights" },
 ];
 
-export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean }) {
+export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; isAdmin: boolean; plan?: "plus" | "free" }) {
   const router = useRouter();
   const pathname = usePathname();
   const { start: startTour, isCompleted: tourCompleted } = useTour();
-  const { isSupported, permission, isSubscribed, isLoading: pushLoading, subscribe, unsubscribe } = usePushSubscription();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -92,6 +90,11 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
               {!tourCompleted && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-500 ring-2 ring-white dark:ring-slate-900 z-10" />
               )}
+              {plan === "plus" && (
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 ring-2 ring-white dark:ring-slate-900 z-10 flex items-center justify-center">
+                  <span className="text-white text-[7px] leading-none">✦</span>
+                </span>
+              )}
               <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name ?? "User"} />
               <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-teal-500 text-white text-sm font-medium">
                 {initials}
@@ -100,8 +103,11 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52 glass border-white/70 dark:border-slate-700/60 shadow-lg shadow-cyan-500/10">
             <div className="px-3 py-2">
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
-                {user.user_metadata?.full_name ?? "User"}
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <span className="truncate">{user.user_metadata?.full_name ?? "User"}</span>
+                {plan === "plus" && (
+                  <span className="text-[10px] font-semibold text-violet-500 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/50 px-1.5 py-0.5 rounded-full shrink-0">✦ Plus</span>
+                )}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
             </div>
@@ -125,31 +131,10 @@ export default function AppNav({ user, isAdmin }: { user: User; isAdmin: boolean
               <Sparkles className="w-4 h-4 mr-2" />
               Take the tour
             </DropdownMenuItem>
-            {isSupported && permission !== "denied" && (
-              <DropdownMenuItem
-                onClick={isSubscribed ? unsubscribe : subscribe}
-                disabled={pushLoading}
-                className="cursor-pointer"
-              >
-                {isSubscribed ? (
-                  <>
-                    <BellOff className="w-4 h-4 mr-2" />
-                    Mute notifications
-                  </>
-                ) : (
-                  <>
-                    <Bell className="w-4 h-4 mr-2" />
-                    Turn on notifications
-                  </>
-                )}
-              </DropdownMenuItem>
-            )}
-            {isSupported && permission === "denied" && (
-              <DropdownMenuItem disabled className="opacity-50 cursor-default">
-                <BellOff className="w-4 h-4 mr-2" />
-                Notifications blocked
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem render={<Link href="/settings" />} className="cursor-pointer">
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-700" />
             <DropdownMenuItem
               onClick={handleSignOut}

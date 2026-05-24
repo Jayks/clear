@@ -3,8 +3,10 @@ import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { settlements } from "@/lib/db/schema/settlements";
-import { count, sum, eq, sql, desc, isNotNull, and } from "drizzle-orm";
+import { count, sum, eq, sql, desc, isNotNull, and, inArray } from "drizzle-orm";
+import { subscriptions } from "@/lib/db/schema/subscriptions";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { cache } from "react";
 
 // cache() deduplicates across getAdminStats / getAdminUserList / getAdminGroupList
@@ -66,6 +68,22 @@ export async function getAdminStats() {
 
 export async function getAdminUserList() {
   await requirePlatformAdmin();
+
+  // Resolve platform admin emails → user IDs via Supabase Auth (outside the DB transaction)
+  const adminEmails = new Set(getPlatformAdminEmails());
+  const platformAdminIds = new Set<string>();
+  if (adminEmails.size > 0) {
+    try {
+      const adminClient = createAdminClient();
+      const { data } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      for (const u of data?.users ?? []) {
+        if (u.email && adminEmails.has(u.email)) platformAdminIds.add(u.id);
+      }
+    } catch {
+      // admin client unavailable — skip platform admin tagging
+    }
+  }
+
   return withAdminTimeout(async (tx) => {
     const rows = await tx
       .select({
@@ -92,15 +110,36 @@ export async function getAdminUserList() {
       }
     }
 
-    return Array.from(userMap.entries()).map(([id, u]) => ({
-      id,
-      email: "",
-      displayName: u.displayName ?? `User ${id.slice(0, 8)}`,
-      joinedAt: u.joinedAt?.toISOString() ?? new Date().toISOString(),
-      groupsOwned: u.owned,
-      groupsJoined: u.joined,
-      role: (u.owned > 0 ? "group_owner" : "member") as "platform_admin" | "group_owner" | "member",
-    }));
+    const userIds = Array.from(userMap.keys());
+    const subRows = userIds.length > 0
+      ? await tx.select({
+          userId: subscriptions.userId,
+          plan: subscriptions.plan,
+          status: subscriptions.status,
+          trialEndsAt: subscriptions.trialEndsAt,
+        }).from(subscriptions).where(inArray(subscriptions.userId, userIds))
+      : [];
+    const subMap = new Map(subRows.map((s) => [s.userId, s]));
+    const now = new Date();
+
+    return Array.from(userMap.entries()).map(([id, u]) => {
+      const sub = subMap.get(id);
+      const isPlus = sub && (
+        (sub.plan === "plus" && sub.status === "active") ||
+        (sub.status === "trialing" && sub.trialEndsAt !== null && sub.trialEndsAt > now)
+      );
+      const isPlatformAdmin = platformAdminIds.has(id);
+      return {
+        id,
+        email: "",
+        displayName: u.displayName ?? `User ${id.slice(0, 8)}`,
+        joinedAt: u.joinedAt?.toISOString() ?? new Date().toISOString(),
+        groupsOwned: u.owned,
+        groupsJoined: u.joined,
+        role: (isPlatformAdmin ? "platform_admin" : u.owned > 0 ? "group_owner" : "member") as "platform_admin" | "group_owner" | "member",
+        plan: (isPlus ? "plus" : "free") as "plus" | "free",
+      };
+    });
   });
 }
 

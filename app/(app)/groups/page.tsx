@@ -10,6 +10,8 @@ import { AnimatedList } from "@/components/shared/animated-list";
 import { ensureDemoGroup } from "@/app/actions/demo";
 import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 import { LongPressHint } from "@/components/shared/long-press-hint";
+import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
+import { getGroupNudge, getGroupsAdminPlans } from "@/lib/subscription/gates";
 
 export default async function GroupsPage() {
   const [, { active: groups, archived }, user] = await Promise.all([
@@ -19,13 +21,17 @@ export default async function GroupsPage() {
   ]);
 
   const allIds = [...groups, ...archived].map((g) => g.group.id);
-  const memberIds = user && allIds.length > 0
-    ? await getUserMemberIds(allIds, user.id)
-    : {};
+  const activeIds = groups.map((g) => g.group.id);
+  const [memberIds, groupNudge, adminPlans] = await Promise.all([
+    user && allIds.length > 0 ? getUserMemberIds(allIds, user.id) : Promise.resolve<Record<string, string>>({}),
+    user ? getGroupNudge(user.id) : Promise.resolve(null),
+    activeIds.length > 0 ? getGroupsAdminPlans(activeIds) : Promise.resolve<Record<string, "plus" | "free">>({}),
+  ]);
 
   return (
     <div>
       <GroupsBackGuard />
+      {groupNudge && <PlanNudgeBanner nudge={groupNudge} resource="groups" />}
       <div className="flex items-center gap-4 mb-8">
         <h1 className="text-3xl text-slate-800 dark:text-slate-100 flex-1" style={{ fontFamily: "var(--font-fraunces)" }}>
           Your groups
@@ -71,6 +77,7 @@ export default async function GroupsPage() {
                       group={group}
                       memberCount={Number(memberCount)}
                       priority={index < 2}
+                      isPlusPlan={adminPlans[group.id] === "plus"}
                       balanceBadge={
                         memberId ? (
                           <Suspense key={group.id} fallback={

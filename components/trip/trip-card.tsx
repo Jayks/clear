@@ -15,6 +15,7 @@ interface TripCardProps {
   memberCount: number;
   balanceBadge?: React.ReactNode;
   priority?: boolean;
+  isPlusPlan?: boolean;
 }
 
 const LONG_PRESS_MS = 500;
@@ -25,7 +26,7 @@ const MOVE_THRESHOLD = 8;
 const moreBtn =
   "hidden md:flex w-8 h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
-export function TripCard({ group, memberCount, balanceBadge, priority = false }: TripCardProps) {
+export function TripCard({ group, memberCount, balanceBadge, priority = false, isPlusPlan = false }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -97,7 +98,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false }:
     // Outer div: positioning context for action buttons, hover effects, touch handlers.
     // No overflow-hidden here — that lives on the inner glass div so buttons aren't clipped.
     <div
-      className={`group/card relative hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-0.5 select-none transition-all ${isLongPressing ? "scale-[0.97] duration-500" : "duration-200"}`}
+      className={`group/card relative select-none transition-all ${isPlusPlan ? "shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30" : "hover:shadow-xl hover:shadow-cyan-500/10"} hover:-translate-y-0.5 ${isLongPressing ? "scale-[0.97] duration-500" : "duration-200"}`}
       data-tour={group.isDemo ? (isNest ? "demo-nest" : "demo-trip") : undefined}
       onTouchStart={startLongPress}
       onTouchEnd={cancelLongPress}
@@ -165,7 +166,16 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false }:
             </div>
           </div>
         </Link>
-        {balanceBadge}
+        {(balanceBadge || isPlusPlan) ? (
+          <div className="relative">
+            {balanceBadge}
+            {isPlusPlan && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-medium text-violet-400/80 dark:text-violet-400/70 tracking-wide">
+                ✦ Plus
+              </span>
+            )}
+          </div>
+        ) : null}
         {/* Diagonal ribbon — now relative to the full card (image + badge), stays consistent */}
         {group.isDemo && (
           <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">

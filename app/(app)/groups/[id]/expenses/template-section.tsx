@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { Plus, Trash2, RefreshCw, ChevronDown, ChevronUp, Pencil, Lock } from "lucide-react";
 import { getCategory } from "@/lib/categories";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { deleteTemplate } from "@/app/actions/expenses";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import Link from "next/link";
+import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 
 interface Template {
   template: Expense;
@@ -24,10 +25,12 @@ interface Props {
   groupId: string;
   currency: string;
   isAdmin: boolean;
+  canUseTemplates?: boolean;
 }
 
-export function TemplateSection({ templates, members, groupId, currency, isAdmin }: Props) {
+export function TemplateSection({ templates, members, groupId, currency, isAdmin, canUseTemplates = true }: Props) {
   const [expanded, setExpanded] = useState(true);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const getMember = (id: string) => members.find((m) => m.id === id);
 
@@ -126,13 +129,28 @@ export function TemplateSection({ templates, members, groupId, currency, isAdmin
       )}
 
       {/* Add template link */}
-      <Link
-        href={`/groups/${groupId}/expenses/templates/new`}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
-      >
-        <Plus className="w-3.5 h-3.5" />
-        Add recurring expense
-      </Link>
+      {canUseTemplates ? (
+        <Link
+          href={`/groups/${groupId}/expenses/templates/new`}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add recurring expense
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setUpgradeOpen(true)}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 dark:text-slate-500 transition-colors"
+        >
+          <Lock className="w-3.5 h-3.5" />
+          Add recurring expense
+          <span className="ml-0.5 inline-flex items-center bg-gradient-to-br from-cyan-500 to-teal-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+            Plus
+          </span>
+        </button>
+      )}
+      <UpgradePrompt open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenses, getGroupTemplates } from "@/lib/db/queries/expenses";
 import { getGroupName } from "@/lib/db/queries/meta";
-import { ArrowLeft, Plus, Receipt, Download } from "lucide-react";
+import { ArrowLeft, Plus, Receipt } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ExpenseFilters } from "@/components/expense/expense-filters";
@@ -10,7 +10,11 @@ import { ChatImportDialog } from "@/components/expense/chat-import-dialog";
 import { ExpenseQuickAddFab } from "@/components/expense/expense-quick-add-fab";
 import { TemplateSection } from "./template-section";
 import { NestHint } from "@/components/shared/nest-hint";
+import { ExportCsvButton } from "./export-csv-button";
+import { getExpenseNudge, canUseTemplates, canUseAI } from "@/lib/subscription/gates";
+import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
 import { formatCurrency } from "@/lib/utils";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -20,11 +24,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ExpensesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, expenses, templates] = await Promise.all([
+  const [data, expenses, templates, expenseNudge, templatesAllowed, user] = await Promise.all([
     getGroupWithMembers(id),
     getExpenses(id),
     getGroupTemplates(id),
+    getExpenseNudge(id),
+    canUseTemplates(id),
+    getCurrentUser(),
   ]);
+  const aiAllowed = user ? await canUseAI(user.id) : false;
   if (!data) notFound();
 
   const { group, members, currentMember, currentUser } = data;
@@ -35,6 +43,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
 
   return (
     <div>
+      {expenseNudge && <PlanNudgeBanner nudge={expenseNudge} resource="expenses" />}
       {/* Header */}
       <div className="flex items-center gap-2 mb-6 flex-wrap" data-tour="expense-add-btn">
         <Link
@@ -55,18 +64,9 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             defaultMemberId={currentMember?.id ?? members[0]?.id ?? ""}
             groupStartDate={group.startDate ?? null}
             groupEndDate={group.endDate ?? null}
+            canUseAI={aiAllowed}
           />
-          {expenses.length > 0 && (
-            <a
-              href={`/api/groups/${id}/export`}
-              download
-              title="Export CSV"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
-            </a>
-          )}
+          {expenses.length > 0 && <ExportCsvButton groupId={id} />}
           <Link
             href={`/groups/${id}/expenses/new`}
             className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md shadow-cyan-500/25 transition-all"
@@ -86,6 +86,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
           groupId={id}
           currency={group.defaultCurrency}
           isAdmin={isAdmin}
+          canUseTemplates={templatesAllowed}
         />
       )}
 

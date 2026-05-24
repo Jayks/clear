@@ -33,7 +33,10 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Onboarding tour** — 7-step walkthrough (4 default + 3 extended) with spotlight, celebration, and a nest-specific 2-step overlay for recurring templates
 - **Progress nudges** — first-time expense and group creation each show a contextual next-step prompt (shown once)
 - **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in
+- **Guest claim flow** — guests added by name can claim their expenses when they join via invite link; name corrects automatically from their Google account
 - **Notifications** — email and web push alerts when group members log expenses; one-click email unsubscribe; per-group mute toggle in the avatar menu
+- **Clear Plus** — freemium subscription: free plan (4 groups, 8 members, 50 expenses each); Plus unlocks unlimited everything, AI features, CSV export, all split modes, templates, and budget tracking. Group admin's plan covers all members.
+- **Settings page** — appearance (dark/light theme), billing (plan status, billing cycle, renewal date, downgrade), and notifications (web push toggle) in a tabbed sidebar layout
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
 - **Realtime** — Supabase Realtime pushes expense/settlement changes to all open sessions
@@ -88,6 +91,9 @@ RESEND_UNSUBSCRIBE_SECRET=            # random 32-char string
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_EMAIL=                          # mailto:you@yourdomain.com
+
+# Analytics (optional)
+NEXT_PUBLIC_GA_MEASUREMENT_ID=        # G-XXXXXXXXXX from GA4 dashboard
 ```
 
 ```bash
@@ -132,7 +138,7 @@ pnpm seed:temple      # seed South India temple tour
 
 ```
 app/
-  (app)/          — authenticated app (groups, expenses, insights, settle)
+  (app)/          — authenticated app (groups, expenses, insights, settle, upgrade, settings)
   (auth)/         — login page
   api/pwa-icon/   — PWA icon endpoint (192 + 512 px, edge runtime)
   manifest.ts     — PWA manifest
@@ -162,5 +168,6 @@ lib/
 - **`unstable_cache`** — group row + members list cached server-side per group (tag `group-${groupId}`); invalidated on any group or member mutation via `revalidateTag`
 - **`getBalances()`** — single SQL CTE round-trip (4 aggregates + members in one query)
 - **GROUP_CONFIG** — all trip/nest differences flow through `lib/group-config.ts`
+- **Subscription gates** — `lib/subscription/gates.ts` exports `getUserPlan()` (cached, returns "plus" for active + trialing), `getUserSubscription()` (uncached, full row for billing UI), and per-feature gate functions (`canCreateGroup`, `canUseAI`, `canAddMember`, etc.)
 - **QuickAddSheet / TripCardNavSheet** — own their own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop. Cards have no footer — Add, Share, and QR float on the cover image (`w-10 h-10` on mobile for iOS tap targets); `⋯` is desktop-only (`hidden md:flex`), long-press opens the nav sheet on mobile
 - **GroupBalanceBadge** — async RSC streamed into each active TripCard via `Suspense`; batch-loads all member IDs in one query (`getUserMemberIds`), then calls cached `getBalances` per group

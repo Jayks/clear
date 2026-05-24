@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getTemplateWithSplits } from "@/lib/db/queries/expenses";
+import { canUseTemplates } from "@/lib/subscription/gates";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { EditTemplateForm } from "./edit-template-form";
@@ -11,14 +12,16 @@ export default async function EditTemplatePage({
   params: Promise<{ id: string; templateId: string }>;
 }) {
   const { id, templateId } = await params;
-  const [data, templateData] = await Promise.all([
+  const [data, templateData, templatesAllowed] = await Promise.all([
     getGroupWithMembers(id),
     getTemplateWithSplits(templateId),
+    canUseTemplates(id),
   ]);
 
   if (!data || !templateData) notFound();
   const { group, members } = data;
   if (group.groupType !== "nest") notFound();
+  if (!templatesAllowed) redirect(`/groups/${id}/expenses`);
 
   return (
     <div className="max-w-xl mx-auto">

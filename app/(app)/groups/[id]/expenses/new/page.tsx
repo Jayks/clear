@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
+import { canUseNonEqualSplit } from "@/lib/subscription/gates";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { AddExpenseForm } from "./add-expense-form";
@@ -12,7 +13,10 @@ export default async function NewExpensePage({
   searchParams: Promise<{ from?: string }>;
 }) {
   const [{ id }, { from }] = await Promise.all([params, searchParams]);
-  const data = await getGroupWithMembers(id);
+  const [data, nonEqualAllowed] = await Promise.all([
+    getGroupWithMembers(id),
+    canUseNonEqualSplit(id),
+  ]);
   if (!data) notFound();
 
   const { group, members } = data;
@@ -35,7 +39,7 @@ export default async function NewExpensePage({
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{group.name}</p>
 
       <div className="glass rounded-2xl p-6">
-        <AddExpenseForm group={group} members={members} />
+        <AddExpenseForm group={group} members={members} canUseNonEqual={nonEqualAllowed} />
       </div>
     </div>
   );

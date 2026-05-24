@@ -20,9 +20,10 @@ import type { ParsedExpense } from "@/lib/parser/parse-expense";
 interface Props {
   group: Group;
   members: GroupMember[];
+  canUseNonEqual?: boolean;
 }
 
-export function AddExpenseForm({ group, members }: Props) {
+export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
@@ -251,6 +252,7 @@ export function AddExpenseForm({ group, members }: Props) {
           onModeChange={handleModeChange}
           onSplitsChange={handleSplitsChange}
           initialSelectedIds={initialSplitIds}
+          canUseNonEqual={canUseNonEqual}
         />
         {errors.splits && <p className="mt-1 text-xs text-red-500">Select at least one member.</p>}
       </div>

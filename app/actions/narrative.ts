@@ -3,6 +3,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { checkAiRateLimit } from "@/lib/rate-limit";
+import { canUseAI } from "@/lib/subscription/gates";
 import { getCategory } from "@/lib/categories";
 import { format, parseISO } from "date-fns";
 
@@ -31,6 +32,7 @@ export async function generateTripNarrative(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
   if (!checkAiRateLimit(user.id)) return { ok: false, error: "Rate limit exceeded — 20 AI requests per hour." };
+  if (!(await canUseAI(user.id))) return { ok: false, error: "AI features require Clear Plus." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

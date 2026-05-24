@@ -8,6 +8,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { canAddMember } from "@/lib/subscription/gates";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
   const user = await getCurrentUser();
@@ -27,6 +28,9 @@ export async function addGuestMember(input: { groupId: string; guestName: string
   if (duplicate) return { ok: false, error: "A guest with this name already exists" } as const;
 
   try {
+    if (!(await canAddMember(groupId)))
+      return { ok: false, error: "Free plan allows up to 8 members per group. Upgrade to Clear Plus for unlimited members." } as const;
+
     const [member] = await db.insert(groupMembers).values({
       groupId,
       guestName,
@@ -113,6 +117,9 @@ export async function joinGroup(token: string) {
   if (existing) return { ok: true, groupId: group.id } as const;
 
   try {
+    if (!(await canAddMember(group.id)))
+      return { ok: false, error: "This group has reached the free plan member limit. The group organiser needs to upgrade to Clear Plus to add more members." } as const;
+
     await db.insert(groupMembers).values({
       groupId: group.id,
       userId: user.id,

@@ -8,7 +8,7 @@ export const createGroupSchema = z.object({
   groupType: z.enum(["trip", "nest"]).default("trip"),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  budget: z.number().positive().optional(),
+  budget: z.preprocess((v) => (typeof v === "number" && isNaN(v)) ? undefined : v, z.number().positive().optional()),
   itinerary: z.string().max(10000).optional(),
 }).refine(
   (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,

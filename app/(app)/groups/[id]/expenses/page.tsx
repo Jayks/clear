@@ -42,7 +42,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   const templateList = isNest ? templates : [];
 
   return (
-    <div>
+    <div className="pb-24 md:pb-0">
       {expenseNudge && <PlanNudgeBanner nudge={expenseNudge} resource="expenses" />}
       {/* Header */}
       <div className="flex items-center gap-2 mb-6 flex-wrap" data-tour="expense-add-btn">

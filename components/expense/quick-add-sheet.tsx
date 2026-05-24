@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff } from "lucide-react";
+import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -77,6 +77,7 @@ export function QuickAddSheet({
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [parsed, setParsed] = useState<ParsedExpense | null>(null);
   const [saving, startSave] = useTransition();
+  const [saved, setSaved] = useState(false);
   const [mounted, setMounted] = useState(false);
   // Each voice transcript gets a unique id so the QuickAddBar effect always fires,
   // even if the user says the same phrase twice.
@@ -88,6 +89,8 @@ export function QuickAddSheet({
   // without triggering a re-render or re-fetch on subsequent opens.
   const fetchedRef = useRef(false);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
+  // Tracks the 1.5s auto-close timer so "Add another" can cancel it.
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { isSupported: micSupported, isListening, interimTranscript, start, stop } =
     useSpeechRecognition({
@@ -114,12 +117,18 @@ export function QuickAddSheet({
   // On close, also clear voiceTrigger — QuickAddBar unmounts/remounts on each
   // open, and its voiceTrigger effect runs on mount, so a stale trigger would
   // immediately re-fire the previous transcript on the next open.
+  // Also cancel any pending auto-close timer if the sheet is closed externally.
   useEffect(() => {
     if (isOpen) {
       setOpenCount((c) => c + 1);
     } else {
       if (isListening) stop();
       setVoiceTrigger(null);
+      setSaved(false);
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
     }
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -153,14 +162,27 @@ export function QuickAddSheet({
             action: { label: "Settle up →", onClick: () => { window.location.href = `/groups/${groupId}/settle`; } },
             duration: 6000,
           });
-        } else {
-          toast.success("Expense added");
         }
-        onClose();
+        setSaved(true);
+        // Auto-close after 2s — cancelled if user taps "Add another"
+        autoCloseTimerRef.current = setTimeout(() => {
+          setSaved(false);
+          onClose();
+        }, 2000);
       } else {
         toast.error(result.error ?? "Failed to save expense");
       }
     });
+  }
+
+  // Post-save: cancel auto-close and reset the form for another entry
+  function handleAddAnother() {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    setSaved(false);
+    setOpenCount((c) => c + 1);
   }
 
   const canSave =
@@ -292,24 +314,51 @@ export function QuickAddSheet({
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!canSave || saving}
-                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium text-sm shadow-md shadow-cyan-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      Save expense
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!canSave || saving || saved}
+                    className={`w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-sm shadow-md transition-all active:scale-[0.98] ${
+                      saved
+                        ? "bg-emerald-500 shadow-emerald-500/25 text-white disabled:opacity-100"
+                        : "bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 shadow-cyan-500/25 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                    }`}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving…
+                      </>
+                    ) : saved ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Saved!
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        Save expense
+                      </>
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {saved && (
+                      <motion.button
+                        type="button"
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.15 }}
+                        onClick={handleAddAnother}
+                        className="w-full py-1.5 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors text-center"
+                      >
+                        + Add another expense →
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
               </>
             ) : null}
           </div>

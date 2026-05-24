@@ -9,11 +9,9 @@ import Image from "next/image";
 import { formatDate } from "@/lib/utils";
 import { BudgetBar } from "@/components/trip/budget-bar";
 import { ArchiveButton } from "./archive-button";
-import { QRInvite } from "@/components/trip/qr-invite";
 import { getGroupConfig } from "@/lib/group-config";
 import type { Metadata } from "next";
-import { ShareButton } from "./share-button";
-import { RegenerateTokenButton } from "./members/regenerate-token-button";
+import { InviteSection } from "@/components/trip/invite-section";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -172,16 +170,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
               Invite to {config.labels.singular.toLowerCase()}
             </p>
-            <RegenerateTokenButton
-              groupId={group.id}
-              inviteUrl={inviteUrl}
-              actions={
-                <>
-                  <ShareButton url={inviteUrl} tripName={group.name} />
-                  <QRInvite url={inviteUrl} />
-                </>
-              }
-            />
+            <InviteSection url={inviteUrl} groupName={group.name} groupId={group.id} />
           </div>
           <div className="flex justify-end mb-4">
             <ArchiveButton groupId={group.id} isArchived={group.isArchived} />

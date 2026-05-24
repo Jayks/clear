@@ -39,11 +39,16 @@ export async function getAllTripsInsightsData() {
   if (tripGroups.length === 0) return null;
   const tripIds = tripGroups.map((g) => g.id);
 
-  const perTripTotals = await db
-    .select({ groupId: expenses.groupId, total: sum(expenses.amount), cnt: count(expenses.id) })
-    .from(expenses)
-    .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
-    .groupBy(expenses.groupId);
+  const [perTripTotals, catRows] = await Promise.all([
+    db.select({ groupId: expenses.groupId, total: sum(expenses.amount), cnt: count(expenses.id) })
+      .from(expenses)
+      .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
+      .groupBy(expenses.groupId),
+    db.select({ category: expenses.category, total: sum(expenses.amount) })
+      .from(expenses)
+      .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
+      .groupBy(expenses.category),
+  ]);
 
   const totalMap = new Map(perTripTotals.map((r) => [r.groupId, r]));
   const summaries: TripSummary[] = tripGroups.map((group) => {
@@ -57,12 +62,6 @@ export async function getAllTripsInsightsData() {
       currency: group.defaultCurrency,
     };
   });
-
-  const catRows = await db
-    .select({ category: expenses.category, total: sum(expenses.amount) })
-    .from(expenses)
-    .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
-    .groupBy(expenses.category);
 
   const categoryTotals: Record<string, number> = {};
   for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);

@@ -7,10 +7,8 @@ import type { Metadata } from "next";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { getMemberName } from "@/lib/utils";
 import { AddGuestForm } from "./add-guest-form";
-import { QRInvite } from "@/components/trip/qr-invite";
-import { ShareButton } from "../share-button";
 import { RemoveMemberButton } from "./remove-member-button";
-import { RegenerateTokenButton } from "./regenerate-token-button";
+import { InviteSection } from "@/components/trip/invite-section";
 import { getGroupConfig } from "@/lib/group-config";
 import { getMemberNudge } from "@/lib/subscription/gates";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
@@ -98,19 +96,11 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
       {/* Invite link */}
       {isAdmin && (
         <div className="glass rounded-2xl p-5">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Invite to {config.labels.singular.toLowerCase()}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Anyone with this link can join.</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <ShareButton url={inviteUrl} tripName={group.name} />
-              <QRInvite url={inviteUrl} />
-            </div>
-          </div>
-          <RegenerateTokenButton groupId={group.id} inviteUrl={inviteUrl} />
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-0.5">
+            Invite to {config.labels.singular.toLowerCase()}
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Anyone with this link can join.</p>
+          <InviteSection url={inviteUrl} groupName={group.name} groupId={group.id} />
         </div>
       )}
     </div>

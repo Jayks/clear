@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Users, MapPin, Home, MoreHorizontal } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import { formatDate } from "@/lib/utils";
-import { TripCardShareButtons } from "./trip-card-share-buttons";
+import { TripCardShareDrawer } from "./trip-card-share-drawer";
 import { TripCardQuickAdd } from "./trip-card-quick-add";
 import { TripCardNavSheet } from "./trip-card-nav-sheet";
 
@@ -22,9 +22,9 @@ const LONG_PRESS_MS = 500;
 // iOS fingers drift slightly even while holding still; only cancel if truly scrolling.
 const MOVE_THRESHOLD = 8;
 
-// Desktop-only quick-nav button — long-press handles this on mobile
+// Quick-nav button — always visible (was desktop-only before Phase 1 UX improvements)
 const moreBtn =
-  "hidden md:flex w-8 h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
+  "flex w-10 h-10 md:w-8 md:h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
 export function TripCard({ group, memberCount, balanceBadge, priority = false, isPlusPlan = false }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -55,7 +55,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
     return () => window.removeEventListener("open-demo-navsheet", onTourOpen);
   }, [group.id]);
 
-  function handleQrOpenChange(open: boolean) {
+  function handleShareOpenChange(open: boolean) {
     if (!open) {
       cancelLongPress();
       navBlockedRef.current = true;
@@ -204,7 +204,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
           groupStartDate={group.startDate}
           groupEndDate={group.endDate}
         />
-        <TripCardShareButtons url={joinUrl} groupName={group.name} onQrOpenChange={handleQrOpenChange} />
+        <TripCardShareDrawer url={joinUrl} groupName={group.name} onShareOpenChange={handleShareOpenChange} />
         <button
           onClick={() => { if (!navBlockedRef.current) setIsNavOpen(true); }}
           className={moreBtn}

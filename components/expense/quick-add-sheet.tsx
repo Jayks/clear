@@ -14,10 +14,12 @@ import { trackEvent } from "@/lib/analytics";
 import { getGroupMembersForQuickAdd } from "@/app/actions/quick-add";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { AddExpenseInput } from "@/lib/validations/expense";
+import { useRecentCategories } from "@/hooks/use-recent-categories";
 
 interface Props {
   groupId: string;
   groupName: string;
+  groupType: string;
   currency: string;
   isOpen: boolean;
   groupStartDate?: string | null;
@@ -66,6 +68,7 @@ function buildExpenseInput(
 export function QuickAddSheet({
   groupId,
   groupName,
+  groupType,
   currency,
   isOpen,
   groupStartDate,
@@ -78,6 +81,7 @@ export function QuickAddSheet({
   const [parsed, setParsed] = useState<ParsedExpense | null>(null);
   const [saving, startSave] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [, addRecentCategory] = useRecentCategories(groupType);
   const [mounted, setMounted] = useState(false);
   // Each voice transcript gets a unique id so the QuickAddBar effect always fires,
   // even if the user says the same phrase twice.
@@ -163,6 +167,7 @@ export function QuickAddSheet({
             duration: 6000,
           });
         }
+        addRecentCategory(input.category);
         setSaved(true);
         // Auto-close after 2s — cancelled if user taps "Add another"
         autoCloseTimerRef.current = setTimeout(() => {

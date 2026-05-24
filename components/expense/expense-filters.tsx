@@ -8,6 +8,7 @@ import { CATEGORIES } from "@/lib/categories";
 import { SwipeableExpenseCard } from "./swipeable-expense-card";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { CategoryIcon } from "./category-icon";
+import { SwipeHint } from "@/components/shared/swipe-hint";
 
 type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
@@ -259,9 +260,13 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
             onDeleteFail={restoreDelete}
           />
         ) : (
-          <div className="space-y-2">
-            {displayItems.slice(0, 2).map(renderCard)}
-          </div>
+          <>
+            <div className="space-y-2">
+              {displayItems.slice(0, 2).map(renderCard)}
+            </div>
+            {/* One-time swipe-to-delete hint, touch devices only */}
+            <SwipeHint />
+          </>
         )}
 
       </div>{/* end data-tour="expense-list-header" */}

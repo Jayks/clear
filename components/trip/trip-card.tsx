@@ -200,6 +200,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         <TripCardQuickAdd
           groupId={group.id}
           groupName={group.name}
+          groupType={group.groupType}
           currency={group.defaultCurrency}
           groupStartDate={group.startDate}
           groupEndDate={group.endDate}

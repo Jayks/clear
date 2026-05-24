@@ -94,6 +94,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
       <ExpenseQuickAddFab
         groupId={id}
         groupName={group.name}
+        groupType={group.groupType}
         currency={group.defaultCurrency}
         members={members}
         groupStartDate={group.startDate}

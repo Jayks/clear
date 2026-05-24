@@ -44,8 +44,14 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
         .slice(0, 2)
     : user.email?.[0]?.toUpperCase() ?? "W";
 
+  // Inside a group detail page the GroupMobileNav replaces this header on mobile.
+  // Match /groups/[uuid]/... but not /groups or /groups/new.
+  const pathParts = pathname.split("/").filter(Boolean);
+  const isInsideGroup =
+    pathParts[0] === "groups" && !!pathParts[1] && pathParts[1] !== "new";
+
   return (
-    <header className="sticky top-0 z-50 glass-nav">
+    <header className={`sticky top-0 z-50 glass-nav${isInsideGroup ? " hidden md:block" : ""}`}>
       <div className="max-w-7xl mx-auto px-6 md:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/groups" className="flex items-center shrink-0">

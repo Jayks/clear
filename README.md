@@ -17,10 +17,12 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 ## Features
 
 - **Quick-add expenses** — type a natural description from any group card; AI parses the amount, payer, and split automatically
-- **Quick-nav from card** — long-press any group card (or tap `⋯` on desktop) to jump directly to Members, Expenses, Settle Up, or Insights
+- **Quick-nav from card** — tap `⋯` (always visible) or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights
+- **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
 - **Expense detail** — tap any expense card to see the full split breakdown, notes, and audit trail in a bottom sheet
 - **Expense search** — instant search across description and category; filters and pagination compose naturally
 - **Expense audit trail** — every card and edit page shows who logged the expense and who last edited it, with relative timestamps
+- **Category recents** — the last 3 used categories appear as quick-tap pills above the full category selector in the expense form (separate per group type)
 - **Four split modes** — equal, exact amount, percentage, or shares
 - **16 expense categories** — including Tour Package for trips; "Other" prompts a free-text description
 - **Minimum-transaction settlement** — greedy optimizer computes the fewest payments to clear all debts
@@ -169,5 +171,6 @@ lib/
 - **`getBalances()`** — single SQL CTE round-trip (4 aggregates + members in one query)
 - **GROUP_CONFIG** — all trip/nest differences flow through `lib/group-config.ts`
 - **Subscription gates** — `lib/subscription/gates.ts` exports `getUserPlan()` (cached, returns "plus" for active + trialing), `getUserSubscription()` (uncached, full row for billing UI), and per-feature gate functions (`canCreateGroup`, `canUseAI`, `canAddMember`, etc.)
-- **QuickAddSheet / TripCardNavSheet** — own their own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop. Cards have no footer — Add, Share, and QR float on the cover image (`w-10 h-10` on mobile for iOS tap targets); `⋯` is desktop-only (`hidden md:flex`), long-press opens the nav sheet on mobile
+- **QuickAddSheet / TripCardNavSheet** — own their own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop. Cards have Add + Share floating on the cover image; `⋯` always visible (`w-10 h-10` on mobile for iOS tap targets). QuickAddSheet has post-save "✓ Saved!" state → "+ Add another expense →" link with 2 s auto-close
+- **Platform-aware share / invite** — `TripCardShareDrawer` + `InviteSection` call `navigator.share()` directly; iOS cancel (AbortError) falls back to `InviteQRSheet` (QR + copy); Windows/Android cancel does nothing (native sheet already includes QR + copy)
 - **GroupBalanceBadge** — async RSC streamed into each active TripCard via `Suspense`; batch-loads all member IDs in one query (`getUserMemberIds`), then calls cached `getBalances` per group

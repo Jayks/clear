@@ -8,6 +8,7 @@ import { QuickAddSheet } from "./quick-add-sheet";
 interface Props {
   groupId: string;
   groupName: string;
+  groupType: string;
   currency: string;
   members: GroupMember[];
   groupStartDate?: string | null;
@@ -17,6 +18,7 @@ interface Props {
 export function ExpenseQuickAddFab({
   groupId,
   groupName,
+  groupType,
   currency,
   members,
   groupStartDate,
@@ -37,6 +39,7 @@ export function ExpenseQuickAddFab({
       <QuickAddSheet
         groupId={groupId}
         groupName={groupName}
+        groupType={groupType}
         currency={currency}
         isOpen={open}
         members={members}

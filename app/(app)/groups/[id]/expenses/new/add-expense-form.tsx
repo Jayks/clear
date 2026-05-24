@@ -16,6 +16,7 @@ import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getMemberName, smartDefaultDate } from "@/lib/utils";
 import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
+import { useRecentCategories } from "@/hooks/use-recent-categories";
 
 interface Props {
   group: Group;
@@ -27,6 +28,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
+  const [recentCategories, addRecentCategory] = useRecentCategories(group.groupType);
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
   const [splitEditorKey, setSplitEditorKey] = useState(0);
   const [initialSplitIds, setInitialSplitIds] = useState<Set<string>>(
@@ -105,6 +107,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
       toast.error(result.error);
       return;
     }
+    addRecentCategory(data.category);
     const isFirst = !localStorage.getItem("first_expense_added");
     if (isFirst) {
       localStorage.setItem("first_expense_added", "1");
@@ -174,6 +177,31 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
       {/* Category */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Category</label>
+        {/* Recent category pills — top 3 from localStorage, only shown after first use */}
+        {recentCategories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {recentCategories.map((cat) => {
+              const meta = groupConfig.categories.find((c) => c.value === cat);
+              if (!meta) return null;
+              const active = category === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => { setValue("category", cat); setValue("customCategory", ""); }}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    active
+                      ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                  }`}
+                >
+                  <meta.icon className="w-3 h-3" />
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <select
           {...register("category", {
             onChange: (e) => { if (e.target.value !== "other") setValue("customCategory", ""); },

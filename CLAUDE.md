@@ -55,7 +55,7 @@
 
 ### CoverPhotoPicker — no `<form>` inside forms
 
-Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` with `type="button"` on the search button to prevent parent form submission. Upload uses `<input type="file" accept="image/*">`. Flow: pick → `URL.createObjectURL` preview → `getSignedUploadUrl` action (`app/actions/upload.ts`) returns `{ path, token, publicUrl }` → browser calls `supabase.storage.uploadToSignedUrl()` directly (raw file, never passes through Vercel) → `onChange(publicUrl)`. 5 MB limit enforced client-side. Revoke object URL on upload or close. **No base64 encoding** — avoids Vercel's 4.5 MB serverless body limit.
+Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` with `type="button"` to prevent parent form submission. Flow: pick → `URL.createObjectURL` preview → `getSignedUploadUrl` action → browser calls `supabase.storage.uploadToSignedUrl()` directly (raw file, never via Vercel) → `onChange(publicUrl)`. 5 MB limit enforced client-side. Revoke object URL on upload or close. **No base64** — avoids Vercel's 4.5 MB body limit.
 
 ### DB Singleton (prevents HMR connection exhaustion)
 
@@ -105,6 +105,10 @@ Use `scripts/find-bad-imports.mjs` (`node scripts/find-bad-imports.mjs`) to scan
 
 Manages its own `createPortal` and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render from parent, never wrap in external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment). Members lazy-fetched on first `isOpen=true` via `fetchedRef`.
 
+**`groupType` prop** — keys `useRecentCategories()` to `clear_recent_categories_trip` / `_nest`; recent category pills shown above the category select.
+
+**Post-save UX** — button turns "✓ Saved!" → "+ Add another →" fades in after 200ms; auto-close 2000ms. "Add another" cancels timer + resets form via `setOpenCount`.
+
 ### iOS touch & safe-area patterns
 
 **Long-press on TripCard** — 500ms timer, `MOVE_THRESHOLD=8px`. `touchAction:"manipulation"` removes 300ms tap delay.
@@ -116,7 +120,7 @@ Manages its own `createPortal` and `AnimatePresence` internally. Always pass `is
 
 **iOS body scroll-through** — `position:fixed` overlays don't block scroll on iOS Safari. `TripCardNavSheet` and `QuickAddSheet` use non-passive DOM `touchmove` listeners (React synthetic events can't `preventDefault()`). QuickAddSheet exempts its scrollable div via `scrollBodyRef`.
 
-**QuickAddSheet voice stale trigger** — `QuickAddBar` unmounts on close; fix: `QuickAddSheet` clears `voiceTrigger` to `null` on close.
+**QuickAddSheet voice stale trigger** — clears `voiceTrigger` to `null` on close (QuickAddBar unmounts on close).
 
 ### Admin dashboard patterns
 
@@ -126,11 +130,11 @@ Manages its own `createPortal` and `AnimatePresence` internally. Always pass `is
 
 **`withAdminTimeout`** — all admin queries run in `db.transaction()` with `SET LOCAL statement_timeout = 8000`. Hard-cancels slow queries, releases connections immediately.
 
-**Admin query design** — `getAdminStats()`: single SQL round-trip (4 subqueries). `getAdminGroupList()`: JOIN aggregation (includes `isDemo` flag). `getAdminUserList()`: DB query from `group_members` + `subscriptions` inside `withAdminTimeout`; calls Supabase Admin `listUsers()` OUTSIDE the transaction to identify platform admin IDs from their emails. Email field returns empty string — display name only in UI.
+**Admin query design** — `getAdminStats()`: 4 subqueries in 1 round-trip. `getAdminUserList()`: DB query inside `withAdminTimeout`; Supabase Admin `listUsers()` OUTSIDE the transaction (identifies platform admins by email). Email field returns empty string in UI.
 
-**Admin delete** — `app/actions/admin.ts` exports `adminDeleteGroup(groupId)` and `adminDeleteUser(userId)`. Group delete cascades via FK. User delete removes `group_members` rows then calls Supabase Admin API. Guards: demo groups and platform admins cannot be deleted (platform admin check uses Supabase Admin API email lookup since `getAdminUserList` has no emails).
+**Admin delete** — `adminDeleteGroup` + `adminDeleteUser` in `app/actions/admin.ts`. Group delete cascades via FK. Guards: demo groups and platform admins cannot be deleted.
 
-**DB resilience** — `lib/db/client.ts`: `max:3`, `idle_timeout:20`, `connect_timeout:10`. Admin page uses `Promise.race` against a 12s resolving fallback (never rejects).
+**DB resilience** — `lib/db/client.ts`: `max:3`, `idle_timeout:20`, `connect_timeout:10`. Admin page uses `Promise.race` against 12s fallback (never rejects).
 
 ### AI action rate limiting
 
@@ -232,7 +236,7 @@ const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,
 
 Always two args: `revalidateTag(\`group-${groupId}\`, "max")` — single-arg form is a TS error in Next.js 16. Call on: `updateGroup`, `archiveGroup`, `regenerateShareToken`, `addGuestMember`, `removeMember`, `joinGroup`, `claimGuestMember`.
 
-### `getAllGroups()` — one query returning `{ active, archived }`. Replaces old `getGroups()` + `getArchivedGroups()`.
+**`getAllGroups()`** — one query returning `{ active, archived }`. Replaces `getGroups()` + `getArchivedGroups()`.
 
 ### `getBalances()` — cached, currency-filtered CTE
 
@@ -242,11 +246,9 @@ Always two args: `revalidateTag(\`group-${groupId}\`, "max")` — single-arg for
 
 ### Join page — existing member redirect + guest claim flow
 
-`app/join/[token]/page.tsx` runs two checks after resolving the token:
-1. **Existing member redirect** — if the logged-in user already has a `group_members` row, `getMembership()` returns it and the page calls `redirect(/groups/${group.id})` immediately. They never see the join UI.
-2. **Guest claim section** — `getGroupByToken()` now returns `unclaimedGuests` (rows where `user_id IS NULL`). If any exist and the user is logged in, `JoinButton` renders a cyan pill list. User taps their name → button becomes "Join as [Google name]" → `claimGuestMember(token, guestMemberId)` runs atomically: verifies guest row is unclaimed, checks no real member exists, updates the row (`user_id` set, `guest_name` cleared, `displayName` from Google). Misspelled guest names are corrected automatically on claim.
+`app/join/[token]/page.tsx`: (1) existing member → `getMembership()` → immediate `redirect(/groups/${group.id})`; (2) `getGroupByToken()` returns `unclaimedGuests` (null `user_id`) → cyan pill list → `claimGuestMember(token, guestMemberId)` atomically sets `user_id`, clears `guest_name`, sets `displayName` from Google.
 
-`claimGuestMember` is in `app/actions/members.ts`. Must call `revalidateTag(`group-${group.id}`, 'max')` after claim.
+`claimGuestMember` in `app/actions/members.ts`. Call `revalidateTag(\`group-${group.id}\`, 'max')` after claim.
 
 ### Misc constraints
 
@@ -363,28 +365,9 @@ Schema: `lib/db/schema/subscriptions.ts`. **Note:** `pnpm db:push` has a pre-exi
 
 ### Supabase Storage — `cover-photos` bucket (run once)
 
-Create via Supabase dashboard → Storage → New bucket:
-- Name: `cover-photos` | Public: **Yes** | File size limit: `5242880` (5 MB)
+Dashboard → Storage → New bucket: name `cover-photos`, Public, 5 MB limit. Three RLS policies: authenticated insert (folder = `auth.uid()`), public select, authenticated delete own. Files at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has Supabase project hostname in `remotePatterns`.
 
-RLS policies (run in SQL Editor):
-```sql
-create policy "Authenticated users can upload cover photos"
-on storage.objects for insert to authenticated
-with check (bucket_id = 'cover-photos' and (storage.foldername(name))[1] = auth.uid()::text);
-
-create policy "Public can read cover photos"
-on storage.objects for select to public
-using (bucket_id = 'cover-photos');
-
-create policy "Users can delete their own cover photos"
-on storage.objects for delete to authenticated
-using (bucket_id = 'cover-photos' and (storage.foldername(name))[1] = auth.uid()::text);
-```
-
-Files at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has `riyfedftffuqzxtcpdde.supabase.co` in `remotePatterns`.
-
-### Realtime setup (run once in SQL Editor)
-Add tables `expenses`, `expense_splits`, `settlements`, `group_members` to `supabase_realtime` publication.
+### Realtime setup — add `expenses`, `expense_splits`, `settlements`, `group_members` to `supabase_realtime` publication (SQL Editor, run once).
 
 ---
 
@@ -449,7 +432,8 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 
 ### Navigation
 - **Desktop**: sticky top — `ClearLogo` (28px), Groups, Insights, ThemeToggle, avatar dropdown (Admin [if platform admin], Take the tour, Settings, Sign out).
-- **Mobile**: icon-only top nav + fixed `MobileNav` bottom. Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page. MobileNav inner div uses `.h-nav-safe`.
+- **Mobile**: icon-only top nav + fixed `MobileNav` bottom. Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page (outer container uses `pb-24 md:pb-0` to clear FAB). MobileNav inner div uses `.h-nav-safe`.
+- **Within group routes on mobile**: `AppNav` hides (`hidden md:block`); `GroupMobileNav` renders inside `<main>` as `sticky top-0 z-40 -mx-6 -mt-6` (negative margins break out of padding; sticky scrolls past TrialBanner). Shows: ← Back | group name (Fraunces) | `⋯` → `TripCardNavSheet`.
 - **Plus badge on avatar**: violet ✦ circle at `-bottom-0.5 -right-0.5` (distinct from cyan tour dot at `-top-0.5 -right-0.5`). Dropdown header also shows a `✦ Plus` pill next to the user's name. Only shown when `plan === "plus"` (active paid, not trialing).
 
 ### Quick-add sheet
@@ -460,17 +444,22 @@ Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — NOT `.glass` (60% o
 `TripCard` uses two nested wrappers to keep action buttons outside the `<Link>`:
 - **Outer div**: positioning, hover, touch handlers. NO `overflow-hidden`.
 - **Inner div** (`glass rounded-2xl overflow-hidden`): clips image + ribbon. Contains `<Link>` (image area only) with top-left badges and diagonal ribbon.
-- **Buttons** are children of the OUTER div (`absolute top-3 right-3 z-10`): Add, Share, QR — `⋯` desktop-only (`hidden md:flex`).
+- **Buttons** are children of the OUTER div (`absolute top-3 right-3 z-10`): Add, Share — `⋯` always visible (`flex w-10 h-10 md:w-8 md:h-8`).
 - **TripCardNavSheet** is also on outer div.
 
-React portals bubble through the React tree, not the DOM — portal-spawning components (QuickAddSheet, QR Dialog) must be React-parented outside the `<Link>`. No `e.stopPropagation()` needed.
+React portals bubble through the React tree, not the DOM — portal-spawning components (QuickAddSheet, InviteQRSheet) must be React-parented outside the `<Link>`. No `e.stopPropagation()` needed.
 
 **Diagonal ribbons** (`absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg]`, `pointer-events-none`): Demo = amber `SAMPLE`, Archived = slate `ARCHIVED`. On the inner div so the ribbon spans image + badge.
 
-**TripCardNavSheet** — portal + AnimatePresence bottom sheet. Opens via `⋯` click (desktop) or 500ms long-press (all). Four destinations: Members, Expenses, Settle Up, Insights.
+**TripCardNavSheet** — portal + AnimatePresence bottom sheet. Opens via `⋯` click (all devices) or 500ms long-press (all). Four destinations: Members, Expenses, Settle Up, Insights.
 
-### Share button — join URL, not summary URL
-`TripCardShareButtons` shares `/join/[shareToken]`. QR encodes same URL with "Copy invite link" / "Scan to join this group".
+### Share / invite pattern — platform-aware Web Share API
+
+`TripCardShareDrawer` — single share icon on card. `navigator.share()` directly → iOS AbortError → `InviteQRSheet`; non-iOS AbortError → nothing (Windows/Android native share sheet already has QR + copy); no Web Share API → clipboard copy.
+
+`InviteSection` — on group detail + members pages. Same platform-aware logic. Embeds `ConfirmDialog` for "Reset invite link" (absorbs old `RegenerateTokenButton`). `currentUrl` state updates after token regeneration.
+
+`InviteQRSheet` (`components/shared/invite-qr-sheet.tsx`) — iOS-only QR bottom sheet. Portal + AnimatePresence, non-passive `touchmove` prevention. Shares `/join/[shareToken]`.
 
 ### Motion
 - Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger via `AnimatedList`
@@ -523,7 +512,7 @@ clear/
 │   │       ├── page.tsx, loading.tsx
 │   │       ├── new/page.tsx + create-trip-form.tsx
 │   │       └── [id]/
-│   │           ├── layout.tsx (RealtimeRefresh), page.tsx
+│   │           ├── layout.tsx (RealtimeRefresh + GroupMobileNav, async), page.tsx
 │   │           ├── edit/page.tsx + edit-trip-form.tsx
 │   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, templates/new/, templates/[templateId]/edit/
 │   │           ├── members/page.tsx, loading.tsx + forms/buttons
@@ -544,12 +533,12 @@ clear/
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
 │   ├── expense/  (expense-card, swipeable-expense-card, expense-detail-sheet, expense-filters, split-editor, quick-add-bar, chat-import-dialog, ...)
-│   ├── trip/     (trip-card, trip-card-nav-sheet, group-balance-badge [async RSC], cover-photo-picker, budget-bar, qr-invite, narrative-section, adherence-card, ...)
+│   ├── trip/     (trip-card, trip-card-nav-sheet, trip-card-share-drawer, invite-section, group-balance-badge [async RSC], cover-photo-picker, budget-bar, narrative-section, adherence-card, ...)
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
-│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo, ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
-├── hooks/  use-trip-realtime.ts, use-warn-before-leave.ts, use-speech-recognition.ts, use-push-subscription.ts
+│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, group-mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo, invite-qr-sheet, swipe-hint, ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
+├── hooks/  use-trip-realtime.ts, use-warn-before-leave.ts, use-speech-recognition.ts, use-push-subscription.ts, use-recent-categories.ts
 ├── lib/
 │   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth).ts
 │   ├── supabase/server.ts, client.ts, admin.ts
@@ -669,13 +658,7 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID        # G-XXXXXXXXXX from GA4 dashboard; omit to 
 - `getGroupPlan(groupId)` — inherits from group admin's plan.
 - `getGroupsAdminPlans(groupIds[])` — batch JOIN for N groups; one query.
 
-**`isPlus` vs `isTrialing` pattern (upgrade/checkout/settings):**
-```typescript
-const sub = await getUserSubscription(user.id);
-const isPlus     = sub?.plan === "plus" && sub?.status === "active"; // paid only
-const isTrialing = sub?.status === "trialing";
-```
-Never use `getUserPlan()` here — it masks trial state and shows wrong UI.
+**`isPlus` vs `isTrialing` pattern (upgrade/checkout/settings):** use `getUserSubscription(user.id)` — `isPlus = plan==="plus" && status==="active"`, `isTrialing = status==="trialing"`. Never use `getUserPlan()` here — it masks trial state.
 
 **Free plan limits:** 4 non-demo non-archived groups, 8 members per group, 50 expenses per group.
 **Plus unlocks:** unlimited everything, AI features, CSV export, all split modes, recurring templates, budget tracking. Group admin's plan covers all members.
@@ -688,10 +671,9 @@ Never use `getUserPlan()` here — it masks trial state and shows wrong UI.
 1. `/upgrade` — global Monthly/Annual toggle above Free + Plus cards. Trialing users see different subtitle; `isPlus` users see confirmation panel instead.
 2. `/upgrade/checkout` — radio picker (defaults from URL `?cycle`). Order summary: price strikethrough → Founder discount → ₹0 total. "Activate Plus free →" calls `activatePlusDemo(cycle)` → `router.push("/groups")`. Redirects away only if `isPlus`; trialing users may still visit.
 
-**Settings page (`/settings`) — tab navigation:**
-`settings-layout.tsx` client component, `useState<"appearance" | "billing" | "notifications">`. Desktop: sidebar buttons set `active`; inactive sections get `md:hidden`. Mobile: all sections stacked. **Anchor-scroll doesn't work** — page too short when only some sections render.
+**Settings page (`/settings`):** `settings-layout.tsx` — `useState` tab switching (`appearance|billing|notifications`). Desktop: sidebar; inactive sections `md:hidden`. Mobile: all stacked. **Anchor-scroll doesn't work** — page too short when only some sections render.
 
-**Admin users table**: `sm:hidden` mobile card layout + `hidden sm:block` desktop table.
+**Admin users table**: `sm:hidden` mobile cards + `hidden sm:block` desktop table.
 
 ---
 

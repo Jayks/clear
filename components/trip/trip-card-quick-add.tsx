@@ -7,6 +7,7 @@ import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
 interface Props {
   groupId: string;
   groupName: string;
+  groupType: string;
   currency: string;
   groupStartDate?: string | null;
   groupEndDate?: string | null;
@@ -15,6 +16,7 @@ interface Props {
 export function TripCardQuickAdd({
   groupId,
   groupName,
+  groupType,
   currency,
   groupStartDate,
   groupEndDate,
@@ -39,6 +41,7 @@ export function TripCardQuickAdd({
       <QuickAddSheet
         groupId={groupId}
         groupName={groupName}
+        groupType={groupType}
         currency={currency}
         isOpen={open}
         groupStartDate={groupStartDate}

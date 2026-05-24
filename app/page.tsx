@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
+import { FadeIn } from "@/components/shared/fade-in";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 
 const HERO_IMAGE    = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85";
@@ -88,26 +89,26 @@ export default async function LandingPage() {
         <div className="relative z-10 max-w-6xl mx-auto px-6 pt-20 pb-28 lg:pt-28 lg:pb-36">
           <div className="flex flex-col lg:flex-row items-center gap-14 lg:gap-16">
 
-            {/* Left — copy */}
+            {/* Left — copy (CSS keyframe stagger, works in RSC) */}
             <div className="flex-1 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-8 shadow-sm">
+              <div className="animate-hero-1 inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-8 shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 animate-pulse shrink-0" />
                 Trips & shared tabs · 30-day Plus trial
               </div>
 
-              <h1 className="text-5xl sm:text-6xl lg:text-[66px] xl:text-[72px] font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-7" style={{ fontFamily: "var(--font-fraunces)" }}>
+              <h1 className="animate-hero-2 text-5xl sm:text-6xl lg:text-[66px] xl:text-[72px] font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-7" style={{ fontFamily: "var(--font-fraunces)" }}>
                 Split it.{" "}
                 <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
                   Clear it.
                 </span>
               </h1>
 
-              <p className="text-lg sm:text-xl text-slate-500 dark:text-slate-400 leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
+              <p className="animate-hero-3 text-lg sm:text-xl text-slate-500 dark:text-slate-400 leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
                 Group expenses for trips and shared tabs — log, split, and settle up with the{" "}
                 <span className="text-slate-700 dark:text-slate-200 font-medium">fewest payments possible.</span>
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-10">
+              <div className="animate-hero-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-10">
                 <Link href="/login?intent=signup" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
                   Start for free <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -116,7 +117,7 @@ export default async function LandingPage() {
                 </a>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2">
+              <div className="animate-hero-5 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2">
                 {["Google sign-in", "No credit card", "Free plan · 30-day Plus trial", "Email & push alerts", "Installs on iOS & Android"].map((t) => (
                   <span key={t} className="inline-flex items-center gap-1.5 text-sm text-slate-400 dark:text-slate-300">
                     <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" /> {t}
@@ -125,8 +126,8 @@ export default async function LandingPage() {
               </div>
             </div>
 
-            {/* Right — groups overview + expense detail */}
-            <div className="flex-1 w-full max-w-[420px] lg:max-w-none">
+            {/* Right — groups overview + expense detail (slides in from right) */}
+            <div className="animate-hero-right flex-1 w-full max-w-[420px] lg:max-w-none">
 
               {/* ── Mobile: stacked ── */}
               <div className="flex flex-col gap-3 sm:hidden">
@@ -224,8 +225,8 @@ export default async function LandingPage() {
                   ))}
                 </div>
 
-                {/* Floating badge */}
-                <div className="absolute glass-sm rounded-full px-3 py-1.5 shadow-md border border-white/80 flex items-center gap-1.5" style={{ top: 0, right: 24, zIndex: 3, transform: "rotate(-1deg)" }}>
+                {/* Floating badge — bobs gently after load */}
+                <div className="animate-float-bob absolute glass-sm rounded-full px-3 py-1.5 shadow-md border border-white/80 flex items-center gap-1.5" style={{ top: 0, right: 24, zIndex: 3 }}>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Trips & nests</span>
                 </div>
@@ -253,7 +254,7 @@ export default async function LandingPage() {
 
       {/* ── How it works ─────────────────────────────────────────────────── */}
       <section id="how-it-works" className="max-w-6xl mx-auto px-6 py-24">
-        <div className="text-center mb-14">
+        <FadeIn className="text-center mb-14">
           <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">How it works</p>
           <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
             Up and running in minutes
@@ -261,30 +262,32 @@ export default async function LandingPage() {
           <p className="text-lg text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
             No setup, no onboarding form. Create a group and go.
           </p>
-        </div>
+        </FadeIn>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 relative">
           <div className="absolute top-[38px] left-[12.5%] right-[12.5%] h-px hidden lg:block" style={{ background: "linear-gradient(90deg, transparent, #A5F3FC 20%, #99F6E4 80%, transparent)" }} />
-          {steps.map((step) => (
-            <div key={step.n} className="glass rounded-2xl p-6 flex flex-col gap-4 relative">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg shrink-0 relative z-10" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
-                {step.n}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <step.icon className="w-4 h-4 text-cyan-500 shrink-0" />
-                  <h3 className="text-lg text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>{step.title}</h3>
+          {steps.map((step, i) => (
+            <FadeIn key={step.n} delay={i * 90}>
+              <div className="glass rounded-2xl p-6 flex flex-col gap-4 relative">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg shrink-0 relative z-10" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
+                  {step.n}
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.body}</p>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <step.icon className="w-4 h-4 text-cyan-500 shrink-0" />
+                    <h3 className="text-lg text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>{step.title}</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{step.body}</p>
+                </div>
               </div>
-            </div>
+            </FadeIn>
           ))}
         </div>
       </section>
 
       {/* ── Two kinds of groups ───────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="text-center mb-14">
+        <FadeIn className="text-center mb-14">
           <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Group types</p>
           <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
             Two kinds of groups.
@@ -296,11 +299,11 @@ export default async function LandingPage() {
           <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
             Choose what fits your situation. Both use the same splitting engine and settlement optimizer.
           </p>
-        </div>
+        </FadeIn>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Trip card */}
-          <div className="glass rounded-3xl overflow-hidden">
+          <FadeIn direction="left" className="glass rounded-3xl overflow-hidden">
             <div className="relative h-48">
               <Image src={HERO_IMAGE} alt="Travel trip" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
@@ -327,10 +330,10 @@ export default async function LandingPage() {
                 ))}
               </ul>
             </div>
-          </div>
+          </FadeIn>
 
           {/* Nest card */}
-          <div className="glass rounded-3xl overflow-hidden">
+          <FadeIn direction="right" className="glass rounded-3xl overflow-hidden">
             <div className="relative h-48">
               <Image src={NEST_IMAGE} alt="Shared tab nest" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
@@ -357,13 +360,13 @@ export default async function LandingPage() {
                 ))}
               </ul>
             </div>
-          </div>
+          </FadeIn>
         </div>
       </section>
 
       {/* ── Why Clear? ───────────────────────────────────────────────────── */}
       <section id="why-clear" className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="text-center mb-12">
+        <FadeIn className="text-center mb-12">
           <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Why Clear?</p>
           <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
             Not just another
@@ -372,49 +375,51 @@ export default async function LandingPage() {
               expense splitter.
             </span>
           </h2>
-        </div>
+        </FadeIn>
 
-        <div className="glass rounded-2xl overflow-hidden mb-10">
-          <div className="grid grid-cols-2 border-b border-slate-100 dark:border-slate-700/60">
-            <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60">
-              <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">Other apps</p>
+        <FadeIn>
+          <div className="glass rounded-2xl overflow-hidden mb-10">
+            <div className="grid grid-cols-2 border-b border-slate-100 dark:border-slate-700/60">
+              <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60">
+                <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">Other apps</p>
+              </div>
+              <div className="px-6 py-4 bg-cyan-50/50 dark:bg-cyan-950/20">
+                <p className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">Clear ✦</p>
+              </div>
             </div>
-            <div className="px-6 py-4 bg-cyan-50/50 dark:bg-cyan-950/20">
-              <p className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">Clear ✦</p>
-            </div>
+            {[
+              {
+                them: "Type every field manually",
+                us:   "AI parses amount, payer and split in seconds",
+              },
+              {
+                them: "Everyone must create an account to join",
+                us:   "Add guests by name — they claim with Google later",
+              },
+              {
+                them: "Complex chains of IOUs between everyone",
+                us:   "Minimum transactions — one payment per person, guaranteed",
+              },
+              {
+                them: "Expenses pile up silently",
+                us:   "Email + push the moment any money moves",
+              },
+            ].map((row, i) => (
+              <div key={i} className={`grid grid-cols-2 border-b border-slate-100/60 dark:border-slate-700/40 last:border-0 ${i % 2 === 1 ? "bg-slate-50/30 dark:bg-slate-800/20" : ""}`}>
+                <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60 flex items-start gap-2.5">
+                  <X className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-slate-400 dark:text-slate-500">{row.them}</p>
+                </div>
+                <div className="px-6 py-4 bg-cyan-50/20 dark:bg-cyan-950/10 flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-slate-700 dark:text-slate-200">{row.us}</p>
+                </div>
+              </div>
+            ))}
           </div>
-          {[
-            {
-              them: "Type every field manually",
-              us:   "AI parses amount, payer and split in seconds",
-            },
-            {
-              them: "Everyone must create an account to join",
-              us:   "Add guests by name — they claim with Google later",
-            },
-            {
-              them: "Complex chains of IOUs between everyone",
-              us:   "Minimum transactions — one payment per person, guaranteed",
-            },
-            {
-              them: "Expenses pile up silently",
-              us:   "Email + push the moment any money moves",
-            },
-          ].map((row, i) => (
-            <div key={i} className={`grid grid-cols-2 border-b border-slate-100/60 dark:border-slate-700/40 last:border-0 ${i % 2 === 1 ? "bg-slate-50/30 dark:bg-slate-800/20" : ""}`}>
-              <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60 flex items-start gap-2.5">
-                <X className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-slate-400 dark:text-slate-500">{row.them}</p>
-              </div>
-              <div className="px-6 py-4 bg-cyan-50/20 dark:bg-cyan-950/10 flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-slate-700 dark:text-slate-200">{row.us}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        </FadeIn>
 
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <FadeIn delay={80} className="flex flex-wrap items-center justify-center gap-3">
           {[
             "AI expense parsing", "Chat import", "Voice input", "Recurring templates",
             "Guest members", "QR code invites", "Per-group insights", "Email & push alerts",
@@ -424,14 +429,14 @@ export default async function LandingPage() {
               {pill}
             </span>
           ))}
-        </div>
+        </FadeIn>
       </section>
 
       {/* ── Recurring templates showcase ─────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
           {/* Left: template mockup */}
-          <div className="flex-1 w-full max-w-md">
+          <FadeIn direction="left" className="flex-1 w-full max-w-md">
             <div className="glass rounded-2xl p-6 shadow-xl shadow-teal-500/10">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -469,10 +474,10 @@ export default async function LandingPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </FadeIn>
 
           {/* Right: copy */}
-          <div className="flex-1 text-center lg:text-left">
+          <FadeIn direction="right" className="flex-1 text-center lg:text-left">
             <p className="text-sm font-semibold text-teal-600 uppercase tracking-widest mb-3">For shared tabs</p>
             <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
               Recurring bills,
@@ -484,7 +489,7 @@ export default async function LandingPage() {
             <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto lg:mx-0">
               Set up recurring templates for rent, electricity, subscriptions. Every month, tap "Log for May" and it's recorded — split exactly as you configured, ready to settle.
             </p>
-          </div>
+          </FadeIn>
         </div>
       </section>
 
@@ -493,7 +498,7 @@ export default async function LandingPage() {
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
           {/* Left: copy */}
-          <div className="flex-1 text-center lg:text-left">
+          <FadeIn direction="left" className="flex-1 text-center lg:text-left">
             <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">AI-powered</p>
             <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
               Type it like you'd
@@ -520,10 +525,10 @@ export default async function LandingPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </FadeIn>
 
           {/* Right: AI parsing mockup */}
-          <div className="flex-1 w-full max-w-sm">
+          <FadeIn direction="right" className="flex-1 w-full max-w-sm">
             <div className="glass rounded-2xl p-6 shadow-xl shadow-cyan-500/10">
               <div className="flex items-center gap-2 mb-5">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
@@ -569,7 +574,7 @@ export default async function LandingPage() {
                 <CheckCircle2 className="w-3.5 h-3.5 text-teal-500 shrink-0" />
               </div>
             </div>
-          </div>
+          </FadeIn>
 
         </div>
       </section>
@@ -579,7 +584,7 @@ export default async function LandingPage() {
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
           {/* Left: copy */}
-          <div className="flex-1 text-center lg:text-left">
+          <FadeIn direction="left" className="flex-1 text-center lg:text-left">
             <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Notifications</p>
             <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
               Know the moment
@@ -606,10 +611,10 @@ export default async function LandingPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </FadeIn>
 
           {/* Right: notification mockup */}
-          <div className="flex-1 w-full max-w-sm">
+          <FadeIn direction="right" className="flex-1 w-full max-w-sm">
             <div className="glass rounded-2xl p-6 shadow-xl shadow-cyan-500/10">
               {/* Phone top bar */}
               <div className="flex items-center justify-between mb-5">
@@ -659,7 +664,7 @@ export default async function LandingPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </FadeIn>
 
         </div>
       </section>
@@ -669,7 +674,7 @@ export default async function LandingPage() {
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
           {/* Left: insights mockup */}
-          <div className="flex-1 w-full max-w-sm">
+          <FadeIn direction="left" className="flex-1 w-full max-w-sm">
             <div className="glass rounded-2xl p-6 shadow-xl shadow-cyan-500/10">
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -718,10 +723,10 @@ export default async function LandingPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </FadeIn>
 
           {/* Right: copy */}
-          <div className="flex-1 text-center lg:text-left">
+          <FadeIn direction="right" className="flex-1 text-center lg:text-left">
             <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Insights</p>
             <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
               See the full story
@@ -749,14 +754,14 @@ export default async function LandingPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </FadeIn>
 
         </div>
       </section>
 
       {/* ── Settlement visualization ─────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="text-center mb-12">
+        <FadeIn className="text-center mb-12">
           <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Settlement</p>
           <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
             One payment each.
@@ -768,11 +773,11 @@ export default async function LandingPage() {
           <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
             Clear's algorithm collapses any tangle of shared expenses into the minimum number of transfers — no matter how many people.
           </p>
-        </div>
+        </FadeIn>
 
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_64px_1fr] gap-4 items-start max-w-3xl mx-auto">
           {/* Before */}
-          <div className="glass rounded-2xl p-6">
+          <FadeIn direction="left" className="glass rounded-2xl p-6">
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-4">Goa 2025 · 5 people · 8 expenses</p>
             <div className="space-y-2 mb-4">
               {[
@@ -789,9 +794,9 @@ export default async function LandingPage() {
               ))}
             </div>
             <p className="text-xs text-slate-400 italic border-t border-slate-100 dark:border-slate-700/40 pt-3">How do we settle this fairly?</p>
-          </div>
+          </FadeIn>
 
-          {/* Arrow — desktop only */}
+          {/* Arrow — desktop only, no animation */}
           <div className="hidden sm:flex items-center justify-center pt-16">
             <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, #0891B2, #14B8A6)" }}>
               <ArrowRight className="w-5 h-5 text-white" />
@@ -799,7 +804,7 @@ export default async function LandingPage() {
           </div>
 
           {/* After */}
-          <div className="glass rounded-2xl p-6 border border-teal-200/40 dark:border-teal-800/30">
+          <FadeIn direction="right" className="glass rounded-2xl p-6 border border-teal-200/40 dark:border-teal-800/30">
             <p className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-4">Clear says — 3 transfers</p>
             <div className="space-y-3 mb-4">
               {[
@@ -830,52 +835,56 @@ export default async function LandingPage() {
                 PAY →
               </div>
             </div>
-          </div>
+          </FadeIn>
         </div>
       </section>
 
       {/* ── Plus teaser ──────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-16">
-        <div className="glass rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-6 border border-violet-200/40 dark:border-violet-800/30">
-          <div className="text-center sm:text-left">
-            <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">
-              <span className="text-violet-500 font-bold text-sm">✦ Clear Plus</span>
+        <FadeIn>
+          <div className="glass rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-6 border border-violet-200/40 dark:border-violet-800/30">
+            <div className="text-center sm:text-left">
+              <div className="flex items-center gap-2 justify-center sm:justify-start mb-2">
+                <span className="text-violet-500 font-bold text-sm">✦ Clear Plus</span>
+              </div>
+              <p className="text-slate-700 dark:text-slate-200 font-medium mb-1">
+                Need more room? Unlock unlimited groups, AI parsing, CSV export, and more.
+              </p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">From ₹49/mo · 30-day free trial · No credit card required.</p>
             </div>
-            <p className="text-slate-700 dark:text-slate-200 font-medium mb-1">
-              Need more room? Unlock unlimited groups, AI parsing, CSV export, and more.
-            </p>
-            <p className="text-sm text-slate-400 dark:text-slate-500">From ₹49/mo · 30-day free trial · No credit card required.</p>
+            <Link
+              href="/pricing"
+              className="shrink-0 inline-flex items-center gap-2 bg-gradient-to-br from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-semibold text-sm py-2.5 px-6 rounded-xl shadow-md shadow-violet-500/20 transition-all hover:-translate-y-0.5 whitespace-nowrap"
+            >
+              See plans <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            href="/pricing"
-            className="shrink-0 inline-flex items-center gap-2 bg-gradient-to-br from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-semibold text-sm py-2.5 px-6 rounded-xl shadow-md shadow-violet-500/20 transition-all hover:-translate-y-0.5 whitespace-nowrap"
-          >
-            See plans <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        </FadeIn>
       </section>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-28">
-        <div className="relative rounded-3xl overflow-hidden px-8 py-16 text-center" style={{ background: "linear-gradient(135deg, #0E7490 0%, #0D9488 50%, #059669 100%)" }}>
-          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative z-10">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6 border border-white/30">
-              <ClearIcon size={40} />
+        <FadeIn>
+          <div className="relative rounded-3xl overflow-hidden px-8 py-16 text-center" style={{ background: "linear-gradient(135deg, #0E7490 0%, #0D9488 50%, #059669 100%)" }}>
+            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+            <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+            <div className="relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-6 border border-white/30">
+                <ClearIcon size={40} />
+              </div>
+              <h2 className="text-4xl sm:text-5xl text-white mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
+                Ready to get clear?
+              </h2>
+              <p className="text-teal-100 text-lg mb-10 max-w-sm mx-auto">
+                Create a trip or a nest in seconds. No credit card required.
+              </p>
+              <Link href="/login?intent=signup" className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl shadow-teal-900/30 transition-all hover:-translate-y-0.5">
+                Get started free <ArrowRight className="w-4 h-4" />
+              </Link>
+              <p className="text-teal-200/70 text-sm mt-5">Google sign-in · No credit card · Takes 30 seconds</p>
             </div>
-            <h2 className="text-4xl sm:text-5xl text-white mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
-              Ready to get clear?
-            </h2>
-            <p className="text-teal-100 text-lg mb-10 max-w-sm mx-auto">
-              Create a trip or a nest in seconds. No credit card required.
-            </p>
-            <Link href="/login?intent=signup" className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl shadow-teal-900/30 transition-all hover:-translate-y-0.5">
-              Get started free <ArrowRight className="w-4 h-4" />
-            </Link>
-            <p className="text-teal-200/70 text-sm mt-5">Google sign-in · No credit card · Takes 30 seconds</p>
           </div>
-        </div>
+        </FadeIn>
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}

@@ -84,7 +84,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               {group.name}
             </h1>
             {isNest ? (
-              <p className="text-white/75 text-sm mt-1">Shared tab</p>
+              <p className="text-white/75 text-sm mt-1">Nest</p>
             ) : (group.startDate || group.endDate) ? (
               <p className="text-white/75 text-sm mt-1">
                 {group.startDate ? formatDate(group.startDate) : ""}

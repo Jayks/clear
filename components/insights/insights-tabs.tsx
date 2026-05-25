@@ -153,7 +153,7 @@ function NestsInsightsContent({ data, fmt }: {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
-          Your shared tabs
+          Your nests
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
           Across {data.nestCount} nest{data.nestCount > 1 ? "s" : ""}

@@ -155,7 +155,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
                 {group.name}
               </h3>
               {isNest ? (
-                <p className="text-white/75 text-xs mt-0.5">Shared tab</p>
+                <p className="text-white/75 text-xs mt-0.5">Nest</p>
               ) : (group.startDate || group.endDate) ? (
                 <p className="text-white/75 text-xs mt-0.5">
                   {group.startDate ? formatDate(group.startDate) : ""}

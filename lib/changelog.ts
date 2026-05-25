@@ -576,7 +576,7 @@ export const changelog: ChangelogRelease[] = [
     tagVariant: "slate",
     headline: "Group expense tracking for trips and shared living — from scratch.",
     description:
-      "Clear launched with a complete expense splitting engine: two group types, four split modes, a settlement optimizer that guarantees the fewest possible payments, and recurring expense templates for shared tabs.",
+      "Clear launched with a complete expense splitting engine: two group types, four split modes, a settlement optimizer that guarantees the fewest possible payments, and recurring expense templates for nests.",
     features: [
       {
         icon: "🗺️",

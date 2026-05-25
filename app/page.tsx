@@ -20,7 +20,7 @@ const steps = [
     n: "01",
     icon: LayoutGrid,
     title: "Create a group",
-    body: "Choose Trip for travel or Nest for a shared tab. Add members in seconds.",
+    body: "Choose Trip for travel or Nest for home expenses. Add members in seconds.",
   },
   {
     n: "02",
@@ -100,7 +100,7 @@ export default async function LandingPage() {
             <div className="flex-1 text-center lg:text-left">
               <div className="animate-hero-1 inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-8 shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 animate-pulse shrink-0" />
-                Trips & shared tabs · 30-day Plus trial
+                Trips & nests · 30-day Plus trial
               </div>
 
               <h1 className="animate-hero-2 text-5xl sm:text-6xl lg:text-[66px] xl:text-[72px] font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-7" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -111,7 +111,7 @@ export default async function LandingPage() {
               </h1>
 
               <p className="animate-hero-3 text-lg sm:text-xl text-slate-500 dark:text-slate-400 leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
-                Group expenses for trips and shared tabs — log, split, and settle up with the{" "}
+                Group expenses for trips and nests — log, split, and settle up with the{" "}
                 <span className="text-slate-700 dark:text-slate-200 font-medium">fewest payments possible.</span>
               </p>
 
@@ -342,7 +342,7 @@ export default async function LandingPage() {
           {/* Nest card */}
           <FadeIn direction="right" className="glass rounded-3xl overflow-hidden">
             <div className="relative h-48">
-              <Image src={NEST_IMAGE} alt="Shared tab nest" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
+              <Image src={NEST_IMAGE} alt="Nest group" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
               <div className="absolute bottom-4 left-5">
                 <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-3 py-1 mb-2">
@@ -490,7 +490,7 @@ export default async function LandingPage() {
 
           {/* Right: copy */}
           <FadeIn direction="right" className="flex-1 text-center lg:text-left">
-            <p className="text-sm font-semibold text-teal-600 uppercase tracking-widest mb-3">For shared tabs</p>
+            <p className="text-sm font-semibold text-teal-600 uppercase tracking-widest mb-3">For nests</p>
             <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
               Recurring bills,
               <br />

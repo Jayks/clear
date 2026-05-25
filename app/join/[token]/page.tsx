@@ -63,7 +63,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
                 </p>
               )}
               {isNest && (
-                <p className="text-white/75 text-sm mt-0.5">Shared tab</p>
+                <p className="text-white/75 text-sm mt-0.5">Nest</p>
               )}
             </div>
           </div>

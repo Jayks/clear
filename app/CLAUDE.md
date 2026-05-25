@@ -24,9 +24,9 @@ clear/
 │   │       └── [id]/
 │   │           ├── layout.tsx (RealtimeRefresh + GroupMobileNav, async), page.tsx
 │   │           ├── edit/page.tsx + edit-trip-form.tsx
-│   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, templates/new/, templates/[templateId]/edit/
+│   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, [expenseId]/thread/page.tsx, templates/new/, templates/[templateId]/edit/
 │   │           ├── members/page.tsx, loading.tsx + forms/buttons
-│   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, mark-paid-button, upi-pay-button
+│   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, balance-cards-client.tsx, mark-paid-button, upi-pay-button
 │   │           └── insights/page.tsx + loading.tsx
 │   ├── join/[token]/page.tsx + join-button.tsx
 │   ├── summary/[token]/page.tsx + opengraph-image.tsx
@@ -36,27 +36,29 @@ clear/
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
 │       ├── admin.ts                       # adminDeleteGroup, adminDeleteUser (platform admin only)
 │       ├── subscription.ts                # activatePlusDemo, cancelPlusDemo
+│       ├── interactions.ts                # addReaction, raiseQuestion, raiseDispute, cancelMyDispute, acceptDispute, declineDispute, addComment, deleteComment, fetchMemberStatsAction
 │       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
 │   ├── api/
 │   │   ├── groups/[id]/export/route.ts, push/subscribe/route.ts, push/unsubscribe/route.ts
 │   │   └── unsubscribe/route.ts           # email unsubscribe (HMAC-verified)
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
-│   ├── expense/  (expense-card, swipeable-expense-card, expense-detail-sheet, expense-filters, split-editor, quick-add-bar, chat-import-dialog, ...)
+│   ├── expense/  (expense-card, swipeable-expense-card, expense-detail-sheet, expense-filters, split-editor, quick-add-bar, chat-import-dialog, question-form, dispute-form, thread-comment-input, ...)
 │   ├── trip/     (trip-card, trip-card-nav-sheet, trip-card-share-drawer, invite-section, group-balance-badge [async RSC], cover-photo-picker, budget-bar, narrative-section, adherence-card, settle-balance-badge, insights-summary-badge, nest-monthly-badge, group-activity-feed, ...)
 │   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
-│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, mobile-nav, group-mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo, invite-qr-sheet, swipe-hint, ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
+│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, member-profile-sheet, mobile-nav, group-mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo, invite-qr-sheet, swipe-hint, ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
 ├── hooks/  use-trip-realtime.ts, use-warn-before-leave.ts, use-speech-recognition.ts, use-push-subscription.ts, use-recent-categories.ts
 ├── lib/
-│   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth, activity).ts
+│   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth, activity, interactions).ts
 │   ├── supabase/server.ts, client.ts, admin.ts
 │   ├── demo/seed-demo-trip.ts + seed-demo-nest.ts
 │   ├── tour/types.ts + steps.ts
 │   ├── group-config.ts, categories.ts
 │   ├── insights/trip-insights.ts + all-trips-insights.ts + all-nests-insights.ts + group-roles.ts
 │   ├── parser/parse-expense.ts
+│   ├── interactions/split-transforms.ts + split-transforms.test.ts   # pure dispute auto-resolve transforms (20 tests)
 │   ├── splits/compute.ts + compute.test.ts
 │   ├── settle/optimize.ts + optimize.test.ts
 │   ├── validations/trip.ts + expense.ts + settlement.ts
@@ -66,6 +68,51 @@ clear/
 ├── drizzle/policies.sql, indexes.sql
 ├── drizzle.config.ts, proxy.ts, vercel.json
 ```
+
+---
+
+## Expense Social Layer
+
+### Thread page — `app/(app)/groups/[id]/expenses/[expenseId]/thread/page.tsx`
+RSC. Auth: `getCurrentUser()` → redirect `/login`; `getMembership()` → 404. Fetches in parallel: group+members, expense row, `fetchExpenseCommentsAction` (fresh, bypasses cache), `getExpenseReactions`, `getExpenseDisputes`.
+
+Sections (top → bottom):
+1. **Reactions summary** — groups by emoji, shows count + label pills
+2. **Pending dispute card** — Accept / Decline for payer or admin (inline `"use server"` form actions)
+3. **`ThreadCommentSection`** — client component; owns optimistic comment state for the thread page; renders `ThreadDiscussion` (bubble UI) + sticky `ThreadCommentInput` at `fixed bottom-nav-safe`
+4. **Resolved disputes** — historical ✅/❌ section
+
+### Expense detail sheet — `components/expense/expense-detail-sheet.tsx`
+WhatsApp-style single-scroll bottom sheet. Key behaviours:
+- **Header**: category icon + title + ✏️ edit (if `canEdit`) + ✕ close. No separate footer edit button.
+- **Reactions**: compact `rounded-full` pills — only 👍 (thumbs_up), ❓ (opens `QuestionForm`), ⚠️ (opens `DisputeForm`). `seen` removed from manual pills.
+- **Auto-seen**: `markSeenAction` fires on every open (`useEffect([isOpen])`). Upsert — no toggle, no duplicates. Passive `👁 Seen by N members` receipt shown in audit trail.
+- **Seen count optimistic**: if RSC hasn't confirmed current user yet, display `rscCount + 1` immediately.
+- **Reaction count optimistic**: `getDisplayCount(emoji)` applies ±1 delta vs the RSC-confirmed value so count updates instantly on tap without waiting for `router.refresh()`.
+- **Comments**: fetched fresh via `fetchExpenseCommentsAction` on open; skeleton shown while loading (`CommentSkeleton` — 2 shimmer bubbles). Cached per expense instance; re-fetched when `expense.id` changes.
+- **Auto-scroll**: `scrollToLatest()` uses double-`requestAnimationFrame` + `scrollBodyRef.current.scrollTop = scrollHeight`. Fires from fetch callback (first open) AND from `useEffect([isOpen])` for cached subsequent opens.
+- **Optimistic post**: bubble appears immediately; replaced with server data after `fetchExpenseCommentsAction`; on DB error, bubble stays with `isOptimistic: false`.
+- **Footer**: compact `ThreadCommentInput` always visible (iMessage style).
+
+### `ThreadDiscussion` — `components/expense/thread-discussion.tsx`
+Pure display component. Props: `comments: OptimisticComment[]`, `currentMemberId`, `isAdmin`, `onDelete`. Bubble layout: own messages right (cyan gradient, `rounded-br-sm`), others left (slate, `rounded-bl-sm`). Exports `OptimisticComment = CommentRow & { isOptimistic?: boolean }`.
+
+### `ThreadCommentInput` — `components/expense/thread-comment-input.tsx`
+Two modes: **compact** (sheet footer — auto-resize textarea, `Enter` sends, icon-only send button) and **full** (thread page — 2-row textarea, `⌘↵` hint, "Send" label). Props: `onPost`, `isSubmitting`, `compact?`. Parent owns the server action call; component just calls `onPost(content, mentionedIds)`.
+
+### Interaction actions — `app/actions/interactions.ts`
+- `markSeenAction(expenseId, groupId)` — upsert seen reaction, `onConflictDoNothing`. No return value. Called fire-and-forget.
+- `fetchExpenseCommentsAction(expenseId, groupId)` — bypasses `unstable_cache`; returns fresh `CommentRow[]`. DB errors return `[]` (never throws). Used by both detail sheet and thread page RSC.
+- All other mutations return `{ ok: true } | { ok: false, error }` and call `revalidateTag(`interactions-${groupId}`, "max")`.
+
+### Inline server actions in RSC (thread page pattern)
+```tsx
+<form action={async () => { "use server"; await acceptDispute(id); }}>
+```
+Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the thread page.
+
+### Interaction mutations — always call `router.refresh()` after success
+`ExpenseDetailSheet` calls `router.refresh()` after every successful interaction so RSC-fetched `interactionCounts` update without full navigation. Pattern applies to: `handleReaction`, `handleAcceptDispute`, `handleDeclineDispute`, `handlePost` (comment), `handleDeleteComment`, `QuestionForm.onSuccess`, `DisputeForm.onSuccess`.
 
 ---
 

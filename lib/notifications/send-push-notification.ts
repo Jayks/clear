@@ -6,6 +6,76 @@ import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { formatCurrency } from "@/lib/utils";
 import { groups } from "@/lib/db/schema/groups";
 
+// ── Targeted single-user push ─────────────────────────────────────────────────
+
+interface PushToUserParams {
+  /** Supabase auth user ID of the recipient */
+  targetUserId: string;
+  /** Group the notification originates from — used to check notifications_muted */
+  groupId: string;
+  title: string;
+  body: string;
+  /** Deep-link URL opened when the notification is tapped */
+  url: string;
+  /** Optional extra data forwarded to the service worker (e.g. disputeId for Accept action) */
+  data?: Record<string, string>;
+}
+
+export async function sendPushToUser(params: PushToUserParams): Promise<void> {
+  const { targetUserId, groupId, title, body, url, data } = params;
+
+  // Check the recipient hasn't muted this group
+  const [membership] = await db
+    .select({ notificationsMuted: groupMembers.notificationsMuted })
+    .from(groupMembers)
+    .where(
+      and(
+        eq(groupMembers.groupId, groupId),
+        eq(groupMembers.userId, targetUserId)
+      )
+    );
+
+  if (!membership || membership.notificationsMuted) return;
+
+  const subs = await db
+    .select()
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.userId, targetUserId));
+
+  if (subs.length === 0) return;
+
+  const webpush = (
+    (await import("web-push")) as unknown as { default: typeof webpushType }
+  ).default;
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+
+  const payload = JSON.stringify({ title, body, url, ...(data ?? {}) });
+
+  await Promise.all(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+      } catch (err: unknown) {
+        if (
+          typeof err === "object" &&
+          err !== null &&
+          "statusCode" in err &&
+          (err as { statusCode: number }).statusCode === 410
+        ) {
+          await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, sub.id));
+        }
+      }
+    })
+  );
+}
+
 interface PushParams {
   groupId: string;
   description: string;

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenses, getGroupTemplates } from "@/lib/db/queries/expenses";
 import { getGroupName } from "@/lib/db/queries/meta";
+import { getExpenseInteractionCounts } from "@/lib/db/queries/interactions";
 import { ArrowLeft, Plus, Receipt } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -38,6 +39,12 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   const { group, members, currentMember, currentUser } = data;
   const isAdmin = currentMember?.role === "admin";
   const isNest = group.groupType === "nest";
+  const currentMemberId = currentMember?.id ?? "";
+
+  // Fetch interaction counts (reactions, comments, disputes) for all expenses on this page
+  const interactionCounts = expenses.length > 0
+    ? await getExpenseInteractionCounts(expenses.map((e) => e.id), currentMemberId)
+    : {};
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const templateList = isNest ? templates : [];
 
@@ -131,11 +138,13 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             expenses={expenses}
             members={members}
             currentUserId={currentUser.id}
+            currentMemberId={currentMemberId}
             isAdmin={isAdmin}
             currency={group.defaultCurrency}
             groupStartDate={group.startDate}
             groupEndDate={group.endDate}
             groupByMonth={isNest}
+            interactionCounts={interactionCounts}
           />
         </>
       )}

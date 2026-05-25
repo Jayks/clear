@@ -191,6 +191,74 @@ CREATE POLICY "subscriptions_select_own" ON subscriptions
 -- Not managed by drizzle-kit — run indexes.sql once alongside this file.
 
 
+-- ── expense_reactions ────────────────────────────────────────────────────────
+
+alter table expense_reactions enable row level security;
+
+-- Any group member can read, insert, update, or delete reactions within their group.
+-- Ownership (only delete your own) is enforced in server actions.
+create policy "reactions: member access" on expense_reactions
+  for all to authenticated
+  using (
+    exists (
+      select 1 from group_members
+      where group_members.group_id = expense_reactions.group_id
+        and group_members.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from group_members
+      where group_members.group_id = expense_reactions.group_id
+        and group_members.user_id = auth.uid()
+    )
+  );
+
+
+-- ── expense_comments ──────────────────────────────────────────────────────────
+
+alter table expense_comments enable row level security;
+
+create policy "comments: member access" on expense_comments
+  for all to authenticated
+  using (
+    exists (
+      select 1 from group_members
+      where group_members.group_id = expense_comments.group_id
+        and group_members.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from group_members
+      where group_members.group_id = expense_comments.group_id
+        and group_members.user_id = auth.uid()
+    )
+  );
+
+
+-- ── expense_disputes ──────────────────────────────────────────────────────────
+
+alter table expense_disputes enable row level security;
+
+create policy "disputes: member access" on expense_disputes
+  for all to authenticated
+  using (
+    exists (
+      select 1 from group_members
+      where group_members.group_id = expense_disputes.group_id
+        and group_members.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from group_members
+      where group_members.group_id = expense_disputes.group_id
+        and group_members.user_id = auth.uid()
+    )
+  );
+
+
 -- ── display_name backfill ─────────────────────────────────────────────────────
 -- Run once after first users join
 

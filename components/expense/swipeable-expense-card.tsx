@@ -9,6 +9,7 @@ import { ExpenseCard } from "./expense-card";
 import { ExpenseDetailSheet } from "./expense-detail-sheet";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
+import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 
 const REVEAL_WIDTH = 76;
 const SNAP_THRESHOLD = 40;
@@ -18,13 +19,15 @@ interface Props {
   expense: Expense;
   members: GroupMember[];
   currentUserId: string;
+  currentMemberId?: string;
   isAdmin: boolean;
   onDelete?: (id: string) => void;
   onDeleteFail?: (id: string) => void;
+  interactionCount?: ExpenseInteractionCount;
 }
 
 export function SwipeableExpenseCard(props: Props) {
-  const { expense, onDelete, onDeleteFail } = props;
+  const { expense, onDelete, onDeleteFail, interactionCount, currentMemberId } = props;
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const x = useMotionValue(0);
   // Delete zone starts REVEAL_WIDTH px to the right of its resting position (hidden).
@@ -98,9 +101,11 @@ export function SwipeableExpenseCard(props: Props) {
           expense={expense}
           members={props.members}
           currentUserId={props.currentUserId}
+          currentMemberId={currentMemberId ?? ""}
           isAdmin={props.isAdmin}
           isOpen={showDetail}
           onClose={() => setShowDetail(false)}
+          interactionCount={interactionCount}
         />
       </>
     );
@@ -130,9 +135,11 @@ export function SwipeableExpenseCard(props: Props) {
         expense={expense}
         members={props.members}
         currentUserId={props.currentUserId}
+        currentMemberId={currentMemberId ?? ""}
         isAdmin={props.isAdmin}
         isOpen={showDetail}
         onClose={() => setShowDetail(false)}
+        interactionCount={interactionCount}
       />
 
       {/* Delete zone — starts outside the right edge, slides in as card moves left */}

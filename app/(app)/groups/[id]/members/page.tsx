@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
-import { ArrowLeft, Crown, UserPlus } from "lucide-react";
+import { ArrowLeft, UserPlus } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { MemberAvatar } from "@/components/shared/member-avatar";
-import { getMemberName } from "@/lib/utils";
 import { AddGuestForm } from "./add-guest-form";
-import { RemoveMemberButton } from "./remove-member-button";
+import { MemberListClient } from "./member-list-client";
 import { InviteSection } from "@/components/trip/invite-section";
 import { getGroupConfig } from "@/lib/group-config";
 import { getMemberNudge } from "@/lib/subscription/gates";
@@ -32,6 +30,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
   const config = getGroupConfig(group.groupType);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
+  const currentMemberId = currentMember?.id ?? "";
 
   return (
     <div className="max-w-xl mx-auto">
@@ -49,38 +48,15 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
       </h1>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{group.name}</p>
 
-      {/* Member list */}
-      <div className="glass rounded-2xl divide-y divide-white/40 dark:divide-slate-700/40 mb-4">
-        {members.map((member) => {
-          const isSelf = member.userId === currentUser.id;
-          const isAdminMember = member.role === "admin";
-
-          return (
-            <div key={member.id} className="flex items-center gap-3 px-4 py-3">
-              <MemberAvatar name={getMemberName(member)} size="sm" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                  {isSelf ? `${getMemberName(member)} (you)` : getMemberName(member)}
-                  {member.guestName && (
-                    <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500 font-normal">guest</span>
-                  )}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {isAdminMember && (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
-                    <Crown className="w-3 h-3" />
-                    Admin
-                  </span>
-                )}
-                {isAdmin && !isSelf && !isAdminMember && (
-                  <RemoveMemberButton groupId={group.id} memberId={member.id} />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Member list — tappable, opens profile sheet */}
+      <MemberListClient
+        members={members}
+        currentUserId={currentUser.id}
+        currentMemberId={currentMemberId}
+        isAdmin={isAdmin}
+        groupId={group.id}
+        currency={group.defaultCurrency}
+      />
 
       {/* Add guest */}
       {isAdmin && (

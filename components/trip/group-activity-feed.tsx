@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Receipt, ArrowLeftRight, UserPlus } from "lucide-react";
+import { Receipt, ArrowLeftRight, UserPlus, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { getGroupActivity } from "@/lib/db/queries/activity";
@@ -21,7 +21,7 @@ export function ActivityFeedSkeleton() {
         <div className="h-3 w-12 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
       </div>
       <div className="space-y-1.5">
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
             className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/50 animate-pulse"
@@ -38,6 +38,9 @@ function EventIcon({ type }: { type: ActivityEvent["type"] }) {
   }
   if (type === "settlement") {
     return <ArrowLeftRight className="w-2.5 h-2.5 text-emerald-500" />;
+  }
+  if (type === "dispute") {
+    return <AlertTriangle className="w-2.5 h-2.5 text-amber-500" />;
   }
   return <UserPlus className="w-2.5 h-2.5 text-violet-500" />;
 }
@@ -56,6 +59,11 @@ function getPrimaryText(event: ActivityEvent, currentMemberId: string | undefine
     return `${event.actorName} paid ${event.otherName}`;
   }
 
+  if (event.type === "dispute") {
+    const who = isActor ? "You" : event.actorName;
+    return `${who} raised a dispute on ${event.description}`;
+  }
+
   // member_joined
   return isActor ? "You joined the group" : `${event.actorName} joined`;
 }
@@ -70,11 +78,14 @@ function getMetaText(event: ActivityEvent): string {
   if (event.type === "settlement") {
     return `Settlement · ${relTime}`;
   }
+  if (event.type === "dispute") {
+    return `Dispute · ${relTime}`;
+  }
   return relTime;
 }
 
 export async function GroupActivityFeed({ groupId, currentMemberId, groupType }: Props) {
-  const limit = groupType === "nest" ? 5 : 3;
+  const limit = 5;
   const events = await getGroupActivity(groupId, limit as 3 | 5);
 
   return (
@@ -108,14 +119,18 @@ export async function GroupActivityFeed({ groupId, currentMemberId, groupType }:
             const primaryText = getPrimaryText(event, currentMemberId);
             const metaText = getMetaText(event);
             const amount =
-              event.type !== "member_joined" ? event.amount : null;
+              (event.type === "expense" || event.type === "settlement") ? event.amount : null;
             const currency =
-              event.type !== "member_joined" ? event.currency : null;
+              (event.type === "expense" || event.type === "settlement") ? event.currency : null;
+            const href =
+              event.type === "dispute"
+                ? `/groups/${groupId}/expenses/${event.expenseId}/thread`
+                : `/groups/${groupId}/expenses`;
 
             return (
               <Link
                 key={event.id}
-                href={`/groups/${groupId}/expenses`}
+                href={href}
                 className="glass-sm rounded-xl px-3 py-2.5 flex items-center gap-3 hover:shadow-md transition-shadow"
               >
                 {/* Avatar with event-type badge */}

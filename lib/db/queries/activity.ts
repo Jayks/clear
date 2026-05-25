@@ -31,6 +31,18 @@ export type ActivityEvent =
       activityAt: Date;
       actorMemberId: string;
       actorName: string;
+    }
+  | {
+      type: "dispute";
+      id: string;
+      activityAt: Date;
+      actorMemberId: string;
+      actorName: string;
+      /** The expense description this dispute is on */
+      description: string;
+      /** "question" | "remove_me" | "change_share" | "split_equal" | "other" */
+      category: string;
+      expenseId: string;
     };
 
 async function _fetchActivity(groupId: string, limit: number): Promise<ActivityEvent[]> {
@@ -104,6 +116,26 @@ async function _fetchActivity(groupId: string, limit: number): Promise<ActivityE
         WHERE e2.group_id = ${groupId} AND e2.is_template = false
       ) < 10
 
+    UNION ALL
+
+    SELECT
+      'dispute'                                                       AS type,
+      d.id,
+      d.created_at                                                    AS activity_at,
+      m.id                                                            AS actor_member_id,
+      COALESCE(m.display_name, m.guest_name, 'Member')               AS actor_name,
+      e.description,
+      NULL::text                                                      AS amount,
+      NULL::text                                                      AS currency,
+      d.dispute_type                                                  AS category,
+      e.id                                                            AS other_member_id,
+      NULL::text                                                      AS other_name
+    FROM expense_disputes d
+    JOIN expenses e    ON e.id  = d.expense_id
+    JOIN group_members m ON m.id = d.requester_member_id
+    WHERE e.group_id = ${groupId}
+      AND d.status   = 'pending'
+
     ORDER BY activity_at DESC
     LIMIT ${limit}
   `);
@@ -135,6 +167,16 @@ async function _fetchActivity(groupId: string, limit: number): Promise<ActivityE
         otherName: row.other_name ?? "Member",
         amount: Number(row.amount ?? 0),
         currency: row.currency ?? "INR",
+      };
+    }
+
+    if (row.type === "dispute") {
+      return {
+        ...base,
+        type: "dispute",
+        description: row.description ?? "",
+        category: row.category ?? "other",
+        expenseId: row.other_member_id ?? "",
       };
     }
 

@@ -1,5 +1,6 @@
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
+import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 import { CategoryIcon } from "./category-icon";
 import { formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import { DeleteExpenseButton } from "./delete-expense-button";
@@ -12,12 +13,14 @@ interface ExpenseCardProps {
   expense: Expense;
   members: GroupMember[];
   currentUserId: string;
+  currentMemberId?: string;
   isAdmin: boolean;
   onDelete?: (expenseId: string) => void;
   onDeleteFail?: (expenseId: string) => void;
+  interactionCount?: ExpenseInteractionCount;
 }
 
-export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete, onDeleteFail }: ExpenseCardProps) {
+export function ExpenseCard({ expense, members, currentUserId, currentMemberId, isAdmin, onDelete, onDeleteFail, interactionCount }: ExpenseCardProps) {
   const payer = members.find((m) => m.id === expense.paidByMemberId);
   const payerName = payer ? getMemberName(payer) : "Member";
   const creator = members.find((m) => m.userId === expense.createdByUserId);
@@ -61,6 +64,31 @@ export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete
               {editSuffix && <span className="opacity-60">{editSuffix}</span>}
             </p>
           )}
+          {/* Interaction signal pills */}
+          {interactionCount && (interactionCount.pendingDispute || interactionCount.commentCount > 0) && (
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              {interactionCount.pendingDispute && (
+                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none ${
+                  interactionCount.pendingDispute.type === "question"
+                    ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                    : "bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800"
+                }`}>
+                  {interactionCount.pendingDispute.type === "question" ? "❓" : "⚠️"}
+                  {" "}
+                  {interactionCount.pendingDispute.requestedByMe
+                    ? "Pending"
+                    : interactionCount.pendingDispute.type === "question"
+                    ? "Question"
+                    : "Dispute"}
+                </span>
+              )}
+              {interactionCount.commentCount > 0 && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium leading-none bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  💬 {interactionCount.commentCount}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         {/* Amount shown inline with description on desktop */}
         <p className="hidden sm:block text-base font-semibold text-slate-800 dark:text-slate-100 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -69,7 +97,7 @@ export function ExpenseCard({ expense, members, currentUserId, isAdmin, onDelete
       </div>
 
       {/* Bottom row on mobile: amount on left, actions on right */}
-      <div className="flex items-center gap-2 sm:gap-2 pl-9 sm:pl-0">
+      <div className="flex items-center gap-2 sm:gap-2 pl-9 sm:pl-0" onClick={(e) => e.stopPropagation()}>
         <p className="sm:hidden text-base font-semibold text-slate-800 dark:text-slate-100 tabular mr-auto" style={{ fontFamily: "var(--font-fraunces)" }}>
           {formatCurrency(Number(expense.amount), expense.currency)}
         </p>

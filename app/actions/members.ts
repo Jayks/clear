@@ -3,8 +3,10 @@
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
+import { expenses } from "@/lib/db/schema/expenses";
+import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { addGuestSchema } from "@/lib/validations/trip";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sum, desc } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -134,4 +136,92 @@ export async function joinGroup(token: string) {
   } catch {
     return { ok: false, error: "Failed to join group" } as const;
   }
+}
+
+// ── fetchMemberStatsAction — lazy stats loaded when a member profile sheet opens ─
+
+export type MemberStats = {
+  totalPaid: number;
+  totalOwed: number;
+  recentExpenses: {
+    id: string;
+    description: string;
+    amount: string;
+    currency: string;
+    expenseDate: string;
+    category: string;
+  }[];
+};
+
+export async function fetchMemberStatsAction(
+  memberId: string,
+  groupId: string
+): Promise<MemberStats | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  // Verify the caller is a member of the group
+  const callerMembership = await getMembership(groupId, user.id);
+  if (!callerMembership) return null;
+
+  const [totalPaidRow, totalOwedRow, recentExpenses] = await Promise.all([
+    // Sum of all expenses this member paid
+    db
+      .select({ total: sum(expenses.amount) })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.groupId, groupId),
+          eq(expenses.paidByMemberId, memberId),
+          eq(expenses.isTemplate, false)
+        )
+      ),
+
+    // Sum of this member's share across all splits
+    db
+      .select({ total: sum(expenseSplits.shareAmount) })
+      .from(expenseSplits)
+      .innerJoin(expenses, eq(expenses.id, expenseSplits.expenseId))
+      .where(
+        and(
+          eq(expenseSplits.memberId, memberId),
+          eq(expenses.groupId, groupId),
+          eq(expenses.isTemplate, false)
+        )
+      ),
+
+    // Last 3 expenses this member paid
+    db
+      .select({
+        id:          expenses.id,
+        description: expenses.description,
+        amount:      expenses.amount,
+        currency:    expenses.currency,
+        expenseDate: expenses.expenseDate,
+        category:    expenses.category,
+      })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.groupId, groupId),
+          eq(expenses.paidByMemberId, memberId),
+          eq(expenses.isTemplate, false)
+        )
+      )
+      .orderBy(desc(expenses.expenseDate), desc(expenses.createdAt))
+      .limit(3),
+  ]);
+
+  return {
+    totalPaid: Number(totalPaidRow[0]?.total ?? 0),
+    totalOwed: Number(totalOwedRow[0]?.total ?? 0),
+    recentExpenses: recentExpenses.map((e) => ({
+      id:          e.id,
+      description: e.description,
+      amount:      String(e.amount),
+      currency:    e.currency,
+      expenseDate: e.expenseDate,
+      category:    e.category,
+    })),
+  };
 }

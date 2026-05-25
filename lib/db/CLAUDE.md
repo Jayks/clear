@@ -68,6 +68,48 @@ amount: numeric(12,2), currency, note, settled_at
 CHECK: from_member_id <> to_member_id
 ```
 
+### expense_reactions
+```
+id
+expense_id: uuid fk->expenses(cascade)
+group_id: uuid fk->groups(cascade)
+member_id: uuid fk->group_members(cascade)
+emoji: text   -- 'thumbs_up' | 'seen'
+created_at: timestamptz
+UNIQUE: (expense_id, member_id, emoji)
+```
+Schema: `lib/db/schema/expense-reactions.ts`. RLS: group members read/write own group.
+
+### expense_comments
+```
+id
+expense_id: uuid fk->expenses(cascade)
+group_id: uuid fk->groups(cascade)
+member_id: uuid fk->group_members(cascade)
+content: text NOT NULL
+mentioned_member_ids: uuid[] default '{}'
+created_at: timestamptz
+```
+Schema: `lib/db/schema/expense-comments.ts`. RLS: group members read; own or admin delete.
+
+### expense_disputes
+```
+id
+expense_id: uuid fk->expenses(cascade)
+group_id: uuid fk->groups(cascade)
+requested_by_member_id: uuid fk->group_members(cascade)
+type: text   -- 'question' | 'remove_me' | 'change_share' | 'split_equal' | 'other'
+status: text default 'pending'   -- 'pending' | 'accepted' | 'declined' | 'cancelled'
+requested_amount: numeric(12,2) nullable   -- for 'change_share' type
+message: text nullable
+resolved_at: timestamptz nullable
+resolved_by_member_id: uuid nullable
+created_at: timestamptz
+```
+Schema: `lib/db/schema/expense-disputes.ts`. RLS: group members read; payer/admin resolve.
+
+**Auto-resolve**: `accepted` disputes of type `remove_me`, `change_share`, `split_equal` trigger pure-function transforms in `lib/interactions/split-transforms.ts` (20 Vitest tests) then call `updateExpense` + `revalidateTag` inside `acceptDispute` action.
+
 ### push_subscriptions
 ```
 id
@@ -120,6 +162,16 @@ Always two args: `revalidateTag(\`group-${groupId}\`, "max")` — single-arg for
 `getBalances(groupId, defaultCurrency)` — filters to `defaultCurrency` expenses only. Returns `{ balances, suggestions, hasMixedCurrencies }`. Wrapped in `unstable_cache` tagged `balances-${groupId}`. Must call `revalidateTag('balances-${groupId}', 'max')` on every action touching expenses or settlements: `addExpense`, `updateExpense`, `duplicateExpense`, `deleteExpense`, `logFromTemplate`, `autoLogDueTemplates`, `recordSettlement`, `deleteSettlement`.
 
 **CTE alias pitfall**: 4 CTE aliases must be unique (`paid_total`, `owed_total`, `sent_total`, `received_total`) — Postgres raises "column reference is ambiguous" if all named `total`.
+
+### Interaction queries — `lib/db/queries/interactions.ts`
+
+Two exported functions:
+- `getExpenseInteractionCounts(expenseIds[], currentMemberId)` — batch, **no cache** (called at RSC render time per page). Returns `Record<expenseId, ExpenseInteractionCount>`. Each count includes `commentCount`, `reactionCounts` (per emoji), `myReaction`, and `pendingDispute` (type + requestedByMe).
+- `getExpenseInteractions(expenseId, groupId)` — per-expense detail: full reactions, comments (with member info), disputes. Cached `interactions-${groupId}`; invalidated by every action in `app/actions/interactions.ts`.
+
+**Cache tag**: `interactions-${groupId}` — call `revalidateTag(\`interactions-${groupId}\`, 'max')` after any reaction, comment, or dispute mutation.
+
+**`ExpenseInteractionCount` type** — use `import type` in client components to avoid bundling server-only DB modules.
 
 ### Activity feed queries — `lib/db/queries/activity.ts`
 

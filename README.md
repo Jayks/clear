@@ -19,7 +19,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Quick-add expenses** — type a natural description from any group card; AI parses the amount, payer, and split automatically
 - **Quick-nav from card** — tap `⋯` (always visible) or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
-- **Expense detail** — tap any expense card to see the full split breakdown, notes, and audit trail in a bottom sheet
+- **Expense detail** — tap any expense card to open a WhatsApp-style bottom sheet: amount, split breakdown, notes, compact reaction pills, pending dispute card, and an inline comment thread with a persistent footer input — no separate page needed for the common case
 - **Expense search** — instant search across description and category; filters and pagination compose naturally
 - **Expense audit trail** — every card and edit page shows who logged the expense and who last edited it, with relative timestamps
 - **Category recents** — the last 3 used categories appear as quick-tap pills above the full category selector in the expense form (separate per group type)
@@ -28,6 +28,13 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Minimum-transaction settlement** — greedy optimizer computes the fewest payments to clear all debts
 - **UPI pay** — direct payment links on the settle-up page
 - **Balance at a glance** — every group card shows your net position (owe / owed / settled / no expenses yet), streaming in without blocking the page
+- **Enriched group overview cards** — the Settle Up card shows your live balance ("You owe ₹500" / "Owed ₹300" / "All settled ✓"); Expenses shows total spend for trips or this month's spend for nests; Insights shows the top spending category — all stream in via Suspense without blocking navigation
+- **Activity feed** — the group home page shows the last 5 recent events (expenses added, settlements recorded, member joins, disputes raised) with actor avatars, event-type icon badges, "You" personalisation, and relative timestamps; dispute events link directly to the expense thread
+- **Expense reactions** — tap 👍 on any expense detail sheet to react; opening the sheet automatically marks the expense as seen (WhatsApp-style read receipt); 👁 Seen by N members appears in the audit trail; reaction counts update optimistically on tap and surface as pills on expense cards
+- **Questions & disputes** — any member can raise a ❓ question or ⚠️ dispute on an expense; dispute types include "Remove me", "Change my share", "Split equally", or a free-text message; actionable types auto-resolve when the payer accepts
+- **Inline comments** — comment thread lives directly inside the expense detail sheet (WhatsApp-style bubbles, own messages right in cyan, others left in slate); @mention autocomplete with dropdown; optimistic posting — bubble appears instantly before server confirms; comments load with a shimmer skeleton and auto-scroll to the latest on open
+- **Expense thread page** — deep-link URL (`/thread`) for each expense; used by notification links and activity feed; shows reactions summary, pending dispute management, full comment history, and resolved disputes
+- **Member profile sheets** — tap any member on the Members page or Settle Up page to open a bottom sheet showing their net balance, total paid, total share, and last 3 expenses paid
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
 - **Cover photo upload** — pick a photo from Unsplash or upload from your device; stored in Supabase Storage
@@ -109,7 +116,7 @@ pnpm dev
 1. Create a project at [supabase.com](https://supabase.com)
 2. Enable Google OAuth under Authentication → Providers
 3. Add `http://localhost:3000/**` to Authentication → URL Configuration → Redirect URLs
-4. Run `drizzle/policies.sql` in the SQL Editor to apply RLS policies
+4. Run `drizzle/policies.sql` in the SQL Editor to apply RLS policies (includes policies for `expense_reactions`, `expense_comments`, and `expense_disputes`)
 5. Enable Realtime for tables: `expenses`, `expense_splits`, `settlements`, `group_members`
 6. Create a Storage bucket named `cover-photos` (public, 5 MB limit) and run the Storage RLS policies from CLAUDE.md
 7. Generate VAPID keys: `node -e "const wp=require('web-push');console.log(wp.generateVAPIDKeys())"` and add to `.env.local`
@@ -140,17 +147,17 @@ pnpm seed:temple      # seed South India temple tour
 
 ```
 app/
-  (app)/          — authenticated app (groups, expenses, insights, settle, upgrade, settings)
+  (app)/          — authenticated app (groups, expenses, expense thread, insights, settle, upgrade, settings)
   (auth)/         — login page
   api/pwa-icon/   — PWA icon endpoint (192 + 512 px, edge runtime)
   manifest.ts     — PWA manifest
   icon.tsx        — favicon (32 px)
   page.tsx        — landing / marketing page
 components/
-  expense/        — expense cards, quick-add sheet, split editor
-  trip/           — group cards, cover photo picker, budget bar
+  expense/        — expense cards, quick-add sheet, split editor, detail sheet (WhatsApp-style), reaction/question/dispute forms, thread discussion (bubble UI), thread comment input
+  trip/           — group cards, cover photo picker, budget bar, overview badge RSCs (balance, insights, activity feed)
   insights/       — charts and insights tabs
-  shared/         — clear-logo, nav, skeletons, animated-list, tour layer
+  shared/         — clear-logo, nav, skeletons, animated-list, tour layer, member profile sheet
   tour/           — tour context and spotlight layer
 lib/
   db/             — Drizzle schema, queries, auth

@@ -38,3 +38,29 @@ create index if not exists idx_settlements_group
 -- The composite (group_id, user_id) index is not used when filtering by user_id alone
 create index if not exists idx_group_members_user
   on group_members (user_id);
+
+-- ── Reactions, Comments, Disputes ─────────────────────────────────────────────
+
+-- Batch count fetch: WHERE expense_id = ANY(?) for reactions
+create index if not exists idx_reactions_expense
+  on expense_reactions (expense_id);
+
+-- RLS subquery: WHERE group_id = ? for reactions
+create index if not exists idx_reactions_group
+  on expense_reactions (group_id);
+
+-- Thread page + count fetch: WHERE expense_id = ANY(?) for comments
+create index if not exists idx_comments_expense
+  on expense_comments (expense_id);
+
+-- RLS subquery for comments
+create index if not exists idx_comments_group
+  on expense_comments (group_id);
+
+-- Dispute lookup by expense (detail sheet + card signal)
+create index if not exists idx_disputes_expense
+  on expense_disputes (expense_id);
+
+-- Activity feed + card signal: pending disputes per group
+create index if not exists idx_disputes_group_status
+  on expense_disputes (group_id, status);

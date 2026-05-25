@@ -99,10 +99,39 @@ All streamed via `<Suspense>`, cached with existing tags — no action file chan
 - `components/trip/settle-balance-badge.tsx` — live net balance on Settle Up card. Calls `getBalances()`, tagged `balances-${groupId}`.
 - `components/trip/insights-summary-badge.tsx` — top spending category on Insights card. Calls `getTopCategory()`, tagged `balances-${groupId}`.
 - `components/trip/nest-monthly-badge.tsx` — this month's spend on Expenses card (nests only). Calls `getThisMonthSpent()`, cache key includes year+month.
-- `components/trip/group-activity-feed.tsx` — recent activity feed (3 items trips / 5 nests) after budget bar. Tagged `group-${groupId}` + `balances-${groupId}`.
+- `components/trip/group-activity-feed.tsx` — recent activity feed (5 items, both trips and nests) after budget bar. Tagged `group-${groupId}` + `balances-${groupId}`.
 
 ### Expense Detail Sheet
-`components/expense/expense-detail-sheet.tsx` — bottom sheet on expense card tap. Self-contained inside `SwipeableExpenseCard`. Fetches splits on demand via `fetchExpenseSplitsAction` (auth-checked, returns `ExpenseSplit[]`). Escape key closes.
+`components/expense/expense-detail-sheet.tsx` — bottom sheet on expense card tap. Self-contained inside `SwipeableExpenseCard`. Fetches splits on demand via `fetchExpenseSplitsAction`. Also contains:
+- **Reaction bar** — 👍 (thumbs_up) and ✓ (seen) toggle via `addReaction`; ❓ opens `QuestionForm`; ⚠️ opens `DisputeForm`. All call `router.refresh()` on success so card pills update without navigation.
+- **Dispute status card** — shows when a `pendingDispute` exists; payer/admin see Accept & Decline buttons.
+- **Thread link** — "Discussion (N)" card linking to `/groups/${groupId}/expenses/${expenseId}/thread`.
+- `QuestionForm` and `DisputeForm` render at `z-[60]` (above the sheet's `z-50`).
+
+### QuestionForm / DisputeForm
+`components/expense/question-form.tsx` and `components/expense/dispute-form.tsx` — portal sheets at `z-[60]`. Both call `router.refresh()` + `onClose()` via the parent's `onSuccess` callback.
+- `DisputeForm`: 4 types — `remove_me`, `change_share` (amount input), `split_equal`, `other` (message). Auto-resolve tip shown for actionable types.
+- `QuestionForm`: plain textarea (280 chars) + "Withdraw" path when `existingDisputeId` present (calls `cancelMyDispute`).
+
+### ThreadCommentInput
+`components/expense/thread-comment-input.tsx` — sticky comment input on the thread page.
+- @mention detection: scans from last `@` before cursor, filters members by name prefix, dropdown uses `onMouseDown + e.preventDefault()` to avoid blur race.
+- `insertMention(member)` replaces `@query` with `@Name ` and refocuses.
+- ⌘↵ / Ctrl+Enter submits. @ button inserts `@` at cursor. Max 500 chars.
+- Final submission validates that all `@Name` tokens are still present before calling `addComment`.
+
+### MemberProfileSheet
+`components/shared/member-profile-sheet.tsx` — portal bottom sheet at `z-50`. Triggered from:
+- **Members page** (`MemberListClient`) — no `netBalance` prop; stats-only view.
+- **Settle page** (`BalanceCardsClient`) — `netBalance` pre-populated from balance calculation; shows emerald/red banner.
+
+Props: `member`, `groupId`, `currency`, `currentMemberId`, `netBalance?`, `isOpen`, `onClose`.
+Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.id` change (prevents stale data across members). Escape key and backdrop close.
+
+### MemberListClient / BalanceCardsClient
+`app/(app)/groups/[id]/members/member-list-client.tsx` — replaces static member list. Each row is `<div role="button">` (not `<button>`) to avoid nested-button violation with `RemoveMemberButton` inside. `stopPropagation` on the actions wrapper prevents Remove button from opening the sheet.
+
+`app/(app)/groups/[id]/settle/balance-cards-client.tsx` — balance cards grid as tappable buttons opening `MemberProfileSheet` with `netBalance`.
 
 ### QuickAddSheet — portal + `isOpen` prop pattern
 Manages its own `createPortal` and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render from parent, never wrap in external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment). Members lazy-fetched on first `isOpen=true` via `fetchedRef`.

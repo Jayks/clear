@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Search, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
+import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 import { CATEGORIES } from "@/lib/categories";
 import { SwipeableExpenseCard } from "./swipeable-expense-card";
 import { formatCurrency, getMemberName } from "@/lib/utils";
@@ -16,16 +17,18 @@ interface Props {
   expenses: Expense[];
   members: GroupMember[];
   currentUserId: string;
+  currentMemberId?: string;
   isAdmin: boolean;
   currency: string;
   groupStartDate?: string | null;
   groupEndDate?: string | null;
   groupByMonth?: boolean;
+  interactionCounts?: Record<string, ExpenseInteractionCount>;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth }: Props) {
+export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts }: Props) {
   const [search, setSearch]        = useState("");
   const [category, setCategory]    = useState<string | null>(null);
   const [payerId, setPayerId]       = useState<string | null>(null);
@@ -105,9 +108,11 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
       expense={expense}
       members={members}
       currentUserId={currentUserId}
+      currentMemberId={currentMemberId}
       isAdmin={isAdmin}
       onDelete={(id) => optimisticDelete(id)}
       onDeleteFail={restoreDelete}
+      interactionCount={interactionCounts?.[expense.id]}
     />
   );
 
@@ -254,10 +259,12 @@ export function ExpenseFilters({ expenses, members, currentUserId, isAdmin, curr
             expenses={displayItems}
             members={members}
             currentUserId={currentUserId}
+            currentMemberId={currentMemberId}
             isAdmin={isAdmin}
             currency={currency}
             onDelete={optimisticDelete}
             onDeleteFail={restoreDelete}
+            interactionCounts={interactionCounts}
           />
         ) : (
           <>
@@ -312,14 +319,16 @@ const MONTH_LABELS: Record<string, string> = {
   "09": "September", "10": "October", "11": "November", "12": "December",
 };
 
-function MonthGroupedList({ expenses, members, currentUserId, isAdmin, currency, onDelete, onDeleteFail }: {
+function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, onDelete, onDeleteFail, interactionCounts }: {
   expenses: Expense[];
   members: GroupMember[];
   currentUserId: string;
+  currentMemberId?: string;
   isAdmin: boolean;
   currency: string;
   onDelete: (id: string) => void;
   onDeleteFail: (id: string) => void;
+  interactionCounts?: Record<string, ExpenseInteractionCount>;
 }) {
   // Group by YYYY-MM, newest month first
   const groups = useMemo(() => {
@@ -355,9 +364,11 @@ function MonthGroupedList({ expenses, members, currentUserId, isAdmin, currency,
                   expense={expense}
                   members={members}
                   currentUserId={currentUserId}
+                  currentMemberId={currentMemberId}
                   isAdmin={isAdmin}
                   onDelete={onDelete}
                   onDeleteFail={onDeleteFail}
+                  interactionCount={interactionCounts?.[expense.id]}
                 />
               ))}
             </div>

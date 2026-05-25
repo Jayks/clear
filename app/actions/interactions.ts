@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { expenseReactions, REACTION_META, type ReactionEmoji } from "@/lib/db/schema/expense-reactions";
 import { expenseComments, MAX_COMMENT_LENGTH } from "@/lib/db/schema/expense-comments";
 import { expenseDisputes, ACTIONABLE_DISPUTE_TYPES, type DisputeType } from "@/lib/db/schema/expense-disputes";
+import { expenseReads } from "@/lib/db/schema/expense-reads";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { groupMembers } from "@/lib/db/schema/group-members";
@@ -13,7 +14,7 @@ import { applyRemoveMe, applyChangeShare, applySplitEqual } from "@/lib/interact
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
 import { sendPushToMembers } from "@/lib/notifications/send-push-notification";
 import { revalidateTag, revalidatePath } from "next/cache";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -197,8 +198,8 @@ export async function addReaction(
 }
 
 // ── markSeen — upserts a "seen" reaction; never toggles off ──────────────────
+// Also stamps expense_reads.last_read_at so unread indicators clear on open.
 // Called automatically when the expense detail sheet opens.
-// Uses onConflictDoNothing so reopening the sheet is always a no-op in the DB.
 
 export async function markSeenAction(expenseId: string, groupId: string) {
   const user = await getCurrentUser();
@@ -207,10 +208,22 @@ export async function markSeenAction(expenseId: string, groupId: string) {
   const membership = await getMembership(groupId, user.id);
   if (!membership) return;
 
-  await db
-    .insert(expenseReactions)
-    .values({ expenseId, groupId, memberId: membership.id, emoji: "seen" })
-    .onConflictDoNothing();
+  await Promise.all([
+    // "seen" reaction — first-time only (read receipt count)
+    db
+      .insert(expenseReactions)
+      .values({ expenseId, groupId, memberId: membership.id, emoji: "seen" })
+      .onConflictDoNothing(),
+
+    // last_read_at — updated every open so the unread dot clears
+    db
+      .insert(expenseReads)
+      .values({ expenseId, groupId, memberId: membership.id })
+      .onConflictDoUpdate({
+        target: [expenseReads.expenseId, expenseReads.memberId],
+        set: { lastReadAt: sql`now()` },
+      }),
+  ]);
 
   revalidateTag(`interactions-${groupId}`, "max");
 }
@@ -620,7 +633,7 @@ export async function declineDispute(disputeId: string) {
   return { ok: true } as const;
 }
 
-// ── addComment — posts a comment, notifies @mentions ─────────────────────────
+// ── addComment — posts a comment, notifies @mentions + thread participants ────
 
 const commentSchema = z.object({
   expenseId:          z.string().uuid(),
@@ -659,39 +672,84 @@ export async function addComment(
   revalidateTag(`interactions-${groupId}`, "max");
   revalidatePath(`/groups/${groupId}/expenses/${expenseId}/thread`);
 
-  // Push to explicitly @mentioned members (exclude the commenter)
+  // ── Push notifications ─────────────────────────────────────────────────────
+
   const actorName = membership.displayName ?? membership.guestName ?? "Someone";
-  const [expense] = await db
-    .select({ description: expenses.description })
-    .from(expenses)
-    .where(eq(expenses.id, expenseId));
 
-  const expenseName = expense?.description ?? "an expense";
-  const groupName = await getGroupName(groupId);
-
-  // Validate mentioned member IDs belong to this group
-  if (parsed.data.mentionedMemberIds.length > 0) {
-    const mentionedRows = await db
+  // Fetch expense + group name + all group members in parallel
+  const [expenseRows, allGroupMembers, groupName] = await Promise.all([
+    db
+      .select({ description: expenses.description, paidByMemberId: expenses.paidByMemberId })
+      .from(expenses)
+      .where(eq(expenses.id, expenseId)),
+    db
       .select({ userId: groupMembers.userId, id: groupMembers.id })
       .from(groupMembers)
-      .where(eq(groupMembers.groupId, groupId));
+      .where(eq(groupMembers.groupId, groupId)),
+    getGroupName(groupId),
+  ]);
 
-    const validIds = new Set(mentionedRows.map((m) => m.id));
-    const pushTargets = mentionedRows.filter(
+  const expense = expenseRows[0];
+  const expenseName = expense?.description ?? "an expense";
+
+  // ── Tier 1: @mentioned members ─────────────────────────────────────────────
+  const mentionedUserIds = new Set<string>();
+  if (parsed.data.mentionedMemberIds.length > 0) {
+    const mentionTargets = allGroupMembers.filter(
       (m) =>
         m.userId &&
         m.userId !== user.id &&
-        parsed.data.mentionedMemberIds.includes(m.id) &&
-        validIds.has(m.id)
+        parsed.data.mentionedMemberIds.includes(m.id)
     );
 
     await Promise.all(
-      pushTargets.map((m) =>
+      mentionTargets.map((m) =>
         sendPushToUser({
           targetUserId: m.userId!,
           groupId,
           title: `${groupName} · @mention`,
           body: `${actorName} mentioned you on "${expenseName}"`,
+          url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+        })
+      )
+    );
+    mentionTargets.forEach((m) => mentionedUserIds.add(m.userId!));
+  }
+
+  // ── Tier 2: payer + prior commenters (not already @mentioned, not commenter) ─
+  if (expense) {
+    // Fetch prior commenters on this expense, excluding the current commenter
+    const priorCommenterRows = await db
+      .select({ memberId: expenseComments.memberId })
+      .from(expenseComments)
+      .where(
+        and(
+          eq(expenseComments.expenseId, expenseId),
+          ne(expenseComments.memberId, membership.id)
+        )
+      );
+
+    const participantMemberIds = new Set([
+      expense.paidByMemberId,
+      ...priorCommenterRows.map((c) => c.memberId),
+    ]);
+    participantMemberIds.delete(membership.id); // exclude commenter
+
+    const participantTargets = allGroupMembers.filter(
+      (m) =>
+        m.userId &&
+        m.userId !== user.id &&
+        !mentionedUserIds.has(m.userId) &&
+        participantMemberIds.has(m.id)
+    );
+
+    await Promise.all(
+      participantTargets.map((m) =>
+        sendPushToUser({
+          targetUserId: m.userId!,
+          groupId,
+          title: `${groupName} · New comment`,
+          body: `${actorName} commented on "${expenseName}"`,
           url: `/groups/${groupId}/expenses/${expenseId}/thread`,
         })
       )

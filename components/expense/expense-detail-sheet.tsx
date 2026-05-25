@@ -30,6 +30,7 @@ import { QuestionForm } from "./question-form";
 import { DisputeForm } from "./dispute-form";
 import { ThreadDiscussion, type OptimisticComment } from "./thread-discussion";
 import { ThreadCommentInput } from "./thread-comment-input";
+import { SeenAvatarStack } from "./seen-avatar-stack";
 
 // ── Comment loading skeleton ─────────────────────────────────────────────────
 function CommentSkeleton() {
@@ -153,10 +154,13 @@ export function ExpenseDetailSheet({
     commentsFetchedRef.current = null;
   }, [expense.id]);
 
-  // Auto-mark as seen when the sheet opens (fire-and-forget, no loading state)
+  // Auto-mark as seen when the sheet opens.
+  // Also refreshes the router so the unread dot on the expense card clears.
   useEffect(() => {
     if (!isOpen) return;
-    markSeenAction(expense.id, expense.groupId).catch(() => {});
+    markSeenAction(expense.id, expense.groupId)
+      .then(() => router.refresh())
+      .catch(() => {});
   }, [isOpen, expense.id, expense.groupId]);
 
   // Scroll to latest when sheet opens with already-cached comments.
@@ -635,18 +639,15 @@ export function ExpenseDetailSheet({
                         })}
                       </p>
                     )}
-                  {/* Seen receipt — optimistic: add 1 if RSC hasn't confirmed current user yet */}
-                  {(() => {
-                    const rscCount = interactionCount?.reactions["seen"] ?? 0;
-                    const seenByRsc = interactionCount?.myReaction === "seen";
-                    const count = seenByRsc ? rscCount : rscCount + 1;
-                    return count > 0 ? (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
-                        <span>👁</span>
-                        <span>Seen by {count} {count === 1 ? "member" : "members"}</span>
-                      </p>
-                    ) : null;
-                  })()}
+                  {/* Seen avatars — optimistic: current user added if RSC not yet confirmed */}
+                  {interactionCount && (
+                    <SeenAvatarStack
+                      seenMemberIds={interactionCount.seenMemberIds}
+                      currentMemberId={currentMemberId}
+                      seenByRsc={interactionCount.myReaction === "seen"}
+                      members={members}
+                    />
+                  )}
                 </div>
               </div>
 

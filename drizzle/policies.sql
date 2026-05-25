@@ -259,6 +259,39 @@ create policy "disputes: member access" on expense_disputes
   );
 
 
+-- ── expense_reads ────────────────────────────────────────────────────────────
+-- Tracks when each member last viewed an expense (drives unread dot on cards).
+-- Run once in Supabase SQL Editor alongside the CREATE TABLE below.
+
+-- CREATE TABLE IF NOT EXISTS expense_reads (
+--   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+--   expense_id uuid NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+--   group_id uuid NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+--   member_id uuid NOT NULL REFERENCES group_members(id) ON DELETE CASCADE,
+--   last_read_at timestamptz NOT NULL DEFAULT now(),
+--   UNIQUE(expense_id, member_id)
+-- );
+
+ALTER TABLE expense_reads ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "expense_reads: member access" ON expense_reads
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM group_members
+      WHERE group_members.group_id = expense_reads.group_id
+        AND group_members.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM group_members
+      WHERE group_members.group_id = expense_reads.group_id
+        AND group_members.user_id = auth.uid()
+    )
+  );
+
+
 -- ── display_name backfill ─────────────────────────────────────────────────────
 -- Run once after first users join
 

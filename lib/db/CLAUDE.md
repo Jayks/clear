@@ -110,6 +110,18 @@ Schema: `lib/db/schema/expense-disputes.ts`. RLS: group members read; payer/admi
 
 **Auto-resolve**: `accepted` disputes of type `remove_me`, `change_share`, `split_equal` trigger pure-function transforms in `lib/interactions/split-transforms.ts` (20 Vitest tests) then call `updateExpense` + `revalidateTag` inside `acceptDispute` action.
 
+### expense_reads
+```
+id
+expense_id: uuid fk->expenses(cascade)
+group_id: uuid fk->groups(cascade)
+member_id: uuid fk->group_members(cascade)
+last_read_at: timestamptz NOT NULL default now()
+UNIQUE: (expense_id, member_id)
+```
+Schema: `lib/db/schema/expense-reads.ts`. RLS: group members full access to their own group's rows.
+Updated by `markSeenAction` on every detail-sheet open (`onConflictDoUpdate` → `last_read_at = now()`). Used by `getExpenseInteractionCounts` to compute `hasUnread`.
+
 ### push_subscriptions
 ```
 id
@@ -166,10 +178,14 @@ Always two args: `revalidateTag(\`group-${groupId}\`, "max")` — single-arg for
 ### Interaction queries — `lib/db/queries/interactions.ts`
 
 Two exported functions:
-- `getExpenseInteractionCounts(expenseIds[], currentMemberId)` — batch, **no cache** (called at RSC render time per page). Returns `Record<expenseId, ExpenseInteractionCount>`. Each count includes `commentCount`, `reactionCounts` (per emoji), `myReaction`, and `pendingDispute` (type + requestedByMe).
+- `getExpenseInteractionCounts(expenseIds[], currentMemberId)` — batch, **no cache** (called at RSC render time per page). Returns `Record<expenseId, ExpenseInteractionCount>`. Runs 4 queries in parallel: reactions, comments (+ `createdAt`), disputes, expense_reads. Fields: `commentCount`, `reactions` (per emoji), `myReaction`, `pendingDispute`, `hasUnread`, `seenMemberIds`.
 - `getExpenseInteractions(expenseId, groupId)` — per-expense detail: full reactions, comments (with member info), disputes. Cached `interactions-${groupId}`; invalidated by every action in `app/actions/interactions.ts`.
 
-**Cache tag**: `interactions-${groupId}` — call `revalidateTag(\`interactions-${groupId}\`, 'max')` after any reaction, comment, or dispute mutation.
+**`hasUnread`** — true when latest comment `created_at > expense_reads.last_read_at` for the current member (or no reads row exists). Used to style the 💬 pill on `ExpenseCard` (cyan/normal = unread, slate/bold = read).
+
+**`seenMemberIds`** — array of member IDs with a `seen` reaction. Passed to `SeenAvatarStack` in the detail sheet.
+
+**Cache tag**: `interactions-${groupId}` — call `revalidateTag(\`interactions-${groupId}\`, 'max')` after any reaction, comment, or dispute mutation. Also invalidated by `markSeenAction`.
 
 **`ExpenseInteractionCount` type** — use `import type` in client components to avoid bundling server-only DB modules.
 

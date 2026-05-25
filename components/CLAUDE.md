@@ -103,9 +103,11 @@ All streamed via `<Suspense>`, cached with existing tags — no action file chan
 
 ### Expense Detail Sheet
 `components/expense/expense-detail-sheet.tsx` — bottom sheet on expense card tap. Self-contained inside `SwipeableExpenseCard`. Fetches splits on demand via `fetchExpenseSplitsAction`. Also contains:
-- **Reaction bar** — 👍 (thumbs_up) and ✓ (seen) toggle via `addReaction`; ❓ opens `QuestionForm`; ⚠️ opens `DisputeForm`. All call `router.refresh()` on success so card pills update without navigation.
+- **Reaction bar** — 👍 (thumbs_up) toggle via `addReaction`; ❓ opens `QuestionForm`; ⚠️ opens `DisputeForm`. All call `router.refresh()` on success so card pills update without navigation.
 - **Dispute status card** — shows when a `pendingDispute` exists; payer/admin see Accept & Decline buttons.
 - **Thread link** — "Discussion (N)" card linking to `/groups/${groupId}/expenses/${expenseId}/thread`.
+- **Seen avatar stack** — `SeenAvatarStack` in the audit trail; shows overlapping `MemberAvatar` circles (max 5 visible + "+N" overflow). Optimistic: adds current user immediately before RSC confirms. Replaces the old "Seen by N members" text.
+- **`markSeenAction` + `router.refresh()`** — fires on every open so the unread dot on the card clears immediately.
 - `QuestionForm` and `DisputeForm` render at `z-[60]` (above the sheet's `z-50`).
 
 ### QuestionForm / DisputeForm

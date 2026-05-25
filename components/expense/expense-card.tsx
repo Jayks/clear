@@ -65,7 +65,7 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
             </p>
           )}
           {/* Interaction signal pills */}
-          {interactionCount && (interactionCount.pendingDispute || interactionCount.commentCount > 0) && (
+          {interactionCount && (interactionCount.hasUnread || interactionCount.pendingDispute || interactionCount.commentCount > 0) && (
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
               {interactionCount.pendingDispute && (
                 <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none ${
@@ -83,7 +83,11 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
                 </span>
               )}
               {interactionCount.commentCount > 0 && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium leading-none bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] leading-none border ${
+                  interactionCount.hasUnread
+                    ? "bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800 font-normal"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-semibold"
+                }`}>
                   💬 {interactionCount.commentCount}
                 </span>
               )}

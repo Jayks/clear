@@ -101,7 +101,8 @@ Pure display component. Props: `comments: OptimisticComment[]`, `currentMemberId
 Two modes: **compact** (sheet footer — auto-resize textarea, `Enter` sends, icon-only send button) and **full** (thread page — 2-row textarea, `⌘↵` hint, "Send" label). Props: `onPost`, `isSubmitting`, `compact?`. Parent owns the server action call; component just calls `onPost(content, mentionedIds)`.
 
 ### Interaction actions — `app/actions/interactions.ts`
-- `markSeenAction(expenseId, groupId)` — upsert seen reaction, `onConflictDoNothing`. No return value. Called fire-and-forget.
+- `markSeenAction(expenseId, groupId)` — upserts `seen` reaction (`onConflictDoNothing`) AND upserts `expense_reads.last_read_at = now()` (`onConflictDoUpdate`). Both writes run in `Promise.all`. No return value. Called fire-and-forget from the detail sheet; the sheet also chains `router.refresh()` after it to clear the unread dot.
+- `addComment(...)` — two-tier push notifications: Tier 1 @mentioned members (`@mention` title), Tier 2 payer + prior commenters not already @mentioned (`New comment` title). Both tiers exclude the commenter and respect `notifications_muted`.
 - `fetchExpenseCommentsAction(expenseId, groupId)` — bypasses `unstable_cache`; returns fresh `CommentRow[]`. DB errors return `[]` (never throws). Used by both detail sheet and thread page RSC.
 - All other mutations return `{ ok: true } | { ok: false, error }` and call `revalidateTag(`interactions-${groupId}`, "max")`.
 

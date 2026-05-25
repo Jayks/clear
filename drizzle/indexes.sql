@@ -64,3 +64,13 @@ create index if not exists idx_disputes_expense
 -- Activity feed + card signal: pending disputes per group
 create index if not exists idx_disputes_group_status
   on expense_disputes (group_id, status);
+
+-- ── expense_reads ─────────────────────────────────────────────────────────────
+
+-- Primary lookup: getExpenseInteractionCounts fetches by (expense_id, member_id)
+create index if not exists idx_reads_expense_member
+  on expense_reads (expense_id, member_id);
+
+-- RLS subquery: WHERE group_id = ? for reads
+create index if not exists idx_reads_group
+  on expense_reads (group_id);

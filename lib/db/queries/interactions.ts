@@ -2,6 +2,7 @@ import { db } from "@/lib/db/client";
 import { expenseReactions, type ReactionEmoji } from "@/lib/db/schema/expense-reactions";
 import { expenseComments } from "@/lib/db/schema/expense-comments";
 import { expenseDisputes, type DisputeType } from "@/lib/db/schema/expense-disputes";
+import { expenseReads } from "@/lib/db/schema/expense-reads";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, inArray, and } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
@@ -47,6 +48,10 @@ export type ExpenseInteractionCount = {
     type: DisputeType;
     requestedByMe: boolean;
   } | null;
+  /** True when there are comments newer than the member's last markSeenAction call. */
+  hasUnread: boolean;
+  /** Member IDs who have a "seen" reaction — used to render the avatar stack. */
+  seenMemberIds: string[];
 };
 
 // ── Batch counts — called from the expenses page (no cache; fresh per render) ─
@@ -60,7 +65,7 @@ export async function getExpenseInteractionCounts(
 ): Promise<Record<string, ExpenseInteractionCount>> {
   if (expenseIds.length === 0) return {};
 
-  const [reactionRows, commentRows, disputeRows] = await Promise.all([
+  const [reactionRows, commentRows, disputeRows, readRows] = await Promise.all([
     db
       .select({
         expenseId: expenseReactions.expenseId,
@@ -71,7 +76,10 @@ export async function getExpenseInteractionCounts(
       .where(inArray(expenseReactions.expenseId, expenseIds)),
 
     db
-      .select({ expenseId: expenseComments.expenseId })
+      .select({
+        expenseId: expenseComments.expenseId,
+        createdAt: expenseComments.createdAt, // needed for hasUnread comparison
+      })
       .from(expenseComments)
       .where(inArray(expenseComments.expenseId, expenseIds)),
 
@@ -89,12 +97,49 @@ export async function getExpenseInteractionCounts(
           eq(expenseDisputes.status, "pending")
         )
       ),
+
+    // Last time this member opened each expense — used for unread dot
+    db
+      .select({ expenseId: expenseReads.expenseId, lastReadAt: expenseReads.lastReadAt })
+      .from(expenseReads)
+      .where(
+        and(
+          inArray(expenseReads.expenseId, expenseIds),
+          eq(expenseReads.memberId, currentMemberId)
+        )
+      ),
   ]);
+
+  // Latest comment timestamp per expense (for hasUnread)
+  const latestCommentAt: Record<string, Date> = {};
+  for (const row of commentRows) {
+    const prev = latestCommentAt[row.expenseId];
+    if (!prev || row.createdAt > prev) latestCommentAt[row.expenseId] = row.createdAt;
+  }
+
+  // Last-read timestamp per expense for this member
+  const readsMap: Record<string, Date> = {};
+  for (const row of readRows) {
+    readsMap[row.expenseId] = row.lastReadAt;
+  }
 
   // Initialise a result entry for every expenseId
   const result: Record<string, ExpenseInteractionCount> = {};
   for (const id of expenseIds) {
-    result[id] = { reactions: {}, myReaction: null, commentCount: 0, pendingDispute: null };
+    const latestAt = latestCommentAt[id];
+    const lastReadAt = readsMap[id];
+    const hasUnread =
+      latestAt !== undefined &&
+      (lastReadAt === undefined || latestAt > lastReadAt);
+
+    result[id] = {
+      reactions: {},
+      myReaction: null,
+      commentCount: 0,
+      pendingDispute: null,
+      hasUnread,
+      seenMemberIds: [],
+    };
   }
 
   for (const row of reactionRows) {
@@ -103,6 +148,7 @@ export async function getExpenseInteractionCounts(
     const emoji = row.emoji as ReactionEmoji;
     entry.reactions[emoji] = (entry.reactions[emoji] ?? 0) + 1;
     if (row.memberId === currentMemberId) entry.myReaction = emoji;
+    if (emoji === "seen") entry.seenMemberIds.push(row.memberId);
   }
 
   for (const row of commentRows) {

@@ -77,11 +77,12 @@ export default function PricingPage() {
               className="flex items-center gap-2.5"
             />
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
             <ThemeToggle />
+            <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1.5" />
             <Link
               href="/login"
-              className="hidden sm:block text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
+              className="hidden sm:inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm"
             >
               Sign in
             </Link>

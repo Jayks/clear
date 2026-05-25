@@ -28,6 +28,8 @@ clear/
 │   │           ├── members/page.tsx, loading.tsx + forms/buttons
 │   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, balance-cards-client.tsx, mark-paid-button, upi-pay-button
 │   │           └── insights/page.tsx + loading.tsx
+│   ├── pricing/page.tsx + plan-cards.tsx   # public — no auth, same nav pattern as changelog
+│   ├── changelog/page.tsx + loading.tsx   # public — 15-release timeline; data in lib/changelog.ts
 │   ├── join/[token]/page.tsx + join-button.tsx
 │   ├── summary/[token]/page.tsx + opengraph-image.tsx
 │   ├── api/groups/[id]/export/route.ts    # CSV download
@@ -63,6 +65,7 @@ clear/
 │   ├── settle/optimize.ts + optimize.test.ts
 │   ├── validations/trip.ts + expense.ts + settlement.ts
 │   ├── analytics.ts, rate-limit.ts, utils.ts
+│   ├── changelog.ts                       # typed static data — 15 ChangelogRelease entries (newest first)
 │   ├── subscription/gates.ts            # getUserPlan, getUserSubscription, getGroupPlan, gates, nudges
 │   └── notifications/expense-email.ts + send-expense-notification.ts + send-push-notification.ts
 ├── drizzle/policies.sql, indexes.sql

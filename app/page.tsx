@@ -66,11 +66,11 @@ export default async function LandingPage() {
           <div className="flex items-center gap-1.5">
             <ThemeToggle />
             {/* ── Text nav links ── */}
-            <Link href="/pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
-              Pricing
-            </Link>
             <Link href="/changelog" className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
               What&apos;s New
+            </Link>
+            <Link href="/pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+              Pricing
             </Link>
             {/* ── Divider ── */}
             <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1.5" />

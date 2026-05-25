@@ -2,6 +2,7 @@ import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { eq, desc, inArray, and, sql, sum } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
 export async function getGroupTotalSpent(groupId: string): Promise<number> {
@@ -17,6 +18,56 @@ export async function getGroupTotalSpent(groupId: string): Promise<number> {
     .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)));
 
   return Number(row?.total ?? 0);
+}
+
+export async function getThisMonthSpent(groupId: string): Promise<number> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1; // 1–12
+  // Include year+month in cache key so a new month gets a fresh fetch automatically
+  const fetchThisMonth = unstable_cache(
+    async () => {
+      const firstOfMonth = `${year}-${String(month).padStart(2, "0")}-01`;
+      const firstOfNext =
+        month === 12
+          ? `${year + 1}-01-01`
+          : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+
+      const [row] = await db
+        .select({ total: sum(expenses.amount) })
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.groupId, groupId),
+            eq(expenses.isTemplate, false),
+            sql`${expenses.expenseDate} >= ${firstOfMonth}`,
+            sql`${expenses.expenseDate} < ${firstOfNext}`
+          )
+        );
+      return Number(row?.total ?? 0);
+    },
+    ["nest-month-spent", groupId, String(year), String(month)],
+    { tags: [`balances-${groupId}`] }
+  );
+  return fetchThisMonth();
+}
+
+export async function getTopCategory(groupId: string): Promise<string | null> {
+  const fetchTop = unstable_cache(
+    async () => {
+      const [row] = await db
+        .select({ category: expenses.category })
+        .from(expenses)
+        .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))
+        .groupBy(expenses.category)
+        .orderBy(desc(sum(expenses.amount)))
+        .limit(1);
+      return row?.category ?? null;
+    },
+    ["top-category", groupId],
+    { tags: [`balances-${groupId}`] }
+  );
+  return fetchTop();
 }
 
 export async function getExpenses(groupId: string) {

@@ -1,0 +1,187 @@
+# Clear — DB & Data Layer Reference
+
+> Loaded when editing `lib/db/**`, `lib/splits/`, `lib/settle/`, `lib/group-config.ts`, `lib/categories.ts`, `drizzle/**`.
+
+---
+
+## Database Schema
+
+Schema files in `lib/db/schema/`. RLS in `drizzle/policies.sql`.
+
+### groups
+```
+id, name, description, cover_photo_url
+group_type: enum('trip', 'nest') default 'trip'
+default_currency: text default 'INR'
+start_date, end_date: date          -- trips only
+budget: numeric(12,2)               -- optional
+itinerary: text                     -- trips only; max 10,000 chars (Zod-only, DB is unlimited)
+is_archived: boolean default false
+is_demo: boolean default false      -- seeded sample group; pinned first
+created_by: uuid
+share_token: uuid unique default gen_random_uuid()
+created_at: timestamptz
+```
+
+### group_members
+```
+id, group_id fk->groups(cascade)
+user_id: uuid nullable
+guest_name: text nullable
+display_name: text nullable
+role: enum('admin','member') default 'member'
+joined_at: timestamptz default now()
+notifications_muted: boolean default false   -- per-group email + push opt-out
+CHECK: exactly one of (user_id, guest_name)
+UNIQUE: (group_id, user_id)
+```
+
+### expenses
+```
+id, group_id fk->groups(cascade), paid_by_member_id fk->group_members
+description: text, category: text   -- text, not enum (validated by Zod + GROUP_CONFIG)
+custom_category: text nullable      -- free-text label when category = 'other'
+amount: numeric(12,2), currency: text, expense_date: date, end_date: date, notes: text
+is_template: boolean default false  -- recurring template (nest)
+recurrence: text                    -- 'monthly' | 'weekly' (templates only)
+source_template_id: uuid nullable
+created_by_user_id: uuid
+updated_by_user_id: uuid nullable   -- set by updateExpense(); null on create
+created_at: timestamptz, updated_at: timestamptz
+```
+
+### expense_splits
+```
+id
+group_id: uuid nullable fk->groups(cascade)   -- added for realtime filtering; always populated on new inserts
+expense_id fk->expenses(cascade), member_id fk->group_members(cascade)
+share_amount: numeric(12,2)
+split_type: enum('equal','exact','percentage','shares')
+split_value: numeric(12,4)
+UNIQUE: (expense_id, member_id)
+```
+
+### settlements
+```
+id, group_id, from_member_id, to_member_id fk->group_members
+amount: numeric(12,2), currency, note, settled_at
+CHECK: from_member_id <> to_member_id
+```
+
+### push_subscriptions
+```
+id
+user_id: uuid fk->auth.users(cascade)
+endpoint: text NOT NULL
+p256dh: text NOT NULL
+auth: text NOT NULL
+created_at: timestamptz
+UNIQUE: (user_id, endpoint)
+```
+RLS: users read/write only their own rows. Schema: `lib/db/schema/push-subscriptions.ts`.
+
+### subscriptions
+```
+id
+user_id: uuid NOT NULL UNIQUE
+plan: text default 'free'           -- 'free' | 'plus'
+status: text default 'trialing'     -- 'trialing' | 'active' | 'cancelled'
+trial_ends_at: timestamptz
+current_period_end: timestamptz
+billing_cycle: text nullable        -- 'monthly' | 'annual'
+admin_override: boolean default false
+razorpay_subscription_id: text nullable
+created_at, updated_at: timestamptz
+```
+Schema: `lib/db/schema/subscriptions.ts`. **Note:** `pnpm db:push` has a pre-existing drizzle-kit bug with `group_members` CHECK constraint — apply new columns via direct SQL in Supabase SQL Editor.
+
+### Supabase Storage — `cover-photos` bucket (run once)
+
+Dashboard → Storage → New bucket: name `cover-photos`, Public, 5 MB limit. Three RLS policies: authenticated insert (folder = `auth.uid()`), public select, authenticated delete own. Files at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has Supabase project hostname in `remotePatterns`.
+
+### Realtime setup — add `expenses`, `expense_splits`, `settlements`, `group_members` to `supabase_realtime` publication (SQL Editor, run once).
+
+---
+
+## Query Patterns & Caching
+
+### `getGroupWithMembers` — cached fetch, itinerary excluded by default
+
+`opts: { full?: boolean }` (default `false`). When false, `itinerary` is `null`. Pass `{ full: true }` only on insights and edit pages. Cached via `unstable_cache` tagged `group-${groupId}` — invalidated by `revalidateTag` only.
+
+### Group cache invalidation — `revalidateTag` required on mutations
+
+Always two args: `revalidateTag(\`group-${groupId}\`, "max")` — single-arg form is a TS error in Next.js 16. Call on: `updateGroup`, `archiveGroup`, `regenerateShareToken`, `addGuestMember`, `removeMember`, `joinGroup`, `claimGuestMember`.
+
+**`getAllGroups()`** — one query returning `{ active, archived }`. Replaces `getGroups()` + `getArchivedGroups()`.
+
+### `getBalances()` — cached, currency-filtered CTE
+
+`getBalances(groupId, defaultCurrency)` — filters to `defaultCurrency` expenses only. Returns `{ balances, suggestions, hasMixedCurrencies }`. Wrapped in `unstable_cache` tagged `balances-${groupId}`. Must call `revalidateTag('balances-${groupId}', 'max')` on every action touching expenses or settlements: `addExpense`, `updateExpense`, `duplicateExpense`, `deleteExpense`, `logFromTemplate`, `autoLogDueTemplates`, `recordSettlement`, `deleteSettlement`.
+
+**CTE alias pitfall**: 4 CTE aliases must be unique (`paid_total`, `owed_total`, `sent_total`, `received_total`) — Postgres raises "column reference is ambiguous" if all named `total`.
+
+### Activity feed queries — `lib/db/queries/activity.ts`
+
+`getGroupActivity(groupId, limit: 3|5)` — union SQL across expenses, settlements, group_members. Cached with tags `['group-${groupId}', 'balances-${groupId}']` — invalidated by both group and balance mutations automatically.
+
+### Overview page badge queries — `lib/db/queries/expenses.ts`
+
+- `getTopCategory(groupId)` — top spending category by SUM(amount). Cached `balances-${groupId}`.
+- `getThisMonthSpent(groupId)` — sum for current calendar month (nests). Cache key includes year+month so new month = fresh fetch automatically. Cached `balances-${groupId}`.
+
+### Join page — existing member redirect + guest claim flow
+
+`app/join/[token]/page.tsx`: (1) existing member → `getMembership()` → immediate `redirect(/groups/${group.id})`; (2) `getGroupByToken()` returns `unclaimedGuests` (null `user_id`) → cyan pill list → `claimGuestMember(token, guestMemberId)` atomically sets `user_id`, clears `guest_name`, sets `displayName` from Google.
+
+`claimGuestMember` in `app/actions/members.ts`. Call `revalidateTag(\`group-${group.id}\`, 'max')` after claim.
+
+### Misc constraints
+
+- `computeTripInsights`: always `{ trip: group, ... }` — do not rename `trip`.
+- `/summary/[token]` returns 404 for nests.
+- **Date-range props**: components use `groupStartDate`/`groupEndDate`; AI `DateContext` uses `groupStart`/`groupEnd`.
+
+---
+
+## Group Config System
+
+`lib/group-config.ts` — single source of truth for type differences:
+
+```typescript
+GROUP_CONFIG = {
+  trip: { labels, showDates, showItinerary, showNarrative, showAdherence, showRecurring, showBudget, categories: TRIP_CATEGORIES },
+  nest: { labels, showDates:false, showItinerary:false, showNarrative:false, showRecurring:true, showBudget:false, categories: NEST_CATEGORIES },
+}
+```
+
+**Trip categories**: food, accommodation, transport, sightseeing, shopping, activities, groceries, tour_package, other
+**Nest categories**: rent, utilities, groceries, subscriptions, food, healthcare, maintenance, supplies, other
+
+Use `getGroupConfig(group.groupType)` — never `group.groupType === 'trip'` inline checks.
+
+---
+
+## Key Algorithms
+
+### Balance formula
+```
+net = totalPaid - totalOwed + settlementsSent - settlementsReceived
+```
+Templates (`is_template = true`) excluded from all balance calculations.
+
+### Recurring expenses (nest only)
+- Templates: `is_template=true`, `recurrence='monthly'|'weekly'`
+- Logged instances: `is_template=false`, `source_template_id=<id>`, `expense_date=first of current month`
+- `getGroupTemplates()` returns each template with `loggedThisMonth` + `lastLoggedDate`
+- Double-logging prevented: button disabled once logged this month
+- **Auto-log on page load**: `autoLogDueTemplates(groupId)` in `app/actions/expenses.ts` called on nest overview page — best-effort (`.catch(() => {})`). Nests only.
+
+### Split computation (`lib/splits/compute.ts`)
+Four modes → `SplitResult[]` with `shareAmount` + `splitValue`:
+- `equal`: divide evenly; `exact`: sum must equal total; `percentage`: sum must equal 100; `shares`: total > 0
+
+Rounding: `Math.round(n * 100) / 100`. Remainder to first row. **16 Vitest tests — all must pass.**
+
+### Settlement optimizer (`lib/settle/optimize.ts`)
+Greedy: creditors/debtors by net, sort desc, match top pairs, emit min transactions. **6 Vitest tests.**

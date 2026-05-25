@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
@@ -6,12 +7,16 @@ import { autoLogDueTemplates } from "@/app/actions/expenses";
 import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { BudgetBar } from "@/components/trip/budget-bar";
 import { ArchiveButton } from "./archive-button";
 import { getGroupConfig } from "@/lib/group-config";
 import type { Metadata } from "next";
 import { InviteSection } from "@/components/trip/invite-section";
+import { GroupActivityFeed, ActivityFeedSkeleton } from "@/components/trip/group-activity-feed";
+import { SettleBalanceBadge, SettleBalanceSkeleton } from "@/components/trip/settle-balance-badge";
+import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components/trip/insights-summary-badge";
+import { NestMonthlyBadge, NestMonthlyBadgeSkeleton } from "@/components/trip/nest-monthly-badge";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -114,7 +119,17 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Expenses</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Log what was spent</p>
+            {isNest ? (
+              <Suspense fallback={<NestMonthlyBadgeSkeleton />}>
+                <NestMonthlyBadge groupId={group.id} defaultCurrency={group.defaultCurrency} />
+              </Suspense>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {totalSpent > 0
+                  ? formatCurrency(totalSpent, group.defaultCurrency)
+                  : "No expenses yet"}
+              </p>
+            )}
           </div>
         </Link>
 
@@ -124,7 +139,17 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Settle up</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Who owes whom</p>
+            <Suspense fallback={<SettleBalanceSkeleton />}>
+              {currentMember ? (
+                <SettleBalanceBadge
+                  groupId={group.id}
+                  currentMemberId={currentMember.id}
+                  defaultCurrency={group.defaultCurrency}
+                />
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">Who owes whom</p>
+              )}
+            </Suspense>
           </div>
         </Link>
 
@@ -134,7 +159,9 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Insights</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Spend analytics</p>
+            <Suspense fallback={<InsightsSummaryBadgeSkeleton />}>
+              <InsightsSummaryBadge groupId={group.id} />
+            </Suspense>
           </div>
         </Link>
       </div>
@@ -162,6 +189,17 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           <BudgetBar spent={totalSpent} budget={Number(group.budget)} currency={group.defaultCurrency} />
         </div>
       )}
+
+      {/* Activity feed */}
+      <div className="mb-6">
+        <Suspense fallback={<ActivityFeedSkeleton />}>
+          <GroupActivityFeed
+            groupId={id}
+            currentMemberId={currentMember?.id}
+            groupType={group.groupType}
+          />
+        </Suspense>
+      </div>
 
       {/* Invite + Archive */}
       {isAdmin && (

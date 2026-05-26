@@ -98,7 +98,7 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
         </label>
         <input
           {...register("description")}
-          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400"
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400"
         />
         {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
       </div>
@@ -114,7 +114,7 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
           inputMode="decimal"
           min="0"
           step="0.01"
-          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 tabular"
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 tabular"
         />
         {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
       </div>
@@ -125,7 +125,7 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Category</label>
           <select
             {...register("category")}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
           >
             {groupConfig.categories.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
@@ -136,7 +136,7 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Repeats</label>
           <select
             {...register("recurrence")}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
           >
             <option value="monthly">Monthly</option>
             <option value="weekly">Weekly</option>
@@ -149,7 +149,7 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Usually paid by</label>
         <select
           {...register("paidByMemberId")}
-          className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
         >
           {members.map((m) => (
             <option key={m.id} value={m.id}>{getMemberName(m)}</option>
@@ -176,7 +176,7 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-2.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full py-3 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {submitting ? "Saving…" : "Save changes"}
       </button>

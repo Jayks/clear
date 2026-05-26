@@ -17,7 +17,7 @@ import { DailySpendBar } from "@/components/insights/daily-spend-bar";
 import { MonthlySpendBar } from "@/components/insights/monthly-spend-bar";
 import type { MonthSpend } from "@/components/insights/monthly-spend-bar";
 import { MemberContributions } from "@/components/insights/member-contributions";
-import { ArrowLeft, BarChart2 } from "lucide-react";
+import { ArrowLeft, BarChart2, PieChart, Sparkles } from "lucide-react";
 import { AdherenceCard } from "@/components/trip/adherence-card";
 import Link from "next/link";
 
@@ -87,12 +87,14 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
     return (
       <div>
         <Link href={`/groups/${id}`}
-          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors">
+          className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <BarChart2 className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-4" />
-          <h2 className="text-lg text-slate-700 dark:text-slate-200 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center mb-5 shadow-lg shadow-cyan-500/25">
+            <BarChart2 className="w-7 h-7 text-white" />
+          </div>
+          <h2 className="text-lg text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
             No expenses yet
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Add some expenses and come back for insights.</p>
@@ -105,7 +107,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
     <div>
       <div className="flex items-center gap-3 mb-6">
         <Link href={`/groups/${id}`}
-          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors">
+          className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div>
@@ -151,6 +153,13 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
       )}
 
       {/* Charts */}
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <PieChart className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Breakdown</span>
+        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="insights-charts">
         <CategoryDonut data={insights.byCategory} currency={currency} />
         {isNest
@@ -192,9 +201,13 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
       )}
 
       {/* Smart insights */}
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-        Smart insights
-      </h2>
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Smart insights</span>
+        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+      </div>
       <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" staggerMs={50}>
         {insights.smartInsights.map((s, i) => (
           <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />

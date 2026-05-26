@@ -39,7 +39,7 @@ export default async function GroupsPage() {
         <Link
           href="/groups/new"
           data-tour="new-trip-btn"
-          className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md shadow-cyan-500/25 transition-all"
+          className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium rounded-xl px-4 py-2.5 shadow-md shadow-cyan-500/25 transition-all"
         >
           <Plus className="w-4 h-4" />
           New group
@@ -103,9 +103,13 @@ export default async function GroupsPage() {
 
           {archived.length > 0 && (
             <div className="mt-10">
-              <h2 className="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <Archive className="w-4 h-4" /> Archived
-              </h2>
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                  <Archive className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                </div>
+                <span className="text-sm font-semibold text-slate-400 dark:text-slate-500">Archived</span>
+                <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-60">
                 {archived.map(({ group, memberCount }) => (
                   <TripCard key={group.id} group={group} memberCount={Number(memberCount)} />

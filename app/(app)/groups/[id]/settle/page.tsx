@@ -28,7 +28,7 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
       <div className="flex items-center gap-3 mb-6">
         <Link
           href={`/groups/${id}`}
-          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
+          className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -40,7 +40,12 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
 
       <Suspense fallback={
         <>
-          <Skeleton className="h-4 w-20 mb-3" />
+          {/* Balances section header skeleton */}
+          <div className="flex items-center gap-2.5 mb-4">
+            <Skeleton className="w-6 h-6 rounded-md shrink-0" />
+            <Skeleton className="h-3.5 w-20" />
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700/50" />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-8">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
@@ -53,10 +58,15 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
               </div>
             ))}
           </div>
-          <Skeleton className="h-4 w-36 mb-3" />
+          {/* Suggested payments section header skeleton */}
+          <div className="flex items-center gap-2.5 mb-4">
+            <Skeleton className="w-6 h-6 rounded-md shrink-0" />
+            <Skeleton className="h-3.5 w-36" />
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700/50" />
+          </div>
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 rounded-xl" />
+              <Skeleton key={i} className="h-16 rounded-xl" />
             ))}
           </div>
         </>

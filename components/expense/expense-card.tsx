@@ -7,7 +7,6 @@ import { DeleteExpenseButton } from "./delete-expense-button";
 import { DuplicateExpenseButton } from "./duplicate-expense-button";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -25,18 +24,8 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
   const payerName = payer ? getMemberName(payer) : "Member";
   const creator = members.find((m) => m.userId === expense.createdByUserId);
   const creatorName = creator ? getMemberName(creator) : null;
-  const sameEditor = expense.updatedByUserId === expense.createdByUserId;
-  const editor = expense.updatedByUserId && !sameEditor
-    ? members.find((m) => m.userId === expense.updatedByUserId)
-    : null;
-  const editorName = editor ? getMemberName(editor) : null;
-  const editSuffix = expense.updatedByUserId
-    ? sameEditor
-      ? ` · edited ${formatDistanceToNow(expense.updatedAt, { addSuffix: true })}`
-      : editorName
-        ? ` · edited by ${editorName} ${formatDistanceToNow(expense.updatedAt, { addSuffix: true })}`
-        : ` · edited ${formatDistanceToNow(expense.updatedAt, { addSuffix: true })}`
-    : "";
+  const wasEdited = !!expense.updatedByUserId && expense.updatedByUserId !== expense.createdByUserId;
+  const editor = wasEdited ? members.find((m) => m.userId === expense.updatedByUserId) : null;
   const canEdit = expense.createdByUserId === currentUserId || isAdmin;
   const dateDisplay =
     expense.category === "accommodation" && expense.endDate
@@ -44,9 +33,9 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
       : formatDate(expense.expenseDate);
 
   return (
-    <div className="glass rounded-xl px-4 py-3 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-      {/* Top row: icon + description + payer */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
+    <div className="glass rounded-xl px-4 py-3 flex flex-col gap-1">
+      {/* Single row: icon + content + amount (always visible) */}
+      <div className="flex items-center gap-3">
         <CategoryIcon category={expense.category} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{expense.description}</p>
@@ -58,12 +47,6 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {payerName} · {dateDisplay}
           </p>
-          {creatorName && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-              {`Added by ${creatorName} · ${formatDistanceToNow(expense.createdAt, { addSuffix: true })}`}
-              {editSuffix && <span className="opacity-60">{editSuffix}</span>}
-            </p>
-          )}
           {/* Interaction signal pills */}
           {interactionCount && (interactionCount.hasUnread || interactionCount.pendingDispute || interactionCount.commentCount > 0) && (
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
@@ -94,35 +77,44 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
             </div>
           )}
         </div>
-        {/* Amount shown inline with description on desktop */}
-        <p className="hidden sm:block text-base font-semibold text-slate-800 dark:text-slate-100 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>
+        {/* Amount — always visible in the top row */}
+        <p className="text-base font-semibold text-slate-800 dark:text-slate-100 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>
           {formatCurrency(Number(expense.amount), expense.currency)}
         </p>
       </div>
 
-      {/* Bottom row on mobile: amount on left, actions on right */}
-      <div className="flex items-center gap-2 sm:gap-2 pl-9 sm:pl-0" onClick={(e) => e.stopPropagation()}>
-        <p className="sm:hidden text-base font-semibold text-slate-800 dark:text-slate-100 tabular mr-auto" style={{ fontFamily: "var(--font-fraunces)" }}>
-          {formatCurrency(Number(expense.amount), expense.currency)}
-        </p>
-        {canEdit && (
-          <>
-            <Link
-              href={`/groups/${expense.groupId}/expenses/${expense.id}/edit`}
-              className="w-11 h-11 sm:w-7 sm:h-7 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 flex items-center justify-center transition-colors"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </Link>
-            <DuplicateExpenseButton expenseId={expense.id} />
-            <DeleteExpenseButton
-              expenseId={expense.id}
-              groupId={expense.groupId}
-              onSuccess={() => onDelete?.(expense.id)}
-              onFail={() => onDeleteFail?.(expense.id)}
-            />
-          </>
-        )}
-      </div>
+      {/* Audit + action row — audit always visible when creator known; buttons only for editors */}
+      {(creatorName || canEdit) && (
+        <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+          {/* Left: who added (and edited) — compact metadata */}
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate min-w-0">
+            {creatorName && (
+              <>
+                Added by {creatorName}
+                {wasEdited && (editor ? ` · edited by ${getMemberName(editor)}` : " · edited")}
+              </>
+            )}
+          </p>
+          {/* Right: action buttons */}
+          {canEdit && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Link
+                href={`/groups/${expense.groupId}/expenses/${expense.id}/edit`}
+                className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 flex items-center justify-center transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Link>
+              <DuplicateExpenseButton expenseId={expense.id} />
+              <DeleteExpenseButton
+                expenseId={expense.id}
+                groupId={expense.groupId}
+                onSuccess={() => onDelete?.(expense.id)}
+                onFail={() => onDeleteFail?.(expense.id)}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

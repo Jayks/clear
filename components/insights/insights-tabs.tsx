@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Home, BarChart2 } from "lucide-react";
+import { MapPin, Home, BarChart2, Sparkles } from "lucide-react";
 import { KpiCard } from "./kpi-card";
 import { SmartInsightCard } from "./smart-insight-card";
 import { CategoryDonut } from "./category-donut";
@@ -107,9 +107,13 @@ function TripsInsightsContent({ data, fmt, primaryCurrency }: {
 
       {/* Smart insights */}
       <div data-tour="all-insights-trips">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-          What stands out
-        </h2>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">What stands out</span>
+          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+        </div>
         <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
           {data.smartInsights.map((s, i) => (
             <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
@@ -118,9 +122,13 @@ function TripsInsightsContent({ data, fmt, primaryCurrency }: {
       </div>
 
       {/* Per-trip links */}
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-        Dive into a trip
-      </h2>
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <MapPin className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dive into a trip</span>
+        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+      </div>
       <AnimatedList className="grid grid-cols-1 lg:grid-cols-2 gap-2" staggerMs={60}>
         {data.byTrip.map((t) => (
           <Link key={t.tripId} href={`/groups/${t.tripId}/insights`}
@@ -179,9 +187,13 @@ function NestsInsightsContent({ data, fmt }: {
       </div>
 
       {/* Smart insights */}
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-        What stands out
-      </h2>
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">What stands out</span>
+        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+      </div>
       <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
         {data.smartInsights.map((s, i) => (
           <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
@@ -189,9 +201,13 @@ function NestsInsightsContent({ data, fmt }: {
       </AnimatedList>
 
       {/* Per-nest links */}
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-        Dive into a nest
-      </h2>
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <Home className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dive into a nest</span>
+        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+      </div>
       <AnimatedList className="grid grid-cols-1 lg:grid-cols-2 gap-2" staggerMs={60}>
         {data.byNest.map((n) => (
           <Link key={n.nestId} href={`/groups/${n.nestId}/insights`}

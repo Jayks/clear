@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
@@ -37,6 +37,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
   const [sort, setSort]             = useState<SortOption>("date-desc");
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Reset to page 1 whenever filters or sort change
   useEffect(() => { setCurrentPage(1); }, [search, category, payerId, dateFrom, dateTo, sort]);
@@ -95,6 +96,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
 
   const filteredTotal = displayItems.reduce((sum, e) => sum + Number(e.amount), 0);
   const isFiltered = !!(search || category || payerId || dateFrom || dateTo);
+  const hasAdvancedFilter = !!(payerId || dateFrom || dateTo);
 
   function clearAll() {
     setSearch(""); setCategory(null); setPayerId(null);
@@ -125,7 +127,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
       */}
       <div data-tour="expense-list-header">
 
-        {/* ── Search + Sort ─────────────────────────────────────── */}
+        {/* ── Search + Sort ─────────────────────────────────────────────── */}
         <div className="flex gap-2 mb-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -157,16 +159,28 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           </div>
+          {/* Advanced filter toggle — mobile only */}
+          <button
+            onClick={() => setAdvancedOpen((v) => !v)}
+            className={`md:hidden flex items-center justify-center w-10 h-10 rounded-xl border transition-colors shrink-0 ${
+              hasAdvancedFilter
+                ? "border-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400"
+                : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400"
+            }`}
+            title="More filters"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* ── Category pills ────────────────────────────────────── */}
-        <div className="flex gap-1.5 flex-wrap mb-2">
+        {/* ── Category pills — horizontal scroll on mobile ──────────────── */}
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 mb-3">
           <button
             onClick={() => setCategory(null)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0 ${
               !category
                 ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
-                : "bg-white/60 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
             }`}
           >
             All
@@ -179,7 +193,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               <button
                 key={cat}
                 onClick={() => setCategory(active ? null : cat)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0 ${
                   active
                     ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
                     : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
@@ -192,8 +206,9 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           })}
         </div>
 
-        {/* ── Payer + date range ────────────────────────────────── */}
-        <div className="flex gap-2 flex-wrap mb-3 items-center">
+        {/* ── Advanced filters: payer + date range ──────────────────────── */}
+        {/* Always visible on desktop; toggled on mobile */}
+        <div className={`${advancedOpen ? "flex" : "hidden md:flex"} gap-2 flex-wrap mb-3 items-center`}>
           <div className="relative">
             <select
               value={payerId ?? ""}
@@ -230,26 +245,26 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               <X className="w-3 h-3" />
-              Clear
+              Clear all
             </button>
           )}
         </div>
 
-        {/* ── Results bar ───────────────────────────────────────── */}
+        {/* ── Results bar ───────────────────────────────────────────────── */}
         <div className="flex items-center justify-between mb-3 px-0.5">
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {isSearching
               ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search.trim()}"`
               : isFiltered
               ? `${filtered.length} matching`
-              : `${expenses.length} expenses`}
+              : `${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
           </p>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
             {formatCurrency(filteredTotal, currency)}
           </p>
         </div>
 
-        {/* ── First 2 cards / empty state (inside spotlight) ────── */}
+        {/* ── First 2 cards / empty state (inside spotlight) ────────────── */}
         {filtered.length === 0 ? (
           <div className="py-14 text-center text-slate-400 dark:text-slate-500 text-sm glass rounded-xl">
             {isSearching ? `No expenses match "${search.trim()}".` : "No expenses match your filters."}
@@ -278,14 +293,14 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
 
       </div>{/* end data-tour="expense-list-header" */}
 
-      {/* ── Cards 3+ outside spotlight (dimmed during tour) ─────── */}
+      {/* ── Cards 3+ outside spotlight (dimmed during tour) ─────────── */}
       {filtered.length > 0 && !groupByMonth && displayItems.length > 2 && (
         <div className="space-y-2 mt-2">
           {displayItems.slice(2).map(renderCard)}
         </div>
       )}
 
-      {/* ── Pagination — hidden while searching ───────────────────── */}
+      {/* ── Pagination — hidden while searching ──────────────────────── */}
       {!isSearching && totalPages > 1 && (
         <div className="flex items-center justify-between mt-4 px-0.5">
           <button
@@ -349,11 +364,13 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
         const total = group.reduce((s, e) => s + Number(e.amount), 0);
         return (
           <div key={yearMonth}>
-            <div className="flex items-center justify-between mb-2 px-0.5">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+            {/* Month header with divider */}
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 shrink-0">
                 {label}
               </span>
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular">
+              <div className="flex-1 h-px bg-slate-200/70 dark:bg-slate-700/50" />
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 tabular shrink-0">
                 {formatCurrency(total, currency)}
               </span>
             </div>

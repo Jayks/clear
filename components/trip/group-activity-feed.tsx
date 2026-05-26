@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Receipt, ArrowLeftRight, UserPlus, AlertTriangle } from "lucide-react";
+import { Receipt, ArrowLeftRight, UserPlus, AlertTriangle, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { getGroupActivity } from "@/lib/db/queries/activity";
@@ -16,8 +16,10 @@ interface Props {
 export function ActivityFeedSkeleton() {
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="h-3 w-28 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-6 h-6 rounded-md bg-slate-200 dark:bg-slate-700 animate-pulse shrink-0" />
+        <div className="h-3.5 w-28 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700/50" />
         <div className="h-3 w-12 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
       </div>
       <div className="space-y-1.5">
@@ -90,14 +92,16 @@ export async function GroupActivityFeed({ groupId, currentMemberId, groupType }:
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Recent activity
-        </p>
+      {/* Section header */}
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <Activity className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent activity</span>
+        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
         <Link
           href={`/groups/${groupId}/expenses`}
-          className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline"
+          className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline shrink-0"
         >
           See all →
         </Link>

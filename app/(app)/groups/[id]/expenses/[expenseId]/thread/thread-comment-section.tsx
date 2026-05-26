@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { MessageCircle } from "lucide-react";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { CommentRow } from "@/lib/db/queries/interactions";
 import {
@@ -89,18 +90,23 @@ export function ThreadCommentSection({
     <>
       {/* Discussion section */}
       <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
-          Discussion{comments.length > 0 ? ` (${comments.length})` : ""}
-        </p>
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+            <MessageCircle className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Discussion{comments.length > 0 ? ` (${comments.length})` : ""}
+          </span>
+          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+        </div>
 
         {comments.length === 0 ? (
-          <div className="glass rounded-2xl px-5 py-8 text-center">
-            <p className="text-slate-400 dark:text-slate-500 text-sm">
-              No comments yet.
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Be the first to add context.
-            </p>
+          <div className="glass rounded-2xl px-5 py-8 flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center mb-3 shadow-sm shadow-cyan-500/25">
+              <MessageCircle className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No comments yet</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Be the first to add context.</p>
           </div>
         ) : (
           <div className="glass rounded-2xl px-4 py-3">

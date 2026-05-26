@@ -48,9 +48,13 @@ export function SettingsLayout({ sub }: { sub: Subscription | null }) {
         {/* Appearance — always visible on mobile; desktop: only when active */}
         <section className={active !== "appearance" ? "md:hidden" : ""}>
           <div className="glass rounded-2xl p-5">
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-4">
-              Appearance
-            </p>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                <Palette className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Appearance</span>
+              <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Theme</p>
@@ -64,9 +68,13 @@ export function SettingsLayout({ sub }: { sub: Subscription | null }) {
         {/* Billing */}
         <section className={active !== "billing" ? "md:hidden" : ""}>
           <div className="glass rounded-2xl p-5">
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-4">
-              Billing
-            </p>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                <CreditCard className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Billing</span>
+              <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+            </div>
             <BillingSection sub={sub} />
           </div>
         </section>
@@ -74,9 +82,13 @@ export function SettingsLayout({ sub }: { sub: Subscription | null }) {
         {/* Notifications */}
         <section className={active !== "notifications" ? "md:hidden" : ""}>
           <div className="glass rounded-2xl p-5">
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-4">
-              Notifications
-            </p>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                <Bell className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Notifications</span>
+              <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+            </div>
             <NotificationsSection />
           </div>
         </section>

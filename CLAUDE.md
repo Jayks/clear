@@ -199,6 +199,22 @@ Strip markdown fences before `JSON.parse` — Haiku wraps JSON in ` ```json ``` 
 const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
 ```
 
+### `scroll-behavior: smooth` — pair with `data-scroll-behavior` on `<html>`
+
+`globals.css` sets `html { scroll-behavior: smooth; }`. Next.js 16 requires the matching `data-scroll-behavior="smooth"` attribute on the `<html>` element in `app/layout.tsx` so the router knows smooth scrolling is intentional and suppresses the console warning. Both must be present.
+
+### Inline `<Script>` — use `dangerouslySetInnerHTML`, not children
+
+React 19 (used by Next.js 16) warns when a `<script>` tag appears as children inside a React component. For `next/script` with inline content (e.g. GA init), always pass the content via `dangerouslySetInnerHTML`:
+
+```tsx
+// ✅ correct
+<Script id="ga-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `...` }} />
+
+// ❌ wrong — React 19 warning: "Encountered a script tag while rendering React component"
+<Script id="ga-init" strategy="afterInteractive">{`...`}</Script>
+```
+
 ---
 
 ## 4. Architecture Principles

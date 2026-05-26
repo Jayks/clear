@@ -3,10 +3,9 @@ import { Skeleton } from "@/components/shared/skeleton";
 export default function GroupLoading() {
   return (
     <div>
-      {/* Back + Edit */}
-      <div className="flex items-center justify-between mb-6">
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-8 w-24 rounded-lg" />
+      {/* Back link — desktop only */}
+      <div className="hidden md:block mb-6">
+        <Skeleton className="h-4 w-24" />
       </div>
 
       {/* Hero */}
@@ -27,11 +26,24 @@ export default function GroupLoading() {
         ))}
       </div>
 
-      {/* Invite card */}
-      <div className="glass rounded-xl p-4 mb-2 space-y-3">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-10 w-full rounded-xl" />
-        <Skeleton className="h-3 w-28 mx-auto" />
+      {/* Activity feed */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2.5 mb-3">
+          <Skeleton className="w-6 h-6 rounded-md shrink-0" />
+          <Skeleton className="h-3.5 w-28" />
+          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700/50" />
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
+              <Skeleton className="w-7 h-7 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3 w-44" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

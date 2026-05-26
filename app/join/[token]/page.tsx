@@ -69,9 +69,11 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
           </div>
 
           <div className="p-5">
-            <div className="flex items-center gap-2 text-slate-500 text-sm mb-5">
-              <Users className="w-4 h-4" />
-              {memberCount} {Number(memberCount) === 1 ? config.labels.members.toLowerCase().replace(/s$/, "") : config.labels.members.toLowerCase()} already in
+            <div className="flex items-center gap-3 mb-5">
+              <span className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                <Users className="w-3.5 h-3.5" />
+                {memberCount} {Number(memberCount) === 1 ? config.labels.members.toLowerCase().replace(/s$/, "") : config.labels.members.toLowerCase()} already in
+              </span>
             </div>
 
             {group.description && (
@@ -89,7 +91,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-4">
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
           {user ? `Signed in as ${user.email}` : "You'll be asked to sign in before joining."}
         </p>
       </div>

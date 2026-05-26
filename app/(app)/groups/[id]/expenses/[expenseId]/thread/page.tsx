@@ -6,7 +6,7 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenseReactions, getExpenseDisputes } from "@/lib/db/queries/interactions";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { acceptDispute, declineDispute } from "@/app/actions/interactions";
-import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Smile } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import type { Metadata } from "next";
@@ -83,7 +83,7 @@ export default async function ThreadPage({
       <div className="flex items-center gap-3 mb-6">
         <Link
           href={`/groups/${groupId}/expenses`}
-          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
+          className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -119,9 +119,13 @@ export default async function ThreadPage({
       {/* Reactions summary */}
       {Object.keys(reactionGroups).length > 0 && (
         <div className="mb-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
-            Reactions
-          </p>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <Smile className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Reactions</span>
+            <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+          </div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(reactionGroups).map(([emoji, names]) => {
               const meta = REACTION_META[emoji as keyof typeof REACTION_META];
@@ -204,7 +208,7 @@ export default async function ThreadPage({
                 >
                   <button
                     type="submit"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold transition-all"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     Accept &amp; update split
@@ -242,9 +246,13 @@ export default async function ThreadPage({
       {/* Resolved / historical disputes */}
       {disputes.filter((d) => d.status !== "pending").length > 0 && (
         <div className="mb-5 mt-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
-            Resolved disputes
-          </p>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Resolved disputes</span>
+            <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+          </div>
           <div className="space-y-2">
             {disputes
               .filter((d) => d.status !== "pending")

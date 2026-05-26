@@ -4,7 +4,7 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
 import { autoLogDueTemplates } from "@/app/actions/expenses";
-import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
+import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home, Link2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -43,25 +43,14 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div>
-      {/* Back + Edit */}
-      <div className="flex items-center justify-between mb-6">
-        <Link
-          href="/groups"
-          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          All groups
-        </Link>
-        {isAdmin && (
-          <Link
-            href={`/groups/${group.id}/edit`}
-            className="inline-flex items-center gap-1.5 min-h-[44px] text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            Edit {config.labels.singular.toLowerCase()}
-          </Link>
-        )}
-      </div>
+      {/* Desktop-only back link — mobile nav handles it */}
+      <Link
+        href="/groups"
+        className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        All groups
+      </Link>
 
       {/* Hero */}
       <div className="glass rounded-2xl overflow-hidden mb-6">
@@ -79,6 +68,16 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <div className={`w-full h-full bg-gradient-to-br ${isNest ? "from-teal-500 to-emerald-500" : "from-cyan-500 to-teal-500"}`} />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
+          {/* Edit button — overlaid on hero, admin only */}
+          {isAdmin && (
+            <Link
+              href={`/groups/${group.id}/edit`}
+              className="absolute top-3 right-3 w-9 h-9 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all z-10"
+              title={`Edit ${config.labels.singular.toLowerCase()}`}
+            >
+              <Pencil className="w-4 h-4" />
+            </Link>
+          )}
           <div className="absolute bottom-4 left-5 right-5">
             <h1 className="text-white text-2xl sm:text-3xl" style={{ fontFamily: "var(--font-fraunces)" }}>
               {group.name}
@@ -103,8 +102,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="trip-quick-actions">
-        <Link href={`/groups/${group.id}/members`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm">
+        <Link href={`/groups/${group.id}/members`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-0.5 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30">
             <Users className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -113,8 +112,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
         </Link>
 
-        <Link href={`/groups/${group.id}/expenses`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm">
+        <Link href={`/groups/${group.id}/expenses`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-0.5 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30">
             <Receipt className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -133,8 +132,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
         </Link>
 
-        <Link href={`/groups/${group.id}/settle`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm">
+        <Link href={`/groups/${group.id}/settle`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm shadow-emerald-500/30">
             <Wallet className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -153,8 +152,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
         </Link>
 
-        <Link href={`/groups/${group.id}/insights`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm">
+        <Link href={`/groups/${group.id}/insights`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-amber-500/10 hover:-translate-y-0.5 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-sm shadow-amber-500/30">
             <BarChart2 className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -205,9 +204,15 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       {isAdmin && (
         <>
           <div className="glass rounded-xl p-4 mb-2">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
-              Invite to {config.labels.singular.toLowerCase()}
-            </p>
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                <Link2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Invite to {config.labels.singular.toLowerCase()}
+              </span>
+              <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+            </div>
             <InviteSection url={inviteUrl} groupName={group.name} groupId={group.id} />
           </div>
           <div className="flex justify-end mb-4">

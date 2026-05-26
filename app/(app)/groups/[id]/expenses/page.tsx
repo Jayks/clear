@@ -55,7 +55,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
       <div className="flex items-center gap-2 mb-6 flex-wrap" data-tour="expense-add-btn">
         <Link
           href={`/groups/${id}`}
-          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
+          className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -97,6 +97,15 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         />
       )}
 
+      {/* Visual divider between recurring and expenses — nest only */}
+      {isNest && (
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">Expenses</span>
+          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+        </div>
+      )}
+
       {/* Mobile FAB — opens quick-add sheet on mobile, above bottom nav */}
       <ExpenseQuickAddFab
         groupId={id}
@@ -127,8 +136,11 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         </div>
       ) : (
         <>
-          <div className="glass rounded-xl px-4 py-3 flex items-center justify-between mb-4">
-            <span className="text-sm text-slate-500 dark:text-slate-400">Total spent</span>
+          {/* Inline total header — lighter than the old glass card */}
+          <div className="flex items-center justify-between mb-4 px-0.5">
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
+            </span>
             <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
               {formatCurrency(total, group.defaultCurrency)}
             </span>

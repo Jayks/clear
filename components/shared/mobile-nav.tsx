@@ -24,11 +24,13 @@ export function MobileNav() {
               href={href}
               data-tour={tourId}
               className={cn(
-                "flex flex-col items-center gap-1 px-8 py-2 rounded-xl min-h-[44px] justify-center transition-colors",
-                active ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"
+                "flex flex-col items-center gap-1 px-8 py-2 rounded-xl min-h-[44px] justify-center transition-all",
+                active
+                  ? "text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60"
+                  : "text-slate-400 dark:text-slate-500"
               )}
             >
-              <Icon className={cn("w-5 h-5", active && "drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]")} />
+              <Icon className="w-5 h-5" />
               <span className="text-xs font-medium">{label}</span>
             </Link>
           );

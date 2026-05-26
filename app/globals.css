@@ -225,6 +225,10 @@ html { scroll-behavior: smooth; }
   bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Hide scrollbar (used for horizontal-scroll filter pills) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 @keyframes marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }

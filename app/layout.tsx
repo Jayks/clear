@@ -44,7 +44,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  modal,
+}: Readonly<{ children: React.ReactNode; modal: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full">
@@ -59,6 +60,7 @@ export default function RootLayout({
             <div className="absolute top-2/3 right-1/3 w-80 h-80 rounded-full bg-emerald-300/15 dark:bg-emerald-900/10 blur-3xl" />
           </div>
           {children}
+          {modal}
           <Toaster richColors position="bottom-right" />
           <IOSInstallHint />
         </ThemeProvider>

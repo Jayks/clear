@@ -10,7 +10,9 @@
 clear/
 ├── app/
 │   ├── icon.tsx, error.tsx, not-found.tsx, layout.tsx, page.tsx, globals.css
-│   ├── (auth)/login/page.tsx + login-form.tsx
+│   ├── (auth)/login/page.tsx + login-form.tsx   # standalone fallback (direct URL / proxy redirects)
+│   ├── @modal/default.tsx                        # null — slot is empty when no modal active
+│   │   └── (.)login/page.tsx                     # intercepts client-side /login nav → LoginModal overlay
 │   ├── auth/callback/route.ts
 │   ├── (app)/
 │   │   ├── layout.tsx, error.tsx, app-nav.tsx

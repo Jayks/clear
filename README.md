@@ -148,7 +148,8 @@ pnpm seed:temple      # seed South India temple tour
 ```
 app/
   (app)/          — authenticated app (groups, expenses, expense thread, insights, settle, upgrade, settings)
-  (auth)/         — login page
+  (auth)/         — login page (standalone; used for direct URL access and proxy.ts redirects)
+  @modal/         — parallel route slot; (.)login intercepts client-side /login nav as a modal overlay
   api/pwa-icon/   — PWA icon endpoint (192 + 512 px, edge runtime)
   manifest.ts     — PWA manifest
   icon.tsx        — favicon (32 px)

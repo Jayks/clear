@@ -75,10 +75,10 @@ export default async function LandingPage() {
             {/* ── Divider ── */}
             <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1.5" />
             {/* ── CTA buttons ── */}
-            <Link href="/login" className="hidden sm:inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm">
+            <Link href="/login" scroll={false} className="hidden sm:inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm">
               Sign in
             </Link>
-            <Link href="/login?intent=signup" className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5">
+            <Link href="/login?intent=signup" scroll={false} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5">
               Get started <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -116,7 +116,7 @@ export default async function LandingPage() {
               </p>
 
               <div className="animate-hero-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-10">
-                <Link href="/login?intent=signup" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
+                <Link href="/login?intent=signup" scroll={false} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
                   Start for free <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a href="#why-clear" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 glass text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 font-medium text-base py-3.5 px-9 rounded-2xl transition-all hover:shadow-md">
@@ -994,7 +994,7 @@ export default async function LandingPage() {
               <p className="text-teal-100 text-lg mb-10 max-w-sm mx-auto">
                 Create a trip or a nest in seconds. No credit card required.
               </p>
-              <Link href="/login?intent=signup" className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl shadow-teal-900/30 transition-all hover:-translate-y-0.5">
+              <Link href="/login?intent=signup" scroll={false} className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl shadow-teal-900/30 transition-all hover:-translate-y-0.5">
                 Get started free <ArrowRight className="w-4 h-4" />
               </Link>
               <p className="text-teal-200/70 text-sm mt-5">Google sign-in · No credit card · Takes 30 seconds</p>
@@ -1016,7 +1016,7 @@ export default async function LandingPage() {
             <span className="text-xs text-slate-400 dark:text-slate-500">Split it. Clear it.</span>
           </div>
           <div className="flex items-center gap-5 text-xs text-slate-400 dark:text-slate-500">
-            <Link href="/login" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Sign in</Link>
+            <Link href="/login" scroll={false} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Sign in</Link>
             <Link href="/changelog" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">What&apos;s New</Link>
             <Link href="/pricing" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Pricing</Link>
             <Link href="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms</Link>

@@ -114,7 +114,15 @@ Use `scripts/find-bad-imports.mjs` (`node scripts/find-bad-imports.mjs`) to scan
 
 `lib/rate-limit.ts` exports `checkAiRateLimit(userId): boolean` — 20 AI calls/hour per user, shared across all AI features. All four AI actions (`parse-expense.ts`, `narrative.ts`, `parse-chat.ts`, `trip-adherence.ts`) call `getCurrentUser()` then `checkAiRateLimit(user.id)` before invoking Anthropic. In-memory store (best-effort on serverless). `parseExpenseWithAI` returns `null` on rate limit; others return `{ ok: false, error: "Rate limit exceeded..." }`.
 
-### Login page — `intent` param
+### Login — modal vs standalone
+
+Login renders as a **modal overlay** (via Next.js parallel routes + intercepting routes) when navigated to client-side from a marketing page; it renders as a **standalone full page** when accessed directly (new tab, email link) or via a `proxy.ts` hard redirect.
+
+- `app/@modal/(.)login/page.tsx` — intercepts client-side nav to `/login`; renders `components/shared/login-modal.tsx` (desktop: centered glass dialog; mobile: bottom sheet).
+- `app/(auth)/login/page.tsx` — unchanged standalone fallback.
+- `components/shared/login-modal.tsx` — client component; Escape key + backdrop click → `router.back()`; scroll-locks body on mount.
+
+**`scroll={false}` required on every `/login` `<Link>` in marketing pages.** Without it, Next.js scrolls to the `{modal}` slot (rendered after `{children}` in the layout) when the intercepting route mounts, jumping the page to the bottom. The `intent` and `returnTo` params work identically in both modes.
 
 `intent=signup` → shows signup copy. `returnTo=/join/...` takes priority. All "Get started" CTAs link to `/login?intent=signup`; sign-in links never include `intent`.
 

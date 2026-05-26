@@ -32,7 +32,7 @@ export default async function AppLayout({
       <div className="min-h-screen flex flex-col">
         <AppNav user={user} isAdmin={isAdmin} plan={plan} />
         <TrialBanner />
-        <main className="flex-1 p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 flex flex-col p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">
           {children}
         </main>
         <MobileNav />

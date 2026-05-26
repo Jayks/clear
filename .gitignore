@@ -48,3 +48,6 @@ next-env.d.ts
 # Claude Code — local settings and logs are personal, never committed
 .claude/settings.local.json
 .claude/db-push.log
+
+# Internal strategy docs — local only, not for the repo
+pricing-strategy.md

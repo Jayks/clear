@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, Minus, CheckCircle2, ChevronDown, ChevronLeft } from "lucide-react";
+import { ArrowRight, Minus, CheckCircle2, ChevronLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
 import { PlanCards } from "./plan-cards";
+import { FaqSection } from "./faq-section";
 
 export const metadata: Metadata = { title: "Pricing — Clear" };
 
@@ -36,29 +37,6 @@ const TABLE_SECTIONS: {
       { feature: "Guest member support", free: true,  plus: true },
       { feature: "UPI pay links",        free: true,  plus: true },
     ],
-  },
-];
-
-const FAQS = [
-  {
-    q: "What happens when my trial ends?",
-    a: "You drop to the free plan automatically. Your data is safe — all your groups, expenses, and settlement history stay intact. You'll be capped at 4 groups until you upgrade.",
-  },
-  {
-    q: "Does the group admin's plan cover everyone?",
-    a: "Yes. If the group creator has Clear Plus, all members in that group get Plus features — non-equal splits, templates, AI parsing, insights — regardless of their own plan.",
-  },
-  {
-    q: "Is a credit card required for the trial?",
-    a: "No. Start your 30-day trial with just a Google sign-in. No payment details needed.",
-  },
-  {
-    q: "Can I cancel or downgrade anytime?",
-    a: "Yes. Go to Settings → Billing and choose Downgrade to Free. It takes effect immediately.",
-  },
-  {
-    q: "When will paid plans be available?",
-    a: "Paid billing is coming soon. For now, your trial gives you full Plus access — no credit card required.",
   },
 ];
 
@@ -96,30 +74,33 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="text-center pt-24 pb-12 px-6">
-        <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-6 shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 shrink-0" />
-          30-day free trial · No credit card required
+      {/* ── Hero + Plan cards — fills the viewport above the fold on laptop ── */}
+      <section className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center px-6 py-12">
+        {/* Hero text */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-5 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 shrink-0" />
+            30-day free trial · No credit card required
+          </div>
+          <h1
+            className="text-4xl sm:text-5xl font-normal text-slate-800 dark:text-slate-100 mb-3"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            Simple, transparent pricing.
+          </h1>
+          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            Start free. Upgrade when your group grows.
+          </p>
         </div>
-        <h1
-          className="text-4xl sm:text-5xl font-normal text-slate-800 dark:text-slate-100 mb-4"
-          style={{ fontFamily: "var(--font-fraunces)" }}
-        >
-          Simple, transparent pricing.
-        </h1>
-        <p className="text-lg text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-          Start free. Upgrade when your group grows.
-        </p>
-      </section>
 
-      {/* ── Plan cards ───────────────────────────────────────────────────── */}
-      <section className="max-w-2xl mx-auto px-6 pb-20">
-        <PlanCards />
+        {/* Plan cards */}
+        <div className="w-full max-w-5xl">
+          <PlanCards />
+        </div>
       </section>
 
       {/* ── Feature comparison table ─────────────────────────────────────── */}
-      <section className="max-w-3xl mx-auto px-6 pb-20">
+      <section className="max-w-5xl mx-auto px-6 pb-20">
         <div className="text-center mb-10">
           <h2
             className="text-3xl text-slate-800 dark:text-slate-100 mb-2"
@@ -177,27 +158,7 @@ export default function PricingPage() {
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-      <section className="max-w-2xl mx-auto px-6 pb-20">
-        <h2
-          className="text-3xl text-slate-800 dark:text-slate-100 mb-8 text-center"
-          style={{ fontFamily: "var(--font-fraunces)" }}
-        >
-          Common questions
-        </h2>
-        <div className="space-y-2">
-          {FAQS.map(({ q, a }) => (
-            <details key={q} className="group glass rounded-xl">
-              <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{q}</span>
-                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 group-open:rotate-180" />
-              </summary>
-              <p className="px-5 pb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                {a}
-              </p>
-            </details>
-          ))}
-        </div>
-      </section>
+      <FaqSection />
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-28">

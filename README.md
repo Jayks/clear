@@ -44,7 +44,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in
 - **Guest claim flow** — guests added by name can claim their expenses when they join via invite link; name corrects automatically from their Google account
 - **Notifications** — email and web push alerts when group members log expenses; one-click email unsubscribe; per-group mute toggle in the avatar menu
-- **Clear Plus** — freemium subscription: free plan (4 groups, 8 members, 50 expenses each); Plus unlocks unlimited everything, AI features, CSV export, all split modes, templates, and budget tracking. Group admin's plan covers all members.
+- **Clear Plus** — freemium subscription: free plan (4 groups, 8 members, 50 expenses each); Plus unlocks unlimited everything, AI features, CSV export, all split modes, templates, and budget tracking. **₹99/month · ₹799/year** (GST-inclusive). Founder pricing ₹79/₹699 locked forever for the first 500 subscribers — live slot counter on the pricing page. Group admin's plan covers all members.
 - **Settings page** — appearance (dark/light theme), billing (plan status, billing cycle, renewal date, downgrade), and notifications (web push toggle) in a tabbed sidebar layout
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
@@ -154,6 +154,7 @@ app/
   manifest.ts     — PWA manifest
   icon.tsx        — favicon (32 px)
   page.tsx        — landing / marketing page
+  pricing/        — public pricing page (plan-cards async RSC + faq-section client)
 components/
   expense/        — expense cards, quick-add sheet, split editor, detail sheet (WhatsApp-style), reaction/question/dispute forms, thread discussion (bubble UI), thread comment input
   trip/           — group cards, cover photo picker, budget bar, overview badge RSCs (balance, insights, activity feed)

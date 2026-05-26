@@ -30,7 +30,7 @@ clear/
 │   │           ├── members/page.tsx, loading.tsx + forms/buttons
 │   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, balance-cards-client.tsx, mark-paid-button, upi-pay-button
 │   │           └── insights/page.tsx + loading.tsx
-│   ├── pricing/page.tsx + plan-cards.tsx   # public — no auth, same nav pattern as changelog
+│   ├── pricing/page.tsx + plan-cards.tsx + faq-section.tsx   # public — no auth; plan-cards is async RSC (fetches founder slots); faq-section is client (Expand all / accordion state)
 │   ├── changelog/page.tsx + loading.tsx   # public — 15-release timeline; data in lib/changelog.ts
 │   ├── join/[token]/page.tsx + join-button.tsx
 │   ├── summary/[token]/page.tsx + opengraph-image.tsx
@@ -69,6 +69,7 @@ clear/
 │   ├── analytics.ts, rate-limit.ts, utils.ts
 │   ├── changelog.ts                       # typed static data — 15 ChangelogRelease entries (newest first)
 │   ├── subscription/gates.ts            # getUserPlan, getUserSubscription, getGroupPlan, gates, nudges
+│   ├── subscription/founder.ts          # server-only; all pricing constants + getFounderSlotsClaimed() + isFounderActive()
 │   └── notifications/expense-email.ts + send-expense-notification.ts + send-push-notification.ts
 ├── drizzle/policies.sql, indexes.sql
 ├── drizzle.config.ts, proxy.ts, vercel.json
@@ -153,7 +154,24 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 ## Subscription & Monetization
 
-`lib/subscription/gates.ts` — all plan-check logic.
+### Pricing constants — `lib/subscription/founder.ts` (server-only)
+
+Single source of truth for all prices and founder slot logic. `import "server-only"` guards it from client bundles. All RSC pages import from here and pass computed values as serializable props to client components — nothing is hardcoded in UI.
+
+```
+FOUNDER_SLOTS_TOTAL = 500
+FOUNDER_PRICE       = { monthly: 79,  annual: 699 }   // ₹79/mo · ₹699/yr
+REGULAR_PRICE       = { monthly: 99,  annual: 799 }   // ₹99/mo · ₹799/yr
+FOUNDER_ANNUAL_MONTHLY_EQUIV = 58   // floor(699 / 12)
+REGULAR_ANNUAL_MONTHLY_EQUIV = 66   // floor(799 / 12)
+FOUNDER_ANNUAL_SAVINGS       = 489  // 99×12 − 699  (savings vs paying regular monthly)
+REGULAR_ANNUAL_SAVINGS       = 389  // 99×12 − 799
+```
+
+- `getFounderSlotsClaimed()` — counts `status='active'` subscriptions; **fails open** (returns 0 on DB error so founder pricing always shows rather than blocking upgrade)
+- `isFounderActive(claimed)` — `true` when `claimed < FOUNDER_SLOTS_TOTAL`
+
+### Plan-check logic — `lib/subscription/gates.ts`
 
 **Key exports:**
 - `getUserPlan(userId)` — React-`cache()`-wrapped; returns `"plus"` for BOTH `active` AND `trialing`. Use for feature gates only.
@@ -166,15 +184,20 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 **Free plan limits:** 4 non-demo non-archived groups, 8 members per group, 50 expenses per group.
 **Plus unlocks:** unlimited everything, AI features, CSV export, all split modes, recurring templates, budget tracking. Group admin's plan covers all members.
 
-**Actions (`app/actions/subscription.ts`):**
+### Actions — `app/actions/subscription.ts`
+
 - `activatePlusDemo(cycle: "monthly" | "annual")` — upserts subscription: `plan="plus"`, `status="active"`, stores `billingCycle`, sets `currentPeriodEnd` to +30 days. Calls `revalidatePath("/", "layout")`.
 - `cancelPlusDemo()` — sets `plan="free"`, `status="cancelled"`, clears `billingCycle` + `currentPeriodEnd`. Calls `revalidatePath("/", "layout")`.
 
-**Upgrade flow:**
-1. `/upgrade` — global Monthly/Annual toggle above Free + Plus cards. Trialing users see different subtitle; `isPlus` users see confirmation panel instead.
-2. `/upgrade/checkout` — radio picker (defaults from URL `?cycle`). Order summary: price strikethrough → Founder discount → ₹0 total. "Activate Plus free →" calls `activatePlusDemo(cycle)` → `router.push("/groups")`. Redirects away only if `isPlus`; trialing users may still visit.
+### Upgrade flow
 
-**Settings page (`/settings`):** `settings-layout.tsx` — `useState` tab switching (`appearance|billing|notifications`). Desktop: sidebar; inactive sections `md:hidden`. Mobile: all stacked. **Anchor-scroll doesn't work** — page too short when only some sections render.
+1. **`/pricing`** — public. `PlanCards` is async RSC (fetches founder slots, renders amber founder banner with slot progress bar + strikethrough pricing). `FaqSection` is `"use client"` (accordion open/close state, Expand all / Collapse all toggle, 2-column grid at `lg:`, `max-w-5xl`).
+2. **`/upgrade`** — RSC fetches founder slots + user sub; passes all computed pricing props to `PricingCards` (client). Amber founder notice banner above cards when active. Monthly/Annual toggle; both views show ~~regular price~~ → founder price. `isPlus` users see "You're on Plus" panel; trialing users see upgrade CTA. Layout: `max-w-5xl`, `flex-1 justify-center` fills viewport height.
+3. **`/upgrade/checkout`** — RSC same data fetch, passes to `CheckoutForm` (client). Annual view shows savings callout box (emerald). "Activate Plus free →" calls `activatePlusDemo(cycle)` → `router.push("/groups")`. Redirects away only if `isPlus`; trialing users may still visit.
+
+### Settings page (`/settings`)
+
+`settings-layout.tsx` — `useState` tab switching (`appearance|billing|notifications`). Desktop: sidebar; inactive sections `md:hidden`. Mobile: all stacked. **Anchor-scroll doesn't work** — page too short when only some sections render.
 
 **Admin users table**: `sm:hidden` mobile cards + `hidden sm:block` desktop table.
 

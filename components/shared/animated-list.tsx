@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
   children: React.ReactNode[];
@@ -12,6 +12,18 @@ interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
 }
 
 export function AnimatedList({ children, className, staggerMs = 40, initialDelayMs = 0, ...rest }: Props) {
+  const reduced = useReducedMotion();
+
+  // If the user prefers reduced motion, render items immediately with no
+  // animation — avoids the opacity:0 initial state going unresolved.
+  if (reduced) {
+    return (
+      <div className={className} {...rest}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className={className} {...rest}>
       {children.map((child, i) => (

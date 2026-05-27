@@ -14,7 +14,6 @@ import { NestHint } from "@/components/shared/nest-hint";
 import { ExportCsvButton } from "./export-csv-button";
 import { getExpenseNudge, canUseTemplates, canUseAI } from "@/lib/subscription/gates";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
-import { formatCurrency } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -45,8 +44,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   const interactionCounts = expenses.length > 0
     ? await getExpenseInteractionCounts(expenses.map((e) => e.id), currentMemberId)
     : {};
-  const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const templateList = isNest ? templates : [];
+const templateList = isNest ? templates : [];
 
   return (
     <div className="pb-24 md:pb-0">
@@ -142,16 +140,6 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         </div>
       ) : (
         <>
-          {/* Inline total header — lighter than the old glass card */}
-          <div className="flex items-center justify-between mb-4 px-0.5">
-            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-              {expenses.length} expense{expenses.length !== 1 ? "s" : ""}
-            </span>
-            <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
-              {formatCurrency(total, group.defaultCurrency)}
-            </span>
-          </div>
-
           <ExpenseFilters
             expenses={expenses}
             members={members}

@@ -21,9 +21,11 @@ interface ExpenseCardProps {
   hideActions?: boolean;
   /** Desktop: reveal action buttons on parent group-hover instead of always-on */
   hoverRevealActions?: boolean;
+  /** Hide audit row (Added by / action buttons) for dense list view */
+  compact?: boolean;
 }
 
-export function ExpenseCard({ expense, members, currentUserId, currentMemberId, isAdmin, onDelete, onDeleteFail, interactionCount, hideActions = false, hoverRevealActions = false }: ExpenseCardProps) {
+export function ExpenseCard({ expense, members, currentUserId, currentMemberId, isAdmin, onDelete, onDeleteFail, interactionCount, hideActions = false, hoverRevealActions = false, compact = false }: ExpenseCardProps) {
   const payer = members.find((m) => m.id === expense.paidByMemberId);
   const payerName = payer ? getMemberName(payer) : "Member";
   const isPayer = !!currentMemberId && expense.paidByMemberId === currentMemberId;
@@ -41,7 +43,7 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
     <div className="glass rounded-xl px-4 py-3 flex flex-col gap-1">
       {/* Single row: icon + content + amount (always visible) */}
       <div className="flex items-center gap-3">
-        <CategoryIcon category={expense.category} />
+        <CategoryIcon category={expense.category} size="sm" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-700 dark:text-slate-200 line-clamp-2">{expense.description}</p>
           {expense.category === "other" && expense.customCategory && (
@@ -88,8 +90,8 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
         </p>
       </div>
 
-      {/* Audit + action row — audit always visible when creator known; buttons only for editors */}
-      {(creatorName || canEdit) && (
+      {/* Audit + action row — hidden in compact mode */}
+      {!compact && (creatorName || canEdit) && (
         <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
           {/* Left: who added (and edited) — compact metadata */}
           <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate min-w-0">

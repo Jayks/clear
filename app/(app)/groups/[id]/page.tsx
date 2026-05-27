@@ -123,7 +123,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{config.labels.members}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{members.length} {members.length === 1 ? "person" : "people"}</p>
+            <p className="text-xs text-violet-500 dark:text-violet-400">{members.length} {members.length === 1 ? "person" : "people"}</p>
           </div>
         </Link>
 
@@ -138,7 +138,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
                 <NestMonthlyBadge groupId={group.id} defaultCurrency={group.defaultCurrency} />
               </Suspense>
             ) : (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-cyan-600 dark:text-cyan-400">
                 {totalSpent > 0
                   ? formatCurrency(totalSpent, group.defaultCurrency)
                   : "No expenses yet"}

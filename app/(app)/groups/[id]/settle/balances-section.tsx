@@ -121,6 +121,18 @@ export async function BalancesSection({
       <div data-tour="settle-suggestions">
         <SectionHeader icon={Send} label="Suggested payments" />
 
+        {/* Total outstanding summary — only when there are active suggestions */}
+        {suggestions.length > 0 && (
+          <div className="flex items-center justify-between mb-4 px-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {suggestions.length} payment{suggestions.length !== 1 ? "s" : ""} to settle
+            </p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
+              {formatCurrency(suggestions.reduce((sum, s) => sum + s.amount, 0), currency)} total
+            </p>
+          </div>
+        )}
+
         {suggestions.length === 0 ? (
           <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20 px-5 py-8 flex flex-col items-center gap-3 mb-8">
             {/* Icon in glowing ring */}

@@ -92,15 +92,20 @@ export function AddTemplateForm({ group, members }: Props) {
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
           Amount <span className="text-red-400">*</span>
         </label>
-        <input
-          {...register("amount", { valueAsNumber: true })}
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="0.01"
-          placeholder="0.00"
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 tabular"
-        />
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 dark:text-slate-500 pointer-events-none select-none">
+            {currency}
+          </span>
+          <input
+            {...register("amount", { valueAsNumber: true })}
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 tabular"
+          />
+        </div>
         {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
       </div>
 

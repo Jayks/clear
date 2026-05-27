@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X, ChevronDown, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
@@ -40,6 +40,18 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
   const [sort, setSort]             = useState<SortOption>("date-desc");
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode]     = useState<"full" | "compact">("full");
+
+  // Restore view mode from localStorage after hydration
+  useEffect(() => {
+    const saved = localStorage.getItem("clear_expense_view_mode") as "full" | "compact" | null;
+    if (saved) setViewMode(saved);
+  }, []);
+
+  function setAndSaveViewMode(mode: "full" | "compact") {
+    setViewMode(mode);
+    localStorage.setItem("clear_expense_view_mode", mode);
+  }
 
   // Reset to page 1 whenever filters, sort, or the expense list length changes (e.g. after adding/deleting)
   useEffect(() => { setCurrentPage(1); }, [search, category, payerId, dateFrom, dateTo, sort, expenses.length]);
@@ -118,6 +130,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
       onDelete={(id) => optimisticDelete(id)}
       onDeleteFail={restoreDelete}
       interactionCount={interactionCounts?.[expense.id]}
+      compact={viewMode === "compact"}
     />
   );
 
@@ -130,7 +143,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
       */}
       <div data-tour="expense-list-header">
 
-        {/* ── Search + Sort ─────────────────────────────────────────────── */}
+        {/* ── Search + Sort + View toggle ───────────────────────────────── */}
         <div className="flex gap-2 mb-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -161,6 +174,32 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               <option value="amount-asc">Lowest</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
+          {/* Compact / Full toggle */}
+          <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
+            <button
+              type="button"
+              onClick={() => setAndSaveViewMode("full")}
+              className={`px-2.5 py-2 text-xs font-medium transition-colors ${
+                viewMode === "full"
+                  ? "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+              }`}
+            >
+              Full
+            </button>
+            <div className="w-px bg-slate-200 dark:bg-slate-700" />
+            <button
+              type="button"
+              onClick={() => setAndSaveViewMode("compact")}
+              className={`px-2.5 py-2 text-xs font-medium transition-colors ${
+                viewMode === "compact"
+                  ? "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+              }`}
+            >
+              Compact
+            </button>
           </div>
         </div>
 
@@ -196,12 +235,57 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           })}
         </div>
 
-        {/* ── Advanced filters: payer + date range — always visible ────── */}
-        {(payers.length > 1 || dateFrom || dateTo) && (
+        {/* ── Payer pills — 2-5 payers ──────────────────────────────────── */}
+        {payers.length >= 2 && payers.length <= 5 && (
+          <>
+            <div className="h-px bg-slate-200/60 dark:bg-slate-700/40 mb-3" />
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              <button
+                onClick={() => setPayerId(null)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  !payerId
+                    ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                    : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                All
+              </button>
+              {payers.map((m) => {
+                const isMe = !!currentMemberId && m.id === currentMemberId;
+                const active = payerId === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setPayerId(active ? null : m.id)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      active
+                        ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                        : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    {isMe ? "Mine" : getMemberName(m)}
+                  </button>
+                );
+              })}
+              {isFiltered && (
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Clear
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── Payer dropdown (>5 payers) + date range ────────────────── */}
+        {(payers.length > 5 || dateFrom || dateTo) && (
           <>
             <div className="h-px bg-slate-200/60 dark:bg-slate-700/40 mb-3" />
             <div className="flex gap-2 flex-wrap mb-3 items-center">
-              {payers.length > 1 && (
+              {payers.length > 5 && (
                 <div className="relative">
                   <select
                     value={payerId ?? ""}
@@ -210,7 +294,9 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                   >
                     <option value="">All payers</option>
                     {payers.map((m) => (
-                      <option key={m.id} value={m.id}>{getMemberName(m)}</option>
+                      <option key={m.id} value={m.id}>
+                        {m.id === currentMemberId ? `Me (${getMemberName(m)})` : getMemberName(m)}
+                      </option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
@@ -253,6 +339,8 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search.trim()}"`
               : isFiltered
               ? `${filtered.length} matching`
+              : usePagination
+              ? `${displayItems.length} of ${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`
               : `${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
           </p>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -292,6 +380,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             onDelete={optimisticDelete}
             onDeleteFail={restoreDelete}
             interactionCounts={interactionCounts}
+            compact={viewMode === "compact"}
           />
         ) : (
           <>
@@ -350,7 +439,7 @@ const MONTH_LABELS: Record<string, string> = {
   "09": "September", "10": "October", "11": "November", "12": "December",
 };
 
-function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, onDelete, onDeleteFail, interactionCounts }: {
+function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, onDelete, onDeleteFail, interactionCounts, compact }: {
   expenses: Expense[];
   members: GroupMember[];
   currentUserId: string;
@@ -360,6 +449,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
   onDelete: (id: string) => void;
   onDeleteFail: (id: string) => void;
   interactionCounts?: Record<string, ExpenseInteractionCount>;
+  compact?: boolean;
 }) {
   // Group by YYYY-MM, newest month first
   const groups = useMemo(() => {
@@ -380,8 +470,11 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
         const total = group.reduce((s, e) => s + Number(e.amount), 0);
         return (
           <div key={yearMonth}>
-            {/* Month header with divider */}
-            <div className="flex items-center gap-3 mb-3">
+            {/* Month header with icon badge + divider */}
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                <CalendarDays className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
+              </div>
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 shrink-0">
                 {label}
               </span>
@@ -402,6 +495,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
                   onDelete={onDelete}
                   onDeleteFail={onDeleteFail}
                   interactionCount={interactionCounts?.[expense.id]}
+                  compact={compact}
                 />
               ))}
             </AnimatedList>

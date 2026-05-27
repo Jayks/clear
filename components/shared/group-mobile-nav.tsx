@@ -41,6 +41,7 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
   const section = parts[2];
   const a       = parts[3];
   const b       = parts[4];
+  const c       = parts[5];
 
   const groupBase = `/groups/${groupId}`;
 
@@ -57,13 +58,13 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
   // Expenses tree — only the index gets the section icon; deep pages don't
   if (section === "expenses") {
     if (!a) return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, ...SECTION_META.expenses };
-    if (a === "new") return { pageTitle: "Add expense", backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined, gradient: undefined };
+    if (a === "new") return { pageTitle: "Add expense",  backHref: `${groupBase}/expenses`, backLabel: "Expenses", ...SECTION_META.expenses };
     if (a === "templates") {
-      const title = b === "edit" ? "Edit template" : "Add template";
-      return { pageTitle: title, backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined, gradient: undefined };
+      const title = c === "edit" ? "Edit recurring expense" : "Add recurring expense";
+      return { pageTitle: title, backHref: `${groupBase}/expenses`, backLabel: "Expenses", ...SECTION_META.expenses };
     }
-    if (b === "edit")   return { pageTitle: "Edit expense", backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined, gradient: undefined };
-    if (b === "thread") return { pageTitle: "Thread",       backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined, gradient: undefined };
+    if (b === "edit")   return { pageTitle: "Edit expense", backHref: `${groupBase}/expenses`, backLabel: "Expenses", ...SECTION_META.expenses };
+    if (b === "thread") return { pageTitle: "Thread",        backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined, gradient: undefined };
     return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, ...SECTION_META.expenses };
   }
 

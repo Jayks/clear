@@ -25,6 +25,7 @@ interface Props {
   onDelete?: (id: string) => void;
   onDeleteFail?: (id: string) => void;
   interactionCount?: ExpenseInteractionCount;
+  compact?: boolean;
 }
 
 export function SwipeableExpenseCard(props: Props) {

@@ -16,7 +16,7 @@ export async function NestMonthlyBadge({ groupId, defaultCurrency }: Props) {
   const total = await getThisMonthSpent(groupId);
 
   return (
-    <p className="text-xs text-slate-500 dark:text-slate-400">
+    <p className={`text-xs ${total > 0 ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"}`}>
       {total > 0
         ? `${formatCurrency(total, defaultCurrency)} this month`
         : "Nothing logged this month"}

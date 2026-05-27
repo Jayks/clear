@@ -67,9 +67,9 @@ export function TemplateSection({ templates, members, groupId, currency, isAdmin
 
       {/* ── Template list ─────────────────────────────────────────────── */}
       {expanded && (
-        <div className="glass rounded-2xl divide-y divide-white/40 dark:divide-slate-700/40 mb-4">
+        <div className="space-y-2 mb-4">
           {templates.length === 0 ? (
-            <div className="px-4 py-6 text-center">
+            <div className="glass rounded-xl px-4 py-6 text-center">
               <p className="text-sm text-slate-400 dark:text-slate-500">No recurring expenses yet.</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Add one below to auto-log monthly bills.</p>
             </div>
@@ -81,7 +81,7 @@ export function TemplateSection({ templates, members, groupId, currency, isAdmin
               const splitCount = splits.length;
 
               return (
-                <div key={template.id} className="px-4 py-3.5">
+                <div key={template.id} className="glass rounded-xl px-4 py-3.5">
                   {/* Row 1: icon + info + amount */}
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cat.gradient} flex items-center justify-center shrink-0 shadow-sm`}>

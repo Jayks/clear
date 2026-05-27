@@ -418,6 +418,12 @@ export function ExpenseDetailSheet({
                   >
                     {formatCurrency(Number(expense.amount), expense.currency)}
                   </p>
+                  {/* Full description — shown below amount when title is truncated in header */}
+                  {expense.description.length > 40 && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 px-2">
+                      {expense.description}
+                    </p>
+                  )}
                 </div>
 
                 {/* Notes */}

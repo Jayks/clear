@@ -158,8 +158,17 @@ export async function BalancesSection({
           </div>
         ) : (
           <div className="space-y-2 mb-8">
-            {suggestions.map((s, i) => (
-              <div key={i} className="glass rounded-xl px-4 py-3.5 flex flex-col gap-2.5">
+            {suggestions.map((s, i) => {
+              const isYouFrom = currentMemberId === s.from;
+              const isYouTo = currentMemberId === s.to;
+              const isYours = isYouFrom || isYouTo;
+              return (
+              <div key={i} className={`glass rounded-xl px-4 py-3.5 flex flex-col gap-2.5 ${isYours ? "ring-2 ring-cyan-400/40 dark:ring-cyan-500/30" : ""}`}>
+                {isYours && (
+                  <p className={`text-[11px] font-semibold -mb-1 ${isYouFrom ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                    {isYouFrom ? "You owe" : "Owed to you"}
+                  </p>
+                )}
                 {/* Row 1: who → who + amount */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">{memberName(s.from)}</span>
@@ -205,7 +214,8 @@ export async function BalancesSection({
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

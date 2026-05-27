@@ -57,29 +57,34 @@ export default async function LandingPage() {
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav className="glass-nav sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <ClearLogo
             iconSize={32}
             wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100"
             className="flex items-center gap-2.5"
           />
           <div className="flex items-center gap-1.5">
-            <ThemeToggle />
+            {/* ThemeToggle — desktop only; mobile uses system theme */}
+            <span className="hidden sm:flex items-center"><ThemeToggle /></span>
             {/* ── Text nav links ── */}
             <Link href="/changelog" className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
               What&apos;s New
             </Link>
-            <Link href="/pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+            <Link href="/pricing" className="text-sm font-medium text-slate-600 dark:text-slate-300 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
               Pricing
             </Link>
             {/* ── Divider ── */}
             <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1.5" />
-            {/* ── CTA buttons ── */}
+            {/* ── Sign in — text-only on mobile, bordered button on desktop ── */}
+            <Link href="/login" scroll={false} className="sm:hidden text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition-colors">
+              Sign in
+            </Link>
             <Link href="/login" scroll={false} className="hidden sm:inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm">
               Sign in
             </Link>
-            <Link href="/login?intent=signup" scroll={false} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5">
-              Get started <ArrowRight className="w-3.5 h-3.5" />
+            {/* ── Primary CTA ── */}
+            <Link href="/login?intent=signup" scroll={false} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5">
+              Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
             </Link>
           </div>
         </div>

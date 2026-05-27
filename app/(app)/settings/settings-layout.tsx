@@ -1,22 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { Palette, CreditCard, Bell } from "lucide-react";
+import { Palette, CreditCard, Bell, User } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { BillingSection } from "./billing-section";
 import { NotificationsSection } from "./notifications-section";
+import { ProfileSection } from "./profile-section";
 import type { Subscription } from "@/lib/db/schema/subscriptions";
 
-type Section = "appearance" | "billing" | "notifications";
+type Section = "profile" | "appearance" | "billing" | "notifications";
 
 const SIDEBAR_LINKS: { id: Section; label: string; icon: React.ElementType }[] = [
+  { id: "profile",       label: "Profile",       icon: User       },
   { id: "appearance",    label: "Appearance",    icon: Palette    },
   { id: "billing",       label: "Billing",       icon: CreditCard },
   { id: "notifications", label: "Notifications", icon: Bell       },
 ];
 
-export function SettingsLayout({ sub }: { sub: Subscription | null }) {
-  const [active, setActive] = useState<Section>("appearance");
+interface Props {
+  sub: Subscription | null;
+  currentDisplayName: string;
+  userEmail: string;
+  userAvatarUrl: string | null;
+}
+
+export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarUrl }: Props) {
+  const [active, setActive] = useState<Section>("profile");
 
   return (
     <div className="md:grid md:grid-cols-[200px_1fr] md:gap-8 md:items-start">
@@ -44,6 +53,24 @@ export function SettingsLayout({ sub }: { sub: Subscription | null }) {
 
       {/* Content */}
       <div className="space-y-4">
+
+        {/* Profile */}
+        <section className={active !== "profile" ? "md:hidden" : ""}>
+          <div className="glass rounded-2xl p-5">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Profile</span>
+              <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+            </div>
+            <ProfileSection
+              currentDisplayName={currentDisplayName}
+              userEmail={userEmail}
+              userAvatarUrl={userAvatarUrl}
+            />
+          </div>
+        </section>
 
         {/* Appearance — always visible on mobile; desktop: only when active */}
         <section className={active !== "appearance" ? "md:hidden" : ""}>

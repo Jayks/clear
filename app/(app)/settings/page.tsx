@@ -5,12 +5,25 @@ import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getUserSubscription } from "@/lib/subscription/gates";
 import { redirect } from "next/navigation";
 import { SettingsLayout } from "./settings-layout";
+import { db } from "@/lib/db/client";
+import { groupMembers } from "@/lib/db/schema/group-members";
+import { eq, isNotNull, and } from "drizzle-orm";
+import { extractDisplayName } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Settings — Clear" };
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?returnTo=/settings");
+
+  // Fetch the user's current display name from any of their group_members rows
+  const [memberRow] = await db
+    .select({ displayName: groupMembers.displayName })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.userId, user.id), isNotNull(groupMembers.displayName)))
+    .limit(1);
+
+  const currentDisplayName = memberRow?.displayName ?? extractDisplayName(user) ?? "";
 
   const sub = await getUserSubscription(user.id);
 
@@ -28,7 +41,12 @@ export default async function SettingsPage() {
         Settings
       </h1>
 
-      <SettingsLayout sub={sub} />
+      <SettingsLayout
+        sub={sub}
+        currentDisplayName={currentDisplayName}
+        userEmail={user.email ?? ""}
+        userAvatarUrl={user.user_metadata?.avatar_url as string | null ?? null}
+      />
     </div>
   );
 }

@@ -252,6 +252,8 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **Form props**: use `group: Group` (not `trip`).
 - **Templates excluded from totals**: always filter `eq(expenses.isTemplate, false)`.
 - **Mobile tap targets**: back/nav links `min-h-[44px]`; expense card buttons `w-11 h-11 sm:w-7 sm:h-7`.
+- **Form pages — no `max-w-xl` constraint**: form pages (`new/`, `edit/`, `members/`) do NOT use `max-w-xl mx-auto` — they inherit the app layout's natural width so they don't look narrow on laptop. Only the app's outer `<main>` has `max-w-2xl`.
+- **Pagination threshold**: `expense-filters.tsx` uses `PAGE_ALL_THRESHOLD = 20` — pagination (Prev/Next, 10/page) only activates for groups with >20 expenses; smaller groups render all at once.
 
 ---
 

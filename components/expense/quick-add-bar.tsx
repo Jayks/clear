@@ -137,7 +137,7 @@ export function QuickAddBar({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={loading || isListening}
-          placeholder={isListening ? "Listening…" : "dinner 2400 raj yesterday split 4"}
+          placeholder={isListening ? "Listening…" : `Coffee ₹120 paid by ${members[0] ? getMemberName(members[0]).split(" ")[0] : "Rahul"}`}
           className="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border border-cyan-200 dark:border-cyan-900/50 bg-white/70 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
         />
         <button

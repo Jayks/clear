@@ -4,15 +4,14 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
 import { autoLogDueTemplates } from "@/app/actions/expenses";
-import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home, Link2 } from "lucide-react";
+import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { BudgetBar } from "@/components/trip/budget-bar";
-import { ArchiveButton } from "./archive-button";
 import { getGroupConfig } from "@/lib/group-config";
 import type { Metadata } from "next";
-import { InviteSection } from "@/components/trip/invite-section";
+import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 import { GroupActivityFeed, ActivityFeedSkeleton } from "@/components/trip/group-activity-feed";
 import { SettleBalanceBadge, SettleBalanceSkeleton } from "@/components/trip/settle-balance-badge";
 import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components/trip/insights-summary-badge";
@@ -68,15 +67,18 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <div className={`w-full h-full bg-gradient-to-br ${isNest ? "from-teal-500 to-emerald-500" : "from-cyan-500 to-teal-500"}`} />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
-          {/* Edit button — overlaid on hero, admin only */}
+          {/* Share + Edit buttons — overlaid on hero, admin only */}
           {isAdmin && (
-            <Link
-              href={`/groups/${group.id}/edit`}
-              className="absolute top-3 right-3 w-9 h-9 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all z-10"
-              title={`Edit ${config.labels.singular.toLowerCase()}`}
-            >
-              <Pencil className="w-4 h-4" />
-            </Link>
+            <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+              <TripCardShareDrawer url={inviteUrl} groupName={group.name} />
+              <Link
+                href={`/groups/${group.id}/edit`}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all"
+                title={`Edit ${config.labels.singular.toLowerCase()}`}
+              >
+                <Pencil className="w-4 h-4" />
+              </Link>
+            </div>
           )}
           <div className="absolute bottom-4 left-5 right-5">
             <h1 className="text-white text-2xl sm:text-3xl" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -200,26 +202,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         </Suspense>
       </div>
 
-      {/* Invite + Archive */}
-      {isAdmin && (
-        <>
-          <div className="glass rounded-xl p-4 mb-2">
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                <Link2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              </div>
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Invite to {config.labels.singular.toLowerCase()}
-              </span>
-              <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
-            </div>
-            <InviteSection url={inviteUrl} groupName={group.name} groupId={group.id} />
-          </div>
-          <div className="flex justify-end mb-4">
-            <ArchiveButton groupId={group.id} isArchived={group.isArchived} />
-          </div>
-        </>
-      )}
     </div>
   );
 }

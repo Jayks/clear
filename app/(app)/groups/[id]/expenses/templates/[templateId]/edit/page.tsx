@@ -24,7 +24,7 @@ export default async function EditTemplatePage({
   if (!templatesAllowed) redirect(`/groups/${id}/expenses`);
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div>
       <Link
         href={`/groups/${id}/expenses`}
         className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"

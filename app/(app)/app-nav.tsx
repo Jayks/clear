@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Settings } from "lucide-react";
+import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Settings, Newspaper } from "lucide-react";
 import { useTour } from "@/components/tour/tour-context";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -130,6 +130,10 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
                 Admin
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem render={<Link href="/changelog" />} className="cursor-pointer">
+              <Newspaper className="w-4 h-4 mr-2" />
+              What&apos;s New
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={startTour}
               className="cursor-pointer"

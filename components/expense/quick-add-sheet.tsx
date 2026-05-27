@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check } from "lucide-react";
+import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -15,6 +15,7 @@ import { getGroupMembersForQuickAdd } from "@/app/actions/quick-add";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { AddExpenseInput } from "@/lib/validations/expense";
 import { useRecentCategories } from "@/hooks/use-recent-categories";
+import { getMemberName, formatDate } from "@/lib/utils";
 
 interface Props {
   groupId: string;
@@ -29,17 +30,21 @@ interface Props {
   onClose: () => void;
 }
 
+type StickyContext = { paidByMemberId: string; expenseDate: string };
+
 function buildExpenseInput(
   parsed: ParsedExpense,
   members: GroupMember[],
   groupId: string,
   currency: string,
+  context?: StickyContext | null,
 ): AddExpenseInput | null {
   if (!parsed.amount || parsed.amount <= 0 || !parsed.description) return null;
   if (members.length === 0) return null;
 
   const today = new Date().toISOString().split("T")[0];
-  const paidByMemberId = parsed.paidByMemberId ?? members[0].id;
+  // Use AI-parsed payer first, then sticky context, then first member
+  const paidByMemberId = parsed.paidByMemberId ?? context?.paidByMemberId ?? members[0].id;
 
   let splitMembers: GroupMember[];
   if (parsed.splitMemberIds && parsed.splitMemberIds.length > 0) {
@@ -59,7 +64,8 @@ function buildExpenseInput(
     customCategory: "",
     amount: parsed.amount,
     currency,
-    expenseDate: parsed.expenseDate ?? today,
+    // Use AI-parsed date first, then sticky context date, then today
+    expenseDate: parsed.expenseDate ?? context?.expenseDate ?? today,
     splitMode: "equal",
     splits: splitMembers.map((m) => ({ memberId: m.id })),
   };
@@ -81,6 +87,7 @@ export function QuickAddSheet({
   const [parsed, setParsed] = useState<ParsedExpense | null>(null);
   const [saving, startSave] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [lastContext, setLastContext] = useState<StickyContext | null>(null);
   const [, addRecentCategory] = useRecentCategories(groupType);
   const [mounted, setMounted] = useState(false);
   // Each voice transcript gets a unique id so the QuickAddBar effect always fires,
@@ -129,6 +136,7 @@ export function QuickAddSheet({
       if (isListening) stop();
       setVoiceTrigger(null);
       setSaved(false);
+      setLastContext(null);
       if (autoCloseTimerRef.current) {
         clearTimeout(autoCloseTimerRef.current);
         autoCloseTimerRef.current = null;
@@ -149,7 +157,7 @@ export function QuickAddSheet({
 
   function handleSave() {
     if (!parsed || !members) return;
-    const input = buildExpenseInput(parsed, members, groupId, currency);
+    const input = buildExpenseInput(parsed, members, groupId, currency, lastContext);
     if (!input) {
       toast.error("Add an amount and description first");
       return;
@@ -168,6 +176,8 @@ export function QuickAddSheet({
           });
         }
         addRecentCategory(input.category);
+        // Store payer + date as sticky context for the next "Add another" entry
+        setLastContext({ paidByMemberId: input.paidByMemberId, expenseDate: input.expenseDate });
         setSaved(true);
         // Auto-close after 2s — cancelled if user taps "Add another"
         autoCloseTimerRef.current = setTimeout(() => {
@@ -274,6 +284,30 @@ export function QuickAddSheet({
               </div>
             ) : members ? (
               <>
+                {/* Sticky context chip — shown after "Add another" */}
+                {lastContext && (
+                  <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200/60 dark:border-cyan-900/50">
+                    <RotateCcw className="w-3 h-3 text-cyan-500 shrink-0" />
+                    <span className="text-xs text-cyan-700 dark:text-cyan-300 flex-1 min-w-0 truncate">
+                      Using{" "}
+                      <span className="font-medium">
+                        {getMemberName(members.find((m) => m.id === lastContext.paidByMemberId) ?? members[0])}
+                      </span>
+                      {" · "}
+                      <span className="font-medium">{formatDate(lastContext.expenseDate)}</span>
+                      {" "}as defaults
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLastContext(null)}
+                      className="shrink-0 text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors"
+                      aria-label="Clear context"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
                 <QuickAddBar
                   members={members}
                   currency={currency}

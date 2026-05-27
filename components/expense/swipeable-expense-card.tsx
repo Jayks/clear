@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useTransform, animate, type PanInfo } from "framer-motion";
-import { Trash2 } from "lucide-react";
-import { deleteExpense } from "@/app/actions/expenses";
+import { motion, useMotionValue, animate, AnimatePresence, type PanInfo } from "framer-motion";
+import { Trash2, Copy, Pencil } from "lucide-react";
+import Link from "next/link";
+import { deleteExpense, duplicateExpense } from "@/app/actions/expenses";
 import { toast } from "sonner";
 import { ExpenseCard } from "./expense-card";
 import { ExpenseDetailSheet } from "./expense-detail-sheet";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 
-const REVEAL_WIDTH = 76;
 const SNAP_THRESHOLD = 40;
 const FAST_VELOCITY = 300;
 
@@ -30,10 +31,7 @@ export function SwipeableExpenseCard(props: Props) {
   const { expense, onDelete, onDeleteFail, interactionCount, currentMemberId } = props;
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const x = useMotionValue(0);
-  // Delete zone starts REVEAL_WIDTH px to the right of its resting position (hidden).
-  // As the card slides left, the zone slides in proportionally so they never overlap.
-  const deleteZoneX = useTransform(x, (v) => REVEAL_WIDTH + v);
-  const [isOpen, setIsOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const isDragging = useRef(false);
 
@@ -41,12 +39,7 @@ export function SwipeableExpenseCard(props: Props) {
     setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
-  const canDelete = expense.createdByUserId === props.currentUserId || props.isAdmin;
-
-  function snapTo(target: number) {
-    animate(x, target, { type: "spring", stiffness: 500, damping: 40 });
-    setIsOpen(target < 0);
-  }
+  const canEdit = expense.createdByUserId === props.currentUserId || props.isAdmin;
 
   function onDragStart() {
     isDragging.current = true;
@@ -56,46 +49,49 @@ export function SwipeableExpenseCard(props: Props) {
     setTimeout(() => { isDragging.current = false; }, 50);
     const velocity = info.velocity.x;
     const offset = x.get();
+
+    // When overlay is open, right swipe dismisses it
+    if (actionsOpen) {
+      if (velocity > FAST_VELOCITY || offset > SNAP_THRESHOLD) {
+        setActionsOpen(false);
+      }
+      animate(x, 0, { type: "spring", stiffness: 500, damping: 40 });
+      return;
+    }
+
+    // Left swipe opens the overlay
     if (velocity < -FAST_VELOCITY || offset < -SNAP_THRESHOLD) {
-      snapTo(-REVEAL_WIDTH);
+      animate(x, 0, { type: "spring", stiffness: 500, damping: 40 });
+      setActionsOpen(true);
     } else {
-      snapTo(0);
+      animate(x, 0, { type: "spring", stiffness: 500, damping: 40 });
     }
   }
 
-  function handleSwipeDelete() {
-    snapTo(0);
-    onDelete?.(expense.id);
-
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      if (cancelled) return;
-      const result = await deleteExpense(expense.id, expense.groupId);
-      if (!result.ok) {
-        onDeleteFail?.(expense.id);
-        toast.error("Failed to delete expense");
-      }
-    }, 3500);
-
-    toast("Expense deleted", {
-      action: {
-        label: "Undo",
-        onClick: () => {
-          cancelled = true;
-          clearTimeout(timer);
-          onDeleteFail?.(expense.id);
-        },
-      },
-      duration: 3500,
-    });
+  async function handleDuplicate() {
+    setActionsOpen(false);
+    const result = await duplicateExpense(expense.id);
+    if (!result.ok) toast.error(result.error);
+    else toast.success("Expense duplicated — dated today.");
   }
 
-  // Non-touch or no delete permission: plain card with tap-to-detail
-  if (!isTouchDevice || !canDelete) {
+  async function handleDelete() {
+    setActionsOpen(false);
+    const result = await deleteExpense(expense.id, expense.groupId);
+    if (!result.ok) {
+      toast.error("Failed to delete expense");
+      onDeleteFail?.(expense.id);
+    } else {
+      onDelete?.(expense.id);
+    }
+  }
+
+  // Non-touch (desktop): plain card with hover-reveal actions
+  if (!isTouchDevice || !canEdit) {
     return (
       <>
-        <div onClick={() => setShowDetail(true)} className="cursor-pointer">
-          <ExpenseCard {...props} />
+        <div onClick={() => setShowDetail(true)} className="cursor-pointer group">
+          <ExpenseCard {...props} hoverRevealActions={canEdit} />
         </div>
         <ExpenseDetailSheet
           expense={expense}
@@ -111,26 +107,79 @@ export function SwipeableExpenseCard(props: Props) {
     );
   }
 
+  // Touch (mobile): swipe-to-reveal overlay with all 3 actions
   return (
-    // overflow-hidden clips the delete zone while it is outside to the right
     <div className="relative rounded-xl overflow-hidden">
-      {/* Card slides left on drag */}
       <motion.div
         drag="x"
-        dragConstraints={{ left: -REVEAL_WIDTH, right: 0 }}
-        dragElastic={{ left: 0.08, right: 0.03 }}
+        dragConstraints={{ left: -60, right: actionsOpen ? 60 : 0 }}
+        dragElastic={{ left: 0.1, right: 0.05 }}
         dragMomentum={false}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         style={{ x, touchAction: "pan-y" }}
         onClick={() => {
           if (isDragging.current) return;
-          if (isOpen) { snapTo(0); return; }
+          if (actionsOpen) { setActionsOpen(false); return; }
           setShowDetail(true);
         }}
       >
-        <ExpenseCard {...props} />
+        <ExpenseCard {...props} hideActions />
       </motion.div>
+
+      {/* Glass overlay with action buttons */}
+      <AnimatePresence>
+        {actionsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 rounded-xl backdrop-blur-md bg-white/75 dark:bg-slate-900/80 flex items-center justify-center gap-6"
+            onClick={() => setActionsOpen(false)}
+          >
+            {/* Edit */}
+            <Link
+              href={`/groups/${expense.groupId}/expenses/${expense.id}/edit`}
+              onClick={(e) => e.stopPropagation()}
+              className="w-14 h-14 rounded-2xl bg-white/90 dark:bg-slate-800/90 shadow-sm text-slate-600 dark:text-slate-300 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+            >
+              <Pencil className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Edit</span>
+            </Link>
+
+            {/* Duplicate */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleDuplicate(); }}
+              className="w-14 h-14 rounded-2xl bg-white/90 dark:bg-slate-800/90 shadow-sm text-slate-600 dark:text-slate-300 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+            >
+              <Copy className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Copy</span>
+            </button>
+
+            {/* Delete */}
+            <ConfirmDialog
+              title="Delete expense"
+              description="This expense and all its splits will be permanently removed. This cannot be undone."
+              confirmLabel="Delete"
+              destructive
+              onConfirm={handleDelete}
+              trigger={
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-14 h-14 rounded-2xl bg-red-500/90 shadow-sm text-white flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">Delete</span>
+                </button>
+              }
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <ExpenseDetailSheet
         expense={expense}
         members={props.members}
@@ -141,22 +190,6 @@ export function SwipeableExpenseCard(props: Props) {
         onClose={() => setShowDetail(false)}
         interactionCount={interactionCount}
       />
-
-      {/* Delete zone — starts outside the right edge, slides in as card moves left */}
-      <motion.div
-        className="absolute top-0 right-0 bottom-0 flex items-center justify-center bg-red-500 rounded-r-xl"
-        style={{ width: REVEAL_WIDTH, x: deleteZoneX }}
-      >
-        <button
-          type="button"
-          onClick={handleSwipeDelete}
-          className="flex flex-col items-center gap-1 text-white w-full h-full justify-center"
-          aria-label="Delete expense"
-        >
-          <Trash2 className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Delete</span>
-        </button>
-      </motion.div>
     </div>
   );
 }

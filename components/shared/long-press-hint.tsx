@@ -14,6 +14,9 @@ export function LongPressHint({ demoTripId }: { demoTripId: string | null }) {
     if (localStorage.getItem(HINT_KEY)) return;
     // Only show on touch devices
     if (!navigator.maxTouchPoints) return;
+    // Don't show while the onboarding tour is still active — the tour has its
+    // own spotlight backdrop and showing both at once creates visual conflict.
+    if (!localStorage.getItem("clear_tour_done")) return;
     const t = setTimeout(() => setVisible(true), 2500);
     return () => clearTimeout(t);
   }, [demoTripId]);

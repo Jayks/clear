@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import { useWarnBeforeLeave } from "@/hooks/use-warn-before-leave";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, ChevronDown } from "lucide-react";
 import { parseItineraryFromFile } from "@/app/actions/parse-itinerary";
 import { GROUP_CONFIG } from "@/lib/group-config";
 import type { GroupType } from "@/lib/group-config";
@@ -21,6 +21,7 @@ export function CreateTripForm() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -142,7 +143,7 @@ export function CreateTripForm() {
                     {cfg.labels.singular}
                   </p>
                   <p className="text-xs text-slate-400 dark:text-slate-500">
-                    {type === "trip" ? "Travel expenses" : "Nest expenses"}
+                    {type === "trip" ? "One-time trips & events" : "Home, flatmates & recurring"}
                   </p>
                 </div>
               </button>
@@ -154,7 +155,9 @@ export function CreateTripForm() {
 
       {/* Cover photo */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Cover photo</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+          Cover photo <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+        </label>
         <CoverPhotoPicker value={coverPhotoUrl} onChange={(url) => setValue("coverPhotoUrl", url)} />
       </div>
 
@@ -171,55 +174,13 @@ export function CreateTripForm() {
         {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
       </div>
 
-      {/* Description */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Description</label>
-        <textarea
-          {...register("description")}
-          rows={2}
-          placeholder={groupType === "trip" ? "A quick note about the trip" : "What's this nest for?"}
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
-        />
-      </div>
-
-      {/* Trip-only: itinerary */}
-      {config.showItinerary && (
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Trip plan <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — helps AI write your trip story)</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingDoc}
-              className="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50 transition-colors"
-            >
-              {uploadingDoc
-                ? <><Loader2 className="w-3 h-3 animate-spin" />Parsing…</>
-                : <><Upload className="w-3 h-3" />Upload document</>}
-            </button>
-            <input ref={fileInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={handleItineraryUpload} />
-          </div>
-          <textarea
-            {...register("itinerary")}
-            rows={6}
-            placeholder={"Day 1: Arrive Chennai, check in\nDay 2: Mahabalipuram – Shore Temple\n..."}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
-          />
-          <div className="flex justify-end mt-1">
-            <span className={`text-xs tabular ${itinerary.length > 10000 ? "text-red-500" : "text-slate-400 dark:text-slate-500"}`}>
-              {itinerary.length.toLocaleString()} / 10,000
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Trip-only: dates */}
+      {/* Trip-only: dates — always visible, prominently placed */}
       {config.showDates && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Start date</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+              Start date <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+            </label>
             <input
               {...register("startDate")}
               type="date"
@@ -227,7 +188,9 @@ export function CreateTripForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">End date</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+              End date <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+            </label>
             <input
               {...register("endDate")}
               type="date"
@@ -238,36 +201,100 @@ export function CreateTripForm() {
         </div>
       )}
 
-      {/* Currency + Budget */}
-      <div className={`grid gap-3 ${config.showBudget ? "grid-cols-2" : "grid-cols-1"}`}>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Default currency</label>
-          <select
-            {...register("defaultCurrency")}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
-          >
-            {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        {config.showBudget && (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-              Budget <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
-            </label>
-            <input
-              {...register("budget", { valueAsNumber: true })}
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-            />
-          </div>
-        )}
+      {/* Currency — always visible */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Default currency</label>
+        <select
+          {...register("defaultCurrency")}
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
+        >
+          {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
       </div>
 
-      <div className="flex gap-3">
+      {/* More options toggle */}
+      <button
+        type="button"
+        onClick={() => setShowMore((v) => !v)}
+        className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+      >
+        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showMore ? "rotate-180" : ""}`} />
+        {showMore ? "Fewer options" : "+ More options"}
+        <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">
+          — description{config.showItinerary ? ", trip plan" : ""}{config.showBudget ? ", budget" : ""}
+        </span>
+      </button>
+
+      {/* Collapsible section */}
+      {showMore && (
+        <div className="space-y-5">
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+              Description <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+            </label>
+            <textarea
+              {...register("description")}
+              rows={2}
+              placeholder={groupType === "trip" ? "A quick note about the trip" : "What's this nest for?"}
+              className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
+            />
+          </div>
+
+          {/* Trip-only: itinerary */}
+          {config.showItinerary && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Trip plan <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — helps AI write your trip story)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingDoc}
+                  className="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50 transition-colors"
+                >
+                  {uploadingDoc
+                    ? <><Loader2 className="w-3 h-3 animate-spin" />Parsing…</>
+                    : <><Upload className="w-3 h-3" />Upload document</>}
+                </button>
+                <input ref={fileInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={handleItineraryUpload} />
+              </div>
+              <textarea
+                {...register("itinerary")}
+                rows={6}
+                placeholder={"Day 1: Arrive Chennai, check in\nDay 2: Mahabalipuram – Shore Temple\n..."}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
+              />
+              <div className="flex justify-end mt-1">
+                <span className={`text-xs tabular ${itinerary.length > 10000 ? "text-red-500" : "text-slate-400 dark:text-slate-500"}`}>
+                  {itinerary.length.toLocaleString()} / 10,000
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Trip-only: budget */}
+          {config.showBudget && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                Budget <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+              </label>
+              <input
+                {...register("budget", { valueAsNumber: true })}
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-1">
         <Link
           href="/groups"
           className="flex-1 py-3 text-center text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"

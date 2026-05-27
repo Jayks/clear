@@ -123,6 +123,12 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 ---
 
+## Groups Page
+
+`app/(app)/groups/page.tsx` — RSC. **Seeding order matters**: `ensureDemoGroup()` is `await`-ed first, then `getAllGroups()` runs. This prevents a race condition where `getAllGroups()` SELECT completes before the demo INSERT on first load, showing a spurious empty state.
+
+---
+
 ## Demo Data Seeding
 
 `ensureDemoGroup()` (`app/actions/demo.ts`) — called on groups page load:
@@ -197,7 +203,9 @@ REGULAR_ANNUAL_SAVINGS       = 389  // 99×12 − 799
 
 ### Settings page (`/settings`)
 
-`settings-layout.tsx` — `useState` tab switching (`appearance|billing|notifications`). Desktop: sidebar; inactive sections `md:hidden`. Mobile: all stacked. **Anchor-scroll doesn't work** — page too short when only some sections render.
+`settings-layout.tsx` — `useState` tab switching (`appearance|billing|notifications|profile`). Desktop: sidebar; inactive sections `md:hidden`. Mobile: all stacked. **Anchor-scroll doesn't work** — page too short when only some sections render.
+
+**Profile section** — editable display name. `updateDisplayNameAction` (in `app/actions/members.ts`) updates every `group_members` row for the user in one query; returns `{ ok, error }`. Shows Google avatar + email (read-only). Input saves on blur.
 
 **Admin users table**: `sm:hidden` mobile cards + `hidden sm:block` desktop table.
 

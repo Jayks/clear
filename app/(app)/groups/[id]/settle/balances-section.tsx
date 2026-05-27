@@ -121,10 +121,39 @@ export async function BalancesSection({
         <SectionHeader icon={Send} label="Suggested payments" />
 
         {suggestions.length === 0 ? (
-          <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-800/40 bg-emerald-50/60 dark:bg-emerald-900/10 px-4 py-6 flex flex-col items-center gap-2 mb-8">
-            <CheckCircle2 className="w-10 h-10 text-emerald-500 dark:text-emerald-400" />
-            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">All settled up!</p>
-            <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">No payments needed right now.</p>
+          <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20 px-5 py-8 flex flex-col items-center gap-3 mb-8">
+            {/* Icon in glowing ring */}
+            <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800/80 border border-emerald-200/80 dark:border-emerald-800/50 flex items-center justify-center shadow-md shadow-emerald-500/10">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500 dark:text-emerald-400" />
+            </div>
+
+            {/* Copy */}
+            <div className="text-center">
+              <p
+                className="text-lg font-semibold text-emerald-700 dark:text-emerald-300"
+                style={{ fontFamily: "var(--font-fraunces)" }}
+              >
+                All settled up!
+              </p>
+              <p className="text-sm text-emerald-600/75 dark:text-emerald-400/70 mt-1">
+                {pastSettlementsTotal > 0
+                  ? `${formatCurrency(pastSettlementsTotal, currency)} tracked and squared away`
+                  : "No payments needed right now."}
+              </p>
+            </div>
+
+            {/* Meta row — only when there's history */}
+            {settlementHistory.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-emerald-600/55 dark:text-emerald-400/50">
+                <span>
+                  {settlementHistory.length} payment{settlementHistory.length !== 1 ? "s" : ""} recorded
+                </span>
+                <span className="w-1 h-1 rounded-full bg-emerald-400/60 dark:bg-emerald-600/60 inline-block" />
+                <span>
+                  {members.length} member{members.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-2 mb-8">

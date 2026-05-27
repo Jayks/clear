@@ -16,12 +16,13 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 
 ## Features
 
-- **Quick-add expenses** — type a natural description from any group card; AI parses the amount, payer, and split automatically
-- **Quick-nav from card** — tap `⋯` (always visible) or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights
+- **Quick-add expenses** — type a natural description from any group card; placeholder shows a live example like `"Coffee ₹120 paid by Priya"` so AI parsing is immediately obvious; AI fills amount, payer, and split automatically
+- **Quick-nav from card** — tap `⋯` (always visible) or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights; the balance badge links directly to Settle Up; the member count badge links directly to Members
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
-- **Expense detail** — tap any expense card to open a WhatsApp-style bottom sheet: amount, split breakdown, notes, compact reaction pills, pending dispute card, and an inline comment thread with a persistent footer input — no separate page needed for the common case
-- **Expense search** — instant search across description and category; filters and pagination compose naturally
+- **Expense detail** — tap any expense card to open a WhatsApp-style bottom sheet: amount, split breakdown, notes, compact reaction pills, pending dispute card, resolved dispute history, an inline comment thread with a persistent footer input, and a direct "View thread" link — no separate page needed for the common case
+- **Expense search** — instant search across description and category; filters and pagination compose naturally; pagination only appears for groups with >20 expenses (smaller groups show all at once)
 - **Expense audit trail** — every card and edit page shows who logged the expense and who last edited it, with relative timestamps
+- **Expense card actions** — Edit, Duplicate, Delete revealed on hover (desktop) or via swipe-left overlay with large tap targets (mobile); no visual clutter when browsing
 - **Category recents** — the last 3 used categories appear as quick-tap pills above the full category selector in the expense form (separate per group type)
 - **Four split modes** — equal, exact amount, percentage, or shares
 - **16 expense categories** — including Tour Package for trips; "Other" prompts a free-text description
@@ -29,11 +30,12 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **UPI pay** — direct payment links on the settle-up page
 - **Balance at a glance** — every group card shows your net position (owe / owed / settled / no expenses yet), streaming in without blocking the page
 - **Enriched group overview cards** — the Settle Up card shows your live balance ("You owe ₹500" / "Owed ₹300" / "All settled ✓"); Expenses shows total spend for trips or this month's spend for nests; Insights shows the top spending category — all stream in via Suspense without blocking navigation
-- **Activity feed** — the group home page shows the last 5 recent events (expenses added, settlements recorded, member joins, disputes raised) with actor avatars, event-type icon badges, "You" personalisation, and relative timestamps; dispute events link directly to the expense thread
+- **Activity feed** — the group home page shows the last 5 recent events (expenses added, settlements recorded, member joins, disputes raised) with actor avatars, event-type icon badges, "You" personalisation, and relative timestamps; all events are tappable: expenses → thread, disputes → thread, settlements → Settle Up, member events → Members page
 - **Expense reactions** — tap 👍 on any expense detail sheet to react; opening the sheet automatically marks the expense as seen (WhatsApp-style read receipt); 👁 Seen by N members appears in the audit trail; reaction counts update optimistically on tap and surface as pills on expense cards
 - **Questions & disputes** — any member can raise a ❓ question or ⚠️ dispute on an expense; dispute types include "Remove me", "Change my share", "Split equally", or a free-text message; actionable types auto-resolve when the payer accepts
 - **Inline comments** — comment thread lives directly inside the expense detail sheet (WhatsApp-style bubbles, own messages right in cyan, others left in slate); @mention autocomplete with dropdown; optimistic posting — bubble appears instantly before server confirms; comments load with a shimmer skeleton and auto-scroll to the latest on open
 - **Expense thread page** — deep-link URL (`/thread`) for each expense; used by notification links and activity feed; shows reactions summary, pending dispute management, full comment history, and resolved disputes
+- **All settled celebration** — when all debts are cleared the Settle Up page shows a celebration card with a total tracked amount, payment count, and member count instead of a flat empty state
 - **Member profile sheets** — tap any member on the Members page or Settle Up page to open a bottom sheet showing their net balance, total paid, total share, and last 3 expenses paid
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
@@ -41,11 +43,13 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Trip plan upload** — upload a PDF or .txt itinerary and have it auto-filled in the trip form
 - **Onboarding tour** — 7-step walkthrough (4 default + 3 extended) with spotlight, celebration, and a nest-specific 2-step overlay for recurring templates
 - **Progress nudges** — first-time expense and group creation each show a contextual next-step prompt (shown once)
-- **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in
+- **Group creation** — type selector shows clear descriptions ("One-time trips & events" / "Home, flatmates & recurring"); optional fields (cover photo, dates) labelled upfront; budget, description, and itinerary hidden behind `+ More options` for a clean first-time flow
+- **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in; group admin's Share + Edit buttons are in the card hero; invite link reset and group archive live on the Edit page under Admin actions
 - **Guest claim flow** — guests added by name can claim their expenses when they join via invite link; name corrects automatically from their Google account
 - **Notifications** — email and web push alerts when group members log expenses; one-click email unsubscribe; per-group mute toggle in the avatar menu
 - **Clear Plus** — freemium subscription: free plan (4 groups, 8 members, 50 expenses each); Plus unlocks unlimited everything, AI features, CSV export, all split modes, templates, and budget tracking. **₹99/month · ₹799/year** (GST-inclusive). Founder pricing ₹79/₹699 locked forever for the first 500 subscribers — live slot counter on the pricing page. Group admin's plan covers all members.
-- **Settings page** — appearance (dark/light theme), billing (plan status, billing cycle, renewal date, downgrade), and notifications (web push toggle) in a tabbed sidebar layout
+- **Settings page** — appearance (dark/light theme), billing (plan status, billing cycle, renewal date, downgrade), notifications (web push toggle), and profile (editable display name synced across all groups) in a tabbed sidebar layout
+- **What's New** — changelog accessible from the avatar dropdown inside the app, and from the marketing page nav
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
 - **Realtime** — Supabase Realtime pushes expense/settlement changes to all open sessions

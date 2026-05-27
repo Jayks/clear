@@ -14,8 +14,11 @@ import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
 import { getGroupNudge, getGroupsAdminPlans } from "@/lib/subscription/gates";
 
 export default async function GroupsPage() {
-  const [, { active: groups, archived }, user] = await Promise.all([
-    ensureDemoGroup().catch(() => {}),
+  // Seed demo groups first so getAllGroups() always sees them on first load.
+  // Running in parallel caused a race where getAllGroups() SELECT executed
+  // before ensureDemoGroup() INSERT, producing a flash of the empty state.
+  await ensureDemoGroup().catch(() => {});
+  const [{ active: groups, archived }, user] = await Promise.all([
     getAllGroups().catch(() => ({ active: [], archived: [] })),
     getCurrentUser(),
   ]);

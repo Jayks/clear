@@ -46,7 +46,7 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 - PWA icons: `app/api/pwa-icon/route.ts` (192+512px, edge). Favicon: `app/icon.tsx` (32px).
 
 ### Navigation
-- **Desktop**: sticky top — `ClearLogo` (28px), Groups, Insights, ThemeToggle, avatar dropdown (Admin [if platform admin], Take the tour, Settings, Sign out).
+- **Desktop**: sticky top — `ClearLogo` (28px), Groups, Insights, ThemeToggle, avatar dropdown (Admin [if platform admin], Take the tour, **What's New** → `/changelog`, Settings, Sign out).
 - **Mobile**: icon-only top nav + fixed `MobileNav` bottom. Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page (outer container uses `pb-24 md:pb-0` to clear FAB). MobileNav inner div uses `.h-nav-safe`.
 - **Within group routes on mobile**: `AppNav` hides (`hidden md:block`); `GroupMobileNav` renders inside `<main>` as `sticky top-0 z-40 -mx-6 -mt-6` (negative margins break out of padding; sticky scrolls past TrialBanner). Shows: ← Back | group name (Fraunces) | `⋯` → `TripCardNavSheet`.
 - **Plus badge on avatar**: violet ✦ circle at `-bottom-0.5 -right-0.5` (distinct from cyan tour dot at `-top-0.5 -right-0.5`). Dropdown header also shows a `✦ Plus` pill next to the user's name. Only shown when `plan === "plus"` (active paid, not trialing).
@@ -64,9 +64,13 @@ Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — NOT `.glass` (60% o
 
 `TripCard` uses two nested wrappers to keep action buttons outside the `<Link>`:
 - **Outer div**: positioning, hover, touch handlers. NO `overflow-hidden`.
-- **Inner div** (`glass rounded-2xl overflow-hidden`): clips image + ribbon. Contains `<Link>` (image area only) with top-left badges and diagonal ribbon.
-- **Buttons** are children of the OUTER div (`absolute top-3 right-3 z-10`): Add, Share — `⋯` always visible (`flex w-10 h-10 md:w-8 md:h-8`).
+- **Inner div** (`glass rounded-2xl overflow-hidden`): clips image + ribbon. Contains `<Link>` (image area only → group overview).
+- **Top-left badges** are on the OUTER div (`absolute top-3 left-3 z-10`): type pill (`pointer-events-none`) + member count `<Link>` → `/members`.
+- **Balance badge** — wrapped in a `<Link>` → `/settle`. `onTouchStart stopPropagation` prevents triggering card's long-press timer.
+- **Top-right buttons** on outer div: Add, Share — `⋯` always visible (`flex w-10 h-10 md:w-8 md:h-8`).
 - **TripCardNavSheet** is also on outer div.
+
+`suppressNextClick` ref pattern — long-press sets `true` for 300ms after lift; click handlers on badges check it and call `e.preventDefault()` to prevent navigation after a long-press.
 
 React portals bubble through the React tree, not the DOM — portal-spawning components (QuickAddSheet, InviteQRSheet) must be React-parented outside the `<Link>`. No `e.stopPropagation()` needed.
 
@@ -105,6 +109,7 @@ All streamed via `<Suspense>`, cached with existing tags — no action file chan
 `components/expense/expense-detail-sheet.tsx` — bottom sheet on expense card tap. Self-contained inside `SwipeableExpenseCard`. Fetches splits on demand via `fetchExpenseSplitsAction`. Also contains:
 - **Reaction bar** — 👍 (thumbs_up) toggle via `addReaction`; ❓ opens `QuestionForm`; ⚠️ opens `DisputeForm`. All call `router.refresh()` on success so card pills update without navigation.
 - **Dispute status card** — shows when a `pendingDispute` exists; payer/admin see Accept & Decline buttons.
+- **Resolved disputes** — accepted/declined/cancelled disputes shown below the pending card; each has a status icon and resolution label. Separated from the pending dispute section.
 - **Thread link** — "Discussion (N)" card linking to `/groups/${groupId}/expenses/${expenseId}/thread`.
 - **Seen avatar stack** — `SeenAvatarStack` in the audit trail; shows overlapping `MemberAvatar` circles (max 5 visible + "+N" overflow). Optimistic: adds current user immediately before RSC confirms. Replaces the old "Seen by N members" text.
 - **`markSeenAction` + `router.refresh()`** — fires on every open so the unread dot on the card clears immediately.
@@ -130,6 +135,17 @@ All streamed via `<Suspense>`, cached with existing tags — no action file chan
 Props: `member`, `groupId`, `currency`, `currentMemberId`, `netBalance?`, `isOpen`, `onClose`.
 Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.id` change (prevents stale data across members). Escape key and backdrop close.
 
+### SwipeableExpenseCard — responsive action reveal
+
+`components/expense/swipeable-expense-card.tsx` — wrapper around `ExpenseCard` with two behaviour modes:
+
+- **Desktop** — `group` wrapper; `ExpenseCard` rendered with `hoverRevealActions` prop → Edit/Duplicate/Delete buttons are `opacity-0 group-hover:opacity-100` (invisible at rest, appear on hover). Zero extra taps.
+- **Mobile** — swipe left → card snaps back to 0 → glass overlay fades in (`backdrop-blur-md bg-white/75 dark:bg-slate-800/75`) → 3 large `w-14 h-14` buttons: Edit (cyan), Duplicate (slate), Delete (red). Swipe right or tap outside → overlay dismissed. Delete still goes through `ConfirmDialog`.
+
+`ExpenseCard` props for this pattern:
+- `hideActions` — hides the button row entirely (mobile: buttons are in the overlay)
+- `hoverRevealActions` — wraps button row in `opacity-0 group-hover:opacity-100`
+
 ### MemberListClient / BalanceCardsClient
 `app/(app)/groups/[id]/members/member-list-client.tsx` — replaces static member list. Each row is `<div role="button">` (not `<button>`) to avoid nested-button violation with `RemoveMemberButton` inside. `stopPropagation` on the actions wrapper prevents Remove button from opening the sheet.
 
@@ -141,3 +157,5 @@ Manages its own `createPortal` and `AnimatePresence` internally. Always pass `is
 **`groupType` prop** — keys `useRecentCategories()` to `clear_recent_categories_trip` / `_nest`; recent category pills shown above the category select.
 
 **Post-save UX** — button turns "✓ Saved!" → "+ Add another →" fades in after 200ms; auto-close 2000ms. "Add another" cancels timer + resets form via `setOpenCount`.
+
+**Sticky context on "Add another"** — payer and date carry forward from the previous expense (stored in `lastPayerId` / `lastDate` refs). Amount, description, category, notes always reset. This lets users log a run of expenses quickly without re-selecting the same payer.

@@ -225,3 +225,23 @@ export async function fetchMemberStatsAction(
     })),
   };
 }
+
+// ── updateDisplayName — sets display_name across all the user's group_members rows ─
+
+export async function updateDisplayName(name: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Display name cannot be empty" } as const;
+  if (trimmed.length > 50) return { ok: false, error: "Name too long (max 50 characters)" } as const;
+
+  await db
+    .update(groupMembers)
+    .set({ displayName: trimmed })
+    .where(eq(groupMembers.userId, user.id));
+
+  // Invalidate all group pages so updated names appear immediately
+  revalidatePath("/groups", "layout");
+  return { ok: true } as const;
+}

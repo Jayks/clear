@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/shared/skeleton";
 
 export default function MembersLoading() {
   return (
-    <div className="max-w-xl mx-auto">
+    <div>
       <Skeleton className="h-4 w-24 mb-6" />
       <Skeleton className="h-7 w-28 mb-1" />
       <Skeleton className="h-4 w-40 mb-6" />

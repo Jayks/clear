@@ -6,22 +6,31 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "sonner";
 import { Archive, ArchiveRestore } from "lucide-react";
 
-export function ArchiveButton({ groupId, isArchived }: { groupId: string; isArchived: boolean }) {
+export function ArchiveButton({
+  groupId,
+  isArchived,
+  groupLabel = "group",
+}: {
+  groupId: string;
+  isArchived: boolean;
+  groupLabel?: string;
+}) {
   const [hovered, setHovered] = useState(false);
+  const label = groupLabel.toLowerCase();
 
   async function handleToggle() {
     const result = await archiveGroup(groupId, !isArchived);
     if (!result.ok) toast.error(result.error);
-    else toast.success(isArchived ? "Trip restored." : "Trip archived.");
+    else toast.success(isArchived ? `${groupLabel} restored.` : `${groupLabel} archived.`);
   }
 
   return (
     <ConfirmDialog
-      title={isArchived ? "Restore trip" : "Archive trip"}
+      title={isArchived ? `Restore ${label}` : `Archive ${label}`}
       description={
         isArchived
-          ? "This trip will reappear in your active trips list."
-          : "This trip will be moved to your archived trips. You can restore it anytime."
+          ? `This ${label} will reappear in your active groups list.`
+          : `This ${label} will be moved to your archived groups. You can restore it anytime.`
       }
       confirmLabel={isArchived ? "Restore" : "Archive"}
       onConfirm={handleToggle}
@@ -34,8 +43,8 @@ export function ArchiveButton({ groupId, isArchived }: { groupId: string; isArch
           }`}
         >
           {isArchived
-            ? <><ArchiveRestore className="w-3.5 h-3.5" /> Restore group</>
-            : <><Archive className="w-3.5 h-3.5" /> Archive group</>}
+            ? <><ArchiveRestore className="w-3.5 h-3.5" /> Restore {label}</>
+            : <><Archive className="w-3.5 h-3.5" /> Archive {label}</>}
         </button>
       }
     />

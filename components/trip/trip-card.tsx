@@ -110,6 +110,26 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
       {isLongPressing && (
         <div className="absolute inset-0 z-20 rounded-2xl ring-2 ring-cyan-400/70 pointer-events-none" />
       )}
+      {/* Type + member count badges — on outer div so member count can be its own Link
+          (can't nest <a> inside the card's main <Link>). Same pattern as action buttons. */}
+      <div
+        className="absolute top-3 left-3 z-10 flex items-center gap-1.5"
+        onTouchStart={(e) => e.stopPropagation()}
+      >
+        <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full pointer-events-none">
+          {isNest ? <Home className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+          {isNest ? "Nest" : "Trip"}
+        </span>
+        <Link
+          href={`/groups/${group.id}/members`}
+          className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full hover:bg-black/60 active:scale-95 transition-all"
+          onClick={(e) => { if (suppressNextClick.current) e.preventDefault(); }}
+        >
+          <Users className="w-3 h-3" />
+          {memberCount}
+        </Link>
+      </div>
+
       {/* Inner div: glass surface + overflow-hidden for image clipping and ribbon */}
       <div className={`relative glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : group.isArchived ? " ring-2 ring-slate-400/30" : ""}`}>
         <Link
@@ -137,18 +157,6 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
 
-            {/* Type + member count badges — top left */}
-            <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                {isNest ? <Home className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
-                {isNest ? "Nest" : "Trip"}
-              </span>
-              <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                <Users className="w-3 h-3" />
-                {memberCount}
-              </span>
-            </div>
-
 
             <div className="absolute bottom-3 left-4 right-4">
               <h3 className="text-white text-xl truncate" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -167,14 +175,19 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
           </div>
         </Link>
         {(balanceBadge || isPlusPlan) ? (
-          <div className="relative">
+          <Link
+            href={`/groups/${group.id}/settle`}
+            className="block relative"
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => { if (suppressNextClick.current) e.preventDefault(); }}
+          >
             {balanceBadge}
             {isPlusPlan && (
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-medium text-violet-400/80 dark:text-violet-400/70 tracking-wide">
                 ✦ Plus
               </span>
             )}
-          </div>
+          </Link>
         ) : null}
         {/* Diagonal ribbon — now relative to the full card (image + badge), stays consistent */}
         {group.isDemo && (

@@ -127,9 +127,13 @@ export async function GroupActivityFeed({ groupId, currentMemberId, groupType }:
             const currency =
               (event.type === "expense" || event.type === "settlement") ? event.currency : null;
             const href =
-              event.type === "dispute"
-                ? `/groups/${groupId}/expenses/${event.expenseId}/thread`
-                : `/groups/${groupId}/expenses`;
+              event.type === "expense"
+                ? `/groups/${groupId}/expenses/${event.id}/thread`
+                : event.type === "dispute"
+                  ? `/groups/${groupId}/expenses/${event.expenseId}/thread`
+                  : event.type === "settlement"
+                    ? `/groups/${groupId}/settle`
+                    : `/groups/${groupId}/members`;
 
             return (
               <Link

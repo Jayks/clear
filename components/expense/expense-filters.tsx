@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, X, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Search, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
@@ -27,6 +27,8 @@ interface Props {
 }
 
 const ITEMS_PER_PAGE = 10;
+// Groups with ≤ this many total expenses skip pagination and show everything.
+const PAGE_ALL_THRESHOLD = 20;
 
 export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts }: Props) {
   const [search, setSearch]        = useState("");
@@ -37,10 +39,9 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
   const [sort, setSort]             = useState<SortOption>("date-desc");
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // Reset to page 1 whenever filters or sort change
-  useEffect(() => { setCurrentPage(1); }, [search, category, payerId, dateFrom, dateTo, sort]);
+  // Reset to page 1 whenever filters, sort, or the expense list length changes (e.g. after adding/deleting)
+  useEffect(() => { setCurrentPage(1); }, [search, category, payerId, dateFrom, dateTo, sort, expenses.length]);
 
   function optimisticDelete(expenseId: string) {
     setRemovedIds((prev) => new Set([...prev, expenseId]));
@@ -88,15 +89,16 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
   }, [expenses, removedIds, search, category, payerId, dateFrom, dateTo, sort]);
 
   const isSearching = !!search.trim();
+  // Small groups (≤ PAGE_ALL_THRESHOLD total expenses) skip pagination entirely.
+  const usePagination = expenses.length > PAGE_ALL_THRESHOLD;
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const page = Math.min(currentPage, Math.max(1, totalPages));
   const pageStart = (page - 1) * ITEMS_PER_PAGE;
   const pageItems = filtered.slice(pageStart, pageStart + ITEMS_PER_PAGE);
-  const displayItems = isSearching ? filtered.slice(0, 50) : pageItems;
+  const displayItems = isSearching ? filtered.slice(0, 50) : usePagination ? pageItems : filtered;
 
   const filteredTotal = displayItems.reduce((sum, e) => sum + Number(e.amount), 0);
   const isFiltered = !!(search || category || payerId || dateFrom || dateTo);
-  const hasAdvancedFilter = !!(payerId || dateFrom || dateTo);
 
   function clearAll() {
     setSearch(""); setCategory(null); setPayerId(null);
@@ -159,18 +161,6 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           </div>
-          {/* Advanced filter toggle — mobile only */}
-          <button
-            onClick={() => setAdvancedOpen((v) => !v)}
-            className={`md:hidden flex items-center justify-center w-10 h-10 rounded-xl border transition-colors shrink-0 ${
-              hasAdvancedFilter
-                ? "border-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400"
-                : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400"
-            }`}
-            title="More filters"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </button>
         </div>
 
         {/* ── Category pills — horizontal scroll on mobile ──────────────── */}
@@ -206,49 +196,55 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           })}
         </div>
 
-        {/* ── Advanced filters: payer + date range ──────────────────────── */}
-        {/* Always visible on desktop; toggled on mobile */}
-        <div className={`${advancedOpen ? "flex" : "hidden md:flex"} gap-2 flex-wrap mb-3 items-center`}>
-          <div className="relative">
-            <select
-              value={payerId ?? ""}
-              onChange={(e) => setPayerId(e.target.value || null)}
-              className="appearance-none pl-3 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-600 dark:text-slate-300 cursor-pointer"
-            >
-              <option value="">All payers</option>
-              {payers.map((m) => (
-                <option key={m.id} value={m.id}>{getMemberName(m)}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-          </div>
-          <input
-            type="date"
-            value={dateFrom}
-            min={groupStartDate ?? undefined}
-            max={dateTo || (groupEndDate ?? undefined)}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
-          />
-          <span className="text-slate-400 text-xs">to</span>
-          <input
-            type="date"
-            value={dateTo}
-            min={dateFrom || (groupStartDate ?? undefined)}
-            max={groupEndDate ?? undefined}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
-          />
-          {isFiltered && (
-            <button
-              onClick={clearAll}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors"
-            >
-              <X className="w-3 h-3" />
-              Clear all
-            </button>
-          )}
-        </div>
+        {/* ── Advanced filters: payer + date range — always visible ────── */}
+        {(payers.length > 1 || dateFrom || dateTo) && (
+          <>
+            <div className="h-px bg-slate-200/60 dark:bg-slate-700/40 mb-3" />
+            <div className="flex gap-2 flex-wrap mb-3 items-center">
+              {payers.length > 1 && (
+                <div className="relative">
+                  <select
+                    value={payerId ?? ""}
+                    onChange={(e) => setPayerId(e.target.value || null)}
+                    className="appearance-none pl-3 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-600 dark:text-slate-300 cursor-pointer"
+                  >
+                    <option value="">All payers</option>
+                    {payers.map((m) => (
+                      <option key={m.id} value={m.id}>{getMemberName(m)}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                </div>
+              )}
+              <input
+                type="date"
+                value={dateFrom}
+                min={groupStartDate ?? undefined}
+                max={dateTo || (groupEndDate ?? undefined)}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
+              />
+              <span className="text-slate-400 text-xs">to</span>
+              <input
+                type="date"
+                value={dateTo}
+                min={dateFrom || (groupStartDate ?? undefined)}
+                max={groupEndDate ?? undefined}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
+              />
+              {isFiltered && (
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Clear all
+                </button>
+              )}
+            </div>
+          </>
+        )}
 
         {/* ── Results bar ───────────────────────────────────────────────── */}
         <div className="flex items-center justify-between mb-3 px-0.5">
@@ -301,7 +297,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
       )}
 
       {/* ── Pagination — hidden while searching ──────────────────────── */}
-      {!isSearching && totalPages > 1 && (
+      {!isSearching && usePagination && totalPages > 1 && (
         <div className="flex items-center justify-between mt-4 px-0.5">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

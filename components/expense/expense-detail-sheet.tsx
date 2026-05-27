@@ -23,6 +23,7 @@ import {
   addComment,
   deleteComment,
   fetchExpenseCommentsAction,
+  fetchExpenseDisputesAction,
 } from "@/app/actions/interactions";
 import { REACTION_META, type ReactionEmoji } from "@/lib/db/schema/expense-reactions";
 import { DISPUTE_TYPE_META } from "@/lib/db/schema/expense-disputes";
@@ -83,7 +84,9 @@ export function ExpenseDetailSheet({
   const [comments, setComments] = useState<OptimisticComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [allDisputes, setAllDisputes] = useState<NonNullable<Awaited<ReturnType<typeof fetchExpenseDisputesAction>>>>([]);
   const commentsFetchedRef = useRef<string | null>(null);
+  const disputesFetchedRef = useRef<string | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
 
@@ -139,12 +142,24 @@ export function ExpenseDetailSheet({
       });
   }, [isOpen, expense.id, expense.groupId]);
 
+  // ── Fetch resolved disputes on open ─────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    if (disputesFetchedRef.current === expense.id) return;
+    disputesFetchedRef.current = expense.id;
+    fetchExpenseDisputesAction(expense.id, expense.groupId)
+      .then((rows) => { if (rows) setAllDisputes(rows); })
+      .catch(() => {});
+  }, [isOpen, expense.id, expense.groupId]);
+
   // Reset all local state when the expense changes
   useEffect(() => {
     setSplits(null);
     setComments([]);
     setCommentsLoading(false);
+    setAllDisputes([]);
     commentsFetchedRef.current = null;
+    disputesFetchedRef.current = null;
   }, [expense.id]);
 
   // Auto-mark as seen when the sheet opens.
@@ -194,6 +209,7 @@ export function ExpenseDetailSheet({
   const isPayer = payer?.userId === currentUserId;
   const canResolveDispute = isPayer || isAdmin;
   const pendingDispute = interactionCount?.pendingDispute ?? null;
+  const resolvedDisputes = allDisputes.filter((d) => d.status !== "pending");
   const disputeTypeMeta = pendingDispute
     ? DISPUTE_TYPE_META[pendingDispute.type as keyof typeof DISPUTE_TYPE_META]
     : null;
@@ -251,6 +267,7 @@ export function ExpenseDetailSheet({
       setIsAccepting(false);
       if (result.ok) {
         toast.success("Dispute accepted — split updated.");
+        disputesFetchedRef.current = null; // re-fetch on next open to show resolved history
         onClose();
         router.refresh();
       } else {
@@ -266,6 +283,7 @@ export function ExpenseDetailSheet({
       setIsDeclining(false);
       if (result.ok) {
         toast("Dispute declined. The requester has been notified.");
+        disputesFetchedRef.current = null; // re-fetch on next open to show resolved history
         onClose();
         router.refresh();
       } else {
@@ -598,6 +616,37 @@ export function ExpenseDetailSheet({
                         </button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ── Resolved dispute history ─────────────────────── */}
+                {resolvedDisputes.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Resolved disputes</span>
+                      <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+                    </div>
+                    <div className="space-y-2">
+                      {resolvedDisputes.map((dispute) => (
+                        <div key={dispute.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
+                          <span className="text-base">
+                            {dispute.status === "accepted" ? "✅" : dispute.status === "declined" ? "❌" : "🔕"}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
+                              {DISPUTE_TYPE_META[dispute.type as keyof typeof DISPUTE_TYPE_META]?.label ?? "Dispute"} · {dispute.requesterName}
+                            </p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                              {dispute.status.charAt(0).toUpperCase() + dispute.status.slice(1)}
+                              {dispute.resolvedAt && ` · ${formatDistanceToNow(dispute.resolvedAt, { addSuffix: true })}`}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

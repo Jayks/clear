@@ -17,9 +17,13 @@ interface ExpenseCardProps {
   onDelete?: (expenseId: string) => void;
   onDeleteFail?: (expenseId: string) => void;
   interactionCount?: ExpenseInteractionCount;
+  /** Mobile: hide action buttons — they live in the swipe overlay instead */
+  hideActions?: boolean;
+  /** Desktop: reveal action buttons on parent group-hover instead of always-on */
+  hoverRevealActions?: boolean;
 }
 
-export function ExpenseCard({ expense, members, currentUserId, currentMemberId, isAdmin, onDelete, onDeleteFail, interactionCount }: ExpenseCardProps) {
+export function ExpenseCard({ expense, members, currentUserId, currentMemberId, isAdmin, onDelete, onDeleteFail, interactionCount, hideActions = false, hoverRevealActions = false }: ExpenseCardProps) {
   const payer = members.find((m) => m.id === expense.paidByMemberId);
   const payerName = payer ? getMemberName(payer) : "Member";
   const creator = members.find((m) => m.userId === expense.createdByUserId);
@@ -96,8 +100,8 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
             )}
           </p>
           {/* Right: action buttons */}
-          {canEdit && (
-            <div className="flex items-center gap-1.5 shrink-0">
+          {canEdit && !hideActions && (
+            <div className={`flex items-center gap-1.5 shrink-0 ${hoverRevealActions ? "opacity-0 group-hover:opacity-100 transition-opacity" : ""}`}>
               <Link
                 href={`/groups/${expense.groupId}/expenses/${expense.id}/edit`}
                 className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 flex items-center justify-center transition-colors"

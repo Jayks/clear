@@ -39,12 +39,13 @@ export function BalanceCardsClient({ balances, members, currentMemberId, currenc
         {balances.map((b) => {
           const isPositive = b.net > 0;
           const isZero = b.net === 0;
+          const isCurrentUser = b.memberId === currentMemberId;
           return (
             <button
               key={b.memberId}
               type="button"
               onClick={() => setSelectedMemberId(b.memberId)}
-              className="glass rounded-xl px-4 py-3 flex items-center gap-3 text-left hover:shadow-md transition-shadow w-full"
+              className={`glass rounded-xl px-4 py-3 flex items-center gap-3 text-left hover:shadow-md transition-shadow w-full ${isCurrentUser ? "ring-2 ring-cyan-400/40 dark:ring-cyan-500/30" : ""}`}
             >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                 isZero
@@ -60,7 +61,14 @@ export function BalanceCardsClient({ balances, members, currentMemberId, currenc
                   : <TrendingDown className="w-4 h-4 text-red-500 dark:text-red-400" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{b.displayName}</p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{b.displayName}</p>
+                  {isCurrentUser && (
+                    <span className="shrink-0 text-[10px] font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/30 px-1.5 py-0.5 rounded-full">
+                      You
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {isZero ? "Settled" : isPositive ? "is owed" : "owes"}
                 </p>

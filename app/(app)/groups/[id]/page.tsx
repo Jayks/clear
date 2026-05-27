@@ -5,6 +5,7 @@ import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
 import { autoLogDueTemplates } from "@/app/actions/expenses";
 import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
+import { TripCardQuickAdd } from "@/components/trip/trip-card-quick-add";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -67,17 +68,29 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <div className={`w-full h-full bg-gradient-to-br ${isNest ? "from-teal-500 to-emerald-500" : "from-cyan-500 to-teal-500"}`} />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
-          {/* Share + Edit buttons — overlaid on hero, admin only */}
-          {isAdmin && (
+          {/* Hero action buttons — quick-add for all members, share+edit for admins only */}
+          {currentMember && (
             <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-              <TripCardShareDrawer url={inviteUrl} groupName={group.name} />
-              <Link
-                href={`/groups/${group.id}/edit`}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all"
-                title={`Edit ${config.labels.singular.toLowerCase()}`}
-              >
-                <Pencil className="w-4 h-4" />
-              </Link>
+              <TripCardQuickAdd
+                groupId={group.id}
+                groupName={group.name}
+                groupType={group.groupType}
+                currency={group.defaultCurrency}
+                groupStartDate={group.startDate}
+                groupEndDate={group.endDate}
+              />
+              {isAdmin && (
+                <>
+                  <TripCardShareDrawer url={inviteUrl} groupName={group.name} />
+                  <Link
+                    href={`/groups/${group.id}/edit`}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all"
+                    title={`Edit ${config.labels.singular.toLowerCase()}`}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Link>
+                </>
+              )}
             </div>
           )}
           <div className="absolute bottom-4 left-5 right-5">
@@ -85,7 +98,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               {group.name}
             </h1>
             {isNest ? (
-              <p className="text-white/75 text-sm mt-1">Nest</p>
+              <p className="text-white/75 text-sm mt-1">{members.length} {members.length === 1 ? "member" : "members"}</p>
             ) : (group.startDate || group.endDate) ? (
               <p className="text-white/75 text-sm mt-1">
                 {group.startDate ? formatDate(group.startDate) : ""}

@@ -263,8 +263,24 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
 
         {/* ── First 2 cards / empty state (inside spotlight) ────────────── */}
         {filtered.length === 0 ? (
-          <div className="py-14 text-center text-slate-400 dark:text-slate-500 text-sm glass rounded-xl">
-            {isSearching ? `No expenses match "${search.trim()}".` : "No expenses match your filters."}
+          <div className="py-12 flex flex-col items-center gap-3 glass rounded-xl text-center">
+            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <Search className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No expenses found</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                {isSearching ? `Nothing matches "${search.trim()}"` : "Try adjusting your filters"}
+              </p>
+            </div>
+            {isFiltered && (
+              <button
+                onClick={clearAll}
+                className="text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         ) : groupByMonth ? (
           <MonthGroupedList

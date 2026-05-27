@@ -5,7 +5,7 @@ import { Search, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
-import { CATEGORIES } from "@/lib/categories";
+import { getCategory } from "@/lib/categories";
 import { SwipeableExpenseCard } from "./swipeable-expense-card";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { CategoryIcon } from "./category-icon";
@@ -164,11 +164,11 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           </div>
         </div>
 
-        {/* ── Category pills — horizontal scroll on mobile ──────────────── */}
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 mb-3">
+        {/* ── Category pills — wrapping layout, all options visible ───────── */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
           <button
             onClick={() => setCategory(null)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0 ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               !category
                 ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
                 : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
@@ -177,21 +177,20 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             All
           </button>
           {usedCategories.map((cat) => {
-            const catMeta = CATEGORIES.find((c) => c.value === cat);
-            if (!catMeta) return null;
+            const catMeta = getCategory(cat);
             const active = category === cat;
             return (
               <button
                 key={cat}
                 onClick={() => setCategory(active ? null : cat)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   active
                     ? `bg-gradient-to-br ${catMeta.gradient} text-white shadow-sm`
                     : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                 }`}
               >
                 <catMeta.icon className="w-3 h-3" />
-                {catMeta.label}
+                {catMeta.shortLabel ?? catMeta.label}
               </button>
             );
           })}

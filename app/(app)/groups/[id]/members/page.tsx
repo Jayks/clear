@@ -43,6 +43,8 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
       </Link>
       {memberNudge && <PlanNudgeBanner nudge={memberNudge} resource="members" />}
 
+      {/* Spacer — replaces the title block's mb-6 on mobile */}
+      <div className="mb-4 md:hidden" />
       {/* Page title — desktop only; mobile nav carries the icon + label */}
       <div className="hidden md:flex items-center gap-3 mb-6">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">

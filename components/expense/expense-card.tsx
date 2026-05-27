@@ -43,7 +43,7 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
       <div className="flex items-center gap-3">
         <CategoryIcon category={expense.category} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{expense.description}</p>
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 line-clamp-2">{expense.description}</p>
           {expense.category === "other" && expense.customCategory && (
             <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium leading-none">
               {expense.customCategory}

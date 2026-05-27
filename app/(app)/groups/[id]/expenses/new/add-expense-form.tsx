@@ -22,9 +22,10 @@ interface Props {
   group: Group;
   members: GroupMember[];
   canUseNonEqual?: boolean;
+  currentMemberId?: string;
 }
 
-export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props) {
+export function AddExpenseForm({ group, members, canUseNonEqual = true, currentMemberId }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
@@ -49,7 +50,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
       expenseDate: smartDefaultDate(group.startDate, group.endDate),
       category: "other",
       customCategory: "",
-      paidByMemberId: members[0]?.id ?? "",
+      paidByMemberId: currentMemberId ?? members[0]?.id ?? "",
       splitMode: "equal",
       splits: members.map((m) => ({ memberId: m.id })),
     },

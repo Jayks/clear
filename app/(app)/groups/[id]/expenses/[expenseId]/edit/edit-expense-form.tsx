@@ -70,6 +70,9 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
   const amount = Number(watch("amount")) || 0;
   const currency = watch("currency");
   const category = watch("category");
+  const currentDate = watch("expenseDate");
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date(Date.now() - 864e5).toISOString().split("T")[0];
 
   function handleModeChange(mode: SplitMode) {
     setSplitMode(mode);
@@ -143,16 +146,29 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
       {/* Category */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Category</label>
-        <select
-          {...register("category", {
-            onChange: (e) => { if (e.target.value !== "other") setValue("customCategory", ""); },
+        <div className="grid grid-cols-3 gap-1.5">
+          {groupConfig.categories.map((c) => {
+            const active = category === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => {
+                  setValue("category", c.value, { shouldValidate: true });
+                  if (c.value !== "other") setValue("customCategory", "");
+                }}
+                className={`flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl font-medium transition-all border ${
+                  active
+                    ? `bg-gradient-to-br ${c.gradient} text-white shadow-sm border-transparent`
+                    : "bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                }`}
+              >
+                <c.icon className="w-4 h-4 shrink-0" />
+                <span className="text-[10px] leading-tight text-center">{c.shortLabel ?? c.label}</span>
+              </button>
+            );
           })}
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
-        >
-          {groupConfig.categories.map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </select>
+        </div>
       </div>
 
       {/* Custom category description — "Other" only */}
@@ -181,6 +197,22 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
             type="date"
             className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
+          <div className="flex gap-1.5 mt-1.5">
+            {[{ label: "Today", value: today }, { label: "Yesterday", value: yesterday }].map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => setValue("expenseDate", s.value, { shouldValidate: true })}
+                className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all ${
+                  currentDate === s.value
+                    ? "bg-cyan-500 text-white"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
           {errors.expenseDate && <p className="mt-1 text-xs text-red-500">{errors.expenseDate.message}</p>}
         </div>
         <div>

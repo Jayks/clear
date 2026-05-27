@@ -19,7 +19,7 @@ export default async function NewExpensePage({
   ]);
   if (!data) notFound();
 
-  const { group, members } = data;
+  const { group, members, currentMember } = data;
   const backHref = from === "groups" ? "/groups" : `/groups/${id}/expenses`;
   const backLabel = from === "groups" ? "Back to groups" : "Back to expenses";
 
@@ -39,7 +39,7 @@ export default async function NewExpensePage({
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{group.name}</p>
 
       <div className="glass rounded-2xl p-6">
-        <AddExpenseForm group={group} members={members} canUseNonEqual={nonEqualAllowed} />
+        <AddExpenseForm group={group} members={members} canUseNonEqual={nonEqualAllowed} currentMemberId={currentMember?.id} />
       </div>
     </div>
   );

@@ -205,7 +205,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
             })}
           </div>
         )}
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {groupConfig.categories.map((c) => {
             const active = category === c.value;
             return (
@@ -216,14 +216,14 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
                   setValue("category", c.value, { shouldValidate: true });
                   if (c.value !== "other") setValue("customCategory", "");
                 }}
-                className={`flex flex-col items-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-medium transition-all border ${
+                className={`flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl font-medium transition-all border ${
                   active
                     ? `bg-gradient-to-br ${c.gradient} text-white shadow-sm border-transparent`
                     : "bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                 }`}
               >
-                <c.icon className="w-4 h-4" />
-                {c.label}
+                <c.icon className="w-4 h-4 shrink-0" />
+                <span className="text-[10px] leading-tight text-center">{c.shortLabel ?? c.label}</span>
               </button>
             );
           })}
@@ -248,32 +248,30 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
       {/* Date + Paid by */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {category === "accommodation" ? "Check-in" : "Date"}
-            </label>
-            <div className="flex gap-1">
-              {[{ label: "Today", value: today }, { label: "Yesterday", value: yesterday }].map((s) => (
-                <button
-                  key={s.label}
-                  type="button"
-                  onClick={() => setValue("expenseDate", s.value, { shouldValidate: true })}
-                  className={`text-[11px] font-medium px-2 py-0.5 rounded-full transition-all ${
-                    currentDate === s.value
-                      ? "bg-cyan-500 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+            {category === "accommodation" ? "Check-in" : "Date"}
+          </label>
           <input
             {...register("expenseDate")}
             type="date"
             className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
           />
+          <div className="flex gap-1.5 mt-1.5">
+            {[{ label: "Today", value: today }, { label: "Yesterday", value: yesterday }].map((s) => (
+              <button
+                key={s.label}
+                type="button"
+                onClick={() => setValue("expenseDate", s.value, { shouldValidate: true })}
+                className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all ${
+                  currentDate === s.value
+                    ? "bg-cyan-500 text-white"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
           {errors.expenseDate && <p className="mt-1 text-xs text-red-500">{errors.expenseDate.message}</p>}
         </div>
         <div>

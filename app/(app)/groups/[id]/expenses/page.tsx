@@ -60,7 +60,8 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
           <ArrowLeft className="w-4 h-4" />
           Back
         </Link>
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        {/* Icon + title — desktop only; mobile nav carries these */}
+        <div className="hidden md:flex items-center gap-2.5 flex-1 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">
             <Receipt className="w-4 h-4 text-white" />
           </div>

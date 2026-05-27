@@ -107,9 +107,10 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      {/* Page title — desktop only; mobile nav carries the icon + label */}
+      <div className="hidden md:flex items-center gap-3 mb-6">
         <Link href={`/groups/${id}`}
-          className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors">
+          className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-sm shadow-amber-500/30 shrink-0">

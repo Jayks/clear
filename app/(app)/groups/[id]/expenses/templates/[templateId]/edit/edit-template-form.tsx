@@ -63,6 +63,7 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
 
   const amount = Number(watch("amount")) || 0;
   const currency = watch("currency");
+  const category = watch("category");
 
   function handleModeChange(mode: SplitMode) {
     setSplitMode(mode);
@@ -119,29 +120,41 @@ export function EditTemplateForm({ group, members, template, splits }: Props) {
         {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
       </div>
 
-      {/* Category + Recurrence */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Category</label>
-          <select
-            {...register("category")}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          >
-            {groupConfig.categories.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+      {/* Category */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Category</label>
+        <div className="grid grid-cols-3 gap-1.5">
+          {groupConfig.categories.map((c) => {
+            const active = category === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => setValue("category", c.value, { shouldValidate: true })}
+                className={`flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl font-medium transition-all border ${
+                  active
+                    ? `bg-gradient-to-br ${c.gradient} text-white shadow-sm border-transparent`
+                    : "bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                }`}
+              >
+                <c.icon className="w-4 h-4 shrink-0" />
+                <span className="text-[10px] leading-tight text-center">{c.shortLabel ?? c.label}</span>
+              </button>
+            );
+          })}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Repeats</label>
-          <select
-            {...register("recurrence")}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          >
-            <option value="monthly">Monthly</option>
-            <option value="weekly">Weekly</option>
-          </select>
-        </div>
+      </div>
+
+      {/* Recurrence */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Repeats</label>
+        <select
+          {...register("recurrence")}
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+        >
+          <option value="monthly">Monthly</option>
+          <option value="weekly">Weekly</option>
+        </select>
       </div>
 
       {/* Paid by */}

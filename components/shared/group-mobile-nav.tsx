@@ -85,26 +85,26 @@ export function GroupMobileNav({ groupId, groupName }: Props) {
   return (
     <>
       {/* relative so the absolutely-centred title anchors to the bar, not the page */}
-      <div className="h-12 px-4 flex items-center justify-between gap-2 glass-nav relative">
-        {/* iOS-style back: truncates with … so it never crowds the centred title */}
+      <div className="h-14 px-4 flex items-center justify-between gap-2 glass-nav relative">
+        {/* Back link — kept small so the centre title dominates */}
         <Link
           href={backHref}
-          className="relative z-10 flex items-center gap-1 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors py-3 shrink-0 max-w-[38%] min-w-0"
+          className="relative z-10 flex items-center gap-1 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors py-3 shrink-0 max-w-[30%] min-w-0"
         >
-          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{backLabel}</span>
         </Link>
 
-        {/* Centre — absolutely anchored so it's always visually centred in the bar */}
+        {/* Centre — absolutely anchored, prominent icon + title */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="flex items-center gap-1.5 max-w-[50%] min-w-0">
+          <div className="flex items-center gap-2 max-w-[55%] min-w-0">
             {SectionIcon && gradient && (
-              <div className={`w-5 h-5 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
-                <SectionIcon className="w-3 h-3 text-white" />
+              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm`}>
+                <SectionIcon className="w-4 h-4 text-white" />
               </div>
             )}
             <p
-              className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate"
+              className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate"
               style={{ fontFamily: "var(--font-fraunces)" }}
             >
               {pageTitle ?? groupName}

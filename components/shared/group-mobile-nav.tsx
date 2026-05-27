@@ -84,36 +84,39 @@ export function GroupMobileNav({ groupId, groupName }: Props) {
 
   return (
     <>
-      <div className="h-12 px-4 flex items-center justify-between gap-2 glass-nav">
-        {/* iOS-style back: label = name of parent screen */}
+      {/* relative so the absolutely-centred title anchors to the bar, not the page */}
+      <div className="h-12 px-4 flex items-center justify-between gap-2 glass-nav relative">
+        {/* iOS-style back: truncates with … so it never crowds the centred title */}
         <Link
           href={backHref}
-          className="flex items-center gap-1 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors py-3 shrink-0 max-w-[40%] min-w-0"
+          className="relative z-10 flex items-center gap-1 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors py-3 shrink-0 max-w-[38%] min-w-0"
         >
           <ArrowLeft className="w-4 h-4 shrink-0" />
           <span className="truncate">{backLabel}</span>
         </Link>
 
-        {/* Current page / group name — centred, with optional section icon */}
-        <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 px-1">
-          {SectionIcon && gradient && (
-            <div className={`w-5 h-5 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
-              <SectionIcon className="w-3 h-3 text-white" />
-            </div>
-          )}
-          <p
-            className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate"
-            style={{ fontFamily: "var(--font-fraunces)" }}
-          >
-            {pageTitle ?? groupName}
-          </p>
+        {/* Centre — absolutely anchored so it's always visually centred in the bar */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="flex items-center gap-1.5 max-w-[50%] min-w-0">
+            {SectionIcon && gradient && (
+              <div className={`w-5 h-5 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
+                <SectionIcon className="w-3 h-3 text-white" />
+              </div>
+            )}
+            <p
+              className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate"
+              style={{ fontFamily: "var(--font-fraunces)" }}
+            >
+              {pageTitle ?? groupName}
+            </p>
+          </div>
         </div>
 
         {/* Section navigator */}
         <button
           type="button"
           onClick={() => setNavOpen(true)}
-          className="flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors shrink-0"
+          className="relative z-10 flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors shrink-0"
           aria-label="Quick navigation"
         >
           <MoreHorizontal className="w-5 h-5" />

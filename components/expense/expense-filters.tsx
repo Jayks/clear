@@ -183,9 +183,9 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               <button
                 key={cat}
                 onClick={() => setCategory(active ? null : cat)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 ${
                   active
-                    ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                    ? `bg-gradient-to-br ${catMeta.gradient} text-white shadow-sm`
                     : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                 }`}
               >

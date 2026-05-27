@@ -26,6 +26,7 @@ interface ExpenseCardProps {
 export function ExpenseCard({ expense, members, currentUserId, currentMemberId, isAdmin, onDelete, onDeleteFail, interactionCount, hideActions = false, hoverRevealActions = false }: ExpenseCardProps) {
   const payer = members.find((m) => m.id === expense.paidByMemberId);
   const payerName = payer ? getMemberName(payer) : "Member";
+  const isPayer = !!currentMemberId && expense.paidByMemberId === currentMemberId;
   const creator = members.find((m) => m.userId === expense.createdByUserId);
   const creatorName = creator ? getMemberName(creator) : null;
   const wasEdited = !!expense.updatedByUserId && expense.updatedByUserId !== expense.createdByUserId;
@@ -81,8 +82,8 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
             </div>
           )}
         </div>
-        {/* Amount — always visible in the top row */}
-        <p className="text-base font-semibold text-slate-800 dark:text-slate-100 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>
+        {/* Amount — emerald when current user paid, neutral otherwise */}
+        <p className={`text-base font-semibold tabular shrink-0 ${isPayer ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-100"}`} style={{ fontFamily: "var(--font-fraunces)" }}>
           {formatCurrency(Number(expense.amount), expense.currency)}
         </p>
       </div>

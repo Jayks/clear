@@ -12,7 +12,7 @@ import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseSplit } from "@/lib/db/schema/expense-splits";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
-import { getCategory } from "@/lib/categories";
+import { getCategory, CATEGORY_HEX } from "@/lib/categories";
 import { formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import { fetchExpenseSplitsAction } from "@/app/actions/expenses";
 import {
@@ -373,9 +373,9 @@ export function ExpenseDetailSheet({
               {/* ── Header ─────────────────────────────────────────────── */}
               <div className="flex items-start gap-3 px-5 py-3 shrink-0 border-b border-slate-100 dark:border-slate-800">
                 <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${catMeta.color}`}
+                  className={`w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-sm ${catMeta.gradient}`}
                 >
-                  <catMeta.icon className={`w-4 h-4 ${catMeta.textColor}`} />
+                  <catMeta.icon className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p
@@ -421,8 +421,8 @@ export function ExpenseDetailSheet({
                     </p>
                   </div>
                   <p
-                    className="text-3xl font-bold text-slate-800 dark:text-slate-100 tabular-nums"
-                    style={{ fontFamily: "var(--font-fraunces)" }}
+                    className="text-3xl font-bold tabular-nums"
+                    style={{ fontFamily: "var(--font-fraunces)", color: CATEGORY_HEX[expense.category] ?? undefined }}
                   >
                     {formatCurrency(Number(expense.amount), expense.currency)}
                   </p>
@@ -447,7 +447,7 @@ export function ExpenseDetailSheet({
                       <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     </div>
                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Split</span>
-                    <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+                    <div className="flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
                   </div>
                   {splits === null ? (
                     <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
@@ -488,7 +488,7 @@ export function ExpenseDetailSheet({
                       <Smile className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     </div>
                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">React</span>
-                    <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+                    <div className="flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {(["thumbs_up"] as const).map((emoji) => {

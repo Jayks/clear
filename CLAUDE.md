@@ -244,6 +244,11 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **Fraunces font**: `style={{ fontFamily: "var(--font-fraunces)" }}` — never Tailwind class.
 - **Dark mode**: every colour class needs a `dark:` counterpart.
 - **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` — never `group.groupType === 'trip'` inline checks.
+- **Category icons**: always `<CategoryIcon category={…} size="sm|md" />` — renders `bg-gradient-to-br ${cat.gradient} text-white`. Never use `cat.color` / `cat.textColor` for icon containers (those are kept for charts only).
+- **Category active chips**: active state = `bg-gradient-to-br ${catMeta.gradient} text-white shadow-sm`. Never hardcode `from-cyan-500 to-teal-500` for category chips.
+- **Expense amount color**: green (`text-emerald-600 dark:text-emerald-400`) when the current user is the payer; neutral (`text-slate-800 dark:text-slate-100`) otherwise.
+- **Section headers**: icon-badge + label + gradient rule line. Accent color by destination — amber=Insights, emerald=Settle, violet=Members, cyan=Expenses, slate=neutral. Pattern: `w-6 h-6 rounded-md bg-[color]-50 dark:bg-[color]-900/30` badge + `h-[1.5px] bg-gradient-to-r from-[color]-200/70 to-transparent dark:from-[color]-800/40 dark:to-transparent` rule. See `components/CLAUDE.md` for full table.
+- **AnimatedList**: wrap card/item lists for `opacity+translateY` entrance stagger. Use `initialDelayMs` to continue stagger across split lists. Stagger cap built-in (`Math.min(i, 8)`). Automatically falls back to plain div when `prefers-reduced-motion` is set.
 - **Shared constants in `lib/utils.ts`**: `DEFAULT_CURRENCY` (`"INR"`), `SUPPORTED_CURRENCIES`, `CHART_AXIS_TICK`.
 - **`CATEGORY_VALUES`** from `lib/categories.ts` — `[string, ...string[]]` for `z.enum()`. Use in AI action schemas.
 - **`?from=groups` on expense new page**: `searchParams.from === "groups"` → back button → `/groups`.

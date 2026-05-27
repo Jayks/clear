@@ -91,6 +91,65 @@ React portals bubble through the React tree, not the DOM — portal-spawning com
 - Balance numbers: `CountUp` (Framer Motion)
 - `NavProgress` (`components/shared/nav-progress.tsx`) — cyan→teal bar at top. Lives in root `app/layout.tsx`. Triggers on `<a>` clicks + custom `navprogress` window event (dispatched before `window.location.href` navigations to cross-layout routes).
 
+#### `AnimatedList` API (`components/shared/animated-list.tsx`)
+```tsx
+<AnimatedList
+  className="grid …"        // forwarded to outer div (supports data-tour, etc.)
+  staggerMs={40}            // ms between items (default 40)
+  initialDelayMs={0}        // base delay before first item — lets split lists cascade seamlessly
+>
+  {items.map(…)}            // children: React.ReactNode[]
+</AnimatedList>
+```
+- `useReducedMotion()` — when OS `prefers-reduced-motion` is set, renders a plain `<div>` at full opacity (no animation, no `opacity:0` invisible-content risk).
+- Stagger cap: `Math.min(i, 8)` — items 9+ all animate at item-8 delay so a 30-item list never exceeds 320ms total.
+- `initialDelayMs` — use when a list is visually split across two `AnimatedList` instances (e.g. expense list first-2 inside tour spotlight, rest outside). Set `initialDelayMs={staggerMs * 2}` on the second list so the cascade feels continuous.
+- Extends `Omit<React.HTMLAttributes<HTMLDivElement>, "children">` — all extra props (`data-tour`, `id`, etc.) are forwarded to the wrapper div.
+
+### Category Color System
+
+#### `CategoryIcon` (`components/expense/category-icon.tsx`)
+```tsx
+<CategoryIcon category="food" size="sm" />  // size: "sm" (w-8 h-8) | "md" (w-10 h-10, default)
+```
+Renders a `bg-gradient-to-br ${cat.gradient}` rounded box with `text-white` icon. **Never** use the old `cat.color` / `cat.textColor` pattern for icon containers — those are kept only for chart axis ticks and chat-import dialogs.
+
+#### `Category` type (in `lib/categories.ts`)
+```typescript
+interface Category {
+  value: string; label: string; icon: LucideIcon;
+  color: string;      // pale tint bg — kept for Recharts axis fills only
+  textColor: string;  // icon color — kept for chart legends only
+  gradient: string;   // vibrant gradient pair for CategoryIcon, e.g. "from-orange-400 to-red-400"
+}
+```
+All 17 categories (trip + nest) have a `gradient` value. Use `cat.gradient` for any icon container or active-chip coloring.
+
+#### Section header color-identity system
+Each major destination has a fixed accent color applied to section header icon badges + gradient rule lines:
+
+| Page / section | Color | Badge bg | Icon color | Rule gradient |
+|---|---|---|---|---|
+| Insights (all pages) | **amber** | `bg-amber-50 dark:bg-amber-900/30` | `text-amber-500 dark:text-amber-400` | `from-amber-200/70 … dark:from-amber-800/40` |
+| Settle Up | **emerald** | `bg-emerald-50 dark:bg-emerald-900/30` | `text-emerald-600 dark:text-emerald-400` | `from-emerald-200/70 … dark:from-emerald-800/40` |
+| Members | **violet** | `bg-violet-50 dark:bg-violet-900/30` | `text-violet-500 dark:text-violet-400` | `from-violet-200/70 … dark:from-violet-800/40` |
+| Expenses | **cyan** | `bg-cyan-50 dark:bg-cyan-900/30` | `text-cyan-600 dark:text-cyan-400` | `from-cyan-200/70 … dark:from-cyan-800/40` |
+| Neutral (activity feed, generic) | **slate** | — | — | `from-slate-300/60 … dark:from-slate-600/50` |
+
+Rule line markup:
+```tsx
+<div className="flex items-center gap-2.5 mb-4">
+  <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+    <Icon className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+  </div>
+  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
+  <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
+</div>
+```
+
+#### `KpiCard` accent behavior
+`<KpiCard accent />` renders a full `bg-gradient-to-br from-amber-500 to-orange-400 shadow-md shadow-amber-500/25` hero card with `text-white` text (label at `text-white/70`, sub at `text-white/60`). Use on the primary metric in any KPI grid (first card).
+
 ---
 
 ## Key Components

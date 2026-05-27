@@ -25,7 +25,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Expense card actions** — Edit, Duplicate, Delete revealed on hover (desktop) or via swipe-left overlay with large tap targets (mobile); no visual clutter when browsing
 - **Category recents** — the last 3 used categories appear as quick-tap pills above the full category selector in the expense form (separate per group type)
 - **Four split modes** — equal, exact amount, percentage, or shares
-- **16 expense categories** — including Tour Package for trips; "Other" prompts a free-text description
+- **16 expense categories** — each with a distinct vibrant gradient icon (Food = orange→red, Transport = blue→indigo, Accommodation = violet→purple, etc.); including Tour Package for trips; "Other" prompts a free-text description
 - **Minimum-transaction settlement** — greedy optimizer computes the fewest payments to clear all debts
 - **UPI pay** — direct payment links on the settle-up page
 - **Balance at a glance** — every group card shows your net position (owe / owed / settled / no expenses yet), streaming in without blocking the page
@@ -52,6 +52,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **What's New** — changelog accessible from the avatar dropdown inside the app, and from the marketing page nav
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
+- **Entrance animations** — expense lists, balance cards, and KPI grids stagger in with a subtle `opacity+translateY` animation via `AnimatedList`; capped so long lists never animate for more than ~320ms; automatically disabled for users with `prefers-reduced-motion` set
 - **Realtime** — Supabase Realtime pushes expense/settlement changes to all open sessions
 
 ---

@@ -5,18 +5,19 @@ import { animate } from "framer-motion";
 
 interface CountUpProps {
   value: number;
-  currency?: string;      // if provided → currency format; omit → integer
+  currency?: string;           // if provided → currency format; omit → integer
   locale?: string;
   className?: string;
   duration?: number;
+  maximumFractionDigits?: number;  // default 2 for currency, 0 for integers
 }
 
-export function CountUp({ value, currency, locale = "en-IN", className, duration = 0.6 }: CountUpProps) {
+export function CountUp({ value, currency, locale = "en-IN", className, duration = 0.6, maximumFractionDigits }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
 
   const fmt = (n: number) =>
     currency
-      ? new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(n)
+      ? new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: maximumFractionDigits ?? 2 }).format(n)
       : Math.round(n).toLocaleString(locale);
 
   useEffect(() => {

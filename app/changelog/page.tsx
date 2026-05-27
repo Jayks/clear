@@ -97,7 +97,7 @@ function ReleaseCard({ release, index }: { release: ChangelogRelease; index: num
 
 export default function ChangelogPage() {
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-clip">
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav className="glass-nav sticky top-0 z-50">

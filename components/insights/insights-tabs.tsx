@@ -8,6 +8,7 @@ import { CategoryDonut } from "./category-donut";
 import { TripsSpendBar } from "./trips-spend-bar";
 import { MonthlySpendBar } from "./monthly-spend-bar";
 import { AnimatedList } from "@/components/shared/animated-list";
+import { FadeIn } from "@/components/shared/fade-in";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { AllTripsInsights } from "@/lib/insights/all-trips-insights";
@@ -81,7 +82,7 @@ function TripsInsightsContent({ data, fmt, primaryCurrency }: {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <AnimatedList className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" staggerMs={80}>
         <KpiCard label="Total spent" value={fmt(data.totalSpend)}
           numericValue={data.totalSpend} currency={primaryCurrency} accent />
         <KpiCard label="Trips" value={String(data.tripCount)}
@@ -90,65 +91,73 @@ function TripsInsightsContent({ data, fmt, primaryCurrency }: {
           numericValue={data.totalExpenses} />
         <KpiCard label="Companions" value={String(data.uniqueCompanions)}
           numericValue={data.uniqueCompanions} />
-      </div>
+      </AnimatedList>
 
       {/* Charts */}
       {data.tripCount > 1 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" data-tour="all-insights-charts">
-          <TripsSpendBar data={data.byTrip} />
-          <CategoryDonut data={data.topCategories} currency={primaryCurrency} />
-        </div>
+        <FadeIn>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" data-tour="all-insights-charts">
+            <TripsSpendBar data={data.byTrip} />
+            <CategoryDonut data={data.topCategories} currency={primaryCurrency} />
+          </div>
+        </FadeIn>
       )}
       {data.tripCount === 1 && (
-        <div className="mb-6 max-w-sm" data-tour="all-insights-charts">
-          <CategoryDonut data={data.topCategories} currency={primaryCurrency} />
-        </div>
+        <FadeIn>
+          <div className="mb-6 max-w-sm" data-tour="all-insights-charts">
+            <CategoryDonut data={data.topCategories} currency={primaryCurrency} />
+          </div>
+        </FadeIn>
       )}
 
       {/* Smart insights */}
-      <div data-tour="all-insights-trips">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-            <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+      <FadeIn>
+        <div data-tour="all-insights-trips">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">What stands out</span>
+            <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
           </div>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">What stands out</span>
-          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+          <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
+            {data.smartInsights.map((s, i) => (
+              <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
+            ))}
+          </AnimatedList>
         </div>
-        <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
-          {data.smartInsights.map((s, i) => (
-            <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
-          ))}
-        </AnimatedList>
-      </div>
+      </FadeIn>
 
       {/* Per-trip links */}
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-          <MapPin className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+      <FadeIn>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+            <MapPin className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dive into a trip</span>
+          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
         </div>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dive into a trip</span>
-        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
-      </div>
-      <AnimatedList className="grid grid-cols-1 lg:grid-cols-2 gap-2" staggerMs={60}>
-        {data.byTrip.map((t) => (
-          <Link key={t.tripId} href={`/groups/${t.tripId}/insights`}
-            className="glass rounded-xl px-4 py-3 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shrink-0">
-              <MapPin className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{t.name}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {t.expenseCount} expenses · {t.memberCount} members
+        <AnimatedList className="grid grid-cols-1 lg:grid-cols-2 gap-2" staggerMs={60}>
+          {data.byTrip.map((t) => (
+            <Link key={t.tripId} href={`/groups/${t.tripId}/insights`}
+              className="glass rounded-xl px-4 py-3 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all group">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shrink-0">
+                <MapPin className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{t.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t.expenseCount} expenses · {t.memberCount} members
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0"
+                style={{ fontFamily: "var(--font-fraunces)" }}>
+                {new Intl.NumberFormat("en-IN", { style: "currency", currency: t.currency, maximumFractionDigits: 0 }).format(t.totalSpend)}
               </p>
-            </div>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0"
-              style={{ fontFamily: "var(--font-fraunces)" }}>
-              {new Intl.NumberFormat("en-IN", { style: "currency", currency: t.currency, maximumFractionDigits: 0 }).format(t.totalSpend)}
-            </p>
-          </Link>
-        ))}
-      </AnimatedList>
+            </Link>
+          ))}
+        </AnimatedList>
+      </FadeIn>
     </div>
   );
 }
@@ -169,7 +178,7 @@ function NestsInsightsContent({ data, fmt }: {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <AnimatedList className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" staggerMs={80}>
         <KpiCard label="Monthly average" value={fmt(data.monthlyAverage)}
           numericValue={data.monthlyAverage} currency="INR" accent />
         <KpiCard label="Total spend" value={fmt(data.totalSpend)}
@@ -178,56 +187,62 @@ function NestsInsightsContent({ data, fmt }: {
           numericValue={data.totalExpenses} />
         <KpiCard label="Mates" value={String(data.uniqueMates)}
           numericValue={data.uniqueMates} />
-      </div>
+      </AnimatedList>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" data-tour="all-insights-charts">
-        <MonthlySpendBar data={data.monthlyTrend} currency="INR" />
-        <CategoryDonut data={data.topCategories} currency="INR" />
-      </div>
+      <FadeIn>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" data-tour="all-insights-charts">
+          <MonthlySpendBar data={data.monthlyTrend} currency="INR" />
+          <CategoryDonut data={data.topCategories} currency="INR" />
+        </div>
+      </FadeIn>
 
       {/* Smart insights */}
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+      <FadeIn>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">What stands out</span>
+          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
         </div>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">What stands out</span>
-        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
-      </div>
-      <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
-        {data.smartInsights.map((s, i) => (
-          <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
-        ))}
-      </AnimatedList>
+        <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8" staggerMs={50}>
+          {data.smartInsights.map((s, i) => (
+            <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
+          ))}
+        </AnimatedList>
+      </FadeIn>
 
       {/* Per-nest links */}
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-          <Home className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+      <FadeIn>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+            <Home className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dive into a nest</span>
+          <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
         </div>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dive into a nest</span>
-        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
-      </div>
-      <AnimatedList className="grid grid-cols-1 lg:grid-cols-2 gap-2" staggerMs={60}>
-        {data.byNest.map((n) => (
-          <Link key={n.nestId} href={`/groups/${n.nestId}/insights`}
-            className="glass rounded-xl px-4 py-3 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-sm shrink-0">
-              <Home className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{n.name}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {fmt(n.monthlyAverage)}/mo · {n.memberCount} members
+        <AnimatedList className="grid grid-cols-1 lg:grid-cols-2 gap-2" staggerMs={60}>
+          {data.byNest.map((n) => (
+            <Link key={n.nestId} href={`/groups/${n.nestId}/insights`}
+              className="glass rounded-xl px-4 py-3 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 transition-all group">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-sm shrink-0">
+                <Home className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{n.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {fmt(n.monthlyAverage)}/mo · {n.memberCount} members
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0"
+                style={{ fontFamily: "var(--font-fraunces)" }}>
+                {fmt(n.totalSpend)}
               </p>
-            </div>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular shrink-0"
-              style={{ fontFamily: "var(--font-fraunces)" }}>
-              {fmt(n.totalSpend)}
-            </p>
-          </Link>
-        ))}
-      </AnimatedList>
+            </Link>
+          ))}
+        </AnimatedList>
+      </FadeIn>
     </div>
   );
 }

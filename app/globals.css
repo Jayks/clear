@@ -6,6 +6,14 @@ html { scroll-behavior: smooth; }
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── AnimatedList entrance keyframe ────────────────────────────────────── */
+/* Declared at root (not inside @layer) so it's always available.
+   16px y-offset + 300ms gives a visible, satisfying entrance on mobile. */
+@keyframes list-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* ─── Wayfare design tokens ─────────────────────────────────────────────── */
 @theme inline {
   /* Fonts */
@@ -178,11 +186,11 @@ html { scroll-behavior: smooth; }
     border: 1px solid rgba(255, 255, 255, 0.7);
   }
   .glass-nav {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 1px 0 rgba(8, 145, 178, 0.06);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(8, 145, 178, 0.04);
   }
 
   /* Dark mode glass overrides */
@@ -196,14 +204,25 @@ html { scroll-behavior: smooth; }
     border: 1px solid rgba(51, 65, 85, 0.5);
   }
   .dark .glass-nav {
-    background: rgba(15, 23, 42, 0.85);
-    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+    background: rgba(13, 18, 30, 0.92);
+    backdrop-filter: saturate(150%) blur(20px);
+    -webkit-backdrop-filter: saturate(150%) blur(20px);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
   }
 
   /* Marquee ticker for landing page */
   .animate-marquee {
     animation: marquee 35s linear infinite;
+  }
+
+  /* AnimatedList card entrance — CSS-driven so it fires on DOM insert,
+     independent of React hydration timing (critical for skeleton→content swaps).
+     animation-delay longhand comes AFTER the shorthand so it overrides the
+     implicit 0s delay; reads --list-delay set as an inline style on each item. */
+  .animate-list-enter {
+    animation: list-enter 0.3s ease-out both;
+    animation-delay: var(--list-delay, 0s);
   }
 
 }

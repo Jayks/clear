@@ -42,7 +42,7 @@ const TABLE_SECTIONS: {
 
 export default function PricingPage() {
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-clip">
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav className="glass-nav sticky top-0 z-50">
@@ -113,14 +113,14 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <div className="glass rounded-2xl overflow-hidden overflow-x-auto">
+        <div className="glass rounded-2xl overflow-hidden">
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_88px_96px] min-w-[360px] border-b border-slate-100 dark:border-slate-700/60">
-            <div className="px-5 py-3.5" />
-            <div className="px-3 py-3.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+          <div className="grid grid-cols-[1fr_60px_72px] sm:grid-cols-[1fr_88px_96px] border-b border-slate-100 dark:border-slate-700/60">
+            <div className="px-3 sm:px-5 py-3.5" />
+            <div className="px-2 sm:px-3 py-3.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
               Free
             </div>
-            <div className="px-3 py-3.5 text-center text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide bg-violet-50/60 dark:bg-violet-950/30">
+            <div className="px-2 sm:px-3 py-3.5 text-center text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide bg-violet-50/60 dark:bg-violet-950/30">
               Plus ✦
             </div>
           </div>
@@ -128,7 +128,7 @@ export default function PricingPage() {
           {TABLE_SECTIONS.map((section) => (
             <div key={section.label}>
               {/* Section label */}
-              <div className="px-5 py-2 bg-slate-50/60 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700/60 min-w-[360px]">
+              <div className="px-3 sm:px-5 py-2 bg-slate-50/60 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700/60">
                 <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   {section.label}
                 </p>
@@ -137,17 +137,17 @@ export default function PricingPage() {
               {section.rows.map((row, i) => (
                 <div
                   key={row.feature}
-                  className={`grid grid-cols-[1fr_88px_96px] min-w-[360px] border-b border-slate-100/60 dark:border-slate-700/40 last:border-0 ${
+                  className={`grid grid-cols-[1fr_60px_72px] sm:grid-cols-[1fr_88px_96px] border-b border-slate-100/60 dark:border-slate-700/40 last:border-0 ${
                     i % 2 === 1 ? "bg-slate-50/30 dark:bg-slate-800/20" : ""
                   }`}
                 >
-                  <div className="px-5 py-3 text-sm text-slate-700 dark:text-slate-200">
+                  <div className="px-3 sm:px-5 py-3 text-sm text-slate-700 dark:text-slate-200">
                     {row.feature}
                   </div>
-                  <div className="px-3 py-3 flex items-center justify-center">
+                  <div className="px-1.5 sm:px-3 py-3 flex items-center justify-center">
                     <TableCell value={row.free} />
                   </div>
-                  <div className="px-3 py-3 flex items-center justify-center bg-violet-50/30 dark:bg-violet-950/10">
+                  <div className="px-1.5 sm:px-3 py-3 flex items-center justify-center bg-violet-50/30 dark:bg-violet-950/10">
                     <TableCell value={row.plus} isPlus />
                   </div>
                 </div>
@@ -227,7 +227,7 @@ function TableCell({ value, isPlus = false }: { value: string | boolean; isPlus?
     );
   }
   return (
-    <span className={`text-xs font-medium text-center leading-tight ${isPlus ? "text-violet-700 dark:text-violet-300" : "text-slate-500 dark:text-slate-400"}`}>
+    <span className={`text-[11px] sm:text-xs font-medium text-center leading-tight break-words hyphens-auto ${isPlus ? "text-violet-700 dark:text-violet-300" : "text-slate-500 dark:text-slate-400"}`}>
       {value}
     </span>
   );

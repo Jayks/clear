@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 
 interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
   children: React.ReactNode[];
@@ -11,7 +11,7 @@ interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "children"> {
   initialDelayMs?: number;
 }
 
-export function AnimatedList({ children, className, staggerMs = 40, initialDelayMs = 0, ...rest }: Props) {
+export function AnimatedList({ children, className, staggerMs = 80, initialDelayMs = 0, ...rest }: Props) {
   const reduced = useReducedMotion();
 
   // If the user prefers reduced motion, render items immediately with no
@@ -27,20 +27,25 @@ export function AnimatedList({ children, className, staggerMs = 40, initialDelay
   return (
     <div className={className} {...rest}>
       {children.map((child, i) => (
-        <motion.div
+        // Plain div + CSS keyframe animation instead of Framer Motion motion.div.
+        // CSS animations fire on DOM insertion — no React hydration dependency —
+        // so the entrance plays reliably after skeleton→content swaps on mobile.
+        //
+        // Delay is passed via CSS custom property --list-delay, read by
+        // animation-delay in the .animate-list-enter rule. This is more reliable
+        // than inline animationDelay which can conflict with the animation
+        // shorthand's implicit delay:0s across different browsers.
+        <div
           key={i}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          // Cap stagger at item 8 — items 9+ share the same delay so a long
-          // expense list doesn't keep animating for seconds.
-          transition={{
-            duration: 0.2,
-            delay: (initialDelayMs + Math.min(i, 8) * staggerMs) / 1000,
-            ease: "easeOut",
-          }}
+          className="h-full animate-list-enter"
+          style={{
+            // Cap stagger at item 8 — items 9+ all animate at item-8 delay so a
+            // long expense list never exceeds 640ms total stagger.
+            "--list-delay": `${(initialDelayMs + Math.min(i, 8) * staggerMs) / 1000}s`,
+          } as React.CSSProperties}
         >
           {child}
-        </motion.div>
+        </div>
       ))}
     </div>
   );

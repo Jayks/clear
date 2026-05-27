@@ -12,6 +12,7 @@ import { SmartInsightCard } from "@/components/insights/smart-insight-card";
 import { GroupRolesCard } from "@/components/insights/group-roles-card";
 import { PaceTrackerCard } from "@/components/insights/pace-tracker-card";
 import { AnimatedList } from "@/components/shared/animated-list";
+import { FadeIn } from "@/components/shared/fade-in";
 
 import { CategoryDonut } from "@/components/insights/category-donut";
 import { DailySpendBar } from "@/components/insights/daily-spend-bar";
@@ -149,31 +150,36 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
 
       {/* Pace tracker — trip only */}
       {!isNest && trajectory && (
-        <PaceTrackerCard data={trajectory} currency={currency} />
+        <FadeIn>
+          <PaceTrackerCard data={trajectory} currency={currency} />
+        </FadeIn>
       )}
 
-      {/* Charts */}
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-          <PieChart className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+      {/* Charts — header + grid wrapped together so they enter as one unit */}
+      <FadeIn>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+            <PieChart className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Breakdown</span>
+          <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
         </div>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Breakdown</span>
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="insights-charts">
-        <CategoryDonut data={insights.byCategory} currency={currency} />
-        {isNest
-          ? <MonthlySpendBar data={monthlyData} currency={currency} />
-          : <DailySpendBar data={insights.byDay} currency={currency} />
-        }
-        <MemberContributions data={insights.byMember} currency={currency} />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="insights-charts">
+          <CategoryDonut data={insights.byCategory} currency={currency} />
+          {isNest
+            ? <MonthlySpendBar data={monthlyData} currency={currency} />
+            : <DailySpendBar data={insights.byDay} currency={currency} />
+          }
+          <MemberContributions data={insights.byMember} currency={currency} />
+        </div>
+      </FadeIn>
 
-      <div className="mb-6">
+      <FadeIn className="mb-6">
         <GroupRolesCard data={groupRoles} />
-      </div>
+      </FadeIn>
 
-      {/* Cross-group comparison — trip only, streams in after main charts */}
+      {/* Cross-group comparison — trip only, streams in via Suspense; no extra FadeIn
+          since the skeleton → content swap already provides visual motion */}
       {!isNest && (
         <Suspense fallback={<Skeleton className="h-24 rounded-xl mb-6" />}>
           <CrossTripSection
@@ -191,28 +197,32 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
 
       {/* Plan vs Reality — trip only */}
       {!isNest && group.itinerary && (
-        <AdherenceCard
-          itinerary={group.itinerary}
-          expenses={expensesWithSplits.map(({ expense }) => ({
-            description: expense.description,
-            expenseDate: expense.expenseDate,
-          }))}
-        />
+        <FadeIn>
+          <AdherenceCard
+            itinerary={group.itinerary}
+            expenses={expensesWithSplits.map(({ expense }) => ({
+              description: expense.description,
+              expenseDate: expense.expenseDate,
+            }))}
+          />
+        </FadeIn>
       )}
 
-      {/* Smart insights */}
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+      {/* Smart insights — header + staggered cards wrapped so they enter together */}
+      <FadeIn>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Smart insights</span>
+          <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
         </div>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Smart insights</span>
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
-      </div>
-      <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" staggerMs={50}>
-        {insights.smartInsights.map((s, i) => (
-          <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
-        ))}
-      </AnimatedList>
+        <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" staggerMs={50}>
+          {insights.smartInsights.map((s, i) => (
+            <SmartInsightCard key={i} emoji={s.emoji} title={s.title} sub={s.sub} />
+          ))}
+        </AnimatedList>
+      </FadeIn>
     </div>
   );
 }

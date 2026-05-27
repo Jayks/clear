@@ -17,10 +17,10 @@
 ```css
 .glass     { background:rgba(255,255,255,0.6); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.75); }
 .glass-sm  { background:rgba(255,255,255,0.5); backdrop-filter:blur(12px); }
-.glass-nav { background:rgba(255,255,255,0.72); backdrop-filter:blur(24px); border-bottom:1px solid rgba(255,255,255,0.8); }
+.glass-nav { background:rgba(255,255,255,0.88); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid rgba(255,255,255,0.9); }
 .dark .glass     { background:rgba(15,23,42,0.75); border:1px solid rgba(51,65,85,0.6); }
 .dark .glass-sm  { background:rgba(15,23,42,0.65); border:1px solid rgba(51,65,85,0.5); }
-.dark .glass-nav { background:rgba(15,23,42,0.85); }
+.dark .glass-nav { background:rgba(13,18,30,0.92); backdrop-filter:saturate(150%) blur(20px); }
 .dark body { background:linear-gradient(135deg,#0F172A,#0C1520,#0A1A18,#0B1F15); }
 ```
 
@@ -87,24 +87,27 @@ React portals bubble through the React tree, not the DOM — portal-spawning com
 `InviteQRSheet` (`components/shared/invite-qr-sheet.tsx`) — iOS-only QR bottom sheet. Portal + AnimatePresence, non-passive `touchmove` prevention. Shares `/join/[shareToken]`.
 
 ### Motion
-- Card entrance: `opacity 0→1, y 8→0` over 200ms, stagger via `AnimatedList`
-- Balance numbers: `CountUp` (Framer Motion)
+- Card entrance: `opacity 0→1, y 16→0` over 300ms, stagger via `AnimatedList` (CSS keyframes)
+- Scroll-triggered section reveals: `FadeIn` (`components/shared/fade-in.tsx`) — `useInView` once, `y 20→0, opacity 0→1`, 550ms, cubic `[0.25,0.1,0.25,1]`. Applied to below-fold sections in insights pages. Supports `delay` (ms) and `direction` (`up`|`left`|`right`|`none`).
+- Balance numbers: `CountUp` (Framer Motion animate). Accepts `maximumFractionDigits` prop (default 2; pass `0` for whole-number currencies like KPI cards).
 - `NavProgress` (`components/shared/nav-progress.tsx`) — cyan→teal bar at top. Lives in root `app/layout.tsx`. Triggers on `<a>` clicks + custom `navprogress` window event (dispatched before `window.location.href` navigations to cross-layout routes).
 
 #### `AnimatedList` API (`components/shared/animated-list.tsx`)
 ```tsx
 <AnimatedList
   className="grid …"        // forwarded to outer div (supports data-tour, etc.)
-  staggerMs={40}            // ms between items (default 40)
+  staggerMs={80}            // ms between items (default 80)
   initialDelayMs={0}        // base delay before first item — lets split lists cascade seamlessly
 >
   {items.map(…)}            // children: React.ReactNode[]
 </AnimatedList>
 ```
-- `useReducedMotion()` — when OS `prefers-reduced-motion` is set, renders a plain `<div>` at full opacity (no animation, no `opacity:0` invisible-content risk).
-- Stagger cap: `Math.min(i, 8)` — items 9+ all animate at item-8 delay so a 30-item list never exceeds 320ms total.
+- **CSS-driven** — uses `@keyframes list-enter` + `.animate-list-enter` class. Fires on DOM insertion, independent of React hydration. Safe after skeleton→content swaps on mobile.
+- Stagger delay passed via CSS custom property `--list-delay` (inline style) read by `animation-delay: var(--list-delay, 0s)` in the class. More reliable than inline `animationDelay` overriding a shorthand across browsers.
+- Each item wrapped in `<div class="h-full animate-list-enter">` — `h-full` ensures grid rows are equal height even when card content lengths differ.
+- `useReducedMotion()` — when OS `prefers-reduced-motion` is set, renders a plain `<div>` with no animation and no `opacity:0` risk.
+- Stagger cap: `Math.min(i, 8)` — items 9+ share item-8 delay so a 30-item list never exceeds 640ms total.
 - `initialDelayMs` — use when a list is visually split across two `AnimatedList` instances (e.g. expense list first-2 inside tour spotlight, rest outside). Set `initialDelayMs={staggerMs * 2}` on the second list so the cascade feels continuous.
-- Extends `Omit<React.HTMLAttributes<HTMLDivElement>, "children">` — all extra props (`data-tour`, `id`, etc.) are forwarded to the wrapper div.
 
 ### Category Color System
 

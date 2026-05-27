@@ -52,7 +52,8 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **What's New** — changelog accessible from the avatar dropdown inside the app, and from the marketing page nav
 - **PWA** — installable on iOS and Android, offline-capable service worker
 - **Dark mode** — full glassmorphic light + dark theme
-- **Entrance animations** — expense lists, balance cards, and KPI grids stagger in with a subtle `opacity+translateY` animation via `AnimatedList`; capped so long lists never animate for more than ~320ms; automatically disabled for users with `prefers-reduced-motion` set
+- **Entrance animations** — expense lists, balance cards, and KPI grids stagger in via CSS `@keyframes` (`opacity+translateY`, 300ms, 80ms stagger default); CSS-driven so animations fire on DOM insertion independent of React hydration — reliable after skeleton→content swaps on mobile; capped at item 8 so long lists never exceed ~640ms total; automatically disabled for `prefers-reduced-motion`
+- **Scroll-triggered section reveals** — below-fold sections on both the per-group and overall insights pages (`FadeIn` via `useInView`) fade up as you scroll into them, once only; same easing curve as the landing page so the motion language is consistent across the whole product
 - **Realtime** — Supabase Realtime pushes expense/settlement changes to all open sessions
 
 ---

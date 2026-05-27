@@ -53,7 +53,7 @@ export default async function LandingPage() {
   if (user) redirect("/groups");
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-clip">
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav className="glass-nav sticky top-0 z-50">

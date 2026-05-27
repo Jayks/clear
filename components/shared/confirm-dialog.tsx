@@ -36,7 +36,7 @@ export function ConfirmDialog({
       <span onClick={() => setOpen(true)} className="contents">{trigger}</span>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="glass border-white/70 max-w-sm p-6">
+        <DialogContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl shadow-black/10 dark:shadow-black/40 max-w-sm p-6">
           <div className="flex gap-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               destructive ? "bg-red-50" : "bg-amber-50"

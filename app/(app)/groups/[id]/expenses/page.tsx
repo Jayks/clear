@@ -60,9 +60,14 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
           <ArrowLeft className="w-4 h-4" />
           Back
         </Link>
-        <h1 className="text-2xl text-slate-800 dark:text-slate-100 flex-1" style={{ fontFamily: "var(--font-fraunces)" }}>
-          Expenses
-        </h1>
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">
+            <Receipt className="w-4 h-4 text-white" />
+          </div>
+          <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
+            Expenses
+          </h1>
+        </div>
         <div className="flex items-center gap-2 shrink-0">
           <ChatImportDialog
             groupId={id}

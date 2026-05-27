@@ -9,7 +9,7 @@ import { UpiPayButton } from "./upi-pay-button";
 import { WhatsAppRemindButton } from "./whatsapp-remind-button";
 import { BalanceCardsClient } from "./balance-cards-client";
 import { ArrowRight, CheckCircle2, AlertTriangle, Wallet, Send, Clock } from "lucide-react";
-import { formatCurrency, formatDate, getMemberName } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 
 interface Props {
@@ -26,11 +26,12 @@ interface Props {
 function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
-      <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-        <Icon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+      <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0",
+        "bg-emerald-50 dark:bg-emerald-900/30")}>
+        <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
       </div>
       <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-      <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+      <div className="flex-1 h-[1.5px] bg-gradient-to-r from-emerald-200/70 to-transparent dark:from-emerald-800/40 dark:to-transparent" />
     </div>
   );
 }
@@ -164,7 +165,7 @@ export async function BalancesSection({
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">{memberName(s.from)}</span>
                   <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0 flex-1">{memberName(s.to)}</span>
-                  <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>
+                  <span className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>
                     {formatCurrency(s.amount, currency)}
                   </span>
                 </div>

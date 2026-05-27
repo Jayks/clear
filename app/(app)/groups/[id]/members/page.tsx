@@ -44,19 +44,24 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
       {memberNudge && <PlanNudgeBanner nudge={memberNudge} resource="members" />}
 
       {/* Page title */}
-      <h1 className="text-2xl text-slate-800 dark:text-slate-100 mb-6" style={{ fontFamily: "var(--font-fraunces)" }}>
-        {config.labels.members}
-      </h1>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
+          <Users className="w-4 h-4 text-white" />
+        </div>
+        <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
+          {config.labels.members}
+        </h1>
+      </div>
 
       {/* Member list section */}
       <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-          <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+          <Users className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
         </div>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {members.length} {members.length === 1 ? "person" : "people"}
         </span>
-        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
       </div>
       <MemberListClient
         members={members}

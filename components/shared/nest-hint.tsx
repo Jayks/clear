@@ -74,7 +74,7 @@ export function NestHint() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 4 }}
           transition={{ duration: 0.2 }}
-          className="fixed z-[900] left-4 right-4 glass rounded-2xl shadow-2xl shadow-cyan-500/10 p-4"
+          className="fixed z-[900] left-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 p-4"
           style={{ bottom: Math.min(popoverBottom, vpH - 180) }}
         >
           <div className="flex items-start justify-between gap-3 mb-1">

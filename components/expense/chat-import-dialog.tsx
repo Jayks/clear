@@ -187,7 +187,7 @@ export function ChatImportDialog({
       <UpgradePrompt open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
 
       <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-        <DialogContent className="glass border-white/70 dark:border-slate-700/60 max-w-2xl w-[calc(100vw-2rem)] sm:w-full p-0 overflow-hidden">
+        <DialogContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl shadow-black/10 dark:shadow-black/40 max-w-2xl w-[calc(100vw-2rem)] sm:w-full p-0 overflow-hidden">
           {/* Header */}
           <div className="px-6 py-4 border-b border-white/40 dark:border-slate-700/40">
             <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>

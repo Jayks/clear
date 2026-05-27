@@ -179,8 +179,8 @@ export function MemberProfileSheet({
                           const cat = getCategory(exp.category);
                           return (
                             <div key={exp.id} className="glass rounded-xl px-3 py-2.5 flex items-center gap-3">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${cat.color}`}>
-                                <cat.icon className={`w-3.5 h-3.5 ${cat.textColor}`} />
+                              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0 shadow-sm ${cat.gradient}`}>
+                                <cat.icon className="w-3.5 h-3.5 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{exp.description}</p>

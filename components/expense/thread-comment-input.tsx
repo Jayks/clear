@@ -172,7 +172,7 @@ export function ThreadCommentInput({
         {mentionQuery !== null && mentionMatches.length > 0 && (
           <div
             ref={dropdownRef}
-            className="absolute bottom-full left-0 right-0 mb-1 z-10 glass rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+            className="absolute bottom-full left-0 right-0 mb-1 z-10 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
           >
             {mentionMatches.slice(0, 5).map((member) => (
               <button

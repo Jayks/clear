@@ -84,8 +84,8 @@ export function TemplateSection({ templates, members, groupId, currency, isAdmin
                 <div key={template.id} className="px-4 py-3.5">
                   {/* Row 1: icon + info + amount */}
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl ${cat.color} flex items-center justify-center shrink-0`}>
-                      <CatIcon className={`w-4 h-4 ${cat.textColor}`} />
+                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cat.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
+                      <CatIcon className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

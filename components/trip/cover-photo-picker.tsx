@@ -146,7 +146,7 @@ export function CoverPhotoPicker({ value, onChange }: CoverPhotoPickerProps) {
           }
         }}
       >
-        <DialogContent className="glass border-white/70 dark:border-slate-700/60 max-w-2xl p-0 overflow-hidden">
+        <DialogContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl shadow-black/10 dark:shadow-black/40 max-w-2xl p-0 overflow-hidden">
           <div className="p-4 border-b border-slate-100 dark:border-slate-700">
             <h3
               className="text-slate-800 dark:text-slate-100 font-semibold mb-3"

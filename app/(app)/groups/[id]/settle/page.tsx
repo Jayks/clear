@@ -4,7 +4,7 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { Skeleton } from "@/components/shared/skeleton";
 import { BalancesSection } from "./balances-section";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Wallet } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -33,6 +33,9 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
           <ArrowLeft className="w-4 h-4" />
           Back
         </Link>
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm shadow-emerald-500/30 shrink-0">
+          <Wallet className="w-4 h-4 text-white" />
+        </div>
         <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
           Settle up
         </h1>

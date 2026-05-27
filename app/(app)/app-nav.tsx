@@ -107,7 +107,7 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
               </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 glass border-white/70 dark:border-slate-700/60 shadow-lg shadow-cyan-500/10">
+          <DropdownMenuContent align="end" className="w-52 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/60 shadow-xl shadow-black/8 dark:shadow-black/40 rounded-xl">
             <div className="px-3 py-2">
               <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                 <span className="truncate">{user.user_metadata?.full_name ?? "User"}</span>

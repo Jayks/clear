@@ -1,3 +1,4 @@
+import type React from "react";
 import Link from "next/link";
 import { Receipt, ArrowLeftRight, UserPlus, AlertTriangle, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -34,17 +35,20 @@ export function ActivityFeedSkeleton() {
   );
 }
 
-function EventIcon({ type }: { type: ActivityEvent["type"] }) {
-  if (type === "expense") {
-    return <Receipt className="w-2.5 h-2.5 text-cyan-500" />;
-  }
-  if (type === "settlement") {
-    return <ArrowLeftRight className="w-2.5 h-2.5 text-emerald-500" />;
-  }
-  if (type === "dispute") {
-    return <AlertTriangle className="w-2.5 h-2.5 text-amber-500" />;
-  }
-  return <UserPlus className="w-2.5 h-2.5 text-violet-500" />;
+const EVENT_BADGE: Record<ActivityEvent["type"], { icon: React.ElementType; bg: string; border: string; iconColor: string }> = {
+  expense:       { icon: Receipt,        bg: "bg-cyan-50 dark:bg-cyan-900/40",    border: "border-cyan-200 dark:border-cyan-800/60",    iconColor: "text-cyan-500 dark:text-cyan-400"    },
+  settlement:    { icon: ArrowLeftRight, bg: "bg-emerald-50 dark:bg-emerald-900/40", border: "border-emerald-200 dark:border-emerald-800/60", iconColor: "text-emerald-500 dark:text-emerald-400" },
+  dispute:       { icon: AlertTriangle,  bg: "bg-amber-50 dark:bg-amber-900/40",  border: "border-amber-200 dark:border-amber-800/60",  iconColor: "text-amber-500 dark:text-amber-400"  },
+  member_joined: { icon: UserPlus,       bg: "bg-violet-50 dark:bg-violet-900/40", border: "border-violet-200 dark:border-violet-800/60", iconColor: "text-violet-500 dark:text-violet-400" },
+};
+
+function EventBadge({ type }: { type: ActivityEvent["type"] }) {
+  const { icon: Icon, bg, border, iconColor } = EVENT_BADGE[type];
+  return (
+    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ${bg} border ${border} flex items-center justify-center shadow-sm`}>
+      <Icon className={`w-2.5 h-2.5 ${iconColor}`} />
+    </div>
+  );
 }
 
 function getPrimaryText(event: ActivityEvent, currentMemberId: string | undefined): string {
@@ -98,7 +102,7 @@ export async function GroupActivityFeed({ groupId, currentMemberId, groupType }:
           <Activity className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
         </div>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent activity</span>
-        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
         <Link
           href={`/groups/${groupId}/expenses`}
           className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline shrink-0"
@@ -144,9 +148,7 @@ export async function GroupActivityFeed({ groupId, currentMemberId, groupType }:
                 {/* Avatar with event-type badge */}
                 <div className="relative shrink-0">
                   <MemberAvatar name={event.actorName} size="sm" />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center shadow-sm">
-                    <EventIcon type={event.type} />
-                  </div>
+                  <EventBadge type={event.type} />
                 </div>
 
                 {/* Text */}

@@ -14,10 +14,10 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { icon: Users,           label: "Members",   path: "members"  },
-  { icon: Receipt,         label: "Expenses",  path: "expenses" },
-  { icon: ArrowLeftRight,  label: "Settle Up", path: "settle"   },
-  { icon: BarChart2,       label: "Insights",  path: "insights" },
+  { icon: Users,          label: "Members",   path: "members",  gradient: "from-violet-500 to-purple-500",  shadow: "shadow-violet-500/30"  },
+  { icon: Receipt,        label: "Expenses",  path: "expenses", gradient: "from-cyan-500 to-teal-500",      shadow: "shadow-cyan-500/30"    },
+  { icon: ArrowLeftRight, label: "Settle Up", path: "settle",   gradient: "from-emerald-500 to-green-500",  shadow: "shadow-emerald-500/30" },
+  { icon: BarChart2,      label: "Insights",  path: "insights", gradient: "from-amber-500 to-orange-400",   shadow: "shadow-amber-500/30"   },
 ];
 
 export function TripCardNavSheet({ isOpen, onClose, groupId, groupName }: Props) {
@@ -69,14 +69,14 @@ export function TripCardNavSheet({ isOpen, onClose, groupId, groupName }: Props)
             </div>
 
             <div className="px-3 py-2">
-              {NAV_ITEMS.map(({ icon: Icon, label, path }) => (
+              {NAV_ITEMS.map(({ icon: Icon, label, path, gradient, shadow }) => (
                 <Link
                   key={path}
                   href={`/groups/${groupId}/${path}`}
                   onClick={onClose}
                   className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 active:bg-slate-100 dark:active:bg-slate-800 transition-colors"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center flex-shrink-0">
+                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm ${shadow}`}>
                     <Icon className="w-4 h-4 text-white" />
                   </div>
                   <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">

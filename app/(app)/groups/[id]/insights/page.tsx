@@ -91,7 +91,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center mb-5 shadow-lg shadow-cyan-500/25">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center mb-5 shadow-lg shadow-amber-500/25">
             <BarChart2 className="w-7 h-7 text-white" />
           </div>
           <h2 className="text-lg text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -110,6 +110,9 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
           className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-sm shadow-amber-500/30 shrink-0">
+          <BarChart2 className="w-4 h-4 text-white" />
+        </div>
         <div>
           <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
             Insights
@@ -154,11 +157,11 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
 
       {/* Charts */}
       <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-          <PieChart className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+          <PieChart className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
         </div>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Breakdown</span>
-        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="insights-charts">
         <CategoryDonut data={insights.byCategory} currency={currency} />
@@ -202,11 +205,11 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
 
       {/* Smart insights */}
       <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+        <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
         </div>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Smart insights</span>
-        <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
       </div>
       <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" staggerMs={50}>
         {insights.smartInsights.map((s, i) => (

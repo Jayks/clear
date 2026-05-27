@@ -189,9 +189,9 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true }: Props)
                   key={cat}
                   type="button"
                   onClick={() => { setValue("category", cat); setValue("customCategory", ""); }}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                     active
-                      ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                      ? `bg-gradient-to-br ${meta.gradient} text-white shadow-sm`
                       : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                   }`}
                 >

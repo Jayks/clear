@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { CountUp } from "@/components/shared/count-up";
 import { MemberProfileSheet } from "@/components/shared/member-profile-sheet";
+import { AnimatedList } from "@/components/shared/animated-list";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getMemberName } from "@/lib/utils";
 
@@ -34,7 +35,7 @@ export function BalanceCardsClient({ balances, members, currentMemberId, currenc
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-8">
+      <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-8" staggerMs={60}>
         {balances.map((b) => {
           const isPositive = b.net > 0;
           const isZero = b.net === 0;
@@ -76,7 +77,7 @@ export function BalanceCardsClient({ balances, members, currentMemberId, currenc
             </button>
           );
         })}
-      </div>
+      </AnimatedList>
 
       {selectedMember && (
         <MemberProfileSheet

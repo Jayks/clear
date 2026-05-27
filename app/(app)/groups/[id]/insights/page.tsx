@@ -12,6 +12,7 @@ import { SmartInsightCard } from "@/components/insights/smart-insight-card";
 import { GroupRolesCard } from "@/components/insights/group-roles-card";
 import { PaceTrackerCard } from "@/components/insights/pace-tracker-card";
 import { AnimatedList } from "@/components/shared/animated-list";
+
 import { CategoryDonut } from "@/components/insights/category-donut";
 import { DailySpendBar } from "@/components/insights/daily-spend-bar";
 import { MonthlySpendBar } from "@/components/insights/monthly-spend-bar";
@@ -122,33 +123,29 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
       </div>
 
       {/* KPIs — trip: total/per-person/daily/count | nest: this month/last month/per person/total */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="trip-kpis">
-        {isNest ? (
-          <>
-            <KpiCard label="This month" value={fmt(thisMonth?.amount ?? 0)}
-              numericValue={thisMonth?.amount ?? 0} currency={currency} accent />
-            <KpiCard label="Last month" value={fmt(lastMonth?.amount ?? 0)}
-              numericValue={lastMonth?.amount ?? 0} currency={currency} />
-            <KpiCard label="Per person" value={fmt(insights.perPerson / Math.max(monthlyData.length, 1))}
-              numericValue={insights.perPerson} currency={currency} />
-            <KpiCard label="All time" value={fmt(insights.totalSpend)}
-              numericValue={insights.totalSpend} currency={currency}
-              sub={`${insights.expenseCount} expenses`} />
-          </>
-        ) : (
-          <>
-            <KpiCard label="Total spend" value={fmt(insights.totalSpend)}
-              numericValue={insights.totalSpend} currency={currency} accent />
-            <KpiCard label="Per person" value={fmt(insights.perPerson)}
-              numericValue={insights.perPerson} currency={currency} />
-            <KpiCard label="Daily average" value={fmt(insights.dailyAverage)}
-              numericValue={insights.dailyAverage} currency={currency} />
-            <KpiCard label="Expenses" value={String(insights.expenseCount)}
-              numericValue={insights.expenseCount}
-              sub={`over ${insights.tripDays} day${insights.tripDays > 1 ? "s" : ""}`} />
-          </>
-        )}
-      </div>
+      <AnimatedList className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" staggerMs={80} data-tour="trip-kpis">
+        {isNest ? [
+          <KpiCard key="this" label="This month" value={fmt(thisMonth?.amount ?? 0)}
+            numericValue={thisMonth?.amount ?? 0} currency={currency} accent />,
+          <KpiCard key="last" label="Last month" value={fmt(lastMonth?.amount ?? 0)}
+            numericValue={lastMonth?.amount ?? 0} currency={currency} />,
+          <KpiCard key="pp" label="Per person" value={fmt(insights.perPerson / Math.max(monthlyData.length, 1))}
+            numericValue={insights.perPerson} currency={currency} />,
+          <KpiCard key="all" label="All time" value={fmt(insights.totalSpend)}
+            numericValue={insights.totalSpend} currency={currency}
+            sub={`${insights.expenseCount} expenses`} />,
+        ] : [
+          <KpiCard key="total" label="Total spend" value={fmt(insights.totalSpend)}
+            numericValue={insights.totalSpend} currency={currency} accent />,
+          <KpiCard key="pp" label="Per person" value={fmt(insights.perPerson)}
+            numericValue={insights.perPerson} currency={currency} />,
+          <KpiCard key="daily" label="Daily average" value={fmt(insights.dailyAverage)}
+            numericValue={insights.dailyAverage} currency={currency} />,
+          <KpiCard key="count" label="Expenses" value={String(insights.expenseCount)}
+            numericValue={insights.expenseCount}
+            sub={`over ${insights.tripDays} day${insights.tripDays > 1 ? "s" : ""}`} />,
+        ]}
+      </AnimatedList>
 
       {/* Pace tracker — trip only */}
       {!isNest && trajectory && (

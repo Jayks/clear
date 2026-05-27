@@ -10,6 +10,7 @@ import { SwipeableExpenseCard } from "./swipeable-expense-card";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { CategoryIcon } from "./category-icon";
 import { SwipeHint } from "@/components/shared/swipe-hint";
+import { AnimatedList } from "@/components/shared/animated-list";
 
 type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
@@ -279,9 +280,9 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           />
         ) : (
           <>
-            <div className="space-y-2">
+            <AnimatedList className="space-y-2" staggerMs={35}>
               {displayItems.slice(0, 2).map(renderCard)}
-            </div>
+            </AnimatedList>
             {/* One-time swipe-to-delete hint, touch devices only */}
             <SwipeHint />
           </>
@@ -291,9 +292,13 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
 
       {/* ── Cards 3+ outside spotlight (dimmed during tour) ─────────── */}
       {filtered.length > 0 && !groupByMonth && displayItems.length > 2 && (
-        <div className="space-y-2 mt-2">
+        <AnimatedList
+          className="space-y-2 mt-2"
+          staggerMs={35}
+          initialDelayMs={2 * 35}
+        >
           {displayItems.slice(2).map(renderCard)}
-        </div>
+        </AnimatedList>
       )}
 
       {/* ── Pagination — hidden while searching ──────────────────────── */}
@@ -370,7 +375,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
                 {formatCurrency(total, currency)}
               </span>
             </div>
-            <div className="space-y-2">
+            <AnimatedList className="space-y-2" staggerMs={30}>
               {group.map((expense) => (
                 <SwipeableExpenseCard
                   key={expense.id}
@@ -384,7 +389,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
                   interactionCount={interactionCounts?.[expense.id]}
                 />
               ))}
-            </div>
+            </AnimatedList>
           </div>
         );
       })}

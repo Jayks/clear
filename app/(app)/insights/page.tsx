@@ -14,7 +14,9 @@ export default async function AllInsightsPage() {
   if (!hasAnyData) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <BarChart2 className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-4" />
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center mb-5 shadow-lg shadow-amber-500/25">
+          <BarChart2 className="w-7 h-7 text-white" />
+        </div>
         <h2 className="text-lg text-slate-700 dark:text-slate-200 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
           No insights yet
         </h2>

@@ -6,10 +6,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { AddGuestForm } from "./add-guest-form";
 import { MemberListClient } from "./member-list-client";
+import { ImportMembersSheet } from "./import-members-sheet";
 import { InviteSection } from "@/components/trip/invite-section";
 import { getGroupConfig } from "@/lib/group-config";
 import { getMemberNudge } from "@/lib/subscription/gates";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
+import { getGroupsForImport } from "@/lib/db/queries/groups";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -19,15 +21,22 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function MembersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, memberNudge] = await Promise.all([
+  const [data, memberNudge, sourceGroups] = await Promise.all([
     getGroupWithMembers(id),
     getMemberNudge(id),
+    getGroupsForImport(id),
   ]);
   if (!data) notFound();
 
   const { group, members, currentMember, currentUser } = data;
   const isAdmin = currentMember?.role === "admin";
   const config = getGroupConfig(group.groupType);
+  // Only the admin (1 member) means the group is brand new — show the empty state
+  const isEmptyGroup = members.length === 1;
+  // Names already in this group (lower-cased) — passed to ImportMembersSheet to flag dupes
+  const existingMemberNames = new Set(
+    members.map((m) => (m.displayName ?? m.guestName ?? "").toLowerCase()).filter(Boolean),
+  );
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
   const currentMemberId = currentMember?.id ?? "";
@@ -74,6 +83,30 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
         currency={group.defaultCurrency}
       />
 
+      {/* Empty-group prompt — shown when only the admin is present */}
+      {isAdmin && isEmptyGroup && sourceGroups.length > 0 && (
+        <div className="glass rounded-2xl p-5 mb-4 border border-cyan-100 dark:border-cyan-900/40">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shrink-0 shadow-sm shadow-cyan-500/20 mt-0.5">
+              <UserPlus className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-0.5">
+                Going with a previous squad?
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                Skip re-inviting everyone — import their names from a past group in one tap.
+              </p>
+              <ImportMembersSheet
+                groupId={group.id}
+                sourceGroups={sourceGroups}
+                existingNames={existingMemberNames}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add guest */}
       {isAdmin && (
         <div className="glass rounded-2xl p-5 mb-4">
@@ -85,6 +118,14 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
               Add a guest {group.groupType === "nest" ? "mate" : "member"}
             </span>
             <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
+            {/* Secondary import link — always available to admins with source groups */}
+            {sourceGroups.length > 0 && !isEmptyGroup && (
+              <ImportMembersSheet
+                groupId={group.id}
+                sourceGroups={sourceGroups}
+                existingNames={existingMemberNames}
+              />
+            )}
           </div>
           <AddGuestForm groupId={group.id} />
         </div>

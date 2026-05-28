@@ -17,6 +17,7 @@ import { GroupActivityFeed, ActivityFeedSkeleton } from "@/components/trip/group
 import { SettleBalanceBadge, SettleBalanceSkeleton } from "@/components/trip/settle-balance-badge";
 import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components/trip/insights-summary-badge";
 import { NestMonthlyBadge, NestMonthlyBadgeSkeleton } from "@/components/trip/nest-monthly-badge";
+import { RepeatTripPrompt } from "@/components/trip/repeat-trip-prompt";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -32,9 +33,21 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   ]);
   if (!data) notFound();
 
-  const { group, members, currentMember } = data;
+  const { group, members, currentMember, currentUser } = data;
   const isAdmin = currentMember?.role === "admin";
   const isNest = group.groupType === "nest";
+
+  // Show the repeat-trip prompt when the trip has ended or is archived (trips only, admins only)
+  const today = new Date().toISOString().slice(0, 10);
+  const isTripComplete =
+    !isNest && isAdmin && (group.isArchived || (!!group.endDate && group.endDate < today));
+  // Member names to copy — everyone except the current user
+  const repeatMemberNames = isTripComplete
+    ? members
+        .filter((m) => m.userId !== currentUser.id)
+        .map((m) => m.displayName ?? m.guestName ?? "")
+        .filter(Boolean)
+    : [];
 
   if (isNest) await autoLogDueTemplates(group.id).catch(() => {});
   const config = getGroupConfig(group.groupType);
@@ -215,6 +228,16 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
           <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-cyan-500 transition-colors shrink-0" />
         </Link>
+      )}
+
+      {/* Repeat-trip prompt — shown when trip is complete/archived, admin only */}
+      {isTripComplete && (
+        <RepeatTripPrompt
+          groupId={group.id}
+          groupName={group.name}
+          memberNames={repeatMemberNames}
+          defaultCurrency={group.defaultCurrency}
+        />
       )}
 
     </div>

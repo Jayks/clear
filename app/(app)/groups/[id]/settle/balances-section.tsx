@@ -3,6 +3,7 @@ import { getBalances, getSettlements } from "@/lib/db/queries/balances";
 import { getMonthlyExpenseSummary } from "@/lib/db/queries/expenses";
 import { Skeleton } from "@/components/shared/skeleton";
 import { MemberDebtBreakdown } from "@/components/settlement/member-debt-breakdown";
+import { SettledCelebration } from "@/components/settlement/settled-celebration";
 import { SettleBreakdownSection } from "./settle-breakdown-section";
 import { MarkPaidButton } from "./mark-paid-button";
 import { UpiPayButton } from "./upi-pay-button";
@@ -134,6 +135,8 @@ export async function BalancesSection({
         )}
 
         {suggestions.length === 0 ? (
+          <>
+          <SettledCelebration groupId={groupId} />
           <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20 px-5 py-8 flex flex-col items-center gap-3 mb-8">
             {/* Icon in glowing ring */}
             <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800/80 border border-emerald-200/80 dark:border-emerald-800/50 flex items-center justify-center shadow-md shadow-emerald-500/10">
@@ -168,6 +171,7 @@ export async function BalancesSection({
               </div>
             )}
           </div>
+          </>
         ) : (
           <div className="space-y-2 mb-8">
             {suggestions.map((s, i) => {

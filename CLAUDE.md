@@ -262,6 +262,9 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **Pagination threshold**: `expense-filters.tsx` uses `PAGE_ALL_THRESHOLD = 20` — pagination (Prev/Next, 10/page) only activates for groups with >20 expenses; smaller groups render all at once.
 - **Haptic feedback**: `lib/haptics.ts` exports `hapticLight()` (50ms, expense save/update), `hapticSuccess()` ([30,20,50]ms pattern, settlement paid), `hapticDelete()` (80ms, delete confirmed). All are no-ops when `navigator.vibrate` is unavailable (iOS Safari, desktop). Call at the success branch, before `toast.success`.
 - **`recordSettlement` returns `settlementId`**: `{ ok: true, settlementId: string }` — used by `MarkPaidButton` to wire the 5-second Undo toast. `deleteSettlement(settlementId, groupId)` is the paired action.
+- **`useSheetDismiss(open, onClose)`** (`hooks/use-sheet-dismiss.ts`): adds Escape key + Android/browser back-button dismissal to any bottom sheet. Pushes a fake history entry on open so the hardware back button closes the sheet rather than navigating away; pops it automatically when closed programmatically. Use in every new bottom sheet component.
+- **Dismissable prompt localStorage keys**: `clear_repeat_trip_dismissed_${groupId}` — `RepeatTripPrompt` reads after mount to avoid SSR mismatch. Pattern: read in `useEffect`, write on dismiss, render `null` if key is set.
+- **Settlement celebration sessionStorage key**: `clear_settled_confetti_${groupId}` — `SettledCelebration` fires once per browser session when all debts are cleared. Stores `"1"` immediately on mount to prevent double-fire on re-renders.
 
 ---
 

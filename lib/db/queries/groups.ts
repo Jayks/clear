@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import type { Group } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, and, count, inArray, sql, getTableColumns, isNull } from "drizzle-orm";
+import { eq, and, count, inArray, sql, getTableColumns, isNull, or, not, desc } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
@@ -119,4 +119,54 @@ export async function getGroupByToken(token: string) {
   ]);
 
   return { group, memberCount: memberCountResult[0].memberCount, unclaimedGuests };
+}
+
+// Returns all the user's other groups with their members — for the "Import from group" feature.
+// Excludes the target group and the current user from member lists.
+export async function getGroupsForImport(targetGroupId: string) {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const groupIds = await getUserGroupIds(user.id);
+  const sourceIds = groupIds.filter((id) => id !== targetGroupId);
+  if (sourceIds.length === 0) return [];
+
+  const [groupRows, memberRows] = await Promise.all([
+    db
+      .select({ id: groups.id, name: groups.name, groupType: groups.groupType })
+      .from(groups)
+      .where(inArray(groups.id, sourceIds))
+      .orderBy(desc(groups.createdAt)),
+    db
+      .select({
+        id: groupMembers.id,
+        groupId: groupMembers.groupId,
+        displayName: groupMembers.displayName,
+        guestName: groupMembers.guestName,
+        userId: groupMembers.userId,
+      })
+      .from(groupMembers)
+      .where(
+        and(
+          inArray(groupMembers.groupId, sourceIds),
+          or(isNull(groupMembers.userId), not(eq(groupMembers.userId, user.id))),
+        ),
+      ),
+  ]);
+
+  const membersByGroup = new Map<string, { id: string; name: string }[]>();
+  for (const m of memberRows) {
+    const name = m.displayName ?? m.guestName ?? "Member";
+    if (!membersByGroup.has(m.groupId)) membersByGroup.set(m.groupId, []);
+    membersByGroup.get(m.groupId)!.push({ id: m.id, name });
+  }
+
+  return groupRows
+    .map((g) => ({
+      id: g.id,
+      name: g.name,
+      groupType: g.groupType,
+      members: membersByGroup.get(g.id) ?? [],
+    }))
+    .filter((g) => g.members.length > 0); // only show groups that have someone to import
 }

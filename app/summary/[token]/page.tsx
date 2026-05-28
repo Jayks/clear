@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/utils";
 import { getCategory, CATEGORY_HEX } from "@/lib/categories";
 import { SummaryShareButton } from "@/components/trip/summary-share-button";
 import { NarrativeSection } from "@/components/trip/narrative-section";
+import { TripTimeline } from "@/components/trip/trip-timeline";
 import { ClearLogo } from "@/components/shared/clear-logo";
 import Link from "next/link";
 import Image from "next/image";
@@ -22,7 +23,8 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
   if (!trip || trip.groupType === "nest") return null;
 
   const [memberRows, categoryRows, [expCount], allExpenseRows] = await Promise.all([
-    db.select({ id: groupMembers.id }).from(groupMembers).where(eq(groupMembers.groupId, trip.id)),
+    db.select({ id: groupMembers.id, displayName: groupMembers.displayName, guestName: groupMembers.guestName })
+      .from(groupMembers).where(eq(groupMembers.groupId, trip.id)),
     db
       .select({
         category: expenses.category,
@@ -40,6 +42,8 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
         description: expenses.description,
         category: expenses.category,
         expenseDate: expenses.expenseDate,
+        amount: expenses.amount,
+        paidByMemberId: expenses.paidByMemberId,
       })
       .from(expenses)
       .where(eq(expenses.groupId, trip.id))
@@ -52,17 +56,36 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
   const totalSpend = sorted.reduce((s, c) => s + c.total, 0);
   const perPerson = memberCount > 0 ? totalSpend / memberCount : 0;
 
-  // Group expenses chronologically by date for the narrative timeline
-  const timelineMap = new Map<string, { description: string; category: string }[]>();
+  // Member name lookup
+  const memberNameMap = new Map(
+    memberRows.map((m) => [m.id, m.displayName ?? m.guestName ?? "Member"]),
+  );
+
+  // Group expenses chronologically by date
+  const timelineMap = new Map<string, {
+    description: string;
+    category: string;
+    amount: number;
+    payerName: string;
+  }[]>();
   for (const e of allExpenseRows) {
     const day = e.expenseDate ?? "unknown";
     const arr = timelineMap.get(day) ?? [];
-    arr.push({ description: e.description, category: e.category });
+    arr.push({
+      description: e.description,
+      category: e.category,
+      amount: Number(e.amount),
+      payerName: memberNameMap.get(e.paidByMemberId) ?? "Member",
+    });
     timelineMap.set(day, arr);
   }
   const dailyTimeline = Array.from(timelineMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, entries]) => ({ date, entries }));
+    .map(([date, entries]) => ({
+      date,
+      entries,
+      dayTotal: entries.reduce((s, e) => s + e.amount, 0),
+    }));
 
   let tripDays = 0;
   if (trip.startDate && trip.endDate) {
@@ -269,6 +292,16 @@ export default async function SummaryPage({
               pct: totalSpend > 0 ? Math.round((c.total / totalSpend) * 100) : 0,
             }))}
             dailyTimeline={dailyTimeline}
+          />
+        )}
+
+        {/* Day-by-day timeline */}
+        {dailyTimeline.length > 0 && (
+          <TripTimeline
+            days={dailyTimeline}
+            startDate={trip.startDate ?? null}
+            endDate={trip.endDate ?? null}
+            currency={currency}
           />
         )}
 

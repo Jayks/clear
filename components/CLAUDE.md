@@ -213,6 +213,40 @@ Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.i
 
 `app/(app)/groups/[id]/settle/balance-cards-client.tsx` — balance cards grid as tappable buttons opening `MemberProfileSheet` with `netBalance`.
 
+### TripTimeline — rich day-by-day summary timeline
+`components/trip/trip-timeline.tsx` — `"use client"` component used on the public summary page (`/summary/[token]`).
+
+Data shape: `{ days: DayGroup[], startDate, endDate, currency }` where `DayGroup = { date, entries: { description, category, amount, payerName }[], dayTotal }`.
+
+Each `DayCard` (inner sub-component) renders on scroll via `useInView`:
+- Animated connector thread between cards
+- Card with dominant-category hex tint at 7% opacity
+- Header row: node dot · Day X/Y badge · formatted date · count-up day total
+- Payer chips row: unique payers √-scaled by spend share (area ∝ amount); colors from `PAYER_COLORS` by index; tooltip shows name + amount
+- Stacked category bar (center-expand, visual-only — no click handler on summary page)
+- 🔥 busiest day / "light day" intensity captions
+- Always-expanded expense rows (stagger-animate in after card enters view)
+
+No accordion — summary page is a showcase; all expense rows are always visible. `PAYER_COLORS` is a local constant (same palette as expense-filters' `MEMBER_AVATAR_COLORS`). `isBusiest` guard: only true when `spendPct === 100 && !isOff`.
+
+### ImportMembersSheet
+`app/(app)/groups/[id]/members/import-members-sheet.tsx` — `"use client"` two-step bottom sheet for bulk-copying members from another group.
+
+Step 1 **pick-group**: list of user's other groups (fetched server-side via `getGroupsForImport`, passed as `sourceGroups` prop). Step 2 **pick-members**: member pills, pre-selected (excluding already-present names), select-all toggle.
+
+Trigger: inline "Import from group" link (shown prominently in a cyan banner when the group has only the admin; shown as a secondary header link otherwise). Uses `useSheetDismiss`. Calls `importMembersFromGroup` server action; respects free-plan 8-member limit. Duplicate detection: `existingNames: Set<string>` passed from page; dupes rendered with `line-through opacity-35`.
+
+### RepeatTripPrompt
+`components/trip/repeat-trip-prompt.tsx` — `"use client"`. Shown on a trip group page when trip is complete or archived (admin only). Renders a dismissable prompt card + bottom sheet to create a new trip with members pre-copied.
+
+Show condition (evaluated in group page RSC): `!isNest && isAdmin && (group.isArchived || (!!group.endDate && group.endDate < today))`.
+Sheet: trip name (required), optional start/end dates, member pills (pre-selected, toggle-able). Calls `createGroup` then `importMembersFromGroup` → navigates to new group. Dismiss writes `clear_repeat_trip_dismissed_${groupId}` to localStorage.
+
+### SettledCelebration
+`components/settlement/settled-celebration.tsx` — `"use client"`. 30-piece CSS confetti burst that fires **once per browser session** when all group debts are cleared (placed just above the "All settled ✓" empty state in `BalancesSection`).
+
+Gated by `sessionStorage.getItem(`clear_settled_confetti_${groupId}`)` — writes `"1"` immediately on mount to prevent re-fire. Auto-removes after 2.5 s. Pieces: mix of 6×14 rectangles and 10×10 squares in Clear's brand palette, burst from `mt-[38vh]` to roughly align with the checkmark icon. `pointer-events-none` so it never blocks interactions.
+
 ### QuickAddSheet — portal + `isOpen` prop pattern
 Manages its own `createPortal` and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render from parent, never wrap in external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment). Members lazy-fetched on first `isOpen=true` via `fetchedRef`.
 

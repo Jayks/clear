@@ -21,6 +21,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
 - **Expense detail** — tap any expense card to open a WhatsApp-style bottom sheet: amount, split breakdown, notes, compact reaction pills, pending dispute card, resolved dispute history, an inline comment thread with a persistent footer input, and a direct "View thread" link — no separate page needed for the common case
 - **Expense search** — instant search across description and category; filters and pagination compose naturally; pagination only appears for groups with >20 expenses (smaller groups show all at once)
+- **Timeline view** — third expense list mode (trips only): animated day-by-day view with stacked category bar (proportional colored segments, clickable to filter), √-scaled payer avatar chips (area ∝ amount paid), count-up day totals, connector threads that draw on scroll, Day X/Y orientation badges, 🔥 busiest day callouts, and empty-day ghost rows for the full trip range
 - **Expense audit trail** — every card and edit page shows who logged the expense and who last edited it, with relative timestamps
 - **Expense card actions** — Edit, Duplicate, Delete revealed on hover (desktop) or via swipe-left overlay with large tap targets (mobile); no visual clutter when browsing
 - **Category recents** — the last 3 used categories appear as quick-tap pills above the full category selector in the expense form (separate per group type)
@@ -36,10 +37,13 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Inline comments** — comment thread lives directly inside the expense detail sheet (WhatsApp-style bubbles, own messages right in cyan, others left in slate); @mention autocomplete with dropdown; optimistic posting — bubble appears instantly before server confirms; comments load with a shimmer skeleton and auto-scroll to the latest on open
 - **Expense thread page** — deep-link URL (`/thread`) for each expense; used by notification links and activity feed; shows reactions summary, pending dispute management, full comment history, and resolved disputes
 - **Undo settlement** — "Mark paid" shows a 5-second toast with an Undo action; tapping it deletes the settlement and refreshes the page, preventing accidental payments from becoming permanent
-- **All settled celebration** — when all debts are cleared the Settle Up page shows a celebration card with a total tracked amount, payment count, and member count instead of a flat empty state
+- **All settled celebration** — when all debts are cleared the Settle Up page shows a celebration card with a total tracked amount, payment count, and member count instead of a flat empty state; a 30-piece confetti burst fires once per session at that moment
 - **Member profile sheets** — tap any member on the Members page or Settle Up page to open a bottom sheet showing their net balance, total paid, total share, and last 3 expenses paid
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations
+- **Import members from group** — on the Members page, admins can copy members from any previous group; a two-step sheet (pick group → toggle members) pre-selects everyone not already present; respects free-plan limits; shown as a prominent banner for new empty groups and as a secondary link otherwise
+- **Repeat trip prompt** — when a trip ends or is archived, admins see a dismissable prompt to create a new trip with the same squad pre-populated; a bottom sheet lets them name the trip, pick dates, and toggle which members to copy
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
+- **Rich trip summary timeline** — the public `/summary/[token]` page shows the same animated day-by-day timeline: stacked category bars, payer chips, count-up totals, connector threads, Day X/Y badges, and always-expanded expense rows for a shareable visual recap
 - **Cover photo upload** — pick a photo from Unsplash or upload from your device; stored in Supabase Storage
 - **Trip plan upload** — upload a PDF or .txt itinerary and have it auto-filled in the trip form
 - **Onboarding tour** — 7-step walkthrough (4 default + 3 extended) with spotlight, celebration, and a nest-specific 2-step overlay for recurring templates

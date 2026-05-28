@@ -27,7 +27,7 @@ clear/
 │   │           ├── layout.tsx (RealtimeRefresh + GroupMobileNav, async), page.tsx
 │   │           ├── edit/page.tsx + edit-trip-form.tsx
 │   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, [expenseId]/thread/page.tsx, templates/new/, templates/[templateId]/edit/
-│   │           ├── members/page.tsx, loading.tsx + forms/buttons
+│   │           ├── members/page.tsx, loading.tsx + forms/buttons + import-members-sheet.tsx
 │   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, balance-cards-client.tsx, mark-paid-button, upi-pay-button
 │   │           └── insights/page.tsx + loading.tsx
 │   ├── pricing/page.tsx + plan-cards.tsx + faq-section.tsx   # public — no auth; plan-cards is async RSC (fetches founder slots); faq-section is client (Expand all / accordion state)
@@ -36,7 +36,7 @@ clear/
 │   ├── summary/[token]/page.tsx + opengraph-image.tsx
 │   ├── api/groups/[id]/export/route.ts    # CSV download
 │   └── actions/
-│       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
+│       ├── groups.ts (+ importMembersFromGroup), expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
 │       ├── admin.ts                       # adminDeleteGroup, adminDeleteUser (platform admin only)
 │       ├── subscription.ts                # activatePlusDemo, cancelPlusDemo
@@ -48,14 +48,14 @@ clear/
 ├── components/
 │   ├── ui/                              # shadcn/base-ui primitives
 │   ├── expense/  (expense-card, swipeable-expense-card, expense-detail-sheet, expense-filters, split-editor, quick-add-bar, chat-import-dialog, question-form, dispute-form, thread-comment-input, ...)
-│   ├── trip/     (trip-card, trip-card-nav-sheet, trip-card-share-drawer, invite-section, group-balance-badge [async RSC], cover-photo-picker, budget-bar, narrative-section, adherence-card, settle-balance-badge, insights-summary-badge, nest-monthly-badge, group-activity-feed, ...)
-│   ├── settlement/ (settlement-breakdown, member-debt-breakdown)
+│   ├── trip/     (trip-card, trip-card-nav-sheet, trip-card-share-drawer, invite-section, group-balance-badge [async RSC], cover-photo-picker, budget-bar, narrative-section, adherence-card, settle-balance-badge, insights-summary-badge, nest-monthly-badge, group-activity-feed, trip-timeline, repeat-trip-prompt, ...)
+│   ├── settlement/ (settlement-breakdown, member-debt-breakdown, settled-celebration)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
 │   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, member-profile-sheet, mobile-nav, group-mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo, invite-qr-sheet, swipe-hint, ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
-├── hooks/  use-trip-realtime.ts, use-warn-before-leave.ts, use-speech-recognition.ts, use-push-subscription.ts, use-recent-categories.ts
+├── hooks/  use-trip-realtime.ts, use-warn-before-leave.ts, use-speech-recognition.ts, use-push-subscription.ts, use-recent-categories.ts, use-sheet-dismiss.ts
 ├── lib/
-│   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth, activity, interactions).ts
+│   ├── db/client.ts, schema/*.ts, queries/(groups [+ getGroupsForImport], expenses, balances, insights, meta, admin, auth, activity, interactions).ts
 │   ├── supabase/server.ts, client.ts, admin.ts
 │   ├── demo/seed-demo-trip.ts + seed-demo-nest.ts
 │   ├── tour/types.ts + steps.ts

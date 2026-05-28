@@ -20,6 +20,92 @@ export type ChangelogRelease = {
 
 export const changelog: ChangelogRelease[] = [
   {
+    id: "v1-5-trip-timeline",
+    version: "v1.5",
+    name: "Trip Timeline",
+    date: "May 28, 2026",
+    tag: "Features",
+    tagVariant: "cyan",
+    headline: "See your trip day by day — every expense in its moment.",
+    description:
+      "A new day-by-day timeline lays out every expense in chronological order: category colour bars, payer chips, and a 🔥 busiest-day highlight. Plus: import your crew from a past trip, a one-tap repeat prompt when a trip ends, and confetti when the last debt is cleared.",
+    features: [
+      {
+        icon: "📅",
+        title: "Trip timeline",
+        description:
+          "Expenses grouped by day with a stacked category bar, payer chips sized by share, and automatic 🔥 busiest-day / 'light day' labels. Visible on the public share page and the group overview.",
+      },
+      {
+        icon: "👥",
+        title: "Import members",
+        description:
+          "Taking the same crew on a new trip? Open Members → Import from group, pick the source, choose who to bring — done in seconds.",
+      },
+      {
+        icon: "🔁",
+        title: "Repeat trip prompt",
+        description:
+          "When a trip ends or is archived, admins see a dismissable prompt to spin up a new trip with the same members pre-loaded.",
+      },
+      {
+        icon: "🎉",
+        title: "Settled confetti",
+        description:
+          "The settle page fires a 30-piece confetti burst the first time a group reaches zero debt. One celebration per session — no repeat fireworks on every refresh.",
+      },
+      {
+        icon: "🌐",
+        title: "Rich summary page",
+        description:
+          "The public /summary share page now renders the full trip timeline — category bars, payer chips, and day totals — so non-members can see exactly how the trip played out.",
+      },
+    ],
+  },
+  {
+    id: "v1-4-ux-polish",
+    version: "v1.4",
+    name: "UX Polish",
+    date: "May 27–28, 2026",
+    tag: "Polish",
+    tagVariant: "slate",
+    headline: "Smarter defaults, live feedback, and a safety net on every tap.",
+    description:
+      "A focused quality-of-life pass: see your split update as you type the amount, undo a settlement within 5 seconds, feel haptic feedback on every save, and switch the expense list between compact and full card views.",
+    features: [
+      {
+        icon: "💡",
+        title: "Live split preview",
+        description:
+          "A pill below the amount field updates in real time as you type — 'Your share: ₹1,500' — so you know the split before you hit save.",
+      },
+      {
+        icon: "↩️",
+        title: "Undo settlement",
+        description:
+          "Mark a payment as paid and a 5-second toast lets you undo it immediately — no need to hunt for a delete button.",
+      },
+      {
+        icon: "📳",
+        title: "Haptic feedback",
+        description:
+          "Short vibration pulses on expense save, settlement paid, and expense delete give mobile interactions a satisfying physical response.",
+      },
+      {
+        icon: "⊞",
+        title: "Compact / full toggle",
+        description:
+          "A toggle on the expenses page switches between a dense compact list and full card view — useful on long expense lists.",
+      },
+      {
+        icon: "🏷️",
+        title: "Payer pills & smarter defaults",
+        description:
+          "Expense cards now show a payer pill at a glance. The paid-by field defaults to yourself so the most common case needs zero taps.",
+      },
+    ],
+  },
+  {
     id: "v1-3-social-extensions",
     version: "v1.3",
     name: "Social Extensions",
@@ -151,7 +237,7 @@ export const changelog: ChangelogRelease[] = [
         icon: "✦",
         title: "Plus subscription",
         description:
-          "₹49/mo or ₹399/yr. 30-day free trial auto-starts on first sign-in — no credit card required to try every feature.",
+          "₹79/mo or ₹699/yr (₹58/mo). 30-day free trial auto-starts on first sign-in — no credit card required to try every feature.",
       },
       {
         icon: "🔓",

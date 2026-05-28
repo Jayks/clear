@@ -9,7 +9,7 @@ import { SettleBreakdownSection } from "./settle-breakdown-section";
 import { MarkPaidButton } from "./mark-paid-button";
 import { UpiPayButton } from "./upi-pay-button";
 import { WhatsAppRemindButton } from "./whatsapp-remind-button";
-import { ArrowRight, CheckCircle2, AlertTriangle, Send, Clock } from "lucide-react";
+import { ArrowRight, CheckCircle2, AlertTriangle, Send, Clock, TrendingUp, TrendingDown, BarChart2 } from "lucide-react";
 import { cn, formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 
@@ -23,15 +23,20 @@ interface Props {
   isNest: boolean;
 }
 
-function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+function SectionHeader({ icon: Icon, label, subtitle }: { icon: React.ElementType; label: string; subtitle?: string }) {
   return (
-    <div className="flex items-center gap-2.5 mb-4">
-      <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0",
-        "bg-emerald-50 dark:bg-emerald-900/30")}>
-        <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+    <div className="mb-4">
+      <div className="flex items-center gap-2.5">
+        <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0",
+          "bg-emerald-50 dark:bg-emerald-900/30")}>
+          <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
+        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-emerald-200/70 to-transparent dark:from-emerald-800/40 dark:to-transparent" />
       </div>
-      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-      <div className="flex-1 h-[1.5px] bg-gradient-to-r from-emerald-200/70 to-transparent dark:from-emerald-800/40 dark:to-transparent" />
+      {subtitle && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 pl-9">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -129,9 +134,77 @@ export async function BalancesSection({
         </div>
       )}
 
-      {/* ── Suggested payments ─────────────────────────────────── */}
+      {/* ── Net balances ───────────────────────────────────────── */}
+      {balances.some((b) => b.net !== 0) && (
+        <div className="mb-6">
+          <SectionHeader icon={BarChart2} label="Net balances" />
+          <div className="glass rounded-2xl overflow-hidden">
+            {balances.map((b, i) => {
+              const isPos  = b.net > 0;
+              const isZero = b.net === 0;
+              const isYou  = b.memberId === currentMemberId;
+              return (
+                <div
+                  key={b.memberId}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3",
+                    i < balances.length - 1 && "border-b border-slate-100 dark:border-slate-700/50",
+                    isYou && "bg-cyan-50/40 dark:bg-cyan-900/10",
+                  )}
+                >
+                  {/* colour dot */}
+                  <div className={cn(
+                    "w-2 h-2 rounded-full shrink-0",
+                    isZero ? "bg-slate-300 dark:bg-slate-600"
+                    : isPos  ? "bg-emerald-400 dark:bg-emerald-500"
+                    :          "bg-amber-400 dark:bg-amber-500",
+                  )} />
+
+                  {/* name */}
+                  <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                    {b.displayName}
+                    {isYou && (
+                      <span className="ml-1.5 text-[10px] font-medium text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/30 px-1.5 py-0.5 rounded-full">
+                        you
+                      </span>
+                    )}
+                  </span>
+
+                  {/* net amount */}
+                  <span
+                    className={cn(
+                      "text-sm font-semibold tabular shrink-0",
+                      isZero ? "text-slate-400 dark:text-slate-500"
+                      : isPos  ? "text-emerald-600 dark:text-emerald-400"
+                      :          "text-amber-600 dark:text-amber-400",
+                    )}
+                    style={{ fontFamily: "var(--font-fraunces)" }}
+                  >
+                    {isZero
+                      ? "Settled"
+                      : `${isPos ? "+" : "−"}${formatCurrency(Math.abs(b.net), currency)}`}
+                  </span>
+
+                  {/* trend icon */}
+                  {!isZero && (
+                    isPos
+                      ? <TrendingUp   className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
+                      : <TrendingDown className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Minimum payments ───────────────────────────────────── */}
       <div data-tour="settle-suggestions">
-        <SectionHeader icon={Send} label="Suggested payments" />
+        <SectionHeader
+          icon={Send}
+          label="Minimum payments"
+          subtitle="Transfers that zero out all the balances above"
+        />
 
         {suggestions.length > 0 && (
           <div className="flex items-center justify-between mb-4 px-0.5">
@@ -259,10 +332,7 @@ export async function BalancesSection({
         <SettleBreakdownSection
           groupId={groupId}
           members={members}
-          balances={balances}
-          suggestions={suggestions}
           currency={currency}
-          pastSettlementsTotal={pastSettlementsTotal}
         />
       </Suspense>
 

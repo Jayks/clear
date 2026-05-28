@@ -387,7 +387,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
 
   // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div className="mb-6 relative">
+    <div className="glass rounded-2xl overflow-hidden mb-6 relative">
 
       {/* Reset button — only visible after the user has dragged a node */}
       <AnimatePresence>
@@ -412,7 +412,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
-        style={{ display: "block", maxHeight: H, touchAction: "none" }}
+        style={{ display: "block", maxHeight: H, touchAction: "pan-y" }}
         aria-label="Group debt flow"
         onClick={() => { setSelectedId(null); setSelectedArc(null); }}
       >
@@ -769,6 +769,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
       </svg>
 
       {/* ── Info bar — 3 states: arc selected / node selected / hint ─── */}
+      <div className="px-3 pb-3">
       <AnimatePresence mode="wait">
         {selSuggestion ? (
           /* Arc selected: payment summary + Settle → scroll */
@@ -851,6 +852,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
           </motion.p>
         )}
       </AnimatePresence>
+      </div>
 
       {/* Member profile sheet */}
       {profMember && (

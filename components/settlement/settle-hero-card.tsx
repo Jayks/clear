@@ -120,7 +120,7 @@ export function SettleHeroCard({ balances, suggestions, currentMemberId, currenc
       </motion.div>
 
       {/* ── Amount — large, neutral typography ─────────────────── */}
-      <motion.div variants={row} className="mb-4 pl-1">
+      <motion.div variants={row} className="mb-3 pl-1">
         <span style={{ fontFamily: "var(--font-fraunces)" }}>
           <CountUp
             value={countActive ? Math.abs(net) : 0}
@@ -136,6 +136,23 @@ export function SettleHeroCard({ balances, suggestions, currentMemberId, currenc
             ? `from ${owedToMe.length} member${owedToMe.length !== 1 ? "s" : ""}`
             : "Others in the group still have pending payments"}
         </p>
+      </motion.div>
+
+      {/* ── Personal math — paid vs. fair share ─────────────────── */}
+      <motion.div variants={row} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-3 pl-1">
+        <span className="text-xs text-slate-500 dark:text-slate-400">
+          You put in{" "}
+          <span className="font-semibold text-slate-700 dark:text-slate-200">
+            {formatCurrency(myBalance.totalPaid, currency)}
+          </span>
+        </span>
+        <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">
+          fair share{" "}
+          <span className="font-semibold text-slate-700 dark:text-slate-200">
+            {formatCurrency(myBalance.totalOwed, currency)}
+          </span>
+        </span>
       </motion.div>
 
       {/* ── Person pills — glass-sm base, only the amount is coloured ─ */}

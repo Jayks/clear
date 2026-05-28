@@ -4,6 +4,7 @@ import { duplicateExpense } from "@/app/actions/expenses";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import { useState } from "react";
+import { hapticLight } from "@/lib/haptics";
 
 export function DuplicateExpenseButton({ expenseId }: { expenseId: string }) {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export function DuplicateExpenseButton({ expenseId }: { expenseId: string }) {
     const result = await duplicateExpense(expenseId);
     setLoading(false);
     if (!result.ok) toast.error(result.error);
-    else toast.success("Expense duplicated — dated today.");
+    else { hapticLight(); toast.success("Expense duplicated — dated today."); }
   }
 
   return (

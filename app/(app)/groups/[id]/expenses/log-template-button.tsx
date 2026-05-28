@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CalendarCheck, Loader2, CheckCircle2 } from "lucide-react";
 import { logFromTemplate } from "@/app/actions/expenses";
 import { toast } from "sonner";
+import { hapticLight } from "@/lib/haptics";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -28,6 +29,7 @@ export function LogTemplateButton({ templateId, description, loggedThisMonth, la
     if (!result.ok) {
       toast.error(result.error);
     } else {
+      hapticLight();
       setJustLogged(true);
       toast.success(`"${description}" logged for ${month}`);
     }

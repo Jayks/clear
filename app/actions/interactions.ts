@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db/client";
-import { expenseReactions, REACTION_META, type ReactionEmoji } from "@/lib/db/schema/expense-reactions";
+import { expenseReactions } from "@/lib/db/schema/expense-reactions";
 import { expenseComments, MAX_COMMENT_LENGTH } from "@/lib/db/schema/expense-comments";
 import { expenseDisputes, ACTIONABLE_DISPUTE_TYPES, type DisputeType } from "@/lib/db/schema/expense-disputes";
 import { expenseReads } from "@/lib/db/schema/expense-reads";
@@ -12,7 +12,6 @@ import { groups } from "@/lib/db/schema/groups";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { applyRemoveMe, applyChangeShare, applySplitEqual } from "@/lib/interactions/split-transforms";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
-import { sendPushToMembers } from "@/lib/notifications/send-push-notification";
 import { revalidateTag, revalidatePath } from "next/cache";
 import { eq, and, ne, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -81,30 +80,6 @@ export async function fetchExpenseCommentsAction(expenseId: string, groupId: str
   }
 }
 
-export async function fetchExpenseReactionsAction(expenseId: string, groupId: string) {
-  const user = await getCurrentUser();
-  if (!user) return null;
-  const membership = await getMembership(groupId, user.id);
-  if (!membership) return null;
-
-  const rows = await db
-    .select({
-      emoji:       expenseReactions.emoji,
-      memberId:    expenseReactions.memberId,
-      displayName: groupMembers.displayName,
-      guestName:   groupMembers.guestName,
-    })
-    .from(expenseReactions)
-    .leftJoin(groupMembers, eq(groupMembers.id, expenseReactions.memberId))
-    .where(eq(expenseReactions.expenseId, expenseId))
-    .orderBy(expenseReactions.createdAt);
-
-  return rows.map((r) => ({
-    emoji:      r.emoji as ReactionEmoji,
-    memberId:   r.memberId,
-    memberName: r.displayName ?? r.guestName ?? "Member",
-  }));
-}
 
 export async function fetchExpenseDisputesAction(expenseId: string, groupId: string) {
   const user = await getCurrentUser();

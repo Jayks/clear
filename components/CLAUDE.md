@@ -247,6 +247,8 @@ Gated by `sessionStorage.getItem(`clear_settled_confetti_${groupId}`)` — write
 ### DebtFlowGraph
 `components/settlement/debt-flow-graph.tsx` — `"use client"` pure-SVG debt-flow visualisation on the Settle Up page.
 
+**Card container**: root element is `<div className="glass rounded-2xl overflow-hidden mb-6 relative">` — matches the visual language of every other card on the settle page. The SVG sits flush (no horizontal padding); the info bar below has a `<div className="px-3 pb-3">` wrapper for internal spacing.
+
 **Layout**: nodes placed via force-relaxed positions, draggable via pointer events (`onPointerDown` + `onPointerMove`). `hasDragged` ref suppresses particles while dragging to keep rendering smooth.
 
 **Node gradients**: exact `AVATAR_COLORS` palette (8 radial gradients matching `MemberAvatar`). Creditor nodes get a soft halo ring. Node size scales with `Math.abs(net)` (clamped: min `r=22`, max `r=32`).
@@ -255,11 +257,13 @@ Gated by `sessionStorage.getItem(`clear_settled_confetti_${groupId}`)` — write
 
 **Flow particles**: two SMIL `animateMotion` particles per arc (180° out of phase, `PARTICLE_DUR=1.8s`). Fill is a *lighter tint* of the arc colour so particles are visible on top of the stroke (`#FEF08A` amber-200 for outgoing, `#6EE7B7` emerald-200 for incoming, `#E2E8F0` slate-200 for third-party). Use `React.createElement("animateMotion", {...})` — see CLAUDE.md gotcha.
 
+**Mobile scroll — `touchAction: "pan-y"`**: The SVG uses `touchAction: "pan-y"` (not `"none"`) so vertical page scroll passes through on mobile. Node drag still works for horizontal and diagonal gestures. Do NOT revert to `"none"` — that blocks all touch scrolling within the graph area.
+
 **Selection**: `selectedArc: number | null` + `selectedId: string | null`. Mutually exclusive — selecting an arc clears `selectedId`, selecting a node clears `selectedArc`. SVG background click clears both.
 
 **Arc tap → payment scroll**: `handleArcClick(i)` calls `document.getElementById("suggestion-${i}")` → `scrollIntoView({ behavior:"smooth", block:"center" })` + 480ms-delayed cyan `box-shadow` flash (12s transition in, 0.55s out). `balances-section.tsx` must set `id={`suggestion-${i}`}` on each suggestion card div.
 
-**3-state info bar** (below graph): arc selected → payment summary + "Settle ↓" button; node selected → member net balance + "View" link; default → hint text.
+**3-state info bar** (below graph, inside the `px-3 pb-3` wrapper): arc selected → payment summary + "Settle ↓" button; node selected → member net balance + "View" link; default → hint text.
 
 **Rules of Hooks**: the `if (members.length === 0) return null` early exit is placed BEFORE all hook calls — required because the component has many hooks.
 

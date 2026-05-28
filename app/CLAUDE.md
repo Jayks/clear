@@ -147,6 +147,23 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 ---
 
+## Settle Page
+
+`app/(app)/groups/[id]/settle/` — page flow is structured to answer questions in natural reading order top → bottom:
+
+1. **`SettleHeroCard`** — personal position. Shows the net amount with two inline figures: "You put in ₹X · fair share ₹Y" directly below the large number so the user immediately understands *why* they owe/are owed without opening anything. Shows person pills for each specific payment.
+2. **`DebtFlowGraph`** — interactive SVG of the full group's debt flows. Wrapped in a `glass rounded-2xl overflow-hidden` card. `touchAction: "pan-y"` on the SVG allows vertical page scroll on mobile.
+3. **Net balances** (inline in `BalancesSection`, always visible) — a `glass rounded-2xl` card showing every member's net in two columns: name and `+/−₹X` (emerald = owed, amber = owes, "you" cyan pill). Gated by `balances.some(b => b.net !== 0)` so it doesn't appear when all settled.
+4. **"Minimum payments"** section (was "Suggested payments") — payment action cards with subtitle "Transfers that zero out all the balances above". `id="suggestion-${i}"` on each card for arc-tap scroll.
+5. **`SettleBreakdownSection`** (Suspense, streamed) → **`SettlementBreakdown`** — single accordion "How were expenses split?", expense ledger only. Steps 2 and 3 of the old "How is this calculated?" are now always visible on the page; the accordion's only job is the raw expense + split detail for verification.
+6. **Payment history** — past settlements.
+
+**`SectionHeader`** local component in `balances-section.tsx` accepts an optional `subtitle?: string` shown below the icon + label + gradient rule line (padded `pl-9` to align under the label).
+
+**`SettlementBreakdown` props** — simplified to `{ expensesWithSplits, members, currency }`. No longer receives `balances`, `suggestions`, or `pastSettlementsTotal` (those are now rendered directly in `BalancesSection`).
+
+---
+
 ## Demo Data Seeding
 
 `ensureDemoGroup()` (`app/actions/demo.ts`) — called on groups page load:

@@ -108,9 +108,13 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [isDark, setIsDark]           = useState(false);
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const [hasDragged, setHasDragged]   = useState(false);
+  const [hasDragged, setHasDragged]       = useState(false);
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const [settled, setSettled]         = useState(false);
+  // Separate from hasDragged — true only while a pointer is actively dragging a node.
+  // Used to pause particles during drag for performance; particles resume on pointer-up.
+  const [isDraggingAny, setIsDraggingAny] = useState(false);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [settled, setSettled]             = useState(false);
 
   // ── Drag refs ──────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -298,6 +302,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
     if (!dragMoved.current && Math.sqrt(dx * dx + dy * dy) > 3) {
       dragMoved.current = true;
       if (!hasDragged) setHasDragged(true);
+      setIsDraggingAny(true);
     }
     if (!dragMoved.current) return;
 
@@ -324,6 +329,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
       setTimeout(() => suppressClick.current.delete(id), 300);
     }
     dragMoved.current = false;
+    setIsDraggingAny(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -532,8 +538,8 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                 </text>
               </motion.g>
 
-              {/* ── Flow particles — lighter tint so they read on top of the arc stroke ── */}
-              {!hasDragged && (
+              {/* ── Flow particles — hidden only while actively dragging for perf ── */}
+              {!isDraggingAny && (
                 <>
                   {[0, PARTICLE_DUR / 2].map((phaseOff, pi) => (
                     <circle key={`p-${i}-${pi}`} r={2.6} fill={pColor2}>
@@ -541,7 +547,9 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                         path: arc.d,
                         dur: `${PARTICLE_DUR}s`,
                         repeatCount: "indefinite",
-                        begin: `${particleDelay + phaseOff}s`,
+                        // After a drag the initial delay is already past, so use phaseOff
+                        // directly — SMIL snaps to the correct phase for that document time.
+                        begin: `${hasDragged ? phaseOff : particleDelay + phaseOff}s`,
                       })}
                       {React.createElement("animate", {
                         attributeName: "opacity",
@@ -549,7 +557,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                         keyTimes: "0;0.08;0.80;1",
                         dur: `${PARTICLE_DUR}s`,
                         repeatCount: "indefinite",
-                        begin: `${particleDelay + phaseOff}s`,
+                        begin: `${hasDragged ? phaseOff : particleDelay + phaseOff}s`,
                       })}
                     </circle>
                   ))}
@@ -594,7 +602,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
               onPointerDown={(e) => onNodePointerDown(e, id)}
               onPointerMove={(e) => onNodePointerMove(e, id)}
               onPointerUp={(e)   => onNodePointerUp(e, id)}
-              onPointerCancel={() => { draggingRef.current = null; dragStart.current = null; }}
+              onPointerCancel={() => { draggingRef.current = null; dragStart.current = null; setIsDraggingAny(false); }}
             >
               <motion.g
                 initial={{ opacity: 0, scale: 0.25 }}

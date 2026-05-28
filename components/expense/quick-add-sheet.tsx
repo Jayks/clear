@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { hapticLight } from "@/lib/haptics";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import { QuickAddBar } from "./quick-add-bar";
@@ -165,6 +166,7 @@ export function QuickAddSheet({
     startSave(async () => {
       const result = await addExpense(input);
       if (result.ok) {
+        hapticLight();
         trackEvent("expense_added", { source: "quick_add" });
         const isFirst = !localStorage.getItem("first_expense_added");
         if (isFirst) {

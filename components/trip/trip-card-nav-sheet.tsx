@@ -32,6 +32,34 @@ export function TripCardNavSheet({ isOpen, onClose, groupId, groupName }: Props)
     document.addEventListener("touchmove", prevent, { passive: false });
     return () => document.removeEventListener("touchmove", prevent);
   }, [isOpen]);
+
+  // Push a fake history entry when the sheet opens so the browser/phone back
+  // button closes the sheet instead of navigating away.
+  useEffect(() => {
+    if (!isOpen) return;
+    window.history.pushState({ navSheet: true }, "");
+
+    const handlePop = () => onClose();
+    window.addEventListener("popstate", handlePop);
+
+    return () => {
+      window.removeEventListener("popstate", handlePop);
+      // If the sheet was closed programmatically (not via back), the fake
+      // history entry is still there — pop it silently.
+      if (window.history.state?.navSheet) {
+        window.history.go(-1);
+      }
+    };
+  }, [isOpen, onClose]);
+
+  // Escape key — close on desktop
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [isOpen, onClose]);
+
   if (!mounted) return null;
 
   return createPortal(
@@ -39,7 +67,7 @@ export function TripCardNavSheet({ isOpen, onClose, groupId, groupName }: Props)
       {isOpen && (
         <>
           <motion.div
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm cursor-pointer"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

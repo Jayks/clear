@@ -175,18 +175,28 @@ export async function BalancesSection({
               const isYouTo = currentMemberId === s.to;
               const isYours = isYouFrom || isYouTo;
               return (
-              <div key={i} className={`glass rounded-xl px-4 py-3.5 flex flex-col gap-2.5 ${isYours ? "ring-2 ring-cyan-400/40 dark:ring-cyan-500/30" : ""}`}>
+              <div key={i} className={`glass rounded-xl px-4 py-3.5 flex flex-col gap-2.5 ${
+                isYouFrom
+                  ? "ring-2 ring-amber-400/50 dark:ring-amber-500/40 bg-amber-50/40 dark:bg-amber-900/10"
+                  : isYouTo
+                  ? "ring-2 ring-emerald-400/40 dark:ring-emerald-500/30"
+                  : ""
+              }`}>
                 {isYours && (
-                  <p className={`text-[11px] font-semibold -mb-1 ${isYouFrom ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  <span className={`self-start text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    isYouFrom
+                      ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+                      : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                  }`}>
                     {isYouFrom ? "You owe" : "Owed to you"}
-                  </p>
+                  </span>
                 )}
                 {/* Row 1: who → who + amount */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">{memberName(s.from)}</span>
                   <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0 flex-1">{memberName(s.to)}</span>
-                  <span className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 tabular shrink-0" style={{ fontFamily: "var(--font-fraunces)" }}>
+                  <span className={`text-lg font-semibold tabular shrink-0 ${isYouFrom ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`} style={{ fontFamily: "var(--font-fraunces)" }}>
                     {formatCurrency(s.amount, currency)}
                   </span>
                 </div>

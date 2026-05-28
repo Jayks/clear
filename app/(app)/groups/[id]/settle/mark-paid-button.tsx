@@ -1,10 +1,12 @@
 "use client";
 
-import { recordSettlement } from "@/app/actions/settlements";
+import { recordSettlement, deleteSettlement } from "@/app/actions/settlements";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
+import { hapticSuccess } from "@/lib/haptics";
 
 interface Props {
   groupId: string;
@@ -16,16 +18,36 @@ interface Props {
 
 export function MarkPaidButton({ groupId, fromMemberId, toMemberId, amount, currency }: Props) {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleMark() {
     setLoading(true);
     const result = await recordSettlement({ groupId, fromMemberId, toMemberId, amount, currency });
     setLoading(false);
-    if (!result.ok) toast.error(result.error);
-    else {
-      trackEvent("settlement_recorded", { currency });
-      toast.success("Payment recorded!");
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
     }
+
+    hapticSuccess();
+    trackEvent("settlement_recorded", { currency });
+    const { settlementId } = result;
+
+    toast.success("Payment recorded!", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          const undoResult = await deleteSettlement(settlementId, groupId);
+          if (undoResult.ok) {
+            toast.success("Settlement undone.");
+            router.refresh();
+          } else {
+            toast.error(undoResult.error ?? "Could not undo settlement.");
+          }
+        },
+      },
+    });
   }
 
   return (

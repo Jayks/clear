@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Zap, X, Sparkles, Loader2, CalendarDays } from "lucide-react";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
@@ -156,6 +157,31 @@ export function QuickAddBar({
           )}
         </button>
       </div>
+
+      {/* Live split preview — while typing, before Fill form is pressed */}
+      {(() => {
+        if (parsed) return null;
+        const match = text.match(/\d+(?:[.,]\d+)?/);
+        const liveAmount = match ? parseFloat(match[0].replace(",", ".")) : null;
+        if (!liveAmount || liveAmount <= 0 || members.length < 2) return null;
+        const perPerson = liveAmount / members.length;
+        return (
+          <AnimatePresence>
+            <motion.div
+              key="split-preview"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="mt-2"
+            >
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+                ÷ {members.length} members = {formatCurrency(perPerson, currency)} each
+              </span>
+            </motion.div>
+          </AnimatePresence>
+        );
+      })()}
 
       {/* Chips row */}
       {parsed && (

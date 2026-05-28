@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/utils";
+import { BarChart2 } from "lucide-react";
 
 interface BudgetBarProps {
   spent: number;
@@ -12,7 +13,7 @@ export function BudgetBar({ spent, budget, currency }: BudgetBarProps) {
   const remaining = budget - spent;
 
   return (
-    <div className="glass rounded-xl px-4 py-4">
+    <div className="glass rounded-xl px-4 py-4 hover:shadow-lg hover:shadow-amber-500/10 transition-shadow">
       <div className="flex items-center justify-between mb-2">
         <div>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Budget</p>
@@ -23,12 +24,19 @@ export function BudgetBar({ spent, budget, currency }: BudgetBarProps) {
             </span>
           </p>
         </div>
-        <p className={`text-sm font-semibold tabular ${over ? "text-red-500" : "text-emerald-600"}`}
-          style={{ fontFamily: "var(--font-fraunces)" }}>
-          {over
-            ? `${formatCurrency(Math.abs(remaining), currency)} over`
-            : `${formatCurrency(remaining, currency)} left`}
-        </p>
+        <div className="flex items-center gap-2.5">
+          <p className={`text-sm font-semibold tabular ${over ? "text-red-500" : "text-emerald-600"}`}
+            style={{ fontFamily: "var(--font-fraunces)" }}>
+            {over
+              ? `${formatCurrency(Math.abs(remaining), currency)} over`
+              : `${formatCurrency(remaining, currency)} left`}
+          </p>
+          {/* Always-visible "Insights →" affordance — signals the bar is tappable */}
+          <div className="flex items-center gap-1 text-xs text-amber-500 dark:text-amber-400 font-medium">
+            <BarChart2 className="w-3 h-3" />
+            <span>Insights →</span>
+          </div>
+        </div>
       </div>
 
       {/* Track */}

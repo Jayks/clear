@@ -6,6 +6,7 @@ import { Trash2, Copy, Pencil } from "lucide-react";
 import Link from "next/link";
 import { deleteExpense, duplicateExpense } from "@/app/actions/expenses";
 import { toast } from "sonner";
+import { hapticDelete } from "@/lib/haptics";
 import { ExpenseCard } from "./expense-card";
 import { ExpenseDetailSheet } from "./expense-detail-sheet";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -35,10 +36,24 @@ export function SwipeableExpenseCard(props: Props) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const isDragging = useRef(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
   }, []);
+
+  // Dismiss when the user taps/clicks anywhere outside this card while actions are open.
+  // pointerdown (not click) fires before any tap delay — feels instant.
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const handleOutside = (e: PointerEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setActionsOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handleOutside);
+    return () => document.removeEventListener("pointerdown", handleOutside);
+  }, [actionsOpen]);
 
   const canEdit = expense.createdByUserId === props.currentUserId || props.isAdmin;
 
@@ -83,6 +98,7 @@ export function SwipeableExpenseCard(props: Props) {
       toast.error("Failed to delete expense");
       onDeleteFail?.(expense.id);
     } else {
+      hapticDelete();
       onDelete?.(expense.id);
     }
   }
@@ -110,7 +126,7 @@ export function SwipeableExpenseCard(props: Props) {
 
   // Touch (mobile): swipe-to-reveal overlay with all 3 actions
   return (
-    <div className="relative rounded-xl overflow-hidden">
+    <div ref={cardRef} className="relative rounded-xl overflow-hidden">
       <motion.div
         drag="x"
         dragConstraints={{ left: -60, right: actionsOpen ? 60 : 0 }}

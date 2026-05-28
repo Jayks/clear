@@ -27,18 +27,18 @@ export async function recordSettlement(input: RecordSettlementInput) {
   if (memberRows.length !== 2) return { ok: false, error: "Invalid members" } as const;
 
   try {
-    await db.insert(settlements).values({
+    const [row] = await db.insert(settlements).values({
       groupId,
       fromMemberId,
       toMemberId,
       amount: String(amount),
       currency,
       note: note || null,
-    });
+    }).returning({ id: settlements.id });
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
-    return { ok: true } as const;
+    return { ok: true, settlementId: row.id } as const;
   } catch {
     return { ok: false, error: "Failed to record settlement" } as const;
   }

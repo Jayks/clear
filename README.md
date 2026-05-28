@@ -16,7 +16,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 
 ## Features
 
-- **Quick-add expenses** — type a natural description from any group card; placeholder shows a live example like `"Coffee ₹120 paid by Priya"` so AI parsing is immediately obvious; AI fills amount, payer, and split automatically
+- **Quick-add expenses** — type a natural description from any group card; placeholder shows a live example like `"Coffee ₹120 paid by Priya"` so AI parsing is immediately obvious; AI fills amount, payer, and split automatically; a live `÷ N members = ₹X each` pill appears as you type so you always know each person's share before confirming
 - **Quick-nav from card** — tap `⋯` (always visible) or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights; the balance badge links directly to Settle Up; the member count badge links directly to Members
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
 - **Expense detail** — tap any expense card to open a WhatsApp-style bottom sheet: amount, split breakdown, notes, compact reaction pills, pending dispute card, resolved dispute history, an inline comment thread with a persistent footer input, and a direct "View thread" link — no separate page needed for the common case
@@ -35,6 +35,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Questions & disputes** — any member can raise a ❓ question or ⚠️ dispute on an expense; dispute types include "Remove me", "Change my share", "Split equally", or a free-text message; actionable types auto-resolve when the payer accepts
 - **Inline comments** — comment thread lives directly inside the expense detail sheet (WhatsApp-style bubbles, own messages right in cyan, others left in slate); @mention autocomplete with dropdown; optimistic posting — bubble appears instantly before server confirms; comments load with a shimmer skeleton and auto-scroll to the latest on open
 - **Expense thread page** — deep-link URL (`/thread`) for each expense; used by notification links and activity feed; shows reactions summary, pending dispute management, full comment history, and resolved disputes
+- **Undo settlement** — "Mark paid" shows a 5-second toast with an Undo action; tapping it deletes the settlement and refreshes the page, preventing accidental payments from becoming permanent
 - **All settled celebration** — when all debts are cleared the Settle Up page shows a celebration card with a total tracked amount, payment count, and member count instead of a flat empty state
 - **Member profile sheets** — tap any member on the Members page or Settle Up page to open a bottom sheet showing their net balance, total paid, total share, and last 3 expenses paid
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations

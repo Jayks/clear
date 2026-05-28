@@ -180,7 +180,27 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         </Link>
       </div>
 
-      {/* Trip summary — trips only */}
+      {/* Activity feed — most dynamic content, gets prime position */}
+      <div className="mb-6">
+        <Suspense fallback={<ActivityFeedSkeleton />}>
+          <GroupActivityFeed
+            groupId={id}
+            currentMemberId={currentMember?.id}
+            groupType={group.groupType}
+          />
+        </Suspense>
+      </div>
+
+      {/* Budget bar — links to insights for drill-down */}
+      {config.showBudget && group.budget && (
+        <div className="mb-6">
+          <Link href={`/groups/${group.id}/insights`} className="block group/budget">
+            <BudgetBar spent={totalSpent} budget={Number(group.budget)} currency={group.defaultCurrency} />
+          </Link>
+        </div>
+      )}
+
+      {/* Trip summary — deepest feature, retrospective view, earns its place at the bottom */}
       {!isNest && (
         <Link
           href={`/summary/${group.shareToken}`}
@@ -196,24 +216,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-cyan-500 transition-colors shrink-0" />
         </Link>
       )}
-
-      {/* Budget bar */}
-      {config.showBudget && group.budget && (
-        <div className="mb-4">
-          <BudgetBar spent={totalSpent} budget={Number(group.budget)} currency={group.defaultCurrency} />
-        </div>
-      )}
-
-      {/* Activity feed */}
-      <div className="mb-6">
-        <Suspense fallback={<ActivityFeedSkeleton />}>
-          <GroupActivityFeed
-            groupId={id}
-            currentMemberId={currentMember?.id}
-            groupType={group.groupType}
-          />
-        </Suspense>
-      </div>
 
     </div>
   );

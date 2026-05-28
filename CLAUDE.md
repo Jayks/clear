@@ -260,6 +260,8 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **Mobile tap targets**: back/nav links `min-h-[44px]`; expense card buttons `w-11 h-11 sm:w-7 sm:h-7`.
 - **Form pages — no `max-w-xl` constraint**: form pages (`new/`, `edit/`, `members/`) do NOT use `max-w-xl mx-auto` — they inherit the app layout's natural width so they don't look narrow on laptop. Only the app's outer `<main>` has `max-w-2xl`.
 - **Pagination threshold**: `expense-filters.tsx` uses `PAGE_ALL_THRESHOLD = 20` — pagination (Prev/Next, 10/page) only activates for groups with >20 expenses; smaller groups render all at once.
+- **Haptic feedback**: `lib/haptics.ts` exports `hapticLight()` (50ms, expense save/update), `hapticSuccess()` ([30,20,50]ms pattern, settlement paid), `hapticDelete()` (80ms, delete confirmed). All are no-ops when `navigator.vibrate` is unavailable (iOS Safari, desktop). Call at the success branch, before `toast.success`.
+- **`recordSettlement` returns `settlementId`**: `{ ok: true, settlementId: string }` — used by `MarkPaidButton` to wire the 5-second Undo toast. `deleteSettlement(settlementId, groupId)` is the paired action.
 
 ---
 

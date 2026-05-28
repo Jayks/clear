@@ -10,6 +10,7 @@ import { getGroupConfig } from "@/lib/group-config";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { hapticLight } from "@/lib/haptics";
 import { useWarnBeforeLeave } from "@/hooks/use-warn-before-leave";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -112,6 +113,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
       return;
     }
     addRecentCategory(data.category);
+    hapticLight();
     const isFirst = !localStorage.getItem("first_expense_added");
     if (isFirst) {
       localStorage.setItem("first_expense_added", "1");

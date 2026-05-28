@@ -9,6 +9,7 @@ import { getGroupConfig } from "@/lib/group-config";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { hapticLight } from "@/lib/haptics";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { Expense } from "@/lib/db/schema/expenses";
@@ -96,6 +97,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
       toast.error(result.error);
       return;
     }
+    hapticLight();
     toast.success("Expense updated!");
     router.push(`/groups/${group.id}/expenses`);
   }

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { RotateCcw } from "lucide-react";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { MemberProfileSheet } from "@/components/shared/member-profile-sheet";
 import type { Transaction } from "@/lib/settle/optimize";
@@ -113,9 +114,11 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
 
   // ── Drag refs ──────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const svgRef        = useRef<SVGSVGElement>(null);
+  const svgRef           = useRef<SVGSVGElement>(null);
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const draggingRef   = useRef<string | null>(null);
+  const originalLayout   = useRef<NodePos[]>([]);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const draggingRef      = useRef<string | null>(null);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const dragStart     = useRef<{ svgX: number; svgY: number; nodeX: number; nodeY: number } | null>(null);
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -156,7 +159,9 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   // Reset layout when members/suggestions change
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    setNodePositions(buildLayout(displayIds, currentMemberId, cx, cy));
+    const layout = buildLayout(displayIds, currentMemberId, cx, cy);
+    originalLayout.current = layout;
+    setNodePositions(layout);
     setHasDragged(false);
     setSettled(false);
     setSelectedArc(null);
@@ -247,6 +252,23 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   const toSvg = useCallback((clientX: number, clientY: number) => {
     const el = svgRef.current;
     if (!el) return { x: 0, y: 0 };
+    // Use the SVG's own CTM so preserveAspectRatio offsets are accounted for.
+    // The simple (clientX - rect.left) * (W / rect.width) formula is wrong when
+    // the viewBox content doesn't fill the rendered element (e.g. on wide screens
+    // with maxHeight clamping the height — the content stays at scale 1 centered,
+    // leaving empty space on the sides, so the effective scale is NOT W/rect.width).
+    try {
+      const ctm = el.getScreenCTM();
+      if (ctm) {
+        const pt = el.createSVGPoint();
+        pt.x = clientX;
+        pt.y = clientY;
+        const p = pt.matrixTransform(ctm.inverse());
+        return { x: p.x, y: p.y };
+      }
+    } catch {
+      // fallthrough to rect-based fallback
+    }
     const rect = el.getBoundingClientRect();
     return {
       x: (clientX - rect.left) * (W / rect.width),
@@ -333,6 +355,15 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
     });
   }, []);
 
+  // Reset nodes to their original ring positions
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const handleReset = useCallback(() => {
+    setNodePositions(originalLayout.current.map((n) => ({ ...n })));
+    setHasDragged(false);
+    setSelectedId(null);
+    setSelectedArc(null);
+  }, []);
+
   // ── Derived display values ─────────────────────────────────────────
   const selMember     = selectedId  ? members.find((m) => m.id === selectedId)  ?? null : null;
   const selBal        = selectedId  ? (balances.find((b) => b.memberId === selectedId)?.net ?? 0) : 0;
@@ -342,12 +373,32 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
 
   // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div className="mb-6">
+    <div className="mb-6 relative">
+
+      {/* Reset button — only visible after the user has dragged a node */}
+      <AnimatePresence>
+        {hasDragged && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.15 }}
+            onClick={handleReset}
+            className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2.5 py-1.5 rounded-lg glass text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            title="Reset to original layout"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
-        style={{ display: "block", maxHeight: H }}
+        style={{ display: "block", maxHeight: H, touchAction: "none" }}
         aria-label="Group debt flow"
         onClick={() => { setSelectedId(null); setSelectedArc(null); }}
       >

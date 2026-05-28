@@ -32,11 +32,11 @@ function getInitials(name: string) {
 }
 
 function getLayout(n: number) {
-  if (n <= 2) return { ringR: 78, nodeR: 24, currentR: 30 };
-  if (n <= 4) return { ringR: 88, nodeR: 22, currentR: 28 };
-  if (n <= 6) return { ringR: 98, nodeR: 20, currentR: 26 };
-  if (n <= 9) return { ringR: 105, nodeR: 17, currentR: 22 };
-  return { ringR: 110, nodeR: 14, currentR: 19 };
+  if (n <= 2) return { ringR: 90, nodeR: 26, currentR: 33 };
+  if (n <= 4) return { ringR: 100, nodeR: 24, currentR: 30 };
+  if (n <= 6) return { ringR: 110, nodeR: 22, currentR: 28 };
+  if (n <= 9) return { ringR: 118, nodeR: 19, currentR: 24 };
+  return { ringR: 124, nodeR: 16, currentR: 21 };
 }
 
 interface NodePos { id: string; x: number; y: number; isCurrent: boolean; }
@@ -92,7 +92,7 @@ interface Props {
   groupId: string;
 }
 
-const W = 360, H = 296;
+const W = 360, H = 340;
 
 export function DebtFlowGraph({ suggestions, members, balances, currentMemberId, currency, groupId }: Props) {
   // Early return before any hooks — members.length === 0 means nothing to render
@@ -204,7 +204,14 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
 
   // ── Colours ────────────────────────────────────────────────────────
   const { nodeR: baseR, currentR } = getLayout(displayIds.length);
-  const nR = (id: string) => (id === currentMemberId ? currentR : baseR);
+  // Node radius scales with absolute net balance — bigger = more at stake.
+  // Clamped to [baseR, baseR * 1.45] so nodes never become distractingly large.
+  const maxAbsNet = isSettled ? 1 : Math.max(...balances.map((b) => Math.abs(b.net)), 1);
+  const nR = (id: string) => {
+    const net  = balances.find((b) => b.memberId === id)?.net ?? 0;
+    const minR = id === currentMemberId ? currentR : baseR;
+    return minR + Math.round((Math.abs(net) / maxAbsNet) * baseR * 0.45);
+  };
 
   const arcColor = (s: Transaction) =>
     s.from === currentMemberId ? "#FBBF24" : s.to === currentMemberId ? "#34D399" : "#94A3B8";
@@ -420,6 +427,26 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
               </linearGradient>
             );
           })}
+
+          {/* Per-arc gradients — FROM node colour flowing into TO node colour.
+              gradientUnits="userSpaceOnUse" with absolute coords so the gradient
+              follows the arc direction regardless of the path bounding box. */}
+          {!isSettled && suggestions.map((s, i) => {
+            const fn = nodePositions.find((n) => n.id === s.from);
+            const tn = nodePositions.find((n) => n.id === s.to);
+            if (!fn || !tn) return null;
+            const fromC = AVATAR_COLORS[hashName(memberName(s.from)) % AVATAR_COLORS.length];
+            const toC   = AVATAR_COLORS[hashName(memberName(s.to))   % AVATAR_COLORS.length];
+            return (
+              <linearGradient key={`ag-${i}`} id={`ag-${i}`}
+                gradientUnits="userSpaceOnUse"
+                x1={fn.x} y1={fn.y} x2={tn.x} y2={tn.y}
+              >
+                <stop offset="0%"   stopColor={fromC.end}   />
+                <stop offset="100%" stopColor={toC.start}   />
+              </linearGradient>
+            );
+          })}
           <filter id="glow-you" x="-60%" y="-60%" width="220%" height="220%">
             <feGaussianBlur stdDeviation="5" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -478,7 +505,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                 />
               )}
 
-              {/* Main arc stroke */}
+              {/* Main arc stroke — gradient from payer → payee avatar colour */}
               <motion.path
                 ref={(el) => {
                   if (el) arcPathRefs.current.set(i, el as unknown as SVGPathElement);
@@ -486,7 +513,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                 }}
                 d={arc.d}
                 fill="none"
-                stroke={color}
+                stroke={`url(#ag-${i})`}
                 strokeWidth={arcStrokeW(s.amount)}
                 strokeLinecap="round"
                 initial={hasDragged ? false : { pathLength: 0, opacity: 0 }}
@@ -538,31 +565,35 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                 </text>
               </motion.g>
 
-              {/* ── Flow particles — hidden only while actively dragging for perf ── */}
-              {!isDraggingAny && (
-                <>
-                  {[0, PARTICLE_DUR / 2].map((phaseOff, pi) => (
-                    <circle key={`p-${i}-${pi}`} r={2.6} fill={pColor2}>
-                      {React.createElement("animateMotion", {
-                        path: arc.d,
-                        dur: `${PARTICLE_DUR}s`,
-                        repeatCount: "indefinite",
-                        // After a drag the initial delay is already past, so use phaseOff
-                        // directly — SMIL snaps to the correct phase for that document time.
-                        begin: `${hasDragged ? phaseOff : particleDelay + phaseOff}s`,
-                      })}
-                      {React.createElement("animate", {
-                        attributeName: "opacity",
-                        values: "0;0.95;0.95;0",
-                        keyTimes: "0;0.08;0.80;1",
-                        dur: `${PARTICLE_DUR}s`,
-                        repeatCount: "indefinite",
-                        begin: `${hasDragged ? phaseOff : particleDelay + phaseOff}s`,
-                      })}
-                    </circle>
-                  ))}
-                </>
-              )}
+              {/* ── Flow particles — count 1–3 proportional to arc amount ── */}
+              {!isDraggingAny && (() => {
+                const count = Math.max(1, Math.round((s.amount / maxAmount) * 3));
+                return (
+                  <>
+                    {Array.from({ length: count }, (_, pi) => {
+                      const phaseOff = (PARTICLE_DUR / count) * pi;
+                      return (
+                        <circle key={`p-${i}-${pi}`} r={2.6} fill={pColor2}>
+                          {React.createElement("animateMotion", {
+                            path: arc.d,
+                            dur: `${PARTICLE_DUR}s`,
+                            repeatCount: "indefinite",
+                            begin: `${hasDragged ? phaseOff : particleDelay + phaseOff}s`,
+                          })}
+                          {React.createElement("animate", {
+                            attributeName: "opacity",
+                            values: "0;0.95;0.95;0",
+                            keyTimes: "0;0.08;0.80;1",
+                            dur: `${PARTICLE_DUR}s`,
+                            repeatCount: "indefinite",
+                            begin: `${hasDragged ? phaseOff : particleDelay + phaseOff}s`,
+                          })}
+                        </circle>
+                      );
+                    })}
+                  </>
+                );
+              })()}
             </g>
           );
         })}
@@ -623,15 +654,33 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                   setSelectedId((prev) => (prev === id ? null : id));
                 }}
               >
-                {/* Breathing glow — current user */}
-                {isCurrent && !isSettled && (
-                  <motion.circle
-                    cx={0} cy={0} r={r + 5} fill="none"
-                    stroke="#06B6D4" strokeWidth={1.8}
-                    initial={{ strokeOpacity: 0 }}
-                    animate={{ r: [r + 4, r + 9, r + 4], strokeOpacity: [0.2, 0.6, 0.2] }}
-                    transition={{ delay: nodeDelay + 0.7, duration: 2.8, repeat: Infinity, ease: "easeInOut" as const }}
-                  />
+                {/* ── Debt-status rings ──────────────────────────────────── */}
+                {!isSettled && (
+                  <>
+                    {/* Current user: pulsing ring whose colour reflects their debt status.
+                        Amber  = owes money  |  Emerald = is owed  |  Cyan = balanced */}
+                    {isCurrent && (
+                      <motion.circle
+                        cx={0} cy={0} r={r + 5} fill="none"
+                        stroke={net < -0.01 ? "#FBBF24" : net > 0.01 ? "#34D399" : "#06B6D4"}
+                        strokeWidth={1.8}
+                        initial={{ strokeOpacity: 0 }}
+                        animate={{ r: [r + 4, r + 9, r + 4], strokeOpacity: [0.2, 0.6, 0.2] }}
+                        transition={{ delay: nodeDelay + 0.7, duration: 2.8, repeat: Infinity, ease: "easeInOut" as const }}
+                      />
+                    )}
+                    {/* Other nodes: static coloured ring — amber = debtor, emerald = creditor */}
+                    {!isCurrent && Math.abs(net) > 0.01 && (
+                      <motion.circle
+                        cx={0} cy={0} r={r + 3} fill="none"
+                        stroke={net < 0 ? "#FBBF24" : "#34D399"}
+                        strokeWidth={1.2}
+                        initial={{ strokeOpacity: 0 }}
+                        animate={{ strokeOpacity: 0.32 }}
+                        transition={{ delay: nodeDelay + 0.5, duration: 0.5 }}
+                      />
+                    )}
+                  </>
                 )}
 
                 {/* Settled glow ring */}

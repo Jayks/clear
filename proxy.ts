@@ -36,6 +36,7 @@ export async function proxy(request: NextRequest) {
 
   const isProtected =
     pathname.startsWith("/groups") ||
+    pathname.startsWith("/insights") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/settings");
 

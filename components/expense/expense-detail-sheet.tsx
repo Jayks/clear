@@ -32,6 +32,7 @@ import { DisputeForm } from "./dispute-form";
 import { ThreadDiscussion, type OptimisticComment } from "./thread-discussion";
 import { ThreadCommentInput } from "./thread-comment-input";
 import { SeenAvatarStack } from "./seen-avatar-stack";
+import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 
 // ── Comment loading skeleton ─────────────────────────────────────────────────
 function CommentSkeleton() {
@@ -104,6 +105,9 @@ export function ExpenseDetailSheet({
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
+
+  // Escape key + Android back-button dismissal
+  useSheetDismiss(isOpen, onClose);
 
   // ── Mount ────────────────────────────────────────────────────────────────
   useEffect(() => { setMounted(true); }, []);

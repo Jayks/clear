@@ -39,7 +39,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Expense thread page** — deep-link URL (`/thread`) for each expense; used by notification links and activity feed; shows reactions summary, pending dispute management, full comment history, and resolved disputes
 - **Undo settlement** — "Mark paid" shows a 5-second toast with an Undo action; tapping it deletes the settlement and refreshes the page, preventing accidental payments from becoming permanent
 - **All settled celebration** — when all debts are cleared the Settle Up page shows a celebration card with a total tracked amount, payment count, and member count instead of a flat empty state; a 30-piece confetti burst fires once per session at that moment
-- **Member profile sheets** — tap any member on the Members page or Settle Up page to open a bottom sheet showing their net balance, total paid, total share, and last 3 expenses paid
+- **Member profile sheets** — tap any member on the Members page to open a bottom sheet showing their net balance, total paid, total share, and last 3 expenses paid
 - **Group insights** — category donut, daily/monthly spend, member contributions, pace tracker, smart observations
 - **Import members from group** — on the Members page, admins can copy members from any previous group; a two-step sheet (pick group → toggle members) pre-selects everyone not already present; respects free-plan limits; shown as a prominent banner for new empty groups and as a secondary link otherwise
 - **Repeat trip prompt** — when a trip ends or is archived, admins see a dismissable prompt to create a new trip with the same squad pre-populated; a bottom sheet lets them name the trip, pick dates, and toggle which members to copy

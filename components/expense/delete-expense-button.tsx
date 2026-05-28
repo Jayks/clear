@@ -4,6 +4,7 @@ import { deleteExpense } from "@/app/actions/expenses";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { hapticDelete } from "@/lib/haptics";
 
 interface Props {
   expenseId: string;
@@ -19,6 +20,7 @@ export function DeleteExpenseButton({ expenseId, groupId, onSuccess, onFail }: P
       toast.error(result.error);
       onFail?.();
     } else {
+      hapticDelete();
       onSuccess?.();
     }
   }

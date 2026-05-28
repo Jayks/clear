@@ -200,7 +200,7 @@ export async function duplicateExpense(expenseId: string) {
       );
     }
 
-    revalidatePath(`/groups/${expense.groupId}/expenses`);
+    revalidatePath(`/groups/${expense.groupId}`, "layout");
     revalidateTag(`balances-${expense.groupId}`, "max");
     return { ok: true, expenseId: newExpense.id } as const;
   } catch {
@@ -240,7 +240,11 @@ export async function createExpenseTemplate(input: AddTemplateInput) {
   const { groupId, paidByMemberId, description, category, amount, currency, recurrence, splitMode, splits } = parsed.data;
 
   const membership = await getMembership(groupId, user.id);
-  if (!membership) return { ok: false, error: "Not a member" } as const;
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only group admins can create templates" } as const;
+
+  if (!(await canUseTemplates(groupId)))
+    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
 
   const [paidByMember] = await db.select({ id: groupMembers.id }).from(groupMembers)
     .where(and(eq(groupMembers.id, paidByMemberId), eq(groupMembers.groupId, groupId)));
@@ -359,7 +363,11 @@ export async function updateTemplate(templateId: string, input: AddTemplateInput
   if (!template) return { ok: false, error: "Template not found" } as const;
 
   const membership = await getMembership(template.groupId, user.id);
-  if (!membership) return { ok: false, error: "Not a member" } as const;
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only group admins can edit templates" } as const;
+
+  if (!(await canUseTemplates(template.groupId)))
+    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
 
   const { paidByMemberId, description, category, amount, recurrence, splitMode, splits } = parsed.data;
 

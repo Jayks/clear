@@ -3,7 +3,7 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
-import { eq, sql, desc, asc } from "drizzle-orm";
+import { eq, and, sql, desc, asc } from "drizzle-orm";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { differenceInDays, parseISO } from "date-fns";
@@ -31,12 +31,12 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
         total: sql<number>`sum(amount)::float8`,
       })
       .from(expenses)
-      .where(eq(expenses.groupId, trip.id))
+      .where(and(eq(expenses.groupId, trip.id), eq(expenses.isTemplate, false)))
       .groupBy(expenses.category),
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(expenses)
-      .where(eq(expenses.groupId, trip.id)),
+      .where(and(eq(expenses.groupId, trip.id), eq(expenses.isTemplate, false))),
     db
       .select({
         description: expenses.description,
@@ -46,7 +46,7 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
         paidByMemberId: expenses.paidByMemberId,
       })
       .from(expenses)
-      .where(eq(expenses.groupId, trip.id))
+      .where(and(eq(expenses.groupId, trip.id), eq(expenses.isTemplate, false)))
       .orderBy(asc(expenses.expenseDate)),
   ]);
 

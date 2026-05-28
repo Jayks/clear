@@ -28,7 +28,7 @@ clear/
 │   │           ├── edit/page.tsx + edit-trip-form.tsx
 │   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, [expenseId]/thread/page.tsx, templates/new/, templates/[templateId]/edit/
 │   │           ├── members/page.tsx, loading.tsx + forms/buttons + import-members-sheet.tsx
-│   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, balance-cards-client.tsx, mark-paid-button, upi-pay-button
+│   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, mark-paid-button, upi-pay-button, whatsapp-remind-button, settle-breakdown-section
 │   │           └── insights/page.tsx + loading.tsx
 │   ├── pricing/page.tsx + plan-cards.tsx + faq-section.tsx   # public — no auth; plan-cards is async RSC (fetches founder slots); faq-section is client (Expand all / accordion state)
 │   ├── changelog/page.tsx + loading.tsx   # public — 15-release timeline; data in lib/changelog.ts

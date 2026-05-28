@@ -10,7 +10,7 @@ import { eq, and, isNull, sum, desc, count } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { canAddMember } from "@/lib/subscription/gates";
+import { canAddMember, getGroupPlan } from "@/lib/subscription/gates";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
   const user = await getCurrentUser();
@@ -75,7 +75,7 @@ export async function importMembersFromGroup(targetGroupId: string, memberNames:
     .from(groupMembers)
     .where(eq(groupMembers.groupId, targetGroupId));
   const current = Number(row?.total ?? 0);
-  const plan = await (await import("@/lib/subscription/gates")).getGroupPlan(targetGroupId);
+  const plan = await getGroupPlan(targetGroupId);
   if (plan !== "plus" && current + toAdd.length > 8) {
     const canAdd = 8 - current;
     if (canAdd <= 0)

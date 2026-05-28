@@ -11,6 +11,7 @@ import { fetchMemberStatsAction, type MemberStats } from "@/app/actions/members"
 import { MemberAvatar } from "./member-avatar";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
+import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 
 interface Props {
   member: GroupMember;
@@ -51,13 +52,8 @@ export function MemberProfileSheet({
   // Reset when member changes
   useEffect(() => { setStats(null); }, [member.id]);
 
-  // Escape key
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
+  // Escape key + Android back-button dismissal
+  useSheetDismiss(isOpen, onClose);
 
   if (!mounted) return null;
 

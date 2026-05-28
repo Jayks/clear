@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 
 const QRCodeSVG = dynamic(
   () => import("qrcode.react").then((m) => ({ default: m.QRCodeSVG })),
@@ -20,6 +21,9 @@ interface Props {
 export function InviteQRSheet({ url, groupName, isOpen, onClose }: Props) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Escape key + Android back-button dismissal
+  useSheetDismiss(isOpen, onClose);
 
   // Prevent iOS body scroll-through while sheet is open.
   useEffect(() => {

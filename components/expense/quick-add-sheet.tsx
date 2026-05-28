@@ -17,6 +17,7 @@ import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { AddExpenseInput } from "@/lib/validations/expense";
 import { useRecentCategories } from "@/hooks/use-recent-categories";
 import { getMemberName, formatDate } from "@/lib/utils";
+import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 
 interface Props {
   groupId: string;
@@ -91,6 +92,10 @@ export function QuickAddSheet({
   const [lastContext, setLastContext] = useState<StickyContext | null>(null);
   const [, addRecentCategory] = useRecentCategories(groupType);
   const [mounted, setMounted] = useState(false);
+
+  // Escape key + Android back-button dismissal
+  useSheetDismiss(isOpen, onClose);
+
   // Each voice transcript gets a unique id so the QuickAddBar effect always fires,
   // even if the user says the same phrase twice.
   const [voiceTrigger, setVoiceTrigger] = useState<{ text: string; id: number } | null>(null);

@@ -612,6 +612,7 @@ export async function declineDispute(disputeId: string) {
     .where(eq(expenseDisputes.id, disputeId));
 
   revalidateGroup(groupId);
+  revalidatePath(`/groups/${groupId}`, "layout");
 
   // Push to requester privately
   const [requesterRow] = await db

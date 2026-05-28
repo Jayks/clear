@@ -192,10 +192,9 @@ All streamed via `<Suspense>`, cached with existing tags — no action file chan
 ### MemberProfileSheet
 `components/shared/member-profile-sheet.tsx` — portal bottom sheet at `z-50`. Triggered from:
 - **Members page** (`MemberListClient`) — no `netBalance` prop; stats-only view.
-- **Settle page** (`BalanceCardsClient`) — `netBalance` pre-populated from balance calculation; shows emerald/red banner.
 
 Props: `member`, `groupId`, `currency`, `currentMemberId`, `netBalance?`, `isOpen`, `onClose`.
-Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.id` change (prevents stale data across members). Escape key and backdrop close.
+Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.id` change (prevents stale data across members). Escape key + Android back-button close via `useSheetDismiss`.
 
 ### SwipeableExpenseCard — responsive action reveal
 
@@ -208,10 +207,8 @@ Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.i
 - `hideActions` — hides the button row entirely (mobile: buttons are in the overlay)
 - `hoverRevealActions` — wraps button row in `opacity-0 group-hover:opacity-100`
 
-### MemberListClient / BalanceCardsClient
+### MemberListClient
 `app/(app)/groups/[id]/members/member-list-client.tsx` — replaces static member list. Each row is `<div role="button">` (not `<button>`) to avoid nested-button violation with `RemoveMemberButton` inside. `stopPropagation` on the actions wrapper prevents Remove button from opening the sheet.
-
-`app/(app)/groups/[id]/settle/balance-cards-client.tsx` — balance cards grid as tappable buttons opening `MemberProfileSheet` with `netBalance`.
 
 ### TripTimeline — rich day-by-day summary timeline
 `components/trip/trip-timeline.tsx` — `"use client"` component used on the public summary page (`/summary/[token]`).

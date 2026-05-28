@@ -208,7 +208,8 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   // Clamped to [baseR, baseR * 1.45] so nodes never become distractingly large.
   const maxAbsNet = isSettled ? 1 : Math.max(...balances.map((b) => Math.abs(b.net)), 1);
   const nR = (id: string) => {
-    const net  = balances.find((b) => b.memberId === id)?.net ?? 0;
+    const raw  = balances.find((b) => b.memberId === id)?.net ?? 0;
+    const net  = isFinite(Number(raw)) ? Number(raw) : 0;
     const minR = id === currentMemberId ? currentR : baseR;
     return minR + Math.round((Math.abs(net) / maxAbsNet) * baseR * 0.45);
   };
@@ -664,7 +665,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                         cx={0} cy={0} r={r + 5} fill="none"
                         stroke={net < -0.01 ? "#FBBF24" : net > 0.01 ? "#34D399" : "#06B6D4"}
                         strokeWidth={1.8}
-                        initial={{ strokeOpacity: 0 }}
+                        initial={{ r: r + 5, strokeOpacity: 0 }}
                         animate={{ r: [r + 4, r + 9, r + 4], strokeOpacity: [0.2, 0.6, 0.2] }}
                         transition={{ delay: nodeDelay + 0.7, duration: 2.8, repeat: Infinity, ease: "easeInOut" as const }}
                       />
@@ -688,7 +689,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
                   <motion.circle
                     cx={0} cy={0} r={r + 4} fill="none"
                     stroke="#34D399" strokeWidth={1.5}
-                    initial={{ strokeOpacity: 0 }}
+                    initial={{ r: r + 4, strokeOpacity: 0 }}
                     animate={{ r: [r + 3, r + 7, r + 3], strokeOpacity: [0.15, 0.45, 0.15] }}
                     transition={{ delay: nodeDelay + 0.5, duration: 2.5, repeat: Infinity, ease: "easeInOut" as const }}
                   />

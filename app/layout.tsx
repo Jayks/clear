@@ -21,6 +21,7 @@ const fraunces = Fraunces({
   subsets: ["latin"],
   display: "swap",
   axes: ["opsz", "SOFT", "WONK"],
+  preload: false, // display font used sparingly — preloading causes "not used in time" warning
 });
 
 export const metadata: Metadata = {

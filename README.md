@@ -47,7 +47,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Rich trip summary timeline** — the public `/summary/[token]` page shows the same animated day-by-day timeline: stacked category bars, payer chips, count-up totals, connector threads, Day X/Y badges, and always-expanded expense rows for a shareable visual recap
 - **Cover photo upload** — pick a photo from Unsplash or upload from your device; stored in Supabase Storage
 - **Trip plan upload** — upload a PDF or .txt itinerary and have it auto-filled in the trip form
-- **Onboarding tour** — 7-step walkthrough (4 default + 3 extended) with spotlight, celebration, and a nest-specific 2-step overlay for recurring templates
+- **Onboarding tour** — 9-step walkthrough (4 default + 5 extended) with spotlight, celebration, and a nest-specific 2-step overlay for recurring templates; extended steps navigate into the demo group and show the expense list (full view), day-by-day timeline (Day 1 spotlighted), debt flow graph, per-group insights, and all-groups insights in sequence
 - **Progress nudges** — first-time expense and group creation each show a contextual next-step prompt (shown once)
 - **Group creation** — type selector shows clear descriptions ("One-time trips & events" / "Home, flatmates & recurring"); optional fields (cover photo, dates) labelled upfront; budget, description, and itinerary hidden behind `+ More options` for a clean first-time flow
 - **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in; group admin's Share + Edit buttons are in the card hero; invite link reset and group archive live on the Edit page under Admin actions

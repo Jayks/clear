@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ArrowLeft, MoreHorizontal, Receipt, Wallet, Users, BarChart2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
@@ -81,6 +81,10 @@ export function GroupMobileNav({ groupId, groupName }: Props) {
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
 
+  // Stable reference — prevents the history useEffect in TripCardNavSheet from
+  // re-running (and re-pushing fake history entries) on every re-render.
+  const handleClose = useCallback(() => setNavOpen(false), []);
+
   const { pageTitle, backHref, backLabel, icon: SectionIcon, gradient } = resolveNav(pathname, groupId, groupName);
 
   return (
@@ -126,7 +130,7 @@ export function GroupMobileNav({ groupId, groupName }: Props) {
 
       <TripCardNavSheet
         isOpen={navOpen}
-        onClose={() => setNavOpen(false)}
+        onClose={handleClose}
         groupId={groupId}
         groupName={groupName}
       />

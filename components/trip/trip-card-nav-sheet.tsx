@@ -101,7 +101,15 @@ export function TripCardNavSheet({ isOpen, onClose, groupId, groupName }: Props)
                 <Link
                   key={path}
                   href={`/groups/${groupId}/${path}`}
-                  onClick={onClose}
+                  onClick={() => {
+                    // Clear the navSheet history marker synchronously before closing.
+                    // Without this, the effect cleanup calls history.go(-1) AFTER
+                    // Next.js has already pushed the new route, reversing the navigation.
+                    if (window.history.state?.navSheet) {
+                      window.history.replaceState(null, "");
+                    }
+                    onClose();
+                  }}
                   className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 active:bg-slate-100 dark:active:bg-slate-800 transition-colors"
                 >
                   <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm ${shadow}`}>

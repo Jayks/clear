@@ -166,7 +166,7 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 **Extended tour (opt-in, 5 steps):** steps 5–9:
 - 5 (idx 4): `[data-tour='expense-list-header']` → expenses page — search/filter
-- 6 (idx 5): `[data-tour='expense-timeline']` → expenses page — day-by-day timeline; dispatches `tour-switch-timeline-view` event (400ms delay); `ExpenseFilters` listens and calls `setAndSaveViewMode("timeline")`
+- 6 (idx 5): `[data-tour='expense-timeline-day1']` → expenses page — Day 1 card only; dispatches `tour-switch-timeline-view` event (400ms delay); `ExpenseFilters` listens and calls `setAndSaveViewMode("timeline")`; first `DaySection` (index 0) carries `data-tour="expense-timeline-day1"` via `dataTour` prop
 - 7 (idx 6): `[data-tour='debt-flow-graph']` → settle page — debt flow graph (wrapper div in `balances-section.tsx`)
 - 8 (idx 7): `[data-tour='insights-charts']` → per-group insights — category/spend charts
 - 9 (idx 8): `[data-tour='all-insights-trips']` → /insights — all-groups spending story
@@ -180,7 +180,9 @@ Finishing → `/groups` + `CelebrationCard`.
 - Avatar shows cyan dot at `-top-0.5 -right-0.5` until `clear_tour_done` is set.
 - `NestHint` — 2-step overlay on nest expenses page (`[data-tour='templates-section']` → `[data-tour='log-template-btn']`).
 - `TripCard` listens for `open-demo-navsheet` custom event via `useEffect`.
-- `ExpenseFilters` listens for `tour-switch-timeline-view` custom event; switches + persists "timeline" view mode.
+- `ExpenseFilters` listens for two tour custom events: `tour-switch-full-view` (step 5) and `tour-switch-timeline-view` (step 6); both call `setAndSaveViewMode()` and persist to localStorage.
+- `showMore()` (in `tour-context.tsx`) pre-writes `"full"` to `clear_expense_view_mode` localStorage **before** navigating to `/expenses`, so the component mounts in list mode even if "timeline" was previously saved. The 400ms event is a backup for the already-mounted case.
+- `demoTripId` is read by iterating **all** `<a>` tags inside `[data-tour='demo-trip']` with a no-`$`-anchor regex — necessary because the member-count badge link (`/groups/{id}/members`) appears before the main group link in DOM order.
 
 ---
 

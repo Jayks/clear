@@ -17,6 +17,25 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
           isSampleData: true,
         },
         {
+          target: "[data-tour='expense-timeline-day1']",
+          page: `${base}/expenses`,
+          title: "Day-by-day timeline",
+          description:
+            "The timeline groups every expense by date — busiest days glow, category bars show the split at a glance. Great for a post-trip review.",
+          phase: "extended",
+          isSampleData: true,
+          autoTimeline: true,
+        },
+        {
+          target: "[data-tour='debt-flow-graph']",
+          page: `${base}/settle`,
+          title: "Debt flow graph",
+          description:
+            "Every debt mapped as a flow between members. Tap any arc to jump to the payment suggestion, or drag nodes to rearrange the layout.",
+          phase: "extended",
+          isSampleData: true,
+        },
+        {
           target: "[data-tour='insights-charts']",
           page: `${base}/insights`,
           title: "See where the money went",
@@ -78,7 +97,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
       navLegend: true,
     },
 
-    // 5-7 — Extended tour
+    // 5-9 — Extended tour (5 steps)
     ...extendedSteps,
   ];
 }

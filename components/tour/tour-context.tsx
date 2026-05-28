@@ -70,16 +70,20 @@ export function TourProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t);
   }, []);
 
-  // Read demoTripId from the demo-trip card href
+  // Read demoTripId from the demo-trip card href.
+  // The card has multiple <a> tags (member badge, balance badge, main link) — iterate
+  // all of them and match any /groups/{id} URL (no $ anchor so /groups/{id}/members works too).
   useEffect(() => {
     if (!active || demoTripId) return;
     const tryRead = () => {
       const el = document.querySelector("[data-tour='demo-trip']");
       if (!el) return false;
-      const link = el.querySelector("a") as HTMLAnchorElement | null;
-      const href = link?.getAttribute("href") ?? "";
-      const match = href.match(/^\/groups\/([^/]+)$/);
-      if (match?.[1]) { setDemoTripId(match[1]); return true; }
+      const links = Array.from(el.querySelectorAll("a")) as HTMLAnchorElement[];
+      for (const link of links) {
+        const href = link.getAttribute("href") ?? "";
+        const match = href.match(/^\/groups\/([^/]+)/);
+        if (match?.[1]) { setDemoTripId(match[1]); return true; }
+      }
       return false;
     };
     if (!tryRead()) {
@@ -121,6 +125,24 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }, 400);
     return () => clearTimeout(t);
   }, [active, step, demoTripId]);
+
+  // Step 5 (index 4, extended): switch ExpenseFilters to full view before showing expense-list-header
+  useEffect(() => {
+    if (!active || !showExtended || step !== 4) return;
+    const t = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("tour-switch-full-view"));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [active, showExtended, step]);
+
+  // Step 6 (index 5, extended): dispatch event so ExpenseFilters auto-switches to timeline view
+  useEffect(() => {
+    if (!active || !showExtended || step !== 5) return;
+    const t = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("tour-switch-timeline-view"));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [active, showExtended, step]);
 
   // Step 3 (index 2): interactive — auto-advance when quick-add sheet opens
   const autoAdvancedRef = useRef(false);
@@ -172,6 +194,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const skip = useCallback(() => finish(false), [finish]);
 
   const showMore = useCallback(() => {
+    // Pre-set full view in localStorage before navigating to /expenses so that
+    // ExpenseFilters mounts in list mode instead of restoring "timeline" from storage.
+    localStorage.setItem("clear_expense_view_mode", "full");
     setShowExtended(true);
     setStep(DEFAULT_STEP_COUNT); // advance to first extended step (index 4)
   }, []);

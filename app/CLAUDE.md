@@ -158,13 +158,20 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 ---
 
-## Onboarding Tour (7 steps — 4 default + 3 extended)
+## Onboarding Tour (9 steps — 4 default + 5 extended)
 
 `getTourSteps(demoTripId)` in `lib/tour/steps.ts`. `DEFAULT_STEP_COUNT = 4`.
 
 **Default tour (stays on /groups):** step 1 = welcome modal, 2 = `[data-tour='new-trip-btn']`, 3 = `[data-tour='trip-card-add-btn']` (quick-add, auto-advances when `[data-tour='quick-add-open']` appears), 4 = `[data-tour='demo-nav-sheet']` (opened via `window.dispatchEvent(new CustomEvent('open-demo-navsheet', { detail: demoTripId }))`), ends with "Done / Show me more →".
 
-**Extended tour (opt-in):** steps 5–7 navigate into demo group → expenses, per-group insights, all-groups insights. Finishing → `/groups` + `CelebrationCard`.
+**Extended tour (opt-in, 5 steps):** steps 5–9:
+- 5 (idx 4): `[data-tour='expense-list-header']` → expenses page — search/filter
+- 6 (idx 5): `[data-tour='expense-timeline']` → expenses page — day-by-day timeline; dispatches `tour-switch-timeline-view` event (400ms delay); `ExpenseFilters` listens and calls `setAndSaveViewMode("timeline")`
+- 7 (idx 6): `[data-tour='debt-flow-graph']` → settle page — debt flow graph (wrapper div in `balances-section.tsx`)
+- 8 (idx 7): `[data-tour='insights-charts']` → per-group insights — category/spend charts
+- 9 (idx 8): `[data-tour='all-insights-trips']` → /insights — all-groups spending story
+
+Finishing → `/groups` + `CelebrationCard`.
 
 **localStorage keys**: `clear_tour_done`, `clear_nest_hint_done`, `clear_longpress_hint_done`, `first_expense_added`, `first_group_created`.
 
@@ -173,6 +180,7 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 - Avatar shows cyan dot at `-top-0.5 -right-0.5` until `clear_tour_done` is set.
 - `NestHint` — 2-step overlay on nest expenses page (`[data-tour='templates-section']` → `[data-tour='log-template-btn']`).
 - `TripCard` listens for `open-demo-navsheet` custom event via `useEffect`.
+- `ExpenseFilters` listens for `tour-switch-timeline-view` custom event; switches + persists "timeline" view mode.
 
 ---
 

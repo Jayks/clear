@@ -81,14 +81,16 @@ export async function BalancesSection({
 
       {/* ── Debt flow graph ────────────────────────────────────── */}
       {members.length > 1 && (
-        <DebtFlowGraph
-          suggestions={suggestions}
-          members={members}
-          balances={balances}
-          currentMemberId={currentMemberId}
-          currency={currency}
-          groupId={groupId}
-        />
+        <div data-tour="debt-flow-graph">
+          <DebtFlowGraph
+            suggestions={suggestions}
+            members={members}
+            balances={balances}
+            currentMemberId={currentMemberId}
+            currency={currency}
+            groupId={groupId}
+          />
+        </div>
       )}
 
       {/* ── Monthly context — nest only ────────────────────────── */}

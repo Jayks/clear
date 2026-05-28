@@ -50,6 +50,18 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
     if (saved) setViewMode(saved);
   }, []);
 
+  // Tour: auto-switch view mode when requested
+  useEffect(() => {
+    const toTimeline = () => setAndSaveViewMode("timeline");
+    const toFull     = () => setAndSaveViewMode("full");
+    window.addEventListener("tour-switch-timeline-view", toTimeline);
+    window.addEventListener("tour-switch-full-view",     toFull);
+    return () => {
+      window.removeEventListener("tour-switch-timeline-view", toTimeline);
+      window.removeEventListener("tour-switch-full-view",     toFull);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   function setAndSaveViewMode(mode: "full" | "compact" | "timeline") {
     setViewMode(mode);
     localStorage.setItem("clear_expense_view_mode", mode);
@@ -352,96 +364,133 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           )}
         </div>
 
-        {/* ── Timeline section header ───────────────────────────────────── */}
-        {viewMode === "timeline" && !groupByMonth && (
-          <div className="flex items-center gap-2.5 mb-4 mt-1">
-            <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-              <CalendarDays className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
+        {/* ── Timeline: header + results + day cards — all in one spotlightable block ── */}
+        {viewMode === "timeline" && !groupByMonth ? (
+          <div>
+            {/* Day by day section header */}
+            <div className="flex items-center gap-2.5 mb-4 mt-1">
+              <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                <CalendarDays className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Day by day</span>
+              <div className="flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
             </div>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Day by day</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
-          </div>
-        )}
 
-        {/* ── Results bar ───────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-3 px-0.5">
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {isSearching
-              ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search.trim()}"`
-              : isFiltered
-              ? `${filtered.length} matching`
-              : usePagination && viewMode !== "timeline"
-              ? `${displayItems.length} of ${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`
-              : `${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
-          </p>
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
-            {formatCurrency(
-              viewMode === "timeline" && !groupByMonth
-                ? filtered.reduce((sum, e) => sum + Number(e.amount), 0)
-                : filteredTotal,
-              currency,
-            )}
-          </p>
-        </div>
-
-        {/* ── First 2 cards / empty state (inside spotlight) ────────────── */}
-        {filtered.length === 0 ? (
-          <div className="py-12 flex flex-col items-center gap-3 glass rounded-xl text-center">
-            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-              <Search className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No expenses found</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                {isSearching ? `Nothing matches "${search.trim()}"` : "Try adjusting your filters"}
+            {/* Results bar */}
+            <div className="flex items-center justify-between mb-3 px-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {isSearching
+                  ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search.trim()}"`
+                  : isFiltered
+                  ? `${filtered.length} matching`
+                  : `${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
+              </p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
+                {formatCurrency(filtered.reduce((sum, e) => sum + Number(e.amount), 0), currency)}
               </p>
             </div>
-            {isFiltered && (
-              <button
-                onClick={clearAll}
-                className="text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
-              >
-                Clear all filters
-              </button>
+
+            {/* Timeline content */}
+            {filtered.length === 0 ? (
+              <div className="py-12 flex flex-col items-center gap-3 glass rounded-xl text-center">
+                <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Search className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No expenses found</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    {isSearching ? `Nothing matches "${search.trim()}"` : "Try adjusting your filters"}
+                  </p>
+                </div>
+                {isFiltered && (
+                  <button
+                    onClick={clearAll}
+                    className="text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <DayGroupedTimeline
+                days={timelineGroups}
+                members={members}
+                currentUserId={currentUserId}
+                currentMemberId={currentMemberId}
+                isAdmin={isAdmin}
+                currency={currency}
+                startDate={groupStartDate ?? null}
+                endDate={groupEndDate ?? null}
+                isFiltered={isFiltered}
+                activeCategory={category}
+                onCategoryClick={(cat) => { setCategory(cat); setCurrentPage(1); }}
+                onDelete={optimisticDelete}
+                onDeleteFail={restoreDelete}
+                interactionCounts={interactionCounts}
+              />
             )}
           </div>
-        ) : viewMode === "timeline" && !groupByMonth ? (
-          <DayGroupedTimeline
-            days={timelineGroups}
-            members={members}
-            currentUserId={currentUserId}
-            currentMemberId={currentMemberId}
-            isAdmin={isAdmin}
-            currency={currency}
-            startDate={groupStartDate ?? null}
-            endDate={groupEndDate ?? null}
-            isFiltered={isFiltered}
-            activeCategory={category}
-            onCategoryClick={(cat) => { setCategory(cat); setCurrentPage(1); }}
-            onDelete={optimisticDelete}
-            onDeleteFail={restoreDelete}
-            interactionCounts={interactionCounts}
-          />
-        ) : groupByMonth ? (
-          <MonthGroupedList
-            expenses={displayItems}
-            members={members}
-            currentUserId={currentUserId}
-            currentMemberId={currentMemberId}
-            isAdmin={isAdmin}
-            currency={currency}
-            onDelete={optimisticDelete}
-            onDeleteFail={restoreDelete}
-            interactionCounts={interactionCounts}
-            compact={viewMode === "compact"}
-          />
         ) : (
           <>
-            <AnimatedList className="space-y-2" staggerMs={35}>
-              {displayItems.slice(0, 2).map(renderCard)}
-            </AnimatedList>
-            {/* One-time swipe-to-delete hint, touch devices only */}
-            <SwipeHint />
+            {/* ── Results bar (non-timeline modes) ──────────────────────── */}
+            <div className="flex items-center justify-between mb-3 px-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {isSearching
+                  ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search.trim()}"`
+                  : isFiltered
+                  ? `${filtered.length} matching`
+                  : usePagination
+                  ? `${displayItems.length} of ${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`
+                  : `${expenses.length} expense${expenses.length !== 1 ? "s" : ""}`}
+              </p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular" style={{ fontFamily: "var(--font-fraunces)" }}>
+                {formatCurrency(filteredTotal, currency)}
+              </p>
+            </div>
+
+            {/* ── First 2 cards / empty state (inside spotlight) ─────────── */}
+            {filtered.length === 0 ? (
+              <div className="py-12 flex flex-col items-center gap-3 glass rounded-xl text-center">
+                <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Search className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No expenses found</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    {isSearching ? `Nothing matches "${search.trim()}"` : "Try adjusting your filters"}
+                  </p>
+                </div>
+                {isFiltered && (
+                  <button
+                    onClick={clearAll}
+                    className="text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            ) : groupByMonth ? (
+              <MonthGroupedList
+                expenses={displayItems}
+                members={members}
+                currentUserId={currentUserId}
+                currentMemberId={currentMemberId}
+                isAdmin={isAdmin}
+                currency={currency}
+                onDelete={optimisticDelete}
+                onDeleteFail={restoreDelete}
+                interactionCounts={interactionCounts}
+                compact={viewMode === "compact"}
+              />
+            ) : (
+              <>
+                <AnimatedList className="space-y-2" staggerMs={35}>
+                  {displayItems.slice(0, 2).map(renderCard)}
+                </AnimatedList>
+                {/* One-time swipe-to-delete hint, touch devices only */}
+                <SwipeHint />
+              </>
+            )}
           </>
         )}
 
@@ -530,7 +579,7 @@ function DaySection({
   date, dayExpenses, index, badge, isOff, isBusiest, isToday, spendPct, dayTotal,
   isEmpty, activeCategory, onCategoryClick,
   currency, members, currentUserId, currentMemberId, isAdmin,
-  onDelete, onDeleteFail, interactionCounts,
+  onDelete, onDeleteFail, interactionCounts, dataTour,
 }: {
   date: string;
   dayExpenses: Expense[];
@@ -552,6 +601,8 @@ function DaySection({
   onDelete: (id: string) => void;
   onDeleteFail: (id: string) => void;
   interactionCounts?: Record<string, ExpenseInteractionCount>;
+  /** Optional data-tour attribute placed on the outermost wrapper (used to spotlight Day 1 in the tour). */
+  dataTour?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "0px 0px -60px 0px" });
@@ -690,6 +741,7 @@ function DaySection({
   return (
     <motion.div
       ref={ref}
+      data-tour={dataTour}
       initial={{ opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
@@ -997,6 +1049,7 @@ function DayGroupedTimeline({
             onDelete={onDelete}
             onDeleteFail={onDeleteFail}
             interactionCounts={interactionCounts}
+            dataTour={i === 0 ? "expense-timeline-day1" : undefined}
           />
         );
       })}

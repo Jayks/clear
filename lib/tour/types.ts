@@ -13,4 +13,6 @@ export interface TourStep {
   isSampleData?: boolean;
   /** Tour auto-advances when [data-tour='quick-add-open'] appears in the DOM. */
   interactive?: boolean;
+  /** Dispatches 'tour-switch-timeline-view' event to auto-switch ExpenseFilters to timeline mode. */
+  autoTimeline?: boolean;
 }

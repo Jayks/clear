@@ -28,6 +28,7 @@ Clear is a group expense tracking app for trips and households. Log what each pe
 - **Four split modes** — equal, exact amount, percentage, or shares
 - **16 expense categories** — each with a distinct vibrant gradient icon (Food = orange→red, Transport = blue→indigo, Accommodation = violet→purple, etc.); including Tour Package for trips; "Other" prompts a free-text description
 - **Minimum-transaction settlement** — greedy optimizer computes the fewest payments to clear all debts
+- **Debt Flow graph** — interactive SVG visualisation on the Settle Up page: draggable member nodes with gradient avatars, animated money-flow particles pulsing along arcs, arc-tap scrolls to the exact payment card with a cyan flash highlight, node-tap opens member balance details; 3-state info bar (arc selected / node selected / hint)
 - **UPI pay** — direct payment links on the settle-up page
 - **Balance at a glance** — every group card shows your net position (owe / owed / settled / no expenses yet), streaming in without blocking the page
 - **Enriched group overview cards** — the Settle Up card shows your live balance ("You owe ₹500" / "Owed ₹300" / "All settled ✓"); Expenses shows total spend for trips or this month's spend for nests; Insights shows the top spending category — all stream in via Suspense without blocking navigation
@@ -169,6 +170,8 @@ app/
 components/
   expense/        — expense cards, quick-add sheet, split editor, detail sheet (WhatsApp-style), reaction/question/dispute forms, thread discussion (bubble UI), thread comment input
   trip/           — group cards, cover photo picker, budget bar, overview badge RSCs (balance, insights, activity feed)
+  settlement/     — debt-flow-graph (interactive SVG), settle-hero-card, settled-celebration
+  marketing/      — settle-flow-demo (animated SVG debt-flow mockup for landing page)
   insights/       — charts and insights tabs
   shared/         — clear-logo, nav, skeletons, animated-list, tour layer, member profile sheet
   tour/           — tour context and spotlight layer

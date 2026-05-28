@@ -203,6 +203,63 @@ const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,
 
 `globals.css` sets `html { scroll-behavior: smooth; }`. Next.js 16 requires the matching `data-scroll-behavior="smooth"` attribute on the `<html>` element in `app/layout.tsx` so the router knows smooth scrolling is intentional and suppresses the console warning. Both must be present.
 
+### SVG + Framer Motion `transform` conflict
+
+`motion.g` with both an SVG `transform` attribute AND Framer Motion `scale`/`opacity` animation props causes Framer Motion to **override** the SVG transform, wiping the `translate(x,y)` and collapsing the element to `(0,0)`. The node becomes invisible (scale 0 at the SVG origin).
+
+**Fix** — separate positioning from animation with two wrappers:
+```tsx
+// ✅ correct — static <g> for position, motion.g for animation only
+<g transform={`translate(${node.x}, ${node.y})`}>
+  <motion.g
+    style={{ transformOrigin: "0px 0px" }}   // scale from local (0,0) = node centre
+    initial={{ scale: 0, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ type: "spring", stiffness: 380, damping: 22 }}
+  >
+    {/* circles, text, etc. at local (0,0) coords */}
+  </motion.g>
+</g>
+
+// ❌ wrong — Framer Motion replaces "translate(x,y)" with "scale(0)" on the same element
+<motion.g
+  transform={`translate(${node.x}, ${node.y})`}
+  initial={{ scale: 0, opacity: 0 }}
+  animate={{ scale: 1, opacity: 1 }}
+>
+```
+
+### SVG SMIL animation elements (`animateMotion`, `animate`) — use `React.createElement`
+
+React's JSX types don't expose the `path` attribute on `<animateMotion>` or all attributes on `<animate>`. Using them as JSX produces TypeScript errors. Bypass with `React.createElement` — identical DOM output, no type errors:
+
+```tsx
+import React from "react";   // must be a default import, not just named hooks
+
+// ✅ correct — React.createElement for SMIL animation elements
+<circle r={2.5} fill="#FDE68A">
+  {React.createElement("animateMotion", {
+    path: arc.d,
+    dur: "2s",
+    repeatCount: "indefinite",
+    begin: "0.5s",
+  })}
+  {React.createElement("animate", {
+    attributeName: "opacity",
+    values: "0;0.9;0.9;0",
+    keyTimes: "0;0.08;0.82;1",
+    dur: "2s",
+    repeatCount: "indefinite",
+    begin: "0.5s",
+  })}
+</circle>
+
+// ❌ wrong — TS error: "path" is not a valid prop on animateMotion
+<animateMotion path={arc.d} dur="2s" repeatCount="indefinite" />
+```
+
+Use `gradientUnits="userSpaceOnUse"` with explicit `x1/y1/x2/y2` for directional SVG gradients along arc paths — `objectBoundingBox` (the default) scales incorrectly for non-rectangular path bounding boxes.
+
 ### Inline `<Script>` — use `dangerouslySetInnerHTML`, not children
 
 React 19 (used by Next.js 16) warns when a `<script>` tag appears as children inside a React component. For `next/script` with inline content (e.g. GA init), always pass the content via `dangerouslySetInnerHTML`:

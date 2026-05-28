@@ -2,14 +2,14 @@ import { Suspense } from "react";
 import { getBalances, getSettlements } from "@/lib/db/queries/balances";
 import { getMonthlyExpenseSummary } from "@/lib/db/queries/expenses";
 import { Skeleton } from "@/components/shared/skeleton";
-import { MemberDebtBreakdown } from "@/components/settlement/member-debt-breakdown";
 import { SettledCelebration } from "@/components/settlement/settled-celebration";
+import { SettleHeroCard } from "@/components/settlement/settle-hero-card";
+import { DebtFlowGraph } from "@/components/settlement/debt-flow-graph";
 import { SettleBreakdownSection } from "./settle-breakdown-section";
 import { MarkPaidButton } from "./mark-paid-button";
 import { UpiPayButton } from "./upi-pay-button";
 import { WhatsAppRemindButton } from "./whatsapp-remind-button";
-import { BalanceCardsClient } from "./balance-cards-client";
-import { ArrowRight, CheckCircle2, AlertTriangle, Wallet, Send, Clock } from "lucide-react";
+import { ArrowRight, CheckCircle2, AlertTriangle, Send, Clock } from "lucide-react";
 import { cn, formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 
@@ -23,7 +23,6 @@ interface Props {
   isNest: boolean;
 }
 
-/** Reusable icon + text + rule section header */
 function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
@@ -61,9 +60,7 @@ export async function BalancesSection({
 
   return (
     <>
-      {/* ── Balances ──────────────────────────────────────────────────── */}
-      <SectionHeader icon={Wallet} label="Balances" />
-
+      {/* Mixed-currency warning */}
       {hasMixedCurrencies && (
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 mb-4">
           <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -73,16 +70,28 @@ export async function BalancesSection({
         </div>
       )}
 
-      {/* Balance cards — client component so each card is tappable → member profile sheet */}
-      <BalanceCardsClient
+      {/* ── Hero card — personal position ─────────────────────── */}
+      <SettleHeroCard
         balances={balances}
-        members={members}
+        suggestions={suggestions}
         currentMemberId={currentMemberId}
         currency={currency}
-        groupId={groupId}
+        members={members}
       />
 
-      {/* ── Monthly context — nest only ───────────────────────────────── */}
+      {/* ── Debt flow graph ────────────────────────────────────── */}
+      {members.length > 1 && (
+        <DebtFlowGraph
+          suggestions={suggestions}
+          members={members}
+          balances={balances}
+          currentMemberId={currentMemberId}
+          currency={currency}
+          groupId={groupId}
+        />
+      )}
+
+      {/* ── Monthly context — nest only ────────────────────────── */}
       {isNest && monthlySummary && monthlySummary.total > 0 && (
         <div className="glass rounded-xl px-4 py-4 mb-6">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
@@ -118,11 +127,10 @@ export async function BalancesSection({
         </div>
       )}
 
-      {/* ── Suggested payments ────────────────────────────────────────── */}
+      {/* ── Suggested payments ─────────────────────────────────── */}
       <div data-tour="settle-suggestions">
         <SectionHeader icon={Send} label="Suggested payments" />
 
-        {/* Total outstanding summary — only when there are active suggestions */}
         {suggestions.length > 0 && (
           <div className="flex items-center justify-between mb-4 px-0.5">
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -136,41 +144,29 @@ export async function BalancesSection({
 
         {suggestions.length === 0 ? (
           <>
-          <SettledCelebration groupId={groupId} />
-          <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20 px-5 py-8 flex flex-col items-center gap-3 mb-8">
-            {/* Icon in glowing ring */}
-            <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800/80 border border-emerald-200/80 dark:border-emerald-800/50 flex items-center justify-center shadow-md shadow-emerald-500/10">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500 dark:text-emerald-400" />
-            </div>
-
-            {/* Copy */}
-            <div className="text-center">
-              <p
-                className="text-lg font-semibold text-emerald-700 dark:text-emerald-300"
-                style={{ fontFamily: "var(--font-fraunces)" }}
-              >
-                All settled up!
-              </p>
-              <p className="text-sm text-emerald-600/75 dark:text-emerald-400/70 mt-1">
-                {pastSettlementsTotal > 0
-                  ? `${formatCurrency(pastSettlementsTotal, currency)} tracked and squared away`
-                  : "No payments needed right now."}
-              </p>
-            </div>
-
-            {/* Meta row — only when there's history */}
-            {settlementHistory.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-emerald-600/55 dark:text-emerald-400/50">
-                <span>
-                  {settlementHistory.length} payment{settlementHistory.length !== 1 ? "s" : ""} recorded
-                </span>
-                <span className="w-1 h-1 rounded-full bg-emerald-400/60 dark:bg-emerald-600/60 inline-block" />
-                <span>
-                  {members.length} member{members.length !== 1 ? "s" : ""}
-                </span>
+            <SettledCelebration groupId={groupId} />
+            <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20 px-5 py-8 flex flex-col items-center gap-3 mb-8">
+              <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800/80 border border-emerald-200/80 dark:border-emerald-800/50 flex items-center justify-center shadow-md shadow-emerald-500/10">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 dark:text-emerald-400" />
               </div>
-            )}
-          </div>
+              <div className="text-center">
+                <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-300" style={{ fontFamily: "var(--font-fraunces)" }}>
+                  All settled up!
+                </p>
+                <p className="text-sm text-emerald-600/75 dark:text-emerald-400/70 mt-1">
+                  {pastSettlementsTotal > 0
+                    ? `${formatCurrency(pastSettlementsTotal, currency)} tracked and squared away`
+                    : "No payments needed right now."}
+                </p>
+              </div>
+              {settlementHistory.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-emerald-600/55 dark:text-emerald-400/50">
+                  <span>{settlementHistory.length} payment{settlementHistory.length !== 1 ? "s" : ""} recorded</span>
+                  <span className="w-1 h-1 rounded-full bg-emerald-400/60 dark:bg-emerald-600/60 inline-block" />
+                  <span>{members.length} member{members.length !== 1 ? "s" : ""}</span>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <div className="space-y-2 mb-8">
@@ -179,77 +175,84 @@ export async function BalancesSection({
               const isYouTo = currentMemberId === s.to;
               const isYours = isYouFrom || isYouTo;
               return (
-              <div key={i} className={`glass rounded-xl px-4 py-3.5 flex flex-col gap-2.5 ${
-                isYouFrom
-                  ? "ring-2 ring-amber-400/50 dark:ring-amber-500/40 bg-amber-50/40 dark:bg-amber-900/10"
-                  : isYouTo
-                  ? "ring-2 ring-emerald-400/40 dark:ring-emerald-500/30"
-                  : ""
-              }`}>
-                {isYours && (
-                  <span className={`self-start text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                <div
+                  key={i}
+                  id={`suggestion-${i}`}
+                  className={`glass rounded-xl px-4 py-3.5 flex flex-col gap-2.5 ${
                     isYouFrom
-                      ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
-                      : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
-                  }`}>
-                    {isYouFrom ? "You owe" : "Owed to you"}
-                  </span>
-                )}
-                {/* Row 1: who → who + amount */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">{memberName(s.from)}</span>
-                  <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0 flex-1">{memberName(s.to)}</span>
-                  <span className={`text-lg font-semibold tabular shrink-0 ${isYouFrom ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`} style={{ fontFamily: "var(--font-fraunces)" }}>
-                    {formatCurrency(s.amount, currency)}
-                  </span>
-                </div>
-                {/* Row 2: action buttons */}
-                {(currentMemberId === s.from || currentMemberId === s.to) && (
+                      ? "ring-2 ring-amber-400/50 dark:ring-amber-500/40 bg-amber-50/40 dark:bg-amber-900/10"
+                      : isYouTo
+                      ? "ring-2 ring-emerald-400/40 dark:ring-emerald-500/30"
+                      : ""
+                  }`}
+                >
+                  {isYours && (
+                    <span className={`self-start text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                      isYouFrom
+                        ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+                        : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                    }`}>
+                      {isYouFrom ? "You owe" : "Owed to you"}
+                    </span>
+                  )}
                   <div className="flex items-center gap-2">
-                    {currentMemberId === s.from && (
-                      <UpiPayButton amount={s.amount} currency={currency} toName={memberName(s.to)} />
-                    )}
-                    {currentMemberId === s.to && (
-                      <WhatsAppRemindButton
-                        fromName={memberName(s.from)}
-                        amount={formatCurrency(s.amount, currency)}
-                        tripName={groupName}
-                        settleUrl={settleUrl}
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
+                      {memberName(s.from)}
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0 flex-1">
+                      {memberName(s.to)}
+                    </span>
+                    <span
+                      className={`text-lg font-semibold tabular shrink-0 ${
+                        isYouFrom ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+                      }`}
+                      style={{ fontFamily: "var(--font-fraunces)" }}
+                    >
+                      {formatCurrency(s.amount, currency)}
+                    </span>
+                  </div>
+                  {(currentMemberId === s.from || currentMemberId === s.to) && (
+                    <div className="flex items-center gap-2">
+                      {currentMemberId === s.from && (
+                        <UpiPayButton amount={s.amount} currency={currency} toName={memberName(s.to)} />
+                      )}
+                      {currentMemberId === s.to && (
+                        <WhatsAppRemindButton
+                          fromName={memberName(s.from)}
+                          amount={formatCurrency(s.amount, currency)}
+                          tripName={groupName}
+                          settleUrl={settleUrl}
+                        />
+                      )}
+                      <MarkPaidButton
+                        groupId={groupId}
+                        fromMemberId={s.from}
+                        toMemberId={s.to}
+                        amount={s.amount}
+                        currency={currency}
                       />
-                    )}
-                    <MarkPaidButton
-                      groupId={groupId}
-                      fromMemberId={s.from}
-                      toMemberId={s.to}
-                      amount={s.amount}
-                      currency={currency}
-                    />
-                  </div>
-                )}
-                {/* Non-participant: just show mark paid (admins can still record) */}
-                {currentMemberId !== s.from && currentMemberId !== s.to && (
-                  <div className="flex items-center gap-2">
-                    <MarkPaidButton
-                      groupId={groupId}
-                      fromMemberId={s.from}
-                      toMemberId={s.to}
-                      amount={s.amount}
-                      currency={currency}
-                    />
-                  </div>
-                )}
-              </div>
+                    </div>
+                  )}
+                  {currentMemberId !== s.from && currentMemberId !== s.to && (
+                    <div className="flex items-center gap-2">
+                      <MarkPaidButton
+                        groupId={groupId}
+                        fromMemberId={s.from}
+                        toMemberId={s.to}
+                        amount={s.amount}
+                        currency={currency}
+                      />
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         )}
       </div>
 
-      {/* Per-member debt breakdown */}
-      <MemberDebtBreakdown members={members} suggestions={suggestions} currency={currency} />
-
-      {/* Expense breakdown — streams in separately */}
+      {/* ── Expense breakdown — streamed ───────────────────────── */}
       <Suspense fallback={<Skeleton className="h-24 rounded-xl mt-6" />}>
         <SettleBreakdownSection
           groupId={groupId}
@@ -261,7 +264,7 @@ export async function BalancesSection({
         />
       </Suspense>
 
-      {/* ── Payment history ───────────────────────────────────────────── */}
+      {/* ── Payment history ────────────────────────────────────── */}
       {settlementHistory.length > 0 && (
         <>
           <div className="mt-8">

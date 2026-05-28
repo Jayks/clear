@@ -49,7 +49,8 @@ clear/
 │   ├── ui/                              # shadcn/base-ui primitives
 │   ├── expense/  (expense-card, swipeable-expense-card, expense-detail-sheet, expense-filters, split-editor, quick-add-bar, chat-import-dialog, question-form, dispute-form, thread-comment-input, ...)
 │   ├── trip/     (trip-card, trip-card-nav-sheet, trip-card-share-drawer, invite-section, group-balance-badge [async RSC], cover-photo-picker, budget-bar, narrative-section, adherence-card, settle-balance-badge, insights-summary-badge, nest-monthly-badge, group-activity-feed, trip-timeline, repeat-trip-prompt, ...)
-│   ├── settlement/ (settlement-breakdown, member-debt-breakdown, settled-celebration)
+│   ├── settlement/ (settlement-breakdown, member-debt-breakdown, settled-celebration, debt-flow-graph, settle-hero-card)
+│   ├── marketing/ (settle-flow-demo — hardcoded animated SVG debt-flow demo for landing page, no DB dependency)
 │   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
 │   ├── tour/     (tour-context.tsx, tour-layer.tsx)
 │   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, member-profile-sheet, mobile-nav, group-mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo, invite-qr-sheet, swipe-hint, ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
@@ -74,6 +75,23 @@ clear/
 ├── drizzle/policies.sql, indexes.sql
 ├── drizzle.config.ts, proxy.ts, vercel.json
 ```
+
+---
+
+## Landing Page (`app/page.tsx`)
+
+RSC. Redirects authenticated users to `/groups`. Section order (top → bottom):
+
+1. Nav → Hero → Ticker → How it works → Why Clear? (comparison table + feature pills)
+2. Recurring templates → Trip timeline → AI features → Notifications → Social layer
+3. **Settlement** — "One payment each / No chasing" before/after table (Goa 2025 example, 5 people → 3 transfers)
+4. **Debt Flow** — animated `SettleFlowDemo` mockup (`components/marketing/settle-flow-demo.tsx`) + copy + 3 feature bullets (2-column desktop)
+5. **Insights** — category bars + member contributions mockup + copy
+6. Plus teaser → Bottom CTA → Footer
+
+**Why Clear? table** — 6-row comparison (Other apps vs Clear ✦): AI parsing · guest members · minimum transactions · **Debt Flow graph** · notifications · in-app disputes. Feature pills below include "Debt flow graph".
+
+`SettleFlowDemo` is a `"use client"` component with hardcoded Goa 2025 data (same 5 members and 3 transfers as the Settlement section). Shared node gradients (`AVATAR_COLORS`) and particle patterns with the real `DebtFlowGraph`.
 
 ---
 

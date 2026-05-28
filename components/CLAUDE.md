@@ -247,6 +247,34 @@ Sheet: trip name (required), optional start/end dates, member pills (pre-selecte
 
 Gated by `sessionStorage.getItem(`clear_settled_confetti_${groupId}`)` — writes `"1"` immediately on mount to prevent re-fire. Auto-removes after 2.5 s. Pieces: mix of 6×14 rectangles and 10×10 squares in Clear's brand palette, burst from `mt-[38vh]` to roughly align with the checkmark icon. `pointer-events-none` so it never blocks interactions.
 
+### DebtFlowGraph
+`components/settlement/debt-flow-graph.tsx` — `"use client"` pure-SVG debt-flow visualisation on the Settle Up page.
+
+**Layout**: nodes placed via force-relaxed positions, draggable via pointer events (`onPointerDown` + `onPointerMove`). `hasDragged` ref suppresses particles while dragging to keep rendering smooth.
+
+**Node gradients**: exact `AVATAR_COLORS` palette (8 radial gradients matching `MemberAvatar`). Creditor nodes get a soft halo ring. Node size scales with `Math.abs(net)` (clamped: min `r=22`, max `r=32`).
+
+**Arc rendering**: quadratic bezier `M x1 y1 Q cpx cpy x2 y2`. Control point: midpoint offset by `curvature * len` in the left-normal direction. `userSpaceOnUse` linear gradients from debtor → creditor colour. Framer Motion `pathLength 0→1` draw-in on mount.
+
+**Flow particles**: two SMIL `animateMotion` particles per arc (180° out of phase, `PARTICLE_DUR=1.8s`). Fill is a *lighter tint* of the arc colour so particles are visible on top of the stroke (`#FEF08A` amber-200 for outgoing, `#6EE7B7` emerald-200 for incoming, `#E2E8F0` slate-200 for third-party). Use `React.createElement("animateMotion", {...})` — see CLAUDE.md gotcha.
+
+**Selection**: `selectedArc: number | null` + `selectedId: string | null`. Mutually exclusive — selecting an arc clears `selectedId`, selecting a node clears `selectedArc`. SVG background click clears both.
+
+**Arc tap → payment scroll**: `handleArcClick(i)` calls `document.getElementById("suggestion-${i}")` → `scrollIntoView({ behavior:"smooth", block:"center" })` + 480ms-delayed cyan `box-shadow` flash (12s transition in, 0.55s out). `balances-section.tsx` must set `id={`suggestion-${i}`}` on each suggestion card div.
+
+**3-state info bar** (below graph): arc selected → payment summary + "Settle ↓" button; node selected → member net balance + "View" link; default → hint text.
+
+**Rules of Hooks**: the `if (members.length === 0) return null` early exit is placed BEFORE all hook calls — required because the component has many hooks.
+
+### SettleFlowDemo
+`components/marketing/settle-flow-demo.tsx` — `"use client"` static animated demo for the marketing landing page. No DB dependency — all data hardcoded (Goa 2025 trip, 5 members, 3 settlement transfers).
+
+Shares the same `AVATAR_COLORS`, arc math (`quadPath`/`quadMid`), and particle pattern as `DebtFlowGraph`. Key difference: no drag, no selection — pure animation showcase.
+
+**Node animation fix**: uses separate outer `<g transform="translate(x,y)">` for positioning + inner `motion.g style={{ transformOrigin:"0px 0px" }}` for scale/opacity spring. See CLAUDE.md SVG+Framer Motion gotcha.
+
+`gradientUnits="userSpaceOnUse"` on all arc linearGradients with explicit `x1/y1/x2/y2` coordinates.
+
 ### QuickAddSheet — portal + `isOpen` prop pattern
 Manages its own `createPortal` and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render from parent, never wrap in external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment). Members lazy-fetched on first `isOpen=true` via `fetchedRef`.
 

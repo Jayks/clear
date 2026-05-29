@@ -309,7 +309,11 @@ RSC. Fetches `getGroupWithMembers(id, { full: true })`, `getGroupExpensesWithSpl
 
 ### All-groups (`/insights`)
 
-RSC → `InsightsTabs` (`"use client"`, `AnimatePresence` tab cross-fade). Both `getAllTripsInsightsData` and `getAllNestsInsightsData` fetched in parallel. `InsightsTabs` is client-only for tab state — all heavy computation is server-side in the lib functions.
+RSC → `InsightsTabs` (`"use client"`, `AnimatePresence` tab cross-fade). `getAllTripsInsightsData`, `getAllNestsInsightsData`, and `getPersonalInsightsData` fetched in parallel alongside `getUserPlan`. `InsightsTabs` is client-only for tab state — all heavy computation is server-side in the lib functions.
+
+**`InsightsTabs` props**: `tripsData`, `nestsData`, `primaryCurrency`, `personalData: PersonalInsights | null`, `isPlusUser: boolean`.
+
+**Tab switcher**: always renders all available tabs — Trips (if any), Nests (if any), and **You** (always). "You" tab uses violet active state (`from-violet-500 to-purple-600`) to distinguish it from the cyan Trips/Nests tabs.
 
 **Cross-tab card** (`components/insights/cross-tab-card.tsx`): shown above the tab switcher when user has **both** trips and nests. Shows home daily rate (`monthlyAverage / 30`) vs travel daily rate (`totalSpend / totalDays`), multiplier ("travel is 7.5× more expensive"), and combined all-time total when same currency (INR). Framer Motion entrance.
 
@@ -328,13 +332,38 @@ RSC → `InsightsTabs` (`"use client"`, `AnimatePresence` tab cross-fade). Both 
 - MonthlySpendBar + CategoryDonut
 - Per-nest link cards: teal/emerald cycling gradients
 
+**You tab** (`PersonalContent` from `components/insights/personal-content.tsx`):
+- **Plus gate**: non-Plus users see `PersonalPlusGate` (violet upgrade card). Plus/trialing users see full content.
+- **Opening sentence** — rule-based: "Since YYYY, you've shared ₹X with N people across N groups." + optional sub "You almost always pay first — and always get paid back." (shown when banker float > 15% of share).
+- **KPI row** — Total your share (amber accent card) + Avg/month (glass card). No filler count KPIs.
+- **Zone 1 — Right now** (net position): two side-by-side glass cards (Owed to you / You owe), each with per-group rows linking to `/groups/[id]/settle`. Only rendered when `totalOwedToMe > 0 || totalIOwe > 0`.
+- **Zone 2 — Financial circle**: up to 5 `PersonalCompanion` cards (userId-matched Clear users across all groups). Each card: `MemberAvatar` (same hash-gradient system) + name + active dot (shared in last 90 days) + group count + human label ("Your most shared companion" etc.) + shared total. Stagger-animated via Framer Motion.
+- **Zone 3 — Triggered insight + Banker card**: ONE insight card fires from 4 rules (priority: companion dominance → heavy banker → YoY trajectory → milestone). `BankerCard` shows paid upfront vs actual share, animated progress bar, year-over-year trend arrow (only when prev year float exists). Only rendered when banker float > 10% of total share.
+- **Zone 4 — Breakdown**: `CategoryDonut` (your share by category, not group totals) + `GroupShareBars` (animated per-group horizontal bars, each row links to `/groups/[id]/insights`).
+
+**Triggered insight rules** (first match wins):
+1. Companion: companion appears in ≥3 groups
+2. Banker: float > 30% of total share
+3. YoY: this year's total > same point last year by >30%
+4. Milestone: total share crossed ₹20k / ₹50k / ₹1L / ₹2L / ₹5L
+
+**`PersonalInsights` data model** (`lib/insights/personal-insights.ts`):
+- `totalShare`, `totalPaidUpfront`, `bankerFloat`, `bankerFloatPrevYear` — core money numbers
+- `netByGroup[]` — per-group net (primary currency only), sorted by abs(net) desc, settled groups excluded
+- `companions[]` — userId-matched members, sorted by groupCount then totalShared, max 5
+- `byCategory[]` — `CategorySlice[]` of user's personal share (not group totals)
+- `byGroup[]` — per-group share breakdown, sorted by myShare desc
+- `triggeredInsight` — `{ text, icon } | null`
+- `openingSentence`, `openingSub` — pre-computed narrative strings
+- Primary currency = highest-volume currency across all splits (same approach as trips tab)
+
 **Data model additions**:
 - `TripSummary`: `startDate`, `endDate` — enables days computation, chronological sort, date subtitles on link cards
 - `AllTripsInsights`: `totalDays`, `dailyPace`, `mostTraveledWith`, `mostTraveledMonth`, `highlights[]`
 - `AllNestsInsights`: `recurringTotal`, `recurringPct`, `biggestMonth`, `yearOverYear`, `currency`, `highlights[]`
 - `AllNestsInsights.currency` — from `nests[0].defaultCurrency`; replaces hardcoded `"INR"` throughout the nest insights tab
 
-**`section headers`** throughout both tabs use amber icon-badge + gradient rule (matching per-group insights and design system). Implemented as a local `SectionHeader` component in `insights-tabs.tsx`.
+**`section headers`** throughout all tabs use amber icon-badge + gradient rule (matching per-group insights and design system). Implemented as a local `SectionHeader` component in each content component.
 
 **`data-tour` attributes**: `data-tour="trip-kpis"` on trip KPI grid; `data-tour="all-insights-trips"` on `TripsBreakdownCharts` div.
 

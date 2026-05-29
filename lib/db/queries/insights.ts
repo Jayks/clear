@@ -4,10 +4,12 @@ import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
-import { eq, sum, count, inArray, and, sql } from "drizzle-orm";
+import { settlements } from "@/lib/db/schema/settlements";
+import { eq, sum, count, inArray, and, sql, ne, isNotNull, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { computeAllTripsInsights } from "@/lib/insights/all-trips-insights";
 import { computeAllNestsInsights } from "@/lib/insights/all-nests-insights";
+import { computePersonalInsights } from "@/lib/insights/personal-insights";
 import type { TripSummary } from "@/lib/insights/all-trips-insights";
 import type { OtherTripSummary } from "@/lib/insights/cross-trip";
 
@@ -168,4 +170,114 @@ export async function getOtherTripsSummary(currentGroupId: string): Promise<Othe
     currency: g.defaultCurrency,
     categoryTotals: catMap.get(g.id) ?? {},
   }));
+}
+
+// ── Personal ("You" tab) ──────────────────────────────────────────────────
+
+export async function getPersonalInsightsData() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  // My member rows across all non-demo groups
+  const myMemberRows = await db
+    .select({ memberId: groupMembers.id, groupId: groupMembers.groupId })
+    .from(groupMembers)
+    .innerJoin(groups, eq(groupMembers.groupId, groups.id))
+    .where(and(eq(groupMembers.userId, user.id), eq(groups.isDemo, false)));
+
+  if (myMemberRows.length === 0) return null;
+
+  const myMemberIds = myMemberRows.map((r) => r.memberId);
+  const myGroupIds = myMemberRows.map((r) => r.groupId);
+
+  const [splitRows, paidRows, settRows, groupRows, companionRows] = await Promise.all([
+    // My expense splits with full context
+    db
+      .select({
+        shareAmount: expenseSplits.shareAmount,
+        category: expenses.category,
+        expenseDate: expenses.expenseDate,
+        groupId: expenses.groupId,
+        currency: expenses.currency,
+        expenseAmount: expenses.amount,
+        paidByMemberId: expenses.paidByMemberId,
+        myMemberId: expenseSplits.memberId,
+      })
+      .from(expenseSplits)
+      .innerJoin(expenses, eq(expenseSplits.expenseId, expenses.id))
+      .where(and(inArray(expenseSplits.memberId, myMemberIds), eq(expenses.isTemplate, false))),
+
+    // Totals of expenses where I was the payer (per group)
+    db
+      .select({
+        groupId: expenses.groupId,
+        total: sum(expenses.amount),
+        cnt: count(expenses.id),
+      })
+      .from(expenses)
+      .where(and(inArray(expenses.paidByMemberId, myMemberIds), eq(expenses.isTemplate, false)))
+      .groupBy(expenses.groupId),
+
+    // Settlements involving my member IDs
+    db
+      .select()
+      .from(settlements)
+      .where(
+        or(
+          inArray(settlements.fromMemberId, myMemberIds),
+          inArray(settlements.toMemberId, myMemberIds),
+        )
+      ),
+
+    // Group metadata
+    db
+      .select({
+        id: groups.id,
+        name: groups.name,
+        groupType: groups.groupType,
+        defaultCurrency: groups.defaultCurrency,
+      })
+      .from(groups)
+      .where(inArray(groups.id, myGroupIds)),
+
+    // Other Clear-account members in my groups (companions)
+    db
+      .select({
+        userId: groupMembers.userId,
+        displayName: groupMembers.displayName,
+        guestName: groupMembers.guestName,
+        groupId: groupMembers.groupId,
+      })
+      .from(groupMembers)
+      .where(
+        and(
+          inArray(groupMembers.groupId, myGroupIds),
+          isNotNull(groupMembers.userId),
+          ne(groupMembers.userId, user.id),
+        )
+      ),
+  ]);
+
+  return computePersonalInsights({
+    splitRows: splitRows.map((r) => ({
+      ...r,
+      shareAmount: String(r.shareAmount),
+      expenseAmount: String(r.expenseAmount),
+      expenseDate: r.expenseDate ?? null,
+    })),
+    paidRows: paidRows.map((r) => ({
+      groupId: r.groupId,
+      total: r.total ? String(r.total) : null,
+      cnt: r.cnt ? String(r.cnt) : null,
+    })),
+    settRows,
+    groupRows: groupRows.map((r) => ({ ...r, groupType: r.groupType ?? "trip" })),
+    companionRows: companionRows.map((r) => ({
+      userId: r.userId ?? null,
+      displayName: r.displayName ?? null,
+      guestName: r.guestName ?? null,
+      groupId: r.groupId,
+    })),
+    myMemberRows,
+  });
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Home, BarChart2, PieChart, Users } from "lucide-react";
+import { MapPin, Home, BarChart2, PieChart, Users, User } from "lucide-react";
 import { parseISO, format, differenceInDays } from "date-fns";
 import { KpiCard } from "./kpi-card";
 import { HighlightsStrip } from "./highlights-strip";
@@ -16,11 +16,15 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { AllTripsInsights, TripSummary } from "@/lib/insights/all-trips-insights";
 import type { AllNestsInsights, NestSummary } from "@/lib/insights/all-nests-insights";
+import type { PersonalInsights } from "@/lib/insights/personal-insights";
+import { PersonalContent, PersonalPlusGate } from "@/components/insights/personal-content";
 
 interface Props {
   tripsData: AllTripsInsights | null;
   nestsData: AllNestsInsights | null;
   primaryCurrency: string;
+  personalData: PersonalInsights | null;
+  isPlusUser: boolean;
 }
 
 // Vivid per-trip gradient palette — cycles through for the drill-down link icons
@@ -48,12 +52,13 @@ function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: 
   );
 }
 
-export function InsightsTabs({ tripsData, nestsData, primaryCurrency }: Props) {
+export function InsightsTabs({ tripsData, nestsData, primaryCurrency, personalData, isPlusUser }: Props) {
   const hasTrips = tripsData && tripsData.tripCount > 0;
   const hasNests = nestsData && nestsData.nestCount > 0;
-  const showTabs = hasTrips && hasNests;
+  const showTabs = hasTrips || hasNests; // always show tabs when we have any data
 
-  const [activeTab, setActiveTab] = useState<"trips" | "nests">(hasTrips ? "trips" : "nests");
+  const defaultTab = hasTrips ? "trips" : hasNests ? "nests" : "you";
+  const [activeTab, setActiveTab] = useState<"trips" | "nests" | "you">(defaultTab);
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: primaryCurrency, maximumFractionDigits: 0 }).format(n);
@@ -65,31 +70,34 @@ export function InsightsTabs({ tripsData, nestsData, primaryCurrency }: Props) {
         <CrossTabCard tripsData={tripsData} nestsData={nestsData} currency={primaryCurrency} />
       )}
 
-      {/* Tab switcher */}
-      {showTabs && (
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
-          {(["trips", "nests"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                activeTab === tab
-                  ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-              )}
-            >
-              {tab === "trips"
-                ? <><MapPin className="w-3.5 h-3.5" /> Trips</>
-                : <><Home className="w-3.5 h-3.5" /> Nests</>}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Tab switcher — always shown, 3 tabs */}
+      <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
+        {([
+          hasTrips  && { key: "trips", icon: MapPin, label: "Trips" },
+          hasNests  && { key: "nests", icon: Home,   label: "Nests" },
+          { key: "you", icon: User, label: "You" },
+        ].filter(Boolean) as { key: string; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key as "trips" | "nests" | "you")}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+              activeTab === key
+                ? key === "you"
+                  ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm"
+                  : "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            )}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* Tab content — animated cross-fade */}
       <AnimatePresence mode="wait" initial={false}>
-        {(!showTabs || activeTab === "trips") && hasTrips && tripsData ? (
+        {activeTab === "trips" && hasTrips && tripsData ? (
           <motion.div
             key="trips"
             initial={{ opacity: 0, y: 10 }}
@@ -99,7 +107,7 @@ export function InsightsTabs({ tripsData, nestsData, primaryCurrency }: Props) {
           >
             <TripsContent data={tripsData} fmt={fmt} primaryCurrency={primaryCurrency} />
           </motion.div>
-        ) : (!showTabs || activeTab === "nests") && hasNests && nestsData ? (
+        ) : activeTab === "nests" && hasNests && nestsData ? (
           <motion.div
             key="nests"
             initial={{ opacity: 0, y: 10 }}
@@ -108,6 +116,22 @@ export function InsightsTabs({ tripsData, nestsData, primaryCurrency }: Props) {
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
             <NestsContent data={nestsData} fmt={fmt} />
+          </motion.div>
+        ) : activeTab === "you" ? (
+          <motion.div
+            key="you"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            {!isPlusUser ? (
+              <PersonalPlusGate />
+            ) : personalData ? (
+              <PersonalContent data={personalData} />
+            ) : (
+              <YouEmptyState />
+            )}
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -453,6 +477,24 @@ function NestsContent({
           ))}
         </AnimatedList>
       </FadeIn>
+    </div>
+  );
+}
+
+// ── You empty state ───────────────────────────────────────────────────────
+
+function YouEmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-violet-500/25">
+        <User className="w-6 h-6 text-white" />
+      </div>
+      <p className="text-base text-slate-700 dark:text-slate-200 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
+        No personal data yet
+      </p>
+      <p className="text-sm text-slate-400 dark:text-slate-500 max-w-xs">
+        Add expenses to your groups and your personal financial picture will appear here.
+      </p>
     </div>
   );
 }

@@ -184,6 +184,21 @@ Both exported from `components/insights/nest-pace-card.tsx`. `computeNestPaceDat
 ### `CrossTabCard`
 `"use client"`. Shown above the tab switcher in all-groups insights when user has both trips and nests. Props: `tripsData`, `nestsData`, `currency`. Shows home daily rate (`monthlyAverage / 30`), travel daily rate (`dailyPace`), multiplier (only when > 1), and combined all-time total (only when `currency === "INR"` — avoids summing mixed currencies). Returns `null` when both rates are 0.
 
+### `PersonalContent` + `PersonalPlusGate`
+`"use client"`. Both exported from `components/insights/personal-content.tsx`. Rendered inside `InsightsTabs` when `activeTab === "you"`.
+
+**`PersonalPlusGate`** — shown to non-Plus users: violet gradient icon + copy + "Upgrade to Clear Plus →" link to `/upgrade`.
+
+**`PersonalContent`** — shown to Plus/trialing users. Props: `data: PersonalInsights`. Four zones:
+1. **Opening sentence** + KPI row (amber accent total-share card + avg/month glass card)
+2. **Right now** — net position; `NetGroupRow` sub-component: group icon (Home/MapPin), name, net amount (emerald if owed, amber if owe), arrow; links to `/groups/[id]/settle`
+3. **Financial circle** — `CompanionCard` sub-component per companion: `MemberAvatar` (hash-gradient), name, active dot (green, last 90 days), group count, human label, shared total; Framer Motion stagger `delay={index * 0.07}`
+4. **Triggered insight card** (amber border, emoji icon) + `BankerCard` (paid-upfront vs share, animated progress bar `framer motion width 0→%`, year-over-year trend line with `TrendingUp` icon) + `CategoryDonut` + `GroupShareBars`
+
+**`GroupShareBars`** — glass card, per-group horizontal bars; each row is a `<Link>` to `/groups/[id]/insights`; bars animate via `motion.div width 0→%` with `delay: 0.1 + i * 0.05`; gradient matches `GROUP_GRADIENTS[i % 8]` (same palette as `TRIP_GRADIENTS` in insights-tabs).
+
+**Avatar colours**: `MemberAvatar` uses `hashName(name) % 8` — same system as rest of app, consistent across groups page, members page, debt-flow graph, and this tab.
+
 ---
 
 ## Key Components

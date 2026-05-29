@@ -1,13 +1,19 @@
-import { getAllTripsInsightsData, getAllNestsInsightsData } from "@/lib/db/queries/insights";
+import { getAllTripsInsightsData, getAllNestsInsightsData, getPersonalInsightsData } from "@/lib/db/queries/insights";
 import { InsightsTabs } from "@/components/insights/insights-tabs";
 import { BarChart2, LayoutGrid } from "lucide-react";
 import Link from "next/link";
+import { getCurrentUser } from "@/lib/db/queries/auth";
+import { getUserPlan } from "@/lib/subscription/gates";
 
 export default async function AllInsightsPage() {
-  const [tripsData, nestsData] = await Promise.all([
+  const [tripsData, nestsData, personalData, user] = await Promise.all([
     getAllTripsInsightsData(),
     getAllNestsInsightsData(),
+    getPersonalInsightsData(),
+    getCurrentUser(),
   ]);
+
+  const isPlusUser = user ? (await getUserPlan(user.id)) === "plus" : false;
 
   const hasAnyData = (tripsData && tripsData.tripCount > 0) || (nestsData && nestsData.nestCount > 0);
 
@@ -41,6 +47,8 @@ export default async function AllInsightsPage() {
       tripsData={tripsData}
       nestsData={nestsData}
       primaryCurrency={primaryCurrency}
+      personalData={personalData}
+      isPlusUser={isPlusUser}
     />
   );
 }

@@ -198,6 +198,29 @@ Two exported functions:
 - `getTopCategory(groupId)` — top spending category by SUM(amount). Cached `balances-${groupId}`.
 - `getThisMonthSpent(groupId)` — sum for current calendar month (nests). Cache key includes year+month so new month = fresh fetch automatically. Cached `balances-${groupId}`.
 
+### Personal insights query — `lib/db/queries/insights.ts` → `getPersonalInsightsData()`
+
+Uncached (called once per `/insights` page render alongside trip/nest queries). Fetches in 2 phases:
+
+**Phase 1**: `myMemberRows` — all `group_members` rows for current user across non-demo groups. Returns early if empty.
+
+**Phase 2** (all in `Promise.all`):
+1. **splitRows** — `expense_splits` → `expenses` WHERE `memberId IN myMemberIds AND isTemplate=false`. Columns: `shareAmount`, `category`, `expenseDate`, `groupId`, `currency`, `expenseAmount`, `paidByMemberId`, `myMemberId`.
+2. **paidRows** — `expenses` WHERE `paidByMemberId IN myMemberIds AND isTemplate=false`, `GROUP BY groupId`. Sum + count per group.
+3. **settRows** — `settlements` WHERE `fromMemberId OR toMemberId IN myMemberIds`.
+4. **groupRows** — `groups` WHERE `id IN myGroupIds`. Name, type, default currency.
+5. **companionRows** — `group_members` WHERE `groupId IN myGroupIds AND userId IS NOT NULL AND userId != currentUser`. Other Clear-account holders in shared groups.
+
+Passed to `computePersonalInsights()` in `lib/insights/personal-insights.ts` (pure function).
+
+**`computePersonalInsights`** key logic:
+- Primary currency = highest total `shareAmount` volume across all splits
+- `bankerFloat = max(0, totalPaidUpfront - totalShare)` — floated amount
+- Net per group = `myPaid - myShare + settlementsReceived - settlementsSent`; groups with `|net| < 0.01` excluded (settled)
+- Companions grouped by `userId`, sorted by `groupCount desc, totalShared desc`, max 5
+- Triggered insight: first matching rule from companion → banker → YoY → milestone
+- Does NOT use `unstable_cache` — personal data is user-specific and changes with every expense add/settle
+
 ### Join page — existing member redirect + guest claim flow
 
 `app/join/[token]/page.tsx`: (1) existing member → `getMembership()` → immediate `redirect(/groups/${group.id})`; (2) `getGroupByToken()` returns `unclaimedGuests` (null `user_id`) → cyan pill list → `claimGuestMember(token, guestMemberId)` atomically sets `user_id`, clears `guest_name`, sets `displayName` from Google.

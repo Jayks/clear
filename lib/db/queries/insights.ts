@@ -60,6 +60,8 @@ export async function getAllTripsInsightsData() {
       expenseCount: Number(t?.cnt ?? 0),
       memberCount: tripMembers.filter((m) => m.groupId === group.id).length,
       currency: group.defaultCurrency,
+      startDate: group.startDate,
+      endDate: group.endDate,
     };
   });
 
@@ -106,7 +108,14 @@ export async function getAllNestsInsightsData() {
   const categoryTotals: Record<string, number> = {};
   for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
 
-  return computeAllNestsInsights({ nests: nestGroups, allExpenses, categoryTotals, allMembers: nestMembers, currentUserId: user.id });
+  return computeAllNestsInsights({
+    nests: nestGroups,
+    allExpenses,
+    categoryTotals,
+    allMembers: nestMembers,
+    currentUserId: user.id,
+    currency: nestGroups[0]?.defaultCurrency ?? "INR",
+  });
 }
 
 export async function getOtherTripsSummary(currentGroupId: string): Promise<OtherTripSummary[]> {

@@ -155,6 +155,37 @@ Rule line markup:
 
 ---
 
+## Insights Components (`components/insights/`)
+
+### `HighlightsStrip`
+`"use client"`. Accepts `Highlight[]` from `lib/insights/trip-insights.ts`. Each card: Framer Motion `scale+opacity` entrance with 90ms stagger; colored gradient orb via `accentColor` (Tailwind gradient pair); Fraunces title; `line-clamp-2` sub-text. Dynamic grid: 1 item → `grid-cols-1 sm:grid-cols-2 max-w-sm`; 2 → `grid-cols-2`; 3 → `grid-cols-3`. Never use `grid-cols-3` hardcoded — a single highlight in a 3-col grid renders at 33% width.
+
+### `DailySpendBar`
+`"use client"`. Accepts `DaySpend[]` (which includes `cats: Record<string, number>` for per-category per-day amounts). Renders a **stacked bar chart** with one `Bar` per category (sorted by total descending → largest at bottom of stack). Uses `CATEGORY_HEX` fill colors — same palette as `CategoryDonut`, threading color language across both charts. Top-3 compact legend in card header. Peak-day total annotated in cyan via `LabelList` on the topmost `Bar`. Falls back to plain cyan bar when `cats` is empty. Chart `margin={{ top: 18 }}` to give room for the peak annotation.
+
+### `MonthlySpendBar`
+`"use client"`. Optional `monthlyAverage?: number` prop — draws a dashed cyan `ReferenceLine y={monthlyAverage}` labelled `"avg"` at `insideTopRight`. Makes each month's above/below-baseline position immediately readable without hovering.
+
+### `MemberContributions`
+`"use client"`. Key props:
+- `currentMemberId?` — renders "You" in cyan on Y-axis, cyan-600 bars (vs cyan-400 for others)
+- `currentUserNet?` + `settleHref?` — net callout below chart with "Collect →" / "Settle →" link
+- `fairShare?` — dashed cyan `ReferenceLine x={fairShare}` labelled `"fair share"`; bars to the right = overpaid, left = underpaid. Pass `Math.round(totalSpend / members.length)`.
+
+### `PaceTrackerCard`
+Requires `groupId: string` prop (for "Review expenses →" link on watch/over pace). When `daysRemaining === 0`: label changes to "Final total" (not "Projected"). When complete + under budget: `"Under budget 🎉"` badge + soft emerald ambient orb. `groupId` also used for the action link.
+
+### `NestPaceCard` + `computeNestPaceData`
+Both exported from `components/insights/nest-pace-card.tsx`. `computeNestPaceData({ thisMonthSpend, monthlyHistory, thisMonthKey, monthLabel })` → `NestPaceData | null`. Status thresholds: projected ≤ avg×1.1 = `on_track`; ≤ avg×1.3 = `watch`; > avg×1.3 = `over`; < 2 months history = `building`. Returns `null` when `thisMonthSpend === 0`.
+
+### `TripsSpendBar`
+`"use client"`. `ComposedChart` with `layout="vertical"` (horizontal bars). Accepts `title?` override for multi-currency labelling (e.g. `"Spend per trip · INR"`). **Trend line** (`Line`) rendered when `data.length >= 3` — dashed cyan, connects bar tips chronologically (oldest at top, newest at bottom), shows spending trajectory. Two-line Y-axis tick via SVG `<tspan>`: trip name (line 1) + `"May '24 · 5d"` (line 2). Always pass `y={y}` on the `<text>` element — without it all labels render at y=0.
+
+### `CrossTabCard`
+`"use client"`. Shown above the tab switcher in all-groups insights when user has both trips and nests. Props: `tripsData`, `nestsData`, `currency`. Shows home daily rate (`monthlyAverage / 30`), travel daily rate (`dailyPace`), multiplier (only when > 1), and combined all-time total (only when `currency === "INR"` — avoids summing mixed currencies). Returns `null` when both rates are 0.
+
+---
+
 ## Key Components
 
 ### Group Card Balance Badge

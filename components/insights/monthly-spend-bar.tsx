@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { formatCurrency, CHART_AXIS_TICK } from "@/lib/utils";
 
 export interface MonthSpend {
@@ -14,6 +14,8 @@ export interface MonthSpend {
 interface Props {
   data: MonthSpend[];
   currency: string;
+  /** When provided, draws a dashed "average" reference line — makes each month's high/low immediately visible */
+  monthlyAverage?: number;
 }
 
 interface TooltipEntry {
@@ -39,7 +41,7 @@ function CustomTooltip({ active, payload, label, currency }: TooltipEntry) {
   );
 }
 
-export function MonthlySpendBar({ data, currency }: Props) {
+export function MonthlySpendBar({ data, currency, monthlyAverage }: Props) {
   if (data.length === 0) return null;
 
   const maxAmount = Math.max(...data.map((d) => d.amount));
@@ -72,6 +74,23 @@ export function MonthlySpendBar({ data, currency }: Props) {
             tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
           />
           <Tooltip content={<CustomTooltip currency={currency} />} cursor={{ fill: "rgba(6,182,212,0.08)" }} />
+          {/* Monthly average reference line — dashed, makes variance immediately visible */}
+          {monthlyAverage && monthlyAverage > 0 && (
+            <ReferenceLine
+              y={monthlyAverage}
+              stroke="#06B6D4"
+              strokeDasharray="4 3"
+              strokeOpacity={0.6}
+              strokeWidth={1.5}
+              label={{
+                value: "avg",
+                position: "insideTopRight",
+                fontSize: 9,
+                fill: "#06B6D4",
+                opacity: 0.8,
+              }}
+            />
+          )}
           <Bar dataKey="recurring" stackId="a" fill="#A5F3FC" radius={[0, 0, 0, 0]} name="recurring" />
           <Bar dataKey="adhoc" stackId="a" radius={[4, 4, 0, 0]} name="adhoc">
             {data.map((entry, i) => (

@@ -51,6 +51,7 @@ next-env.d.ts
 
 # Internal strategy docs — local only, not for the repo
 pricing-strategy.md
+ideation.md
 
 # Development report — local only
 dev-report.md

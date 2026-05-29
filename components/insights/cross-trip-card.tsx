@@ -8,8 +8,7 @@ export function CrossTripCard({ insights }: Props) {
   if (insights.length === 0) return null;
 
   return (
-    <div className="glass rounded-2xl p-5 mb-6">
-      <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">How this trip compares</h2>
+    <div className="glass rounded-2xl p-5">
       <div className="space-y-3.5">
         {insights.map((insight, i) => (
           <div key={i} className="flex gap-3">

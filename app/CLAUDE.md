@@ -258,9 +258,85 @@ REGULAR_ANNUAL_SAVINGS       = 389  // 99×12 − 799
 
 ## Insights Architecture
 
-**Per-group** (`/groups/[id]/insights`): Trip → KPIs, PaceTracker, CategoryDonut, DailySpendBar, MemberContributions, GroupRoles, CrossTripCard, AdherenceCard, SmartInsights. Nest → KPIs, CategoryDonut, MonthlySpendBar (stacked recurring+adhoc), MemberContributions, GroupRoles, SmartInsights.
+### Per-group (`/groups/[id]/insights`)
 
-**All-groups** (`/insights`) — tabbed (Trips / Nests). Tab switcher only if user has both. `getAllTripsInsightsData` uses single `GROUP BY group_id` query. `getAllNestsInsightsData` derives category totals in-memory.
+RSC. Fetches `getGroupWithMembers(id, { full: true })`, `getGroupExpensesWithSplits(id)`, and `getCurrentUser()` in parallel. Computes `computeTripInsights`, `computeGroupRoles`, and `computeSpendTrajectory` server-side.
+
+**Trip state** is derived from `startDate`/`endDate` vs today (string comparison on `"yyyy-MM-dd"`):
+- `active` — today is within the trip range
+- `completed` — trip has ended
+- `future` — trip hasn't started (may have pre-booked expenses)
+- `undated` — no dates set
+
+**Trip section order** (state-aware):
+1. Desktop header (Back · amber icon · "Insights" · meta-line · Share summary link)
+2. Mobile meta-line (`md:hidden`) — always visible on small screens
+3. Opening sentence card — rule-based narrative: "Day 3 of 5 · Food at 38% · ₹2,100/day" (active) / "Food dominated at 38% · under budget 🎉" (completed) / pre-booked + budget + T-minus (future)
+4. **Active trip only**: Pace Tracker BEFORE KPIs (hero position on live trip)
+5. **Future trip only**: T-minus badge (🗓️ "Starts in N days")
+6. KPI grid (2×2 on mobile, 4-col on sm+): Total spend (accent) · Per person · Daily avg · Contextual 4th → budget% if budget set, else "Your position" (links to /settle, hover ring, "settle →" sub)
+7. Highlights strip — 3 vivid `HighlightsStrip` cards: biggest expense · peak day · tab-picker. **Quality guard**: only renders when `expenseList.length >= 3` to avoid tautologies with 1–2 expenses. Dynamic grid: 1 highlight → `grid-cols-1 max-w-sm`, 2 → `grid-cols-2`, 3 → `grid-cols-3`.
+8. Pace Tracker (non-active trips) — `groupId` prop for "Review expenses →" link on watch/over. When trip complete + under budget: `"Under budget 🎉"` badge + emerald ambient glow. When complete: "Final total" label replaces "Projected total".
+9. Breakdown section header + 3 charts: CategoryDonut · Stacked DailySpendBar · MemberContributions
+10. Group Dynamics — hidden when `members.length < 2`; shows fairness score + distinctive roles only (Traveler badges suppressed)
+11. Cross-trip comparison (Suspense-streamed `CrossTripSection` — owns its section header so it only renders when insights exist)
+12. Plan vs Reality (`AdherenceCard`) — trips with itinerary only
+
+**Nest section order**:
+1–3 same header/meta/opening as trip
+4. KPI grid: This month (accent + MoM sub-label) · Per person this month · Recurring this month (₹X · Y%) · All time
+5. Highlights strip: category mover (biggest MoM category delta) · recurring coverage % · biggest single expense (tab-picker fallback)
+6. Nest Pace Card — monthly projection: `thisMonthSpend / daysElapsed × daysInMonth` vs 3-month rolling avg. Shows "On pace / Watch it / Trending over / Building baseline". "Review expenses →" link on watch/over.
+7. Breakdown: CategoryDonut · MonthlySpendBar (with `monthlyAverage` reference line) · MemberContributions
+8. Group Dynamics
+
+**Key component props added**:
+- `MemberContributions`: `fairShare?` → cyan dashed `ReferenceLine x={fairShare}` labelled "fair share"; bars to right = overpaid, left = underpaid. `currentMemberId` → "You" label in cyan on Y-axis, darker cyan bars for current user's row. `currentUserNet` → net callout below chart. `settleHref` → "Collect →" / "Settle →" link.
+- `MonthlySpendBar`: `monthlyAverage?` → cyan dashed `ReferenceLine y={monthlyAverage}` labelled "avg".
+- `PaceTrackerCard`: `groupId` prop for action links.
+
+**`DaySpend` interface** (in `lib/insights/trip-insights.ts`): includes `cats: Record<string, number>` — category slug → amount for that day. Populated by `dayCatMap` in `computeTripInsights`. Used by `DailySpendBar` for stacked bars.
+
+**`DailySpendBar`**: stacked bar chart using `DaySpend.cats`. Categories sorted by total spend descending (largest at bottom = most visually prominent). Uses `CATEGORY_HEX` for fill colors — same palette as `CategoryDonut` so color language threads across charts. Top-3 compact legend in card header. Peak-day total annotated in cyan above the tallest stack via `LabelList` on the topmost `Bar`. Falls back to plain cyan bar when `cats` is empty.
+
+**`HighlightsStrip`** (`components/insights/highlights-strip.tsx`): `"use client"`. `Highlight[]` from `lib/insights/trip-insights.ts`. Each card has Framer Motion scale+fade stagger (90ms apart), colored gradient orbs (`accentColor` Tailwind gradient pair), Fraunces title, `line-clamp-2` sub. Dynamic `grid-cols` based on `highlights.length`.
+
+**`NestPaceCard`** (`components/insights/nest-pace-card.tsx`): `computeNestPaceData()` exported from same file. `NestPaceStatus`: `on_track | watch | over | building | complete`. Rolling avg from last 3 completed months. Shows `daysElapsed / daysInMonth` progress, projected vs avg bar, action link when over/watch.
+
+**Trip highlights** only compute when `expenseList.length >= 3`. Nest highlights each have their own data guards (e.g. category mover requires prior-month data, recurring requires templates).
+
+**`fairShare`** passed to `MemberContributions`: `Math.round(insights.totalSpend / members.length)`. **`nestMonthlyAverage`** passed to `MonthlySpendBar`: `Math.round(insights.totalSpend / monthlyData.length)`.
+
+### All-groups (`/insights`)
+
+RSC → `InsightsTabs` (`"use client"`, `AnimatePresence` tab cross-fade). Both `getAllTripsInsightsData` and `getAllNestsInsightsData` fetched in parallel. `InsightsTabs` is client-only for tab state — all heavy computation is server-side in the lib functions.
+
+**Cross-tab card** (`components/insights/cross-tab-card.tsx`): shown above the tab switcher when user has **both** trips and nests. Shows home daily rate (`monthlyAverage / 30`) vs travel daily rate (`totalSpend / totalDays`), multiplier ("travel is 7.5× more expensive"), and combined all-time total when same currency (INR). Framer Motion entrance.
+
+**Trips tab** (`TripsContent`):
+- Heading: "Your travel story" + `N trips · N days on the road · since YYYY`
+- KPIs: Total spent (accent) · Trips (avg sub) · Days on road · Companions
+- Highlights: biggest trip · `dailyPace` (₹/day) · most-traveled-with companion (userId match + guest name fallback across groups)
+- `TripsBreakdownCharts` component: groups `byTrip` by currency; single-currency → TripsSpendBar + CategoryDonut side-by-side; multi-currency → one `TripsSpendBar` per currency (labelled "Spend per trip · INR/USD") + CategoryDonut below. Prevents meaningless cross-currency amount comparison on one axis.
+- `TripsSpendBar` (horizontal, `ComposedChart`): `layout="vertical"`, chronological order (oldest top), two-line Y-axis tick (trip name + date · days via SVG `<tspan>`), trend `Line` for 3+ trips (dashed cyan, connects bar tips top→bottom = spending trajectory). Peak bar = full cyan, others = light cyan.
+- Per-trip link cards: colorful gradient icons cycling through 8 gradients, "May 2024 · 5 days · N members" subtitle.
+
+**Nests tab** (`NestsContent`):
+- Heading: "Your household story" + `N nests · since MMM YYYY · ₹X/mo average`
+- KPIs: Monthly average (accent + MoM sub) · Total spend · Recurring/mo (₹X · Y%) · Mates
+- Highlights: recurring baseline · biggest month ever · year-over-year (same-period comparison `Jan–May YYYY vs Jan–May YYYY-1`) or MoM fallback
+- MonthlySpendBar + CategoryDonut
+- Per-nest link cards: teal/emerald cycling gradients
+
+**Data model additions**:
+- `TripSummary`: `startDate`, `endDate` — enables days computation, chronological sort, date subtitles on link cards
+- `AllTripsInsights`: `totalDays`, `dailyPace`, `mostTraveledWith`, `mostTraveledMonth`, `highlights[]`
+- `AllNestsInsights`: `recurringTotal`, `recurringPct`, `biggestMonth`, `yearOverYear`, `currency`, `highlights[]`
+- `AllNestsInsights.currency` — from `nests[0].defaultCurrency`; replaces hardcoded `"INR"` throughout the nest insights tab
+
+**`section headers`** throughout both tabs use amber icon-badge + gradient rule (matching per-group insights and design system). Implemented as a local `SectionHeader` component in `insights-tabs.tsx`.
+
+**`data-tour` attributes**: `data-tour="trip-kpis"` on trip KPI grid; `data-tour="all-insights-trips"` on `TripsBreakdownCharts` div.
 
 ---
 

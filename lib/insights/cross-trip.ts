@@ -217,21 +217,5 @@ export function computeCrossTripInsights(params: {
     }
   }
 
-  // 4. Group size comparison
-  if (others.length >= 1) {
-    const avgMembers = others.reduce((s, t) => s + t.memberCount, 0) / others.length;
-    const diff = current.memberCount - Math.round(avgMembers);
-    if (Math.abs(diff) >= 2) {
-      insights.push({
-        emoji: diff > 0 ? "👥" : "👤",
-        title:
-          diff > 0
-            ? `${current.memberCount} people — bigger crew than usual`
-            : `${current.memberCount} people — smaller group this time`,
-        sub: `Your trips average ${Math.round(avgMembers)} members`,
-      });
-    }
-  }
-
   return insights;
 }

@@ -1,8 +1,10 @@
+import Link from "next/link";
 import type { TrajectoryResult } from "@/lib/insights/cross-trip";
 
 interface Props {
   data: TrajectoryResult;
   currency: string;
+  groupId: string;
 }
 
 const STATUS_CONFIG = {
@@ -12,7 +14,7 @@ const STATUS_CONFIG = {
   unknown:  { label: "",            color: "text-slate-500 dark:text-slate-400",     bar: "from-cyan-500 to-teal-500",      bg: "bg-slate-50 dark:bg-slate-800"         },
 };
 
-export function PaceTrackerCard({ data, currency }: Props) {
+export function PaceTrackerCard({ data, currency, groupId }: Props) {
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 
@@ -23,14 +25,28 @@ export function PaceTrackerCard({ data, currency }: Props) {
 
   const cfg = STATUS_CONFIG[paceStatus];
   const barPct = percentBudgetUsed !== null ? Math.min(100, percentBudgetUsed) : null;
+  const isComplete = daysRemaining === 0;
+  const showActionLink = (paceStatus === "close" || paceStatus === "over") && !isComplete;
+
+  const celebrateUnderBudget = isComplete && budget !== null && projectedOverage !== null && projectedOverage <= 0;
 
   return (
-    <div className="glass rounded-2xl p-5 mb-6">
+    <div className="relative glass rounded-2xl p-5 mb-6 overflow-hidden">
+      {/* Celebratory emerald glow when trip ended under budget */}
+      {celebrateUnderBudget && (
+        <div className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-[0.13] dark:opacity-[0.18] blur-3xl bg-gradient-to-br from-emerald-400 to-green-400" />
+      )}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Spend pace</h2>
         {paceStatus !== "unknown" && (
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.color}`}>
-            {cfg.label}
+            {isComplete
+            ? budget
+              ? projectedOverage !== null && projectedOverage <= 0
+                ? "Under budget 🎉"
+                : "Over budget"
+              : "Trip complete ✓"
+            : cfg.label}
           </span>
         )}
       </div>
@@ -48,7 +64,7 @@ export function PaceTrackerCard({ data, currency }: Props) {
               {daysRemaining !== null && daysRemaining > 0 && (
                 <span className="text-slate-400 dark:text-slate-500"> · {daysRemaining} left</span>
               )}
-              {daysRemaining === 0 && (
+              {isComplete && (
                 <span className="text-slate-400 dark:text-slate-500"> · trip ended</span>
               )}
             </p>
@@ -56,12 +72,15 @@ export function PaceTrackerCard({ data, currency }: Props) {
         )}
       </div>
 
-      {/* Projected vs budget */}
+      {/* Projected / final vs budget */}
       {(projectedTotal !== null || budget !== null) && (
         <div className="space-y-2">
           {projectedTotal !== null && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500 dark:text-slate-400">Projected total</span>
+              {/* "Projected total" while live, "Final total" once trip ends */}
+              <span className="text-slate-500 dark:text-slate-400">
+                {isComplete ? "Final total" : "Projected total"}
+              </span>
               <span className="font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{fmt(projectedTotal)}</span>
             </div>
           )}
@@ -73,7 +92,7 @@ export function PaceTrackerCard({ data, currency }: Props) {
           )}
           {projectedOverage !== null && projectedOverage !== 0 && (
             <div className={`flex items-center justify-between text-sm font-medium ${projectedOverage > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-              <span>{projectedOverage > 0 ? "Projected over by" : "Projected under by"}</span>
+              <span>{projectedOverage > 0 ? (isComplete ? "Over budget by" : "Projected over by") : (isComplete ? "Under budget by" : "Projected under by")}</span>
               <span className="tabular-nums">{fmt(Math.abs(projectedOverage))}</span>
             </div>
           )}
@@ -90,6 +109,17 @@ export function PaceTrackerCard({ data, currency }: Props) {
                   style={{ width: `${barPct}%` }}
                 />
               </div>
+            </div>
+          )}
+
+          {showActionLink && (
+            <div className="mt-3 pt-3 border-t border-white/40 dark:border-slate-700/40">
+              <Link
+                href={`/groups/${groupId}/expenses`}
+                className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+              >
+                Review expenses →
+              </Link>
             </div>
           )}
         </div>

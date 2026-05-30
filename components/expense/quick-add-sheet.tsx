@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check, RotateCcw } from "lucide-react";
+import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check, RotateCcw, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { hapticLight } from "@/lib/haptics";
@@ -30,6 +30,8 @@ interface Props {
   /** Pre-loaded members — when available (expenses page), skips the fetch. */
   members?: GroupMember[];
   onClose: () => void;
+  /** When provided (global FAB flow), shows a ← back button to re-pick the group. */
+  onBack?: () => void;
 }
 
 type StickyContext = { paidByMemberId: string; expenseDate: string };
@@ -83,6 +85,7 @@ export function QuickAddSheet({
   groupEndDate,
   members: initialMembers,
   onClose,
+  onBack,
 }: Props) {
   const [members, setMembers] = useState<GroupMember[] | null>(initialMembers ?? null);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -251,15 +254,41 @@ export function QuickAddSheet({
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3 shrink-0 border-b border-slate-100 dark:border-slate-800">
-            <div>
-              <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Add expense</p>
-              <h3
-                className="text-base text-slate-800 dark:text-slate-100"
-                style={{ fontFamily: "var(--font-fraunces)" }}
+            {onBack ? (
+              /* Global FAB flow — back button re-opens group picker */
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex items-center gap-1 text-left group -ml-1 rounded-lg px-1 py-0.5
+                           hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
-                {groupName}
-              </h3>
-            </div>
+                <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500
+                                        group-hover:text-slate-600 dark:group-hover:text-slate-300
+                                        transition-colors shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500
+                                group-hover:text-slate-500 dark:group-hover:text-slate-400">
+                    Change group
+                  </p>
+                  <h3
+                    className="text-base text-slate-800 dark:text-slate-100 leading-tight"
+                    style={{ fontFamily: "var(--font-fraunces)" }}
+                  >
+                    {groupName}
+                  </h3>
+                </div>
+              </button>
+            ) : (
+              <div>
+                <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Add expense</p>
+                <h3
+                  className="text-base text-slate-800 dark:text-slate-100"
+                  style={{ fontFamily: "var(--font-fraunces)" }}
+                >
+                  {groupName}
+                </h3>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Link
                 href={`/groups/${groupId}/expenses/new?from=groups`}

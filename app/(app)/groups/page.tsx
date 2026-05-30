@@ -17,6 +17,7 @@ import type { NavSection, CreatePill } from "@/components/shared/section-pill-na
 import { GroupSearchInput } from "@/components/shared/group-search-input";
 import { StreamBadgeSync } from "@/components/stream/stream-badge-sync";
 import { getStreamBadgeData } from "@/lib/db/queries/stream";
+import { GlobalFab } from "@/components/shared/global-fab";
 
 export default async function GroupsPage() {
   await ensureDemoGroup().catch(() => {});
@@ -267,6 +268,9 @@ export default async function GroupsPage() {
           </div>
         </section>
       )}
+
+      {/* ── Global FAB — log expense (with group picker) or log stream entry ── */}
+      {!isEmpty && <GlobalFab trips={trips} nests={nests} />}
     </div>
   );
 }

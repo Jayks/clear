@@ -18,6 +18,55 @@ interface TripCardProps {
   isPlusPlan?: boolean;
 }
 
+// ── Trip alive status ─────────────────────────────────────────────────────────
+
+type TripStatusType = "active" | "lastDay" | "justReturned";
+
+interface TripStatus {
+  type:  TripStatusType;
+  label: string;
+  color: string; // Tailwind text colour on the dark image overlay
+}
+
+const MS_PER_DAY = 86_400_000;
+
+function computeTripStatus(
+  startDate: string | null,
+  endDate:   string | null,
+): TripStatus | null {
+  if (!startDate) return null;
+
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+  if (today < startDate) return null; // upcoming — no badge
+
+  if (endDate && today > endDate) {
+    const daysAgo = Math.round(
+      (new Date(today).getTime() - new Date(endDate).getTime()) / MS_PER_DAY,
+    );
+    if (daysAgo > 7) return null; // too long ago
+    return { type: "justReturned", label: "Just returned ✓", color: "text-emerald-300" };
+  }
+
+  if (endDate && today === endDate) {
+    return { type: "lastDay", label: "Last day 🏁", color: "text-amber-300" };
+  }
+
+  // Active trip — today is on or after start, before or on end (or no end set)
+  const dayNumber = Math.round(
+    (new Date(today).getTime() - new Date(startDate).getTime()) / MS_PER_DAY,
+  ) + 1;
+  const totalDays = endDate
+    ? Math.round(
+        (new Date(endDate).getTime() - new Date(startDate).getTime()) / MS_PER_DAY,
+      ) + 1
+    : null;
+  const label = totalDays ? `Day ${dayNumber} of ${totalDays}` : `Day ${dayNumber}`;
+  return { type: "active", label, color: "text-cyan-300" };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const LONG_PRESS_MS = 500;
 // iOS fingers drift slightly even while holding still; only cancel if truly scrolling.
 const MOVE_THRESHOLD = 8;
@@ -31,7 +80,10 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
   const [isLongPressing, setIsLongPressing] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
-  const isNest = group.groupType === "nest";
+  const isNest     = group.groupType === "nest";
+  const tripStatus = !isNest && !group.isArchived
+    ? computeTripStatus(group.startDate, group.endDate)
+    : null;
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Long-press fires touchend AND a subsequent click event. This ref lets the
@@ -163,7 +215,19 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
                 {group.name}
               </h3>
               {isNest ? (
-                <p className="text-white/75 text-xs mt-0.5">{memberCount} {memberCount === 1 ? "member" : "members"}</p>
+                <p className="text-white/75 text-xs mt-0.5">
+                  {memberCount} {memberCount === 1 ? "member" : "members"}
+                </p>
+              ) : tripStatus ? (
+                /* Alive status replaces the date line when the trip is active/recent */
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {tripStatus.type === "active" && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                  )}
+                  <span className={`text-xs font-semibold ${tripStatus.color}`}>
+                    {tripStatus.label}
+                  </span>
+                </div>
               ) : (group.startDate || group.endDate) ? (
                 <p className="text-white/75 text-xs mt-0.5">
                   {group.startDate ? formatDate(group.startDate) : ""}

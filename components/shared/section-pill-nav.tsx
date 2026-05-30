@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-export type SectionColor = "cyan" | "emerald" | "violet" | "slate";
+export type SectionColor = "cyan" | "emerald" | "violet" | "amber" | "slate";
 
 export interface NavSection {
   id:    string;
@@ -47,6 +47,12 @@ const COLORS: Record<SectionColor, {
     hover:       "hover:border-violet-300 dark:hover:border-violet-700/60 hover:text-violet-700 dark:hover:text-violet-400 hover:bg-violet-50/60 dark:hover:bg-violet-950/20",
     badge:       "bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400",
   },
+  amber: {
+    active:      "border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400",
+    activeBadge: "bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300",
+    hover:       "hover:border-amber-300 dark:hover:border-amber-700/60 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/20",
+    badge:       "bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400",
+  },
   slate: {
     active:      "border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300",
     activeBadge: "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400",
@@ -76,16 +82,27 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
   useEffect(() => {
     if (sections.length === 0) return;
 
+    // Track which sections are currently intersecting the trigger band.
+    // We keep a Set so we always know the full picture, not just what changed.
+    const intersecting = new Set<string>();
+
     // A section is "active" when its top edge is in the upper-middle viewport band.
-    // rootMargin "-16% 0px -72% 0px" means the trigger zone is roughly 16%–28% from top.
+    // rootMargin "-16% 0px -72% 0px" means the trigger zone is ~16%–28% from top.
     const observer = new IntersectionObserver(
       (entries) => {
-        // Pick the most recently intersecting visible entry
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
+            intersecting.add(entry.target.id);
+          } else {
+            intersecting.delete(entry.target.id);
           }
         }
+
+        // When multiple sections overlap the trigger band (e.g. a tall Nests section
+        // whose bottom is still visible while Archived has entered from below), always
+        // prefer the LAST section in page order — that's the one the user scrolled to.
+        const active = [...sections].reverse().find((s) => intersecting.has(s.id));
+        if (active) setActiveId(active.id);
       },
       { rootMargin: "-16% 0px -72% 0px", threshold: 0 },
     );
@@ -113,15 +130,15 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-1 px-3 py-1.5 rounded-full shrink-0",
-                "text-xs font-medium whitespace-nowrap transition-all",
+                "flex items-center gap-1 px-4 py-2 rounded-full shrink-0",
+                "text-sm font-medium whitespace-nowrap transition-all",
                 "border border-dashed",
                 "border-slate-300 dark:border-slate-600",
                 "text-slate-400 dark:text-slate-500",
                 c.hover,
               )}
             >
-              <span className="text-[10px]">+</span>
+              <span className="text-xs">+</span>
               {label}
             </a>
           );
@@ -135,9 +152,10 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
             <a
               key={id}
               href={`#${id}`}
+              onClick={() => setActiveId(id)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0",
-                "text-xs font-medium whitespace-nowrap transition-all border",
+                "flex items-center gap-1.5 px-4 py-2 rounded-full shrink-0",
+                "text-sm font-medium whitespace-nowrap transition-all border",
                 isActive
                   ? c.active
                   : cn(
@@ -151,7 +169,7 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
               {label}
               <span
                 className={cn(
-                  "text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none",
+                  "text-xs font-bold px-1.5 py-0.5 rounded-full leading-none",
                   isActive ? c.activeBadge : c.badge,
                 )}
               >

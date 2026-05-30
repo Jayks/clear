@@ -281,7 +281,27 @@ No accordion — summary page is a showcase; all expense rows are always visible
 ### SectionPillNav
 `components/shared/section-pill-nav.tsx` — `"use client"` sticky pill nav for the Home page. Accepts `sections: NavSection[]` (id, label, count, color) + optional `createPills: CreatePill[]` (dashed pills linking to create pages for missing group types).
 
-Sits `sticky top-14 z-40 -mx-6 px-6 backdrop-blur-sm`. Uses `IntersectionObserver` with `rootMargin "-16% 0px -72% 0px"` to track which section is visible. Active pill gets accent colour (cyan=Trips, emerald=Nests, violet=Circle, slate=Archived). Sections need `scroll-mt-28` to clear both the AppNav and this sticky bar.
+Sits `sticky top-14 z-40 -mx-6 px-6 backdrop-blur-sm`. Pill size: `px-4 py-2 text-sm` (was `px-3 py-1.5 text-xs` — bumped for better tap targets). Active pill gets accent colour: cyan=Trips, emerald=Nests, violet=Circle, **amber=Archived** (slate looked disabled; amber is unambiguous). `SectionColor` type: `"cyan" | "emerald" | "violet" | "amber" | "slate"`. Sections need `scroll-mt-28` to clear both the AppNav and this sticky bar.
+
+**Observer pattern** — keeps a `Set<string>` of all currently-intersecting sections (not just the latest entry). Callback picks the **last section in page order** that is in the Set — this correctly handles tall sections whose bottom still overlaps the trigger band when a shorter section below enters from the bottom. Pills also call `setActiveId(id)` directly `onClick` for instant visual feedback without waiting for the observer.
+
+### GlobalFab
+`components/shared/global-fab.tsx` — fixed `bottom-nav-safe right-4 z-50` fan-out FAB rendered on the Home page (only when groups exist). Warm sunset gradient `from-orange-400 to-rose-500` + `shadow-orange-500/35`. Main `+` rotates 45° → `×` on open via Framer Motion spring.
+
+**Fan items** — two staggered mini FABs (stagger 0.05s / 0.11s):
+- **Log expense** (cyan, Receipt icon) → `GroupPickerSheet` (unless only 1 group, then opens `QuickAddSheet` directly)
+- **Log entry** (indigo, ArrowLeftRight icon) → `StreamLogSheet`
+
+**Auto-hide** — `fabVisible` state + passive scroll listener. Hides (`y:96, opacity:0`) when scrolling down >8px delta; shows when scrolling up or `currentY < 80`. Always visible when `fabOpen`. Wrapper is a `motion.div` with spring transition.
+
+**`GroupPickerSheet`** — inline portal component. Recent tiles: top 2 non-demo active groups (cover photo, name, member count). Full list: remaining trips + nests sections with mini thumbnails. Empty states handled. Uses `useSheetDismiss(isOpen, onClose)` for Escape key + Android back button (same as all other sheets).
+
+**State machine**: `fabOpen` → picker or stream sheet → `quickAddGroup` + `quickAddOpen`. Separate `quickAddGroup`/`quickAddOpen` states ensure exit animation plays cleanly before data is cleared (150ms open delay, 350ms close delay).
+
+**`QuickAddSheet` `onBack` prop** — when provided, the sheet header left side shows `← Change group` (tappable, calls `onBack`). Without it, shows plain "Add expense" label. Backward-compatible (optional prop).
+
+### HomeGreeting
+`components/shared/home-greeting.tsx` — `"use client"` personal greeting at the top of the Home page. Uses client's local time so the greeting matches the user's timezone (not server UTC). Three greetings: **Good morning** (5–11), **Good afternoon** (12–16), **Good evening** (17+, incl. late night — "Good night" omitted as it implies signoff). Renders `{greeting}, {firstName} 👋` in Fraunces `text-xl`. `firstName` extracted from `user.user_metadata.full_name` server-side and passed as prop; gracefully omits name if absent.
 
 ### GroupSearchInput
 `components/shared/group-search-input.tsx` — `"use client"` search input. Only renders when `totalCount > 5`. Filters by querying `[data-group-card]` DOM elements and hiding those where `data-group-name` doesn't match. Also hides `[data-group-section]` elements when all their cards are hidden.

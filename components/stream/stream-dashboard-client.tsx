@@ -65,7 +65,7 @@ export function StreamDashboardClient({ data }: Props) {
                        min-h-[44px] min-w-[44px] shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Groups</span>
+            <span className="hidden sm:inline">Home</span>
           </Link>
 
           {/* Centred title */}

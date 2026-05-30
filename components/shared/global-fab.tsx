@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Plus, Receipt, ArrowLeftRight, MapPin, Home, ChevronRight, X } from "lucide-react";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
 import { StreamLogSheet } from "@/components/stream/stream-log-sheet";
+import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { hapticLight } from "@/lib/haptics";
 import type { Group } from "@/lib/db/schema/groups";
 
@@ -39,8 +40,26 @@ export function GlobalFab({ trips, nests }: Props) {
   const [quickAddGroup,  setQuickAddGroup]  = useState<GroupItem | null>(null);
   const [quickAddOpen,   setQuickAddOpen]   = useState(false);
   const [streamOpen,     setStreamOpen]     = useState(false);
+  const [fabVisible,     setFabVisible]     = useState(true);
+  const lastScrollY = useRef(0);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Auto-hide FAB when scrolling down, reveal when scrolling up
+  useEffect(() => {
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const delta    = currentY - lastScrollY.current;
+      // Only react to deliberate scrolls (>8px) to avoid micro-jitter
+      if (Math.abs(delta) > 8) {
+        // Always show near the top; hide when scrolling down
+        setFabVisible(delta < 0 || currentY < 80);
+      }
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const allActive = [...trips, ...nests];
   const hasGroups = allActive.length > 0;
@@ -113,7 +132,15 @@ export function GlobalFab({ trips, nests }: Props) {
 
       {/* ── FAB stack ────────────────────────────────────────────────────── */}
       {/* flex-col-reverse: main FAB is last child → visually at bottom; items stack upward */}
-      <div className="fixed bottom-nav-safe right-4 z-50 flex flex-col-reverse items-end gap-3 pointer-events-none">
+      {/* motion.div handles auto-hide: slides down + fades out on scroll down */}
+      <motion.div
+        animate={{
+          y:       (fabVisible || fabOpen) ? 0 : 96,
+          opacity: (fabVisible || fabOpen) ? 1 : 0,
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 28, mass: 0.8 }}
+        className="fixed bottom-nav-safe right-4 z-50 flex flex-col-reverse items-end gap-3 pointer-events-none"
+      >
 
         {/* Main FAB */}
         <motion.button
@@ -157,7 +184,7 @@ export function GlobalFab({ trips, nests }: Props) {
             </>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
       {/* ── Group picker sheet ─────────────────────────────────────────────── */}
       <GroupPickerSheet
@@ -258,13 +285,8 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests }: PickerPro
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  // Escape key support
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [isOpen, onClose]);
+  // Escape key + Android back-button dismissal (same pattern as all other sheets)
+  useSheetDismiss(isOpen, onClose);
 
   const allActive  = [...trips, ...nests];
   const nonDemo    = allActive.filter((g) => !g.group.isDemo);

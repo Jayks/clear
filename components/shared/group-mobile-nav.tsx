@@ -47,7 +47,7 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
 
   // Group overview
   if (!section) {
-    return { pageTitle: null, backHref: "/groups", backLabel: "Groups", icon: undefined, gradient: undefined };
+    return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined, gradient: undefined };
   }
 
   // Edit group
@@ -74,7 +74,7 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
     return { pageTitle: LABELS[section], backHref: groupBase, backLabel: groupName, ...SECTION_META[section] };
   }
 
-  return { pageTitle: null, backHref: "/groups", backLabel: "Groups", icon: undefined, gradient: undefined };
+  return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined, gradient: undefined };
 }
 
 export function GroupMobileNav({ groupId, groupName }: Props) {

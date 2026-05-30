@@ -18,6 +18,7 @@ import { GroupSearchInput } from "@/components/shared/group-search-input";
 import { StreamBadgeSync } from "@/components/stream/stream-badge-sync";
 import { getStreamBadgeData } from "@/lib/db/queries/stream";
 import { GlobalFab } from "@/components/shared/global-fab";
+import { HomeGreeting } from "@/components/shared/home-greeting";
 
 export default async function GroupsPage() {
   await ensureDemoGroup().catch(() => {});
@@ -43,7 +44,9 @@ export default async function GroupsPage() {
     user ? getStreamBadgeData(user.id) : Promise.resolve({ latestUpdatedAt: null, hasDisputed: false }),
   ]);
 
-  const isEmpty = groups.length === 0 && archived.length === 0;
+  const isEmpty    = groups.length === 0 && archived.length === 0;
+  const firstName  = (user?.user_metadata?.full_name as string | undefined)
+    ?.split(" ")[0] ?? null;
 
   // Balance badge fallback — used in both sections
   function balanceFallback() {
@@ -57,6 +60,10 @@ export default async function GroupsPage() {
   return (
     <div>
       <GroupsBackGuard />
+
+      {/* ── Personal greeting ──────────────────────────────────────────────── */}
+      {user && <HomeGreeting firstName={firstName} />}
+
       {/* Invisible — syncs Streams nav badge via localStorage */}
       <StreamBadgeSync
         latestUpdatedAt={streamBadge.latestUpdatedAt}
@@ -72,7 +79,7 @@ export default async function GroupsPage() {
         const sections: NavSection[] = [
           ...(trips.length    > 0 ? [{ id: "trips",    label: "Trips",    count: trips.length,    color: "cyan"    as const }] : []),
           ...(nests.length    > 0 ? [{ id: "nests",    label: "Nests",    count: nests.length,    color: "emerald" as const }] : []),
-          ...(archived.length > 0 ? [{ id: "archived", label: "Archived", count: archived.length, color: "slate"   as const }] : []),
+          ...(archived.length > 0 ? [{ id: "archived", label: "Archived", count: archived.length, color: "amber"   as const }] : []),
         ];
         // Dashed create pills for missing section types
         const createPills: CreatePill[] = [

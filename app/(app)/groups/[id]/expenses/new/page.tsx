@@ -21,7 +21,7 @@ export default async function NewExpensePage({
 
   const { group, members, currentMember } = data;
   const backHref = from === "groups" ? "/groups" : `/groups/${id}/expenses`;
-  const backLabel = from === "groups" ? "Back to groups" : "Back to expenses";
+  const backLabel = from === "groups" ? "Home" : "Back to expenses";
 
   return (
     <div>

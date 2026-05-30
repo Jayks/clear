@@ -56,7 +56,9 @@ clear/
 │   │   └── confirm-stream-client.tsx
 │   ├── ui/, expense/, trip/, settlement/, marketing/, insights/, tour/
 │   └── shared/
-│       ├── section-pill-nav.tsx         # sticky section pills with IntersectionObserver active tracking
+│       ├── section-pill-nav.tsx         # sticky section pills; Set-based IntersectionObserver; amber=Archived; px-4 py-2 text-sm
+│       ├── global-fab.tsx               # fan-out FAB (Home only): Log expense → GroupPickerSheet → QuickAddSheet; Log entry → StreamLogSheet; auto-hide on scroll
+│       ├── home-greeting.tsx            # "Good morning/afternoon/evening, {firstName} 👋" — client, user's local time
 │       ├── group-search-input.tsx       # DOM-based filter (data-group-card attrs), shows >5 groups only
 │       ├── mobile-nav.tsx               # 3 tabs: Home|Streams|Insights; Streams badge from localStorage
 │       ├── group-mobile-nav.tsx, animated-list, count-up, ...
@@ -82,17 +84,23 @@ clear/
 
 ## Home Page (`app/(app)/groups/page.tsx`)
 
-RSC. **No stream strip** — Streams has its own nav tab. Sections:
+RSC. **No stream strip** — Streams has its own nav tab. Sections (top → bottom):
 
-1. `StreamBadgeSync` (invisible client component) — fetches `getStreamBadgeData(userId)`, writes `clear_stream_has_badge` to localStorage so `MobileNav` can show the badge dot.
-2. `GroupSearchInput` — client; only renders when `groups.length > 5`; filters via `data-group-card`/`data-group-name` DOM attrs.
-3. `SectionPillNav` — sticky pills (`sticky top-14 z-40`); `NavSection[]` from trips/nests/archived counts; `CreatePill[]` for missing types (dashed "New Trip" / "New Nest" when one type absent). Only renders when 2+ sections OR any createPills.
-4. **Trips section** — `<section id="trips" data-group-section scroll-mt-28>`; section header (cyan, MapPin icon, `+` → `/groups/new?type=trip` with `data-tour="new-trip-btn"`); TripCard grid with `data-group-card` + `data-group-name` wrappers.
-5. **Nests section** — `<section id="nests" data-group-section scroll-mt-28>`; section header (emerald, Home icon, `+` → `/groups/new?type=nest`); TripCard grid same pattern.
-6. **Archived section** — `<section id="archived" data-group-section scroll-mt-28>`; opacity-60, no `+` button.
-7. **Empty state** — shown when 0 groups AND 0 archived; two side-by-side CTAs (New Trip + New Nest).
+1. `HomeGreeting` — `"use client"` personal greeting (`Good morning/afternoon/evening, {firstName} 👋`). `firstName` from `user.user_metadata.full_name`. Only rendered when `user` is set. Client component so greeting uses user's local timezone.
+2. `StreamBadgeSync` (invisible client component) — fetches `getStreamBadgeData(userId)`, writes `clear_stream_has_badge` to localStorage so `MobileNav` can show the badge dot.
+3. `GroupSearchInput` — client; only renders when `groups.length > 5`; filters via `data-group-card`/`data-group-name` DOM attrs.
+4. `SectionPillNav` — sticky pills (`sticky top-14 z-40`); `NavSection[]` from trips/nests/archived counts; Archived uses `color: "amber"`; `CreatePill[]` for missing types (dashed "New Trip" / "New Nest" when one type absent). Only renders when 2+ sections OR any createPills.
+5. **Trips section** — `<section id="trips" data-group-section scroll-mt-28>`; section header (cyan, MapPin icon, `+` → `/groups/new?type=trip` with `data-tour="new-trip-btn"`); TripCard grid with `data-group-card` + `data-group-name` wrappers.
+6. **Nests section** — `<section id="nests" data-group-section scroll-mt-28>`; section header (emerald, Home icon, `+` → `/groups/new?type=nest`); TripCard grid same pattern.
+7. **Archived section** — `<section id="archived" data-group-section scroll-mt-28>`; opacity-60, no `+` button.
+8. **Empty state** — shown when 0 groups AND 0 archived; two side-by-side CTAs (New Trip + New Nest).
+9. `GlobalFab` — rendered when `!isEmpty`; fan-out FAB for Log expense (→ group picker → QuickAdd) + Log entry (→ StreamLogSheet). Auto-hides on scroll down.
 
 **New group type pre-fill**: `/groups/new?type=trip` or `?type=nest` — `NewGroupPage` reads `searchParams.type` and passes `defaultGroupType: GroupType` to `CreateTripForm`, which uses it in `defaultValues`.
+
+**`firstName` extraction**: `(user?.user_metadata?.full_name as string | undefined)?.split(" ")[0] ?? null` — passed to `HomeGreeting`.
+
+**Trip alive badges** — `computeTripStatus(startDate, endDate)` in `components/trip/trip-card.tsx` replaces the date subtitle on TripCard when a trip is live. Types: `active` ("Day X of Y", cyan-300 + pulsing dot), `lastDay` ("Last day 🏁", amber-300), `justReturned` ("Just returned ✓", emerald-300, shown ≤7 days after endDate). Not shown for nests or archived groups. Falls back to date range display otherwise.
 
 ---
 

@@ -33,7 +33,7 @@ export default async function UpgradePage() {
         className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-4 transition-colors self-start"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to groups
+        Home
       </Link>
 
       {/* Main content — vertically centered in remaining space */}

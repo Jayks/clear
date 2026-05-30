@@ -26,6 +26,10 @@ interface Props {
 // Max tiles shown in "Recent" section
 const RECENT_COUNT = 2;
 
+// FAB uses a warm sunset gradient — pops against the app's cool blue-green background
+const FAB_GRADIENT = "from-orange-400 to-rose-500";
+const FAB_SHADOW   = "shadow-orange-500/35";
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function GlobalFab({ trips, nests }: Props) {
@@ -117,11 +121,10 @@ export function GlobalFab({ trips, nests }: Props) {
           animate={{ rotate: fabOpen ? 45 : 0 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
           aria-label={fabOpen ? "Close" : "Quick add"}
-          className="pointer-events-auto w-14 h-14 rounded-full flex items-center justify-center
-                     bg-gradient-to-br from-cyan-500 to-teal-500
-                     hover:from-cyan-600 hover:to-teal-600
-                     shadow-xl shadow-cyan-500/35 text-white
-                     active:scale-95 transition-colors"
+          className={`pointer-events-auto w-14 h-14 rounded-full flex items-center justify-center
+                     bg-gradient-to-br ${FAB_GRADIENT}
+                     shadow-xl ${FAB_SHADOW} text-white
+                     hover:opacity-90 active:scale-95 transition-opacity`}
         >
           <Plus className="w-6 h-6" />
         </motion.button>

@@ -149,6 +149,65 @@ created_at, updated_at: timestamptz
 ```
 Schema: `lib/db/schema/subscriptions.ts`. **Note:** `pnpm db:push` has a pre-existing drizzle-kit bug with `group_members` CHECK constraint — apply new columns via direct SQL in Supabase SQL Editor.
 
+### stream_guests
+```
+id: uuid PK
+created_by: uuid  -- auth.users.id (no FK to avoid cross-schema issues)
+name: text NOT NULL
+email: text nullable
+phone: text nullable
+created_at: timestamptz
+```
+Schema: `lib/db/schema/stream-guests.ts`. RLS: creator reads/writes own rows.
+
+### stream_records
+```
+id: uuid PK
+creator_id: uuid NOT NULL                  -- auth.users.id
+counterpart_id: uuid nullable              -- auth.users.id (Clear user)
+counterpart_guest_id: uuid nullable        -- FK → stream_guests(cascade)
+amount: numeric(12,2) NOT NULL
+currency: text default 'INR'
+direction: text NOT NULL                   -- 'they_owe_me' | 'i_owe_them' (always from creator's perspective)
+note: text nullable
+status: text default 'pending'            -- 'pending' | 'confirmed' | 'disputed' | 'settled' | 'forgiven'
+confirm_token: uuid UNIQUE default gen_random_uuid()
+confirm_token_expires_at: timestamptz
+confirmed_at, disputed_at, settled_at, forgiven_at: timestamptz nullable
+dispute_reason, dispute_note, forgiven_note: text nullable
+created_at, updated_at: timestamptz
+CHECK: exactly one of (counterpart_id, counterpart_guest_id) non-null
+CHECK: creator_id != counterpart_id (no self-streams)
+```
+Schema: `lib/db/schema/stream-records.ts`. RLS on all three stream tables. Applied via `drizzle/stream-tables.sql`.
+
+**direction semantics**: `they_owe_me` = I paid on behalf of counterpart. `i_owe_them` = counterpart paid for me. When the COUNTERPART views the same record, direction inverts — handled by `computeNet(record, viewerUserId)` in queries.
+
+**Terminology**: individual stream_records are called **"entries"** in the UI, NOT "streams". "Streams" = the bilateral relationship/feature. "Entries" = individual debt records within a stream.
+
+### stream_settlements
+```
+id: uuid PK
+stream_id: uuid NOT NULL FK → stream_records(cascade)
+amount: numeric(12,2) NOT NULL
+currency: text default 'INR'
+note: text nullable
+recorded_by: uuid NOT NULL               -- auth.users.id
+settled_at: timestamptz default now()
+```
+Schema: `lib/db/schema/stream-settlements.ts`. Supports partial payments — multiple rows per stream_record.
+
+### Stream queries — `lib/db/queries/stream.ts`
+
+Key functions:
+- `getStreamSummary(userId)` — lightweight; used on Home page badge sync and Insights "You" tab. Returns `{ topRecords, totalOwedToMe, totalIOwe, hasMore, moreCount, hasAnyHistory }`.
+- `getStreamDashboard(userId)` — full dashboard data including `recentActivity: StreamActivityEvent[]` (last 5 by updatedAt).
+- `getStreamWithPerson(userId, personId)` — all records between two people + settlements. `personId` can be auth.users.id OR stream_guests.id.
+- `getStreamBadgeData(userId)` — minimal query: `{ latestUpdatedAt, hasDisputed }` for nav badge sync.
+- `buildPersonSummaries(userId)` — private helper shared by Summary and Dashboard. `PersonSummary` has `latestUpdatedAt` + `hasDisputed` for attention dot logic.
+
+**Three-case counterpart query pattern**: any query matching by person must handle (1) user created + Clear counterpart_id, (2) Clear user created + viewer is counterpart, (3) user created + guest counterpart_guest_id. Missing case 3 was a bug — all settle/forgive actions use all three.
+
 ### Supabase Storage — `cover-photos` bucket (run once)
 
 Dashboard → Storage → New bucket: name `cover-photos`, Public, 5 MB limit. Three RLS policies: authenticated insert (folder = `auth.uid()`), public select, authenticated delete own. Files at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has Supabase project hostname in `remotePatterns`.

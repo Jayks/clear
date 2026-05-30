@@ -19,12 +19,19 @@ import type { AllNestsInsights, NestSummary } from "@/lib/insights/all-nests-ins
 import type { PersonalInsights } from "@/lib/insights/personal-insights";
 import { PersonalContent, PersonalPlusGate } from "@/components/insights/personal-content";
 
+export interface StreamNetSummary {
+  owedToMe: number;
+  iOwe:     number;
+  currency: string;
+}
+
 interface Props {
-  tripsData: AllTripsInsights | null;
-  nestsData: AllNestsInsights | null;
+  tripsData:       AllTripsInsights | null;
+  nestsData:       AllNestsInsights | null;
   primaryCurrency: string;
-  personalData: PersonalInsights | null;
-  isPlusUser: boolean;
+  personalData:    PersonalInsights | null;
+  isPlusUser:      boolean;
+  streamSummary?:  StreamNetSummary;
 }
 
 // Vivid per-trip gradient palette — cycles through for the drill-down link icons
@@ -52,7 +59,7 @@ function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: 
   );
 }
 
-export function InsightsTabs({ tripsData, nestsData, primaryCurrency, personalData, isPlusUser }: Props) {
+export function InsightsTabs({ tripsData, nestsData, primaryCurrency, personalData, isPlusUser, streamSummary }: Props) {
   const hasTrips = tripsData && tripsData.tripCount > 0;
   const hasNests = nestsData && nestsData.nestCount > 0;
   const showTabs = hasTrips || hasNests; // always show tabs when we have any data
@@ -128,7 +135,7 @@ export function InsightsTabs({ tripsData, nestsData, primaryCurrency, personalDa
             {!isPlusUser ? (
               <PersonalPlusGate />
             ) : personalData ? (
-              <PersonalContent data={personalData} />
+              <PersonalContent data={personalData} streamSummary={streamSummary} />
             ) : (
               <YouEmptyState />
             )}

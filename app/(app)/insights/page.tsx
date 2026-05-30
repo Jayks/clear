@@ -4,6 +4,7 @@ import { BarChart2, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getUserPlan } from "@/lib/subscription/gates";
+import { getStreamSummary } from "@/lib/db/queries/stream";
 
 export default async function AllInsightsPage() {
   const [tripsData, nestsData, personalData, user] = await Promise.all([
@@ -12,6 +13,11 @@ export default async function AllInsightsPage() {
     getPersonalInsightsData(),
     getCurrentUser(),
   ]);
+
+  const streamData = user ? await getStreamSummary(user.id) : null;
+  const streamSummary = streamData && (streamData.totalOwedToMe > 0 || streamData.totalIOwe > 0)
+    ? { owedToMe: streamData.totalOwedToMe, iOwe: streamData.totalIOwe, currency: "INR" }
+    : undefined;
 
   const isPlusUser = user ? (await getUserPlan(user.id)) === "plus" : false;
 
@@ -49,6 +55,7 @@ export default async function AllInsightsPage() {
       primaryCurrency={primaryCurrency}
       personalData={personalData}
       isPlusUser={isPlusUser}
+      streamSummary={streamSummary}
     />
   );
 }

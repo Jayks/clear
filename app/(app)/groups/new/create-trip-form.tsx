@@ -17,7 +17,7 @@ import type { GroupType } from "@/lib/group-config";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 
-export function CreateTripForm() {
+export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType?: GroupType }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -32,7 +32,7 @@ export function CreateTripForm() {
     formState: { errors, isDirty },
   } = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema),
-    defaultValues: { defaultCurrency: "INR", groupType: "trip" },
+    defaultValues: { defaultCurrency: "INR", groupType: defaultGroupType },
   });
 
   useWarnBeforeLeave(isDirty);

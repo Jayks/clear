@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import {
   Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownLeft,
-  Sparkles, PieChart, BarChart2, Home, MapPin, User,
+  Sparkles, PieChart, BarChart2, Home, MapPin, User, ArrowLeftRight,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { CategoryDonut } from "@/components/insights/category-donut";
 import { FadeIn } from "@/components/shared/fade-in";
 import { AnimatedList } from "@/components/shared/animated-list";
 import type { PersonalInsights } from "@/lib/insights/personal-insights";
+import type { StreamNetSummary } from "@/components/insights/insights-tabs";
 
 // ── Section header (amber — matches insights colour identity) ─────────────
 
@@ -93,11 +94,15 @@ export function PersonalPlusGate() {
 // ── Main PersonalContent ──────────────────────────────────────────────────
 
 interface Props {
-  data: PersonalInsights;
+  data:            PersonalInsights;
+  streamSummary?:  StreamNetSummary;
 }
 
-export function PersonalContent({ data }: Props) {
+export function PersonalContent({ data, streamSummary }: Props) {
   const fmt = useFmt(data.currency);
+  const fmtS = useFmt(streamSummary?.currency ?? data.currency);
+  const hasStreamBalance = streamSummary &&
+    (streamSummary.owedToMe > 0.01 || streamSummary.iOwe > 0.01);
   const hasNet = data.totalOwedToMe > 0 || data.totalIOwe > 0;
   const hasBanker = data.bankerFloat > 0 && data.totalShare > 0 && data.bankerFloat / data.totalShare > 0.1;
   const hasCompanions = data.companions.length > 0;
@@ -153,6 +158,40 @@ export function PersonalContent({ data }: Props) {
           </p>
         </div>
       </AnimatedList>
+
+      {/* ── Stream net position ─────────────────────────────────────── */}
+      {hasStreamBalance && streamSummary && (
+        <FadeIn className="mb-6">
+          <SectionHeader icon={ArrowLeftRight} label="Streams" />
+          <Link href="/stream"
+            className="glass rounded-xl px-4 py-3.5 flex items-center gap-3 hover:shadow-md transition-all group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500
+                            flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/25">
+              <ArrowLeftRight className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Personal streams</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                {streamSummary.owedToMe > 0.01 && (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    {fmtS(streamSummary.owedToMe)} owed to you
+                  </span>
+                )}
+                {streamSummary.owedToMe > 0.01 && streamSummary.iOwe > 0.01 && " · "}
+                {streamSummary.iOwe > 0.01 && (
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">
+                    {fmtS(streamSummary.iOwe)} you owe
+                  </span>
+                )}
+              </p>
+            </div>
+            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0
+                             group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+              View →
+            </span>
+          </Link>
+        </FadeIn>
+      )}
 
       {/* ── Zone 1: Net position ─────────────────────────────────────── */}
       {hasNet && (

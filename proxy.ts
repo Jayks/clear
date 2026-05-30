@@ -38,7 +38,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/groups") ||
     pathname.startsWith("/insights") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/settings");
+    pathname.startsWith("/settings") ||
+    // /stream routes are protected — but /stream/confirm/[token] is public (guest confirmation)
+    (pathname.startsWith("/stream") && !pathname.startsWith("/stream/confirm"));
 
   // Redirect unauthenticated users to login, preserving the destination
   if (!user && isProtected) {
@@ -66,6 +68,8 @@ export const config = {
     "/admin/:path*",
     "/settings/:path*",
     "/settings",
+    "/stream",
+    "/stream/:path*",
     "/login",
     "/",
   ],

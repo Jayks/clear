@@ -12,15 +12,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Settings, Newspaper } from "lucide-react";
+import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
 import { useTour } from "@/components/tour/tour-context";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
 
 const NAV_LINKS = [
-  { href: "/groups",   label: "Groups",   icon: LayoutGrid, tourId: "nav-trips"    },
-  { href: "/insights", label: "Insights", icon: BarChart2,  tourId: "nav-insights" },
+  { href: "/groups",   label: "Home",    icon: LayoutGrid,     tourId: "nav-trips"    },
+  { href: "/stream",   label: "Streams", icon: ArrowLeftRight, tourId: "nav-streams"  },
+  { href: "/insights", label: "Insights", icon: BarChart2,     tourId: "nav-insights" },
 ];
 
 export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; isAdmin: boolean; plan?: "plus" | "free" }) {
@@ -50,8 +51,15 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
   const isInsideGroup =
     pathParts[0] === "groups" && !!pathParts[1] && pathParts[1] !== "new";
 
+  // Stream pages have their own sticky header — hide AppNav on mobile there too.
+  // Match /stream (dashboard) and /stream/[personId] but not /stream/confirm/*.
+  const isInsideStream =
+    pathParts[0] === "stream" && pathParts[1] !== "confirm";
+
+  const hideOnMobile = isInsideGroup || isInsideStream;
+
   return (
-    <header className={`sticky top-0 z-50 glass-nav${isInsideGroup ? " hidden md:block" : ""}`}>
+    <header className={`sticky top-0 z-50 backdrop-blur-sm${hideOnMobile ? " hidden md:block" : ""}`}>
       <div className="max-w-7xl mx-auto px-6 md:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/groups" className="flex items-center shrink-0">

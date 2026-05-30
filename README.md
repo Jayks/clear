@@ -2,20 +2,32 @@
 
 **Split it. Clear it.**
 
-Clear is a group expense tracking app for trips and households. Log what each person paid, choose how to split it, and let Clear compute who owes whom — with the minimum number of payments.
+Clear is a shared expense and personal debt tracking app. Log what each person paid, choose how to split it, and let Clear compute who owes whom — with the minimum number of payments. No group needed for everyday debts.
 
 ---
 
-## Two kinds of groups
+## Three financial contexts
 
 **Trips** — multi-day travel with your crew. Hotels, meals, transport, activities. Trip insights, budget tracking, and an AI-generated trip story.
 
 **Nests** — ongoing household expenses. Recurring templates for rent, electricity, WiFi — log each month with one tap. Monthly grouping, settlement context, and household insights.
 
+**Streams** — bilateral personal debt ledger. Track what you owe (and who owes you) without creating a group. "He covered my Uber." "I owe her lunch." Each relationship is a Stream; individual debt records are entries. Guests can confirm or dispute via a shareable link — no account required.
+
+---
+
+## Navigation
+
+Three-tab structure: **Home** (Trips + Nests) · **Streams** · **Insights**
+
+The Home page splits Trips and Nests into distinct sections with their own section headers, a sticky section-jump pill bar, and a live search filter for users with 5+ groups.
+
 ---
 
 ## Features
 
+- **Streams** — bilateral debt tracking without a group. Log entries like "Rahul paid my cab" or "I owe her dinner"; each person gets a Stream page with a bilateral spine timeline (they owe me on one side, I owe them on the other); running net delta shown on every spine node; swipe left on any entry to access Forgive/Mark Paid/Share; partial settle with editable amount; all-square confetti celebration. Guest confirm/dispute via token link (no login required). Nav badge on the Streams tab shows new activity across all streams.
+- **Streams — spine view** — bilateral timeline showing entries directionally left/right of a centre spine line. Running cumulative net (`↑₹10.6k`) on each spine node so you can read the full history of a relationship at a glance. Disputed entries show amber tint with stronger border (attention treatment, not muted). Mobile: swipe left → Mark Paid / Forgive / Share overlay. Desktop: hover → inline action pills.
 - **Quick-add expenses** — type a natural description from any group card; placeholder shows a live example like `"Coffee ₹120 paid by Priya"` so AI parsing is immediately obvious; AI fills amount, payer, and split automatically; a live `÷ N members = ₹X each` pill appears as you type so you always know each person's share before confirming
 - **Quick-nav from card** — tap `⋯` (always visible) or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights; the balance badge links directly to Settle Up; the member count badge links directly to Members
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
@@ -152,6 +164,7 @@ pnpm db:push          # push schema to DB
 pnpm db:studio        # open Drizzle Studio
 pnpm seed             # seed Goa trip demo data
 pnpm seed:temple      # seed South India temple tour
+pnpm seed:streams     # seed 3 stream counterparts, 30 entries (all statuses)
 ```
 
 ---

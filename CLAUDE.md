@@ -9,11 +9,19 @@
 
 ## 1. Project Overview
 
-**Clear** — shared expense tracking for trips and households. Members log expenses, app computes minimum-transaction settlements. Deployed on Vercel + Supabase (free tier).
+**Clear** — shared expense tracking for trips and households, plus bilateral personal debt tracking. Deployed on Vercel + Supabase (free tier).
 
-**Two group types:**
-- **Trip** — multi-day travel. Has dates, itinerary, AI narrative, budget adherence, travel categories.
-- **Nest** — ongoing household. Has recurring expense templates, monthly grouping, household categories. No dates/itinerary.
+**Three financial contexts:**
+- **Trip** — multi-day travel groups. Has dates, itinerary, AI narrative, budget adherence, travel categories.
+- **Nest** — ongoing household groups. Has recurring expense templates, monthly grouping, household categories. No dates/itinerary.
+- **Stream** — bilateral personal debt ledger (no group needed). One stream per person; individual debt records within = **entries**.
+
+**Navigation (mobile bottom nav + desktop top nav):**
+- **Home** (`/groups`) — Trips section + Nests section (split, not mixed). Section jump pills.
+- **Streams** (`/stream`) — bilateral personal debt dashboard.
+- **Insights** (`/insights`) — analytics across all contexts.
+
+**Stream terminology:** The feature = "Streams". The bilateral relationship with one person = "a Stream". An individual debt record within a stream = an **"entry"** (NOT "stream"). This distinction matters in all UI copy.
 
 ---
 
@@ -322,6 +330,15 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **`useSheetDismiss(open, onClose)`** (`hooks/use-sheet-dismiss.ts`): adds Escape key + Android/browser back-button dismissal to any bottom sheet. Pushes a fake history entry on open so the hardware back button closes the sheet rather than navigating away; pops it automatically when closed programmatically. Use in every new bottom sheet component.
 - **Dismissable prompt localStorage keys**: `clear_repeat_trip_dismissed_${groupId}` — `RepeatTripPrompt` reads after mount to avoid SSR mismatch. Pattern: read in `useEffect`, write on dismiss, render `null` if key is set.
 - **Settlement celebration sessionStorage key**: `clear_settled_confetti_${groupId}` — `SettledCelebration` fires once per browser session when all debts are cleared. Stores `"1"` immediately on mount to prevent double-fire on re-renders.
+- **Stream entry terminology**: individual debt records within a Stream are called **"entries"** in UI copy (not "streams"). "Log entry →", "3 entries", "New entry", etc. The Stream feature / relationship itself = "Stream".
+- **Stream nav badge localStorage keys**: `clear_stream_has_badge` ("disputed" | "new" | absent) — written by `StreamBadgeSync` on Home page, cleared by `StreamDashboardClient` on mount. `clear_stream_last_viewed` (ms timestamp) — set when /stream dashboard opens. `MobileNav` reads badge after hydration and on `stream-badge-update` custom event.
+- **Stream settled celebration**: `clear_stream_settled_${personId}` — `StreamSettledCelebration` fires confetti once per session when all-square with a person.
+- **`SectionPillNav`** (`components/shared/section-pill-nav.tsx`) — sticky pill row (`sticky top-14`) that tracks the active section via `IntersectionObserver`. Accepts `sections: NavSection[]` + optional `createPills: CreatePill[]` for dashed "create" prompts. Sections need `scroll-mt-28` to clear both AppNav + sticky pills. Color system: cyan=Trips, emerald=Nests, violet=Circle, slate=Archived.
+- **`GroupSearchInput`** (`components/shared/group-search-input.tsx`) — only renders when `totalCount > 5`. Uses `data-group-card` + `data-group-name` attributes on TripCard wrappers and `data-group-section` on section elements for DOM-based filter.
+- **Home page Trips/Nests sections**: each `<section>` gets `id="trips"/"nests"/"archived"`, `data-group-section=""`, and `scroll-mt-28`. Each TripCard wrapper gets `data-group-card=""` + `data-group-name={group.name.toLowerCase()}`.
+- **New group URL pre-fill**: `/groups/new?type=trip` or `?type=nest` — `NewGroupPage` reads `searchParams.type` and passes `defaultGroupType` prop to `CreateTripForm`. Form `defaultValues` uses it.
+- **App nav bars are transparent**: `AppNav`, `MobileNav`, `GroupMobileNav` all use `backdrop-blur-sm` (no background). Marketing navs (`/`, `/pricing`, `/changelog`) still use `glass-nav`. Do NOT apply `glass-nav` to in-app navbars.
+- **AppNav hides on mobile for Stream pages**: `isInsideStream = pathParts[0] === "stream" && pathParts[1] !== "confirm"` — same pattern as `isInsideGroup`. Stream pages have their own custom sticky headers.
 
 ---
 
@@ -364,6 +381,7 @@ pnpm test / pnpm test --run
 pnpm db:push / db:studio
 pnpm seed                # Goa trip — 10 members, 30 expenses
 pnpm seed:temple         # South India temple tour — 20 members
+pnpm seed:streams        # 3 stream counterparts, 30 entries (all statuses)
 ```
 
 ---

@@ -1,8 +1,17 @@
 import { CreateTripForm } from "./create-trip-form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import type { GroupType } from "@/lib/group-config";
 
-export default function NewGroupPage() {
+interface Props {
+  searchParams: Promise<{ type?: string }>;
+}
+
+export default async function NewGroupPage({ searchParams }: Props) {
+  const { type } = await searchParams;
+  const defaultGroupType: GroupType =
+    type === "nest" ? "nest" : "trip";
+
   return (
     <div>
       <Link
@@ -14,12 +23,14 @@ export default function NewGroupPage() {
       </Link>
 
       <h1 className="text-3xl text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
-        Create a group
+        {defaultGroupType === "nest" ? "Create a Nest" : "Create a Trip"}
       </h1>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">Only the group name is required — everything else can be added later.</p>
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">
+        Only the name is required — everything else can be added later.
+      </p>
 
       <div className="glass rounded-2xl p-6">
-        <CreateTripForm />
+        <CreateTripForm defaultGroupType={defaultGroupType} />
       </div>
     </div>
   );

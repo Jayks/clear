@@ -46,8 +46,14 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 - PWA icons: `app/api/pwa-icon/route.ts` (192+512px, edge). Favicon: `app/icon.tsx` (32px).
 
 ### Navigation
-- **Desktop**: sticky top — `ClearLogo` (28px), Groups, Insights, ThemeToggle, avatar dropdown (Admin [if platform admin], Take the tour, **What's New** → `/changelog`, Settings, Sign out).
-- **Mobile**: icon-only top nav + fixed `MobileNav` bottom. Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page (outer container uses `pb-24 md:pb-0` to clear FAB). MobileNav inner div uses `.h-nav-safe`.
+- **Desktop**: sticky top — `ClearLogo` (28px), **Home** · **Streams** · **Insights**, ThemeToggle, avatar dropdown.
+- **Mobile bottom nav**: 3 tabs — **Home** (`/groups`) · **Streams** (`/stream`) · **Insights** (`/insights`). `MobileNav` reads `clear_stream_has_badge` from localStorage and shows a small dot on Streams (amber=disputed, green=new). Clears when pathname is `/stream*`.
+- **Mobile top nav**: icon-only `AppNav` hidden on group detail pages (`isInsideGroup`) AND stream pages (`isInsideStream`). Those pages have their own custom sticky headers.
+- **App nav bars are transparent**: `AppNav`, `MobileNav`, `GroupMobileNav` all use `backdrop-blur-sm` (no background, no border). **Marketing/public pages** (`/`, `/pricing`, `/changelog`, `/admin`) still use `.glass-nav`. Do NOT use `.glass-nav` on in-app navbars.
+- Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page (outer container uses `pb-24 md:pb-0` to clear FAB). MobileNav inner div uses `.h-nav-safe`.
+- **Within group routes on mobile**: `AppNav` hides (`hidden md:block`); `GroupMobileNav` renders inside `<main>` as `sticky top-0 z-40 -mx-6 -mt-6` (negative margins break out of padding).
+- **Within stream routes on mobile**: same — `AppNav` hides, custom stream header takes over with `backdrop-blur-sm`.
+- **Plus badge on avatar**: violet ✦ circle at `-bottom-0.5 -right-0.5`. Dropdown shows `✦ Plus` pill next to user name.
 - **Within group routes on mobile**: `AppNav` hides (`hidden md:block`); `GroupMobileNav` renders inside `<main>` as `sticky top-0 z-40 -mx-6 -mt-6` (negative margins break out of padding; sticky scrolls past TrialBanner). Shows: ← Back | group name (Fraunces) | `⋯` → `TripCardNavSheet`.
 - **Plus badge on avatar**: violet ✦ circle at `-bottom-0.5 -right-0.5` (distinct from cyan tour dot at `-top-0.5 -right-0.5`). Dropdown header also shows a `✦ Plus` pill next to the user's name. Only shown when `plan === "plus"` (active paid, not trialing).
 
@@ -271,6 +277,14 @@ Each `DayCard` (inner sub-component) renders on scroll via `useInView`:
 - Always-expanded expense rows (stagger-animate in after card enters view)
 
 No accordion — summary page is a showcase; all expense rows are always visible. `PAYER_COLORS` is a local constant (same palette as expense-filters' `MEMBER_AVATAR_COLORS`). `isBusiest` guard: only true when `spendPct === 100 && !isOff`.
+
+### SectionPillNav
+`components/shared/section-pill-nav.tsx` — `"use client"` sticky pill nav for the Home page. Accepts `sections: NavSection[]` (id, label, count, color) + optional `createPills: CreatePill[]` (dashed pills linking to create pages for missing group types).
+
+Sits `sticky top-14 z-40 -mx-6 px-6 backdrop-blur-sm`. Uses `IntersectionObserver` with `rootMargin "-16% 0px -72% 0px"` to track which section is visible. Active pill gets accent colour (cyan=Trips, emerald=Nests, violet=Circle, slate=Archived). Sections need `scroll-mt-28` to clear both the AppNav and this sticky bar.
+
+### GroupSearchInput
+`components/shared/group-search-input.tsx` — `"use client"` search input. Only renders when `totalCount > 5`. Filters by querying `[data-group-card]` DOM elements and hiding those where `data-group-name` doesn't match. Also hides `[data-group-section]` elements when all their cards are hidden.
 
 ### ImportMembersSheet
 `app/(app)/groups/[id]/members/import-members-sheet.tsx` — `"use client"` two-step bottom sheet for bulk-copying members from another group.

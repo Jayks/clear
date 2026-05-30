@@ -10,71 +10,113 @@
 clear/
 ├── app/
 │   ├── icon.tsx, error.tsx, not-found.tsx, layout.tsx, page.tsx, globals.css
-│   ├── (auth)/login/page.tsx + login-form.tsx   # standalone fallback (direct URL / proxy redirects)
-│   ├── @modal/default.tsx                        # null — slot is empty when no modal active
-│   │   └── (.)login/page.tsx                     # intercepts client-side /login nav → LoginModal overlay
+│   ├── (auth)/login/page.tsx + login-form.tsx
+│   ├── @modal/(.)login/page.tsx          # intercepts client-side /login nav as modal overlay
 │   ├── auth/callback/route.ts
 │   ├── (app)/
-│   │   ├── layout.tsx, error.tsx, app-nav.tsx
-│   │   ├── insights/page.tsx + loading.tsx
-│   │   ├── upgrade/page.tsx + pricing-cards.tsx (client: billing toggle, Free/Plus cards)
-│   │   │   └── checkout/page.tsx + checkout-form.tsx (order summary, activatePlusDemo)
-│   │   ├── settings/page.tsx + settings-layout.tsx + billing-section.tsx + notifications-section.tsx
-│   │   └── groups/
-│   │       ├── page.tsx, loading.tsx
-│   │       ├── new/page.tsx + create-trip-form.tsx
-│   │       └── [id]/
-│   │           ├── layout.tsx (RealtimeRefresh + GroupMobileNav, async), page.tsx
-│   │           ├── edit/page.tsx + edit-trip-form.tsx
-│   │           ├── expenses/page.tsx, loading.tsx, new/, [expenseId]/edit/, [expenseId]/thread/page.tsx, templates/new/, templates/[templateId]/edit/
-│   │           ├── members/page.tsx, loading.tsx + forms/buttons + import-members-sheet.tsx
-│   │           ├── settle/page.tsx, loading.tsx, balances-section.tsx, mark-paid-button, upi-pay-button, whatsapp-remind-button, settle-breakdown-section
-│   │           └── insights/page.tsx + loading.tsx
-│   ├── pricing/page.tsx + plan-cards.tsx + faq-section.tsx   # public — no auth; plan-cards is async RSC (fetches founder slots); faq-section is client (Expand all / accordion state)
-│   ├── changelog/page.tsx + loading.tsx   # public — 15-release timeline; data in lib/changelog.ts
-│   ├── join/[token]/page.tsx + join-button.tsx
-│   ├── summary/[token]/page.tsx + opengraph-image.tsx
-│   ├── api/groups/[id]/export/route.ts    # CSV download
+│   │   ├── layout.tsx, error.tsx, app-nav.tsx  # 3-tab nav: Home|Streams|Insights; transparent on app pages
+│   │   ├── insights/page.tsx + loading.tsx     # receives streamSummary → InsightsTabs → PersonalContent
+│   │   ├── upgrade/ + checkout/
+│   │   ├── settings/
+│   │   ├── groups/
+│   │   │   ├── page.tsx                  # Home page: Trips + Nests sections, SectionPillNav, GroupSearchInput, StreamBadgeSync
+│   │   │   ├── loading.tsx
+│   │   │   ├── new/page.tsx              # reads ?type=trip|nest → passes defaultGroupType to CreateTripForm
+│   │   │   │   └── create-trip-form.tsx  # accepts defaultGroupType?: GroupType prop
+│   │   │   └── [id]/
+│   │   │       ├── layout.tsx (RealtimeRefresh + GroupMobileNav hidden md:block)
+│   │   │       ├── page.tsx, edit/, expenses/, members/, settle/, insights/
+│   │   └── stream/
+│   │       ├── page.tsx                  # RSC → StreamDashboardClient; clears nav badge on mount
+│   │       └── [personId]/page.tsx       # RSC → StreamPersonPageClient; passes currentUserName
+│   ├── stream/confirm/[token]/page.tsx   # PUBLIC — no auth; guest confirmation page
+│   ├── pricing/, changelog/, join/, summary/, api/
 │   └── actions/
-│       ├── groups.ts (+ importMembersFromGroup), expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
+│       ├── stream.ts                     # 11+ server actions: logStream, confirmStream, disputeStream,
+│       │                                 # settleStream, undoSettleStream, forgiveStream, settleWithPerson
+│       │                                 # (accepts partialAmount?), undoSettleWithPerson, forgiveAllActiveStreams,
+│       │                                 # deleteStream + thin wrappers
+│       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
-│       ├── admin.ts                       # adminDeleteGroup, adminDeleteUser (platform admin only)
-│       ├── subscription.ts                # activatePlusDemo, cancelPlusDemo
-│       ├── interactions.ts                # addReaction, raiseQuestion, raiseDispute, cancelMyDispute, acceptDispute, declineDispute, addComment, deleteComment, fetchMemberStatsAction
-│       └── demo.ts                        # ensureDemoGroup — seeds trip + nest demos
-│   ├── api/
-│   │   ├── groups/[id]/export/route.ts, push/subscribe/route.ts, push/unsubscribe/route.ts
-│   │   └── unsubscribe/route.ts           # email unsubscribe (HMAC-verified)
+│       ├── admin.ts, subscription.ts, interactions.ts, demo.ts
 ├── components/
-│   ├── ui/                              # shadcn/base-ui primitives
-│   ├── expense/  (expense-card, swipeable-expense-card, expense-detail-sheet, expense-filters, split-editor, quick-add-bar, chat-import-dialog, question-form, dispute-form, thread-comment-input, ...)
-│   ├── trip/     (trip-card, trip-card-nav-sheet, trip-card-share-drawer, invite-section, group-balance-badge [async RSC], cover-photo-picker, budget-bar, narrative-section, adherence-card, settle-balance-badge, insights-summary-badge, nest-monthly-badge, group-activity-feed, trip-timeline, repeat-trip-prompt, ...)
-│   ├── settlement/ (settlement-breakdown, member-debt-breakdown, settled-celebration, debt-flow-graph, settle-hero-card)
-│   ├── marketing/ (settle-flow-demo — hardcoded animated SVG debt-flow demo for landing page, no DB dependency)
-│   ├── insights/ (kpi-card, category-donut, daily-spend-bar, monthly-spend-bar, member-contributions, trips-spend-bar, insights-tabs, ...)
-│   ├── tour/     (tour-context.tsx, tour-layer.tsx)
-│   └── shared/   (skeleton, animated-list, count-up, confirm-dialog, member-avatar, member-profile-sheet, mobile-nav, group-mobile-nav, realtime-refresh, theme-toggle, nav-progress, clear-logo, invite-qr-sheet, swipe-hint, ios-install-hint, long-press-hint, nest-hint, push-permission-prompt)
-├── hooks/  use-trip-realtime.ts, use-warn-before-leave.ts, use-speech-recognition.ts, use-push-subscription.ts, use-recent-categories.ts, use-sheet-dismiss.ts
+│   ├── stream/                          # All stream UI
+│   │   ├── stream-summary-strip.tsx / -client.tsx / -skeleton.tsx  # (no longer on Home — strip removed)
+│   │   ├── stream-spine-view.tsx        # bilateral timeline: mobile 3-col grid + desktop 2-col
+│   │   │                                # SpineCard: swipe-left (mobile) / hover (desktop) → Forgive/MarkPaid/Share
+│   │   │                                # Disputed entries: amber tint + stronger border (NOT muted)
+│   │   ├── stream-log-sheet.tsx         # "Who paid?" Me/{Name} instead of direction toggle
+│   │   ├── stream-dashboard-client.tsx  # search (>6 people), activity feed, clears nav badge on mount
+│   │   ├── stream-person-page-client.tsx # hero: full net (consistent with dashboard) + confirmed/pending/disputed breakdown
+│   │   ├── stream-person-card.tsx       # attention dots: green=new, amber=disputed (localStorage)
+│   │   ├── stream-settle-sheet.tsx      # partial settle: editable amount, "oldest first" backend logic
+│   │   ├── stream-forgive-sheet.tsx, stream-settle-sheet.tsx
+│   │   ├── stream-entry-row.tsx, stream-settled-celebration.tsx
+│   │   ├── stream-badge-sync.tsx        # invisible RSC companion — writes clear_stream_has_badge to localStorage
+│   │   └── confirm-stream-client.tsx
+│   ├── ui/, expense/, trip/, settlement/, marketing/, insights/, tour/
+│   └── shared/
+│       ├── section-pill-nav.tsx         # sticky section pills with IntersectionObserver active tracking
+│       ├── group-search-input.tsx       # DOM-based filter (data-group-card attrs), shows >5 groups only
+│       ├── mobile-nav.tsx               # 3 tabs: Home|Streams|Insights; Streams badge from localStorage
+│       ├── group-mobile-nav.tsx, animated-list, count-up, ...
 ├── lib/
-│   ├── db/client.ts, schema/*.ts, queries/(groups [+ getGroupsForImport], expenses, balances, insights, meta, admin, auth, activity, interactions).ts
-│   ├── supabase/server.ts, client.ts, admin.ts
-│   ├── demo/seed-demo-trip.ts + seed-demo-nest.ts
-│   ├── tour/types.ts + steps.ts
-│   ├── group-config.ts, categories.ts
-│   ├── insights/trip-insights.ts + all-trips-insights.ts + all-nests-insights.ts + group-roles.ts
-│   ├── parser/parse-expense.ts
-│   ├── interactions/split-transforms.ts + split-transforms.test.ts   # pure dispute auto-resolve transforms (20 tests)
-│   ├── splits/compute.ts + compute.test.ts
-│   ├── settle/optimize.ts + optimize.test.ts
-│   ├── validations/trip.ts + expense.ts + settlement.ts
-│   ├── analytics.ts, rate-limit.ts, utils.ts
-│   ├── changelog.ts                       # typed static data — 15 ChangelogRelease entries (newest first)
-│   ├── subscription/gates.ts            # getUserPlan, getUserSubscription, getGroupPlan, gates, nudges
-│   ├── subscription/founder.ts          # server-only; all pricing constants + getFounderSlotsClaimed() + isFounderActive()
+│   ├── db/
+│   │   ├── schema/stream-guests.ts, stream-records.ts, stream-settlements.ts
+│   │   └── queries/stream.ts            # getStreamSummary, getStreamDashboard, getStreamWithPerson,
+│   │                                    # getPersonDetails, getStreamBadgeData, getStreamActivity (in dashboard)
+│   ├── validations/stream.ts
+│   ├── notifications/send-stream-notification.ts
+│   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth, activity, interactions).ts
+│   ├── supabase/, demo/, tour/, group-config.ts, categories.ts
+│   ├── insights/trip-insights.ts + all-trips-insights.ts + all-nests-insights.ts + group-roles.ts + personal-insights.ts
+│   ├── splits/, settle/, interactions/, validations/, analytics.ts, rate-limit.ts, utils.ts
+│   ├── subscription/gates.ts + founder.ts
 │   └── notifications/expense-email.ts + send-expense-notification.ts + send-push-notification.ts
-├── drizzle/policies.sql, indexes.sql
+├── drizzle/policies.sql, indexes.sql, stream-tables.sql  # stream tables applied via Supabase SQL Editor
 ├── drizzle.config.ts, proxy.ts, vercel.json
+├── scripts/seed-streams.ts              # pnpm seed:streams — uses PLATFORM_ADMIN_EMAIL to find user
 ```
+
+---
+
+## Home Page (`app/(app)/groups/page.tsx`)
+
+RSC. **No stream strip** — Streams has its own nav tab. Sections:
+
+1. `StreamBadgeSync` (invisible client component) — fetches `getStreamBadgeData(userId)`, writes `clear_stream_has_badge` to localStorage so `MobileNav` can show the badge dot.
+2. `GroupSearchInput` — client; only renders when `groups.length > 5`; filters via `data-group-card`/`data-group-name` DOM attrs.
+3. `SectionPillNav` — sticky pills (`sticky top-14 z-40`); `NavSection[]` from trips/nests/archived counts; `CreatePill[]` for missing types (dashed "New Trip" / "New Nest" when one type absent). Only renders when 2+ sections OR any createPills.
+4. **Trips section** — `<section id="trips" data-group-section scroll-mt-28>`; section header (cyan, MapPin icon, `+` → `/groups/new?type=trip` with `data-tour="new-trip-btn"`); TripCard grid with `data-group-card` + `data-group-name` wrappers.
+5. **Nests section** — `<section id="nests" data-group-section scroll-mt-28>`; section header (emerald, Home icon, `+` → `/groups/new?type=nest`); TripCard grid same pattern.
+6. **Archived section** — `<section id="archived" data-group-section scroll-mt-28>`; opacity-60, no `+` button.
+7. **Empty state** — shown when 0 groups AND 0 archived; two side-by-side CTAs (New Trip + New Nest).
+
+**New group type pre-fill**: `/groups/new?type=trip` or `?type=nest` — `NewGroupPage` reads `searchParams.type` and passes `defaultGroupType: GroupType` to `CreateTripForm`, which uses it in `defaultValues`.
+
+---
+
+## Stream Pages
+
+### `/stream` (dashboard) — `app/(app)/stream/page.tsx`
+RSC → `StreamDashboardClient`. `StreamDashboardClient` writes `clear_stream_last_viewed = Date.now()` + removes `clear_stream_has_badge` on mount (clears nav badge). Shows: net position cards, person lists (owed-to-me / i-owe), pending entries, past section, activity feed (last 5 events by `updatedAt`).
+
+### `/stream/[personId]` — `app/(app)/stream/[personId]/page.tsx`
+RSC → `StreamPersonPageClient`. Passes `currentUserName` from `user.user_metadata.full_name`. Hero shows **full net** (same as dashboard) with confirmed/pending/disputed breakdown below. Spine view replaces old Open/History list sections.
+
+**`StreamSpineView`** (`components/stream/stream-spine-view.tsx`):
+- **Mobile**: 3-col grid `[48px 12px 1fr]` — date+net (col1), spine dot (col2), SpineCard (col3). "I owe" cards indented `pl-5`.
+- **Desktop**: true 2-col with centre spine. Left = they owe me, Right = I owe them.
+- **SpineCard swipe (mobile)**: swipe left → glass overlay with action buttons: 📱 Share (pending guest), ✓ Mark Paid (any active), 💚 Forgive (creditor only).
+- **SpineCard hover (desktop)**: action pills appear on hover in the top corner.
+- **Disputed entries**: amber tint + stronger border, NOT muted — signals "needs attention."
+- **Running net**: each spine node shows `↑₹10.6k` / `↓₹8.9k` — cumulative net after each entry chronologically.
+
+### `/stream/confirm/[token]` — **PUBLIC** (`app/stream/confirm/[token]/page.tsx`)
+No auth. UUID validation. 4 server-rendered states + `ConfirmStreamClient` for active. `proxy.ts` carves it out of auth protection.
+
+### Stream settle — partial amount
+`StreamSettleSheet` has an editable amount field (default = full net). If user reduces it, `settleWithPerson(counterpartId, note, partialAmount)` settles oldest entries first until amount covered.
 
 ---
 

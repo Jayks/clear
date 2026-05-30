@@ -5,6 +5,9 @@ import { groupMembers, memberRoleEnum } from "./schema/group-members";
 import { expenses } from "./schema/expenses";
 import { expenseSplits, splitTypeEnum } from "./schema/expense-splits";
 import { settlements } from "./schema/settlements";
+import { streamGuests } from "./schema/stream-guests";
+import { streamRecords } from "./schema/stream-records";
+import { streamSettlements } from "./schema/stream-settlements";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -33,5 +36,14 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const db = drizzle(client, {
-  schema: { groups, groupTypeEnum, groupMembers, memberRoleEnum, expenses, expenseSplits, splitTypeEnum, settlements },
+  schema: {
+    groups, groupTypeEnum,
+    groupMembers, memberRoleEnum,
+    expenses,
+    expenseSplits, splitTypeEnum,
+    settlements,
+    streamGuests,
+    streamRecords,
+    streamSettlements,
+  },
 });

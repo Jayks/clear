@@ -90,7 +90,7 @@ export function GroupMobileNav({ groupId, groupName }: Props) {
   return (
     <>
       {/* relative so the absolutely-centred title anchors to the bar, not the page */}
-      <div className="h-14 px-4 flex items-center justify-between gap-2 glass-nav relative">
+      <div className="h-14 px-4 flex items-center justify-between gap-2 backdrop-blur-sm relative">
         {/* Back link — kept small so the centre title dominates */}
         <Link
           href={backHref}

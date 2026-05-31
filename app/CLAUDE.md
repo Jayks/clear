@@ -19,13 +19,16 @@ clear/
 │   │   ├── upgrade/ + checkout/
 │   │   ├── settings/
 │   │   ├── groups/
-│   │   │   ├── page.tsx                  # Home page: Trips + Nests sections, SectionPillNav, GroupSearchInput, StreamBadgeSync
+│   │   │   ├── page.tsx                  # Home page: Trips + Nests + Circles sections, SectionPillNav, GroupSearchInput, StreamBadgeSync
 │   │   │   ├── loading.tsx
-│   │   │   ├── new/page.tsx              # reads ?type=trip|nest → passes defaultGroupType to CreateTripForm
-│   │   │   │   └── create-trip-form.tsx  # accepts defaultGroupType?: GroupType prop
+│   │   │   ├── new/page.tsx              # reads ?type=trip|nest|circle → CreateTripForm or CreateCircleForm
+│   │   │   │   ├── create-trip-form.tsx  # accepts defaultGroupType?: "trip" | "nest"
+│   │   │   │   └── create-circle-form.tsx # 3-step wizard: mode select → details → invite (WhatsApp wa.me)
 │   │   │   └── [id]/
 │   │   │       ├── layout.tsx (RealtimeRefresh + GroupMobileNav hidden md:block)
-│   │   │       ├── page.tsx, edit/, expenses/, members/, settle/, insights/
+│   │   │       ├── page.tsx              # branches on config.isCircle → CircleDashboard OR trip/nest layout
+│   │   │       │                         # accepts searchParams.period ("YYYY-MM") for circle cycle nav
+│   │   │       ├── edit/, expenses/, members/, settle/, insights/
 │   │   └── stream/
 │   │       ├── page.tsx                  # RSC → StreamDashboardClient; clears nav badge on mount
 │   │       └── [personId]/page.tsx       # RSC → StreamPersonPageClient; passes currentUserName
@@ -36,6 +39,7 @@ clear/
 │       │                                 # settleStream, undoSettleStream, forgiveStream, settleWithPerson
 │       │                                 # (accepts partialAmount?), undoSettleWithPerson, forgiveAllActiveStreams,
 │       │                                 # deleteStream + thin wrappers
+│       ├── circle.ts                    # createCircle, recordContribution, selfReportContribution
 │       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
 │       ├── admin.ts, subscription.ts, interactions.ts, demo.ts
@@ -54,9 +58,18 @@ clear/
 │   │   ├── stream-entry-row.tsx, stream-settled-celebration.tsx
 │   │   ├── stream-badge-sync.tsx        # invisible RSC companion — writes clear_stream_has_badge to localStorage
 │   │   └── confirm-stream-client.tsx
+│   ├── circle/                          # All circle UI
+│   │   ├── circle-dashboard.tsx         # RSC: violet gradient hero, cycle nav, progress, chip grid, quick links
+│   │   ├── circle-card.tsx              # "use client": interactive home card (progress bar, pending chips, Pay Now, I've paid)
+│   │   ├── circle-card-server.tsx       # RSC data loader + CircleCardSkeleton; Suspense-wrapped on home page
+│   │   ├── circle-chip-grid.tsx         # "use client": full member chip grid; admin taps → RecordContributionSheet + router.refresh
+│   │   ├── circle-cycle-nav.tsx         # "use client": ← YYYY-MM → navigation via router.push(?period=)
+│   │   ├── circle-reminder-button.tsx   # "use client": wraps CircleReminderSheet state
+│   │   ├── circle-reminder-sheet.tsx    # "use client": WhatsApp group reminder message generator (ASCII progress bar)
+│   │   └── record-contribution-sheet.tsx # "use client": admin one-tap confirm sheet; calls recordContribution action
 │   ├── ui/, expense/, trip/, settlement/, marketing/, insights/, tour/
 │   └── shared/
-│       ├── section-pill-nav.tsx         # sticky section pills; Set-based IntersectionObserver; amber=Archived; px-4 py-2 text-sm
+│       ├── section-pill-nav.tsx         # sticky section pills; scroll-position active detection (45% viewport threshold); amber=Archived; px-4 py-2 text-sm
 │       ├── global-fab.tsx               # fan-out FAB (Home only): Log expense → GroupPickerSheet → QuickAddSheet; Log entry → StreamLogSheet; auto-hide on scroll
 │       ├── home-greeting.tsx            # "Good morning/afternoon/evening, {firstName} 👋" — client, user's local time
 │       ├── group-search-input.tsx       # DOM-based filter (data-group-card attrs), shows >5 groups only
@@ -89,18 +102,55 @@ RSC. **No stream strip** — Streams has its own nav tab. Sections (top → bott
 1. `HomeGreeting` — `"use client"` personal greeting (`Good morning/afternoon/evening, {firstName} 👋`). `firstName` from `user.user_metadata.full_name`. Only rendered when `user` is set. Client component so greeting uses user's local timezone.
 2. `StreamBadgeSync` (invisible client component) — fetches `getStreamBadgeData(userId)`, writes `clear_stream_has_badge` to localStorage so `MobileNav` can show the badge dot.
 3. `GroupSearchInput` — client; only renders when `groups.length > 5`; filters via `data-group-card`/`data-group-name` DOM attrs.
-4. `SectionPillNav` — sticky pills (`sticky top-14 z-40`); `NavSection[]` from trips/nests/archived counts; Archived uses `color: "amber"`; `CreatePill[]` for missing types (dashed "New Trip" / "New Nest" when one type absent). Only renders when 2+ sections OR any createPills.
-5. **Trips section** — `<section id="trips" data-group-section scroll-mt-28>`; section header (cyan, MapPin icon, `+` → `/groups/new?type=trip` with `data-tour="new-trip-btn"`); TripCard grid with `data-group-card` + `data-group-name` wrappers.
-6. **Nests section** — `<section id="nests" data-group-section scroll-mt-28>`; section header (emerald, Home icon, `+` → `/groups/new?type=nest`); TripCard grid same pattern.
-7. **Archived section** — `<section id="archived" data-group-section scroll-mt-28>`; opacity-60, no `+` button.
-8. **Empty state** — shown when 0 groups AND 0 archived; two side-by-side CTAs (New Trip + New Nest).
-9. `GlobalFab` — rendered when `!isEmpty`; fan-out FAB for Log expense (→ group picker → QuickAdd) + Log entry (→ StreamLogSheet). Auto-hides on scroll down.
+4. `SectionPillNav` — sticky pills (`sticky top-14 z-40`); `NavSection[]` from trips/nests/circles/archived counts; colors: cyan=Trips, emerald=Nests, violet=Circles, amber=Archived; `CreatePill[]` for missing types. Active detection uses **scroll-position** (45% viewport threshold), not IntersectionObserver. Only renders when 2+ sections OR any createPills.
+5. **Trips section** — `<section id="trips" data-group-section scroll-mt-28>`; section header (cyan, MapPin icon, `+` → `/groups/new?type=trip`); TripCard grid.
+6. **Nests section** — `<section id="nests" data-group-section scroll-mt-28>`; section header (emerald, Home icon, `+` → `/groups/new?type=nest`); TripCard grid.
+7. **Circles section** — `<section id="circles" data-group-section scroll-mt-28>`; section header (violet, Coins icon, `+` → `/groups/new?type=circle`); `CircleCardServer` (Suspense-streamed, each card fetches its own data).
+8. **Archived section** — `<section id="archived" data-group-section scroll-mt-28>`; opacity-60, no `+` button.
+9. **Empty state** — shown when 0 groups AND 0 archived; two side-by-side CTAs (New Trip + New Nest).
+10. `GlobalFab` — rendered when `!isEmpty`; fan-out FAB for Log expense (→ group picker → QuickAdd) + Log entry (→ StreamLogSheet). Picker includes Circles section. Auto-hides on scroll down.
 
-**New group type pre-fill**: `/groups/new?type=trip` or `?type=nest` — `NewGroupPage` reads `searchParams.type` and passes `defaultGroupType: GroupType` to `CreateTripForm`, which uses it in `defaultValues`.
+**New group type pre-fill**: `/groups/new?type=trip|nest|circle` — `NewGroupPage` reads `searchParams.type`. Trip/nest → `CreateTripForm`. Circle → `CreateCircleForm` (3-step wizard: mode select → details → invite).
+
+**`CircleCardServer`** — RSC, Suspense-wrapped per circle card. Calls `getCircleCardData()`, renders `CircleCard`. CircleCard is `"use client"` with optimistic updates for admin contribution recording and member self-report. Uses `RecordContributionSheet` for admin one-tap confirm.
 
 **`firstName` extraction**: `(user?.user_metadata?.full_name as string | undefined)?.split(" ")[0] ?? null` — passed to `HomeGreeting`.
 
 **Trip alive badges** — `computeTripStatus(startDate, endDate)` in `components/trip/trip-card.tsx` replaces the date subtitle on TripCard when a trip is live. Types: `active` ("Day X of Y", cyan-300 + pulsing dot), `lastDay` ("Last day 🏁", amber-300), `justReturned` ("Just returned ✓", emerald-300, shown ≤7 days after endDate). Not shown for nests or archived groups. Falls back to date range display otherwise.
+
+---
+
+## Circle Pages
+
+### `/groups/[id]` — Circle dashboard (`components/circle/circle-dashboard.tsx`)
+
+`GroupPage` detects `config.isCircle` and renders `CircleDashboard` instead of the trip/nest layout. `searchParams.period` ("YYYY-MM") controls cycle navigation for recurring mode.
+
+**Dashboard sections (top → bottom):**
+1. **Hero** — violet/rose gradient header (based on mode), circle name, mode badge (`[monthly]` / `[goal]`), deadline countdown (goal), edit + share buttons (admin).
+2. **Progress section** (inside the hero card):
+   - Cycle nav (`CircleCycleNav` client component) — ← prev | "June 2026" | next → (next hidden on current period)
+   - Committed line — "N × ₹X = ₹Y committed this cycle" (recurring with fixed amount)
+   - Progress bar — `paidCount/totalMembers` (recurring) or `collected/target` (goal); green when 100%
+   - Pool balance + runway health (🟢 >2mo / 🟡 1-2mo / 🔴 <1mo)
+3. **Personal status card** (member view, recurring, current period only) — "✓ You're clear for June · ₹500 confirmed · Jun 2" or "⏳ pending · ₹500 due"
+4. **Chip grid** (`CircleChipGrid`) — all members. Admin: tapping a `⏳` chip opens `RecordContributionSheet`; on confirm → `router.refresh()`. Member: read-only. Chip states: ✓ paid (green), ⏳ pending (grey), 👻 ghost (grey, no userId).
+5. **Send reminder** (`CircleReminderButton` + `CircleReminderSheet`) — shown when pending members exist (admin only). WhatsApp message includes ASCII progress bar, pending names, UPI deep link (if upiId set), join URL.
+6. **Quick links** — Pool expenses → `/expenses`; Members → `/members`.
+
+**Cycle navigation pattern**: `router.push(\`/groups/${id}?period=${YYYY-MM}\`)` — server re-renders with new period, no client-side data fetching needed.
+
+**Pool balance = SUM(all contributions) − SUM(all non-template expenses)** — computed in `getCircleDashboardData`.
+**Runway = poolBalance / (contributionAmount × totalMembers)** — null when no expense history.
+
+### `/groups/new?type=circle` — Circle creation (`create-circle-form.tsx`)
+
+3-step wizard (all within one component, step tracked via `useState`):
+- **Step 1**: Mode selection — Recurring (violet, Repeat2 icon) vs One-time goal (rose, Target icon)
+- **Step 2**: Details — recurring: name, ₹/month, contribution day slider (1–28); goal: name, target, deadline, per-person (optional), privacy toggle, UPI ID (both modes). Add members (name + phone; phone not persisted, used for WhatsApp invite only).
+- **Step 3** (post-creation): Invite — WhatsApp message (wa.me deep link), copy button, "Go to my Circle" navigation.
+
+Circle is created at the end of Step 2 (before Step 3). `createCircle` action returns `{ groupId, shareToken, creatorName }`.
 
 ---
 

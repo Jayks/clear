@@ -11,7 +11,7 @@ Schema files in `lib/db/schema/`. RLS in `drizzle/policies.sql`.
 ### groups
 ```
 id, name, description, cover_photo_url
-group_type: enum('trip', 'nest') default 'trip'
+group_type: enum('trip', 'nest', 'circle') default 'trip'
 default_currency: text default 'INR'
 start_date, end_date: date          -- trips only
 budget: numeric(12,2)               -- optional
@@ -21,7 +21,36 @@ is_demo: boolean default false      -- seeded sample group; pinned first
 created_by: uuid
 share_token: uuid unique default gen_random_uuid()
 created_at: timestamptz
+
+-- Circle-specific columns (null for trip/nest):
+circle_mode: text                   -- 'recurring' | 'goal'
+contribution_amount: numeric(12,2)  -- fixed per-person amount
+contribution_period: text           -- 'monthly' (recurring only)
+contribution_day: int               -- 1–28: day of month due
+target_amount: numeric(12,2)        -- total goal target (goal only)
+event_date: date                    -- deadline (goal only)
+circle_status: text default 'active' -- 'active' | 'purchased' | 'complete' (goal lifecycle)
+upi_id: text                        -- organiser UPI ID for Pay Now deep link
+contribution_privacy: text          -- 'public' | 'admin_only' (goal only)
 ```
+
+### circle_contributions
+```
+id: uuid PK
+group_id: uuid NOT NULL FK → groups(cascade)
+member_id: uuid NOT NULL FK → group_members
+amount: numeric(12,2) NOT NULL
+currency: text NOT NULL default 'INR'
+period: text nullable                -- "2026-06" for recurring; null for goal mode
+recorded_by: uuid                   -- auth.users.id who logged it
+note: text nullable
+created_at: timestamptz NOT NULL
+```
+Schema: `lib/db/schema/circle-contributions.ts`. RLS: all group members read; admin members write.
+Applied via `drizzle/circle-tables.sql` (run once in Supabase SQL Editor).
+
+**Pool balance = `SUM(circle_contributions.amount) − SUM(expenses.amount WHERE is_template=false)`** — computed, never stored.
+**Runway = `pool_balance / (contribution_amount × total_members)`** — months the pool can sustain itself.
 
 ### group_members
 ```
@@ -300,15 +329,23 @@ Passed to `computePersonalInsights()` in `lib/insights/personal-insights.ts` (pu
 
 ```typescript
 GROUP_CONFIG = {
-  trip: { labels, showDates, showItinerary, showNarrative, showAdherence, showRecurring, showBudget, categories: TRIP_CATEGORIES },
-  nest: { labels, showDates:false, showItinerary:false, showNarrative:false, showRecurring:true, showBudget:false, categories: NEST_CATEGORIES },
+  trip: {   labels, icon: MapPin,  showDates:true,  showItinerary:true,  showNarrative:true,  showAdherence:true,  showRecurring:false, showBudget:true,  isCircle:false, categories: TRIP_CATEGORIES   },
+  nest: {   labels, icon: Home,    showDates:false, showItinerary:false, showNarrative:false, showAdherence:false, showRecurring:true,  showBudget:false, isCircle:false, categories: NEST_CATEGORIES   },
+  circle: { labels, icon: Coins,   showDates:false, showItinerary:false, showNarrative:false, showAdherence:false, showRecurring:false, showBudget:false, isCircle:true,  categories: CIRCLE_CATEGORIES },
 }
 ```
 
 **Trip categories**: food, accommodation, transport, sightseeing, shopping, activities, groceries, tour_package, other
 **Nest categories**: rent, utilities, groceries, subscriptions, food, healthcare, maintenance, supplies, other
+**Circle categories**: food, activities, venue, supplies, transport, gift, equipment, other
 
+**`config.isCircle`** — use this flag to branch circle-specific logic. Never check `group.groupType === 'circle'` inline.
 Use `getGroupConfig(group.groupType)` — never `group.groupType === 'trip'` inline checks.
+
+### Circle queries — `lib/db/queries/circle.ts`
+
+- `getCircleCardData(groupId, circleMode)` — lightweight query for home page CircleCard: members, this-cycle contributions, pool balance, pending members list, current user status. Called once per circle, Suspense-streamed.
+- `getCircleDashboardData(groupId, circleMode, selectedPeriod, contributionAmount)` — full dashboard data: `MemberDashboardStatus[]` (paid + date), cycle nav (prev/next/label), pool balance, runway, personal contribution details. Called from CircleDashboard RSC.
 
 ---
 

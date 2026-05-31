@@ -9,19 +9,22 @@
 
 ## 1. Project Overview
 
-**Clear** — shared expense tracking for trips and households, plus bilateral personal debt tracking. Deployed on Vercel + Supabase (free tier).
+**Clear** — shared expense tracking for trips and households, plus bilateral personal debt tracking and shared fund management. Deployed on Vercel + Supabase (free tier).
 
-**Three financial contexts:**
+**Four financial contexts:**
 - **Trip** — multi-day travel groups. Has dates, itinerary, AI narrative, budget adherence, travel categories.
 - **Nest** — ongoing household groups. Has recurring expense templates, monthly grouping, household categories. No dates/itinerary.
 - **Stream** — bilateral personal debt ledger (no group needed). One stream per person; individual debt records within = **entries**.
+- **Circle** — shared fund managed by an organiser. Two modes: **recurring** (fixed monthly contributions) and **goal** (one-time target with deadline). No individual debts — everyone is accountable to a shared pool. Pool balance = contributions − pool expenses.
 
 **Navigation (mobile bottom nav + desktop top nav):**
-- **Home** (`/groups`) — Trips section + Nests section (split, not mixed). Section jump pills.
+- **Home** (`/groups`) — Trips · Nests · Circles sections (split, not mixed). Section jump pills (cyan=Trips, emerald=Nests, violet=Circles, amber=Archived).
 - **Streams** (`/stream`) — bilateral personal debt dashboard.
 - **Insights** (`/insights`) — analytics across all contexts.
 
 **Stream terminology:** The feature = "Streams". The bilateral relationship with one person = "a Stream". An individual debt record within a stream = an **"entry"** (NOT "stream"). This distinction matters in all UI copy.
+
+**Circle terminology:** The feature = "Circles". One circle group = "a Circle". Each member's monthly payment = "a contribution" (NOT "expense"). Pool draws = "pool expenses" (logged by admin). Ghost members = added by name without a Clear account; admin records contributions on their behalf.
 
 ---
 
@@ -308,7 +311,7 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **File names**: kebab-case. No barrel files.
 - **Fraunces font**: `style={{ fontFamily: "var(--font-fraunces)" }}` — never Tailwind class.
 - **Dark mode**: every colour class needs a `dark:` counterpart.
-- **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` — never `group.groupType === 'trip'` inline checks.
+- **GROUP_CONFIG**: use `getGroupConfig(group.groupType)` — never `group.groupType === 'trip'` inline checks. Use `config.isCircle` to branch circle-specific logic.
 - **Category icons**: always `<CategoryIcon category={…} size="sm|md" />` — renders `bg-gradient-to-br ${cat.gradient} text-white`. Never use `cat.color` / `cat.textColor` for icon containers (those are kept for charts only).
 - **Category active chips**: active state = `bg-gradient-to-br ${catMeta.gradient} text-white shadow-sm`. Never hardcode `from-cyan-500 to-teal-500` for category chips.
 - **Expense amount color**: green (`text-emerald-600 dark:text-emerald-400`) when the current user is the payer; neutral (`text-slate-800 dark:text-slate-100`) otherwise.

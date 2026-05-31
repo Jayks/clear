@@ -11,9 +11,11 @@ interface LoginModalProps {
   error?: string;
   returnTo?: string;
   intent?: string;
+  /** When provided (client-side open), called on dismiss instead of router navigation */
+  onClose?: () => void;
 }
 
-export function LoginModal({ error, returnTo, intent }: LoginModalProps) {
+export function LoginModal({ error, returnTo, intent, onClose }: LoginModalProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
   const isSignup = intent === "signup";
@@ -33,16 +35,18 @@ export function LoginModal({ error, returnTo, intent }: LoginModalProps) {
   function close() {
     setIsOpen(false);
     setTimeout(() => {
-      if (returnTo?.startsWith("/join/")) {
+      if (onClose) {
+        // Client-side modal (opened from CarouselLanding via state, not router).
+        // Just invoke the callback — no router navigation needed, no stale @modal
+        // slot issue, re-opening always works.
+        onClose();
+      } else if (returnTo?.startsWith("/join/")) {
         // Join preview is a public page — send them there so they can still see it
         router.replace(returnTo);
       } else {
-        // Always replace (never back()). router.back() pops the intercepted /login
-        // entry from history but Next.js 16 caches the intercepted route state —
-        // subsequent <Link href="/login"> clicks then fail to re-trigger the
-        // interception and the modal never opens again. replace('/') gives the
-        // router a clean state so the next Sign in click works correctly.
-        router.replace("/");
+        // Intercepting-route mode (AutoLoginRedirect path). Use push so the clean
+        // "/" URL doesn't carry ?returnTo, preventing AutoLoginRedirect re-loop.
+        router.push("/");
       }
     }, 250);
   }

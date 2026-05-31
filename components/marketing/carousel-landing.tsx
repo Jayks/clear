@@ -9,6 +9,7 @@ import {
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SettleFlowDemo } from "@/components/marketing/settle-flow-demo";
+import { LoginModal } from "@/components/shared/login-modal";
 import { motion } from "framer-motion";
 
 // ─── Motion presets ───────────────────────────────────────────────────────────
@@ -631,6 +632,9 @@ export function CarouselLanding() {
   const [active, setActive] = useState(0);
   const [userInteracted, setUserInteracted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Client-side login modal state — avoids Next.js parallel-route intercepting
+  // route re-open bug (modal stuck with isOpen:false on second click).
+  const [loginModal, setLoginModal] = useState<{ open: boolean; intent?: string } | null>(null);
 
   const handleScroll = useCallback(() => {
     const c = containerRef.current;
@@ -691,10 +695,10 @@ export function CarouselLanding() {
         <ClearLogo iconSize={30} wordmarkClassName="text-base font-semibold text-slate-800 dark:text-slate-100" className="flex items-center gap-2" />
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <Link href="/login" scroll={false} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</Link>
-          <Link href="/login?intent=signup" scroll={false} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
+          <button onClick={() => setLoginModal({ open: true })} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</button>
+          <button onClick={() => setLoginModal({ open: true, intent: "signup" })} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
             Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
-          </Link>
+          </button>
         </div>
       </nav>
 
@@ -806,13 +810,12 @@ export function CarouselLanding() {
 
             {/* CTAs */}
             <motion.div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mb-6" variants={fadeUp}>
-              <Link
-                href="/login?intent=signup"
-                scroll={false}
+              <button
+                onClick={() => setLoginModal({ open: true, intent: "signup" })}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-sm py-3 px-8 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5"
               >
                 Start for free <ArrowRight className="w-4 h-4" />
-              </Link>
+              </button>
               <button
                 onClick={() => { setUserInteracted(true); goTo(1); }}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium text-sm py-3 px-8 rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/30 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
@@ -1516,13 +1519,12 @@ export function CarouselLanding() {
                 </h2>
                 <p className="text-teal-100 text-base mb-1">30-day Plus trial. No credit card.</p>
                 <p className="text-teal-200/50 text-sm mb-8">Google sign-in · 30 seconds · iOS &amp; Android</p>
-                <Link
-                  href="/login?intent=signup"
-                  scroll={false}
+                <button
+                  onClick={() => setLoginModal({ open: true, intent: "signup" })}
                   className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl transition-all hover:-translate-y-0.5"
                 >
                   Start for free <ArrowRight className="w-4 h-4" />
-                </Link>
+                </button>
                 <div className="mt-7 flex items-center justify-center gap-5">
                   <Link href="/about"   className="text-teal-200/60 text-sm hover:text-white transition-colors">See all features →</Link>
                   <span className="text-teal-300/30">·</span>
@@ -1567,6 +1569,14 @@ export function CarouselLanding() {
       </div>
 
       {/* ── Desktop prev/next arrows ── */}
+      {/* ── Client-side login modal (no intercepting route) ── */}
+      {loginModal?.open && (
+        <LoginModal
+          intent={loginModal.intent}
+          onClose={() => setLoginModal(null)}
+        />
+      )}
+
       <button
         onClick={() => { setUserInteracted(true); goTo(Math.max(0, active - 1)); }}
         className="fixed left-3 top-1/2 -translate-y-1/2 hidden md:flex w-9 h-9 items-center justify-center rounded-full bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-md hover:bg-white dark:hover:bg-slate-700 transition-all z-50 disabled:opacity-25"

@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import { circleContributions } from "@/lib/db/schema/circle-contributions";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -135,6 +135,16 @@ export interface MemberDashboardStatus {
   contributionAmount: number | null;
 }
 
+export interface RecentPoolExpense {
+  id:          string;
+  description: string;
+  category:    string;
+  amount:      number;
+  expenseDate: string;
+  isAdvance:   boolean;
+  paidByName:  string;
+}
+
 export interface CircleDashboardData {
   // Period navigation (recurring only)
   selectedPeriod:      string;        // "2026-06"
@@ -166,6 +176,9 @@ export interface CircleDashboardData {
   currentUserPaid:       boolean;
   myContributionDate:    string | null;
   myContributionAmount:  number | null;
+
+  // Recent pool expenses (last 3, for dashboard inline list)
+  recentExpenses: RecentPoolExpense[];
 }
 
 /**
@@ -189,7 +202,7 @@ export async function getCircleDashboardData(
   const isCurrentPer  = period === current;
   const isRecurring   = circleMode === "recurring";
 
-  const [allMembers, cycleContribs, allTimeRows, expenseRows] = await Promise.all([
+  const [allMembers, cycleContribs, allTimeRows, expenseRows, recentExpenseRows] = await Promise.all([
     // All group members
     db.select({
       id:          groupMembers.id,
@@ -219,6 +232,23 @@ export async function getCircleDashboardData(
     db.select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
       .from(expenses)
       .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false))),
+
+    // Recent pool expenses (last 3) with payer info
+    db.select({
+      id:             expenses.id,
+      description:    expenses.description,
+      category:       expenses.category,
+      amount:         expenses.amount,
+      expenseDate:    expenses.expenseDate,
+      isAdvance:      expenses.isAdvance,
+      paidByMemberId: expenses.paidByMemberId,
+      payerDisplay:   groupMembers.displayName,
+      payerGuest:     groupMembers.guestName,
+    }).from(expenses)
+      .leftJoin(groupMembers, eq(expenses.paidByMemberId, groupMembers.id))
+      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)))
+      .orderBy(desc(expenses.expenseDate), desc(expenses.createdAt))
+      .limit(3),
   ]);
 
   const paidMap = new Map(cycleContribs.map((c) => [c.memberId, c]));
@@ -260,6 +290,16 @@ export async function getCircleDashboardData(
     ? Math.round((poolBalance / monthlyCommitted) * 10) / 10
     : null;
 
+  const recentExpenses: RecentPoolExpense[] = recentExpenseRows.map((r) => ({
+    id:          r.id,
+    description: r.description,
+    category:    r.category,
+    amount:      Number(r.amount),
+    expenseDate: r.expenseDate,
+    isAdvance:   r.isAdvance,
+    paidByName:  r.payerDisplay ?? r.payerGuest ?? "Admin",
+  }));
+
   return {
     selectedPeriod:      period,
     selectedPeriodLabel: periodLbl,
@@ -281,5 +321,6 @@ export async function getCircleDashboardData(
       ? new Date(myContrib.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
       : null,
     myContributionAmount: myContrib ? Number(myContrib.amount) : null,
+    recentExpenses,
   };
 }

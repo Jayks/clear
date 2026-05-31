@@ -1,13 +1,16 @@
 import Link from "next/link";
-import { ArrowLeft, Users, Receipt, Pencil, Send } from "lucide-react";
+import { ArrowLeft, Users, Receipt, Pencil, Plus } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getCircleDashboardData } from "@/lib/db/queries/circle";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { CircleCycleNav } from "./circle-cycle-nav";
 import { CircleChipGrid } from "./circle-chip-grid";
 import { CircleReminderButton } from "./circle-reminder-button";
+import { CircleGoalCelebration } from "./circle-goal-celebration";
+import { CircleGoalStatus } from "./circle-goal-status";
 import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
+import { CategoryIcon } from "@/components/expense/category-icon";
 import { Coins, Repeat2, Target } from "lucide-react";
 
 interface Props {
@@ -52,6 +55,12 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   const daysLeft = isGoal && group.eventDate
     ? Math.max(0, Math.ceil((new Date(group.eventDate).getTime() - Date.now()) / 86_400_000))
     : null;
+
+  // Contribution privacy — hide ₹ totals from non-admins for goal mode
+  const hideAmounts = isGoal && group.contributionPrivacy === "admin_only" && !isAdmin;
+
+  // Goal-hit detection
+  const goalHit = isGoal && targetNum !== null && dash.allTimeCollected >= targetNum;
 
   // Pending member names for the reminder
   const pendingNames = dash.memberStatuses.filter((m) => !m.isPaid).map((m) => m.name);
@@ -141,12 +150,20 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           <div>
             <div className="flex items-center justify-between mb-1.5">
               {targetNum ? (
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
-                  {formatCurrency(dash.allTimeCollected, group.defaultCurrency)}
-                  <span className="text-slate-400 dark:text-slate-500 font-normal">
-                    {" "}/ {formatCurrency(targetNum, group.defaultCurrency)}
+                hideAmounts ? (
+                  // Privacy: non-admin sees count only, not ₹ totals
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+                    {dash.paidCount}/{dash.memberStatuses.length}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal"> contributed</span>
                   </span>
-                </span>
+                ) : (
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+                    {formatCurrency(dash.allTimeCollected, group.defaultCurrency)}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal">
+                      {" "}/ {formatCurrency(targetNum, group.defaultCurrency)}
+                    </span>
+                  </span>
+                )
               ) : (
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
                   {formatCurrency(dash.cycleCollected, group.defaultCurrency)}
@@ -154,7 +171,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                 </span>
               )}
               <span className="text-xs font-medium tabular-nums text-slate-500 dark:text-slate-400">
-                {dash.paidCount}/{dash.memberStatuses.length} paid
+                {dash.paidCount}/{dash.memberStatuses.length} {isGoal ? "contributed" : "paid"}
               </span>
             </div>
             <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
@@ -174,7 +191,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           {/* Pool balance + runway (below progress bar) */}
           <div className="flex items-center justify-between pt-1">
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              Pool balance:{" "}
+              Wallet balance:{" "}
               <span className="font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
                 {formatCurrency(dash.poolBalance, group.defaultCurrency)}
               </span>
@@ -188,7 +205,18 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         </div>
       </div>
 
-      {/* ── Personal status card (member view, recurring, current period) ────── */}
+      {/* ── Goal celebration (100% reached) ──────────────────────────────────── */}
+      {isGoal && goalHit && targetNum && (
+        <CircleGoalCelebration
+          groupId={group.id}
+          collectedAmount={dash.allTimeCollected}
+          targetAmount={targetNum}
+          currency={group.defaultCurrency}
+        />
+      )}
+
+      {/* ── Personal status card (member view) ──────────────────────────────── */}
+      {/* Recurring — current period only */}
       {!isAdmin && isRecurring && dash.isCurrentPeriod && (
         <div className={`glass rounded-2xl px-4 py-3 mb-6 flex items-center gap-3 border-l-4 ${
           dash.currentUserPaid
@@ -220,6 +248,42 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             {!dash.currentUserPaid && amount && (
               <p className="text-xs text-slate-400 dark:text-slate-500">
                 {formatCurrency(amount, group.defaultCurrency)} due
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Goal mode — personal status card for non-admin members */}
+      {!isAdmin && isGoal && (
+        <div className={`glass rounded-2xl px-4 py-3 mb-6 flex items-center gap-3 border-l-4 ${
+          dash.currentUserPaid
+            ? "border-emerald-400 dark:border-emerald-600"
+            : "border-rose-400 dark:border-rose-600"
+        }`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+            dash.currentUserPaid
+              ? "bg-emerald-100 dark:bg-emerald-900/30"
+              : "bg-rose-100 dark:bg-rose-900/30"
+          }`}>
+            <span className="text-base">{dash.currentUserPaid ? "✓" : "⏳"}</span>
+          </div>
+          <div>
+            <p className={`text-sm font-semibold ${
+              dash.currentUserPaid
+                ? "text-emerald-700 dark:text-emerald-300"
+                : "text-rose-700 dark:text-rose-300"
+            }`}>
+              {dash.currentUserPaid ? "You've contributed" : "Your contribution is pending"}
+            </p>
+            {dash.currentUserPaid && dash.myContributionDate && (
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {formatCurrency(dash.myContributionAmount ?? 0, group.defaultCurrency)} · {dash.myContributionDate}
+              </p>
+            )}
+            {!dash.currentUserPaid && amount && (
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {formatCurrency(amount, group.defaultCurrency)} expected
               </p>
             )}
           </div>
@@ -277,24 +341,93 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Quick links ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 mt-6">
-        <Link
-          href={`/groups/${group.id}/expenses`}
-          className="glass rounded-xl p-4 flex items-center gap-3
-                     hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-0.5 transition-all"
-        >
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30">
-            <Receipt className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Pool expenses</p>
-            <p className="text-xs text-cyan-600 dark:text-cyan-400">
-              {formatCurrency(dash.allTimeExpenses, group.defaultCurrency)} drawn
-            </p>
-          </div>
-        </Link>
+      {/* ── Goal lifecycle status (goal mode only) ──────────────────────────── */}
+      {isGoal && (
+        <CircleGoalStatus
+          groupId={group.id}
+          status={group.circleStatus}
+          isAdmin={isAdmin}
+          poolBalance={dash.poolBalance}
+          allTimeExpenses={dash.allTimeExpenses}
+          allTimeCollected={dash.allTimeCollected}
+          currency={group.defaultCurrency}
+        />
+      )}
 
+      {/* ── Recent wallet expenses ───────────────────────────────────────────── */}
+      <div className="glass rounded-2xl p-5 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+              <Receipt className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Wallet expenses</span>
+            <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+          </div>
+          <Link
+            href={`/groups/${group.id}/expenses`}
+            className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+
+        {/* Summary line */}
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+          {formatCurrency(dash.allTimeExpenses, group.defaultCurrency)} drawn from wallet
+        </p>
+
+        {/* Recent rows */}
+        {dash.recentExpenses.length === 0 ? (
+          <p className="text-xs text-slate-400 dark:text-slate-500 py-2">
+            No expenses logged yet.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {dash.recentExpenses.map((exp) => (
+              <div key={exp.id} className="flex items-center gap-2.5 py-1.5">
+                <CategoryIcon category={exp.category} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{exp.description}</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      {formatDate(exp.expenseDate)}
+                    </span>
+                    {exp.isAdvance && (
+                      <>
+                        <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
+                        <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                          Advanced by {exp.paidByName}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 tabular-nums shrink-0">
+                  {formatCurrency(exp.amount, group.defaultCurrency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Admin CTA */}
+        {isAdmin && (
+          <Link
+            href={`/groups/${group.id}/expenses/new`}
+            className="mt-4 w-full inline-flex items-center justify-center gap-1.5
+                       bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700
+                       text-white text-sm font-medium rounded-xl px-4 py-2.5
+                       shadow-sm shadow-violet-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Log wallet expense
+          </Link>
+        )}
+      </div>
+
+      {/* ── Members quick link ────────────────────────────────────────────────── */}
+      <div className="mt-3">
         <Link
           href={`/groups/${group.id}/members`}
           className="glass rounded-xl p-4 flex items-center gap-3

@@ -4,11 +4,14 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { circleContributions } from "@/lib/db/schema/circle-contributions";
+import { expenses } from "@/lib/db/schema/expenses";
 import { createCircleActionSchema, type CreateCircleActionInput } from "@/lib/validations/circle";
+import { addCircleExpenseSchema, type AddCircleExpenseInput } from "@/lib/validations/circle-expense";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
-import { canCreateGroup } from "@/lib/subscription/gates";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { canCreateGroup, canAddExpense } from "@/lib/subscription/gates";
+import { eq, and } from "drizzle-orm";
 
 // ── Create circle group ───────────────────────────────────────────────────────
 
@@ -147,5 +150,77 @@ export async function selfReportContribution(input: {
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to record contribution" } as const;
+  }
+}
+
+// ── Log circle pool expense (admin only) ──────────────────────────────────────
+
+export async function addCircleExpense(input: AddCircleExpenseInput) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const parsed = addCircleExpenseSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input" } as const;
+
+  const { groupId, description, category, customCategory, amount, currency, expenseDate, notes, isAdvance } = parsed.data;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only circle admins can log wallet expenses" } as const;
+
+  // Check expense limit (pool expenses count toward the group's expense limit)
+  if (!(await canAddExpense(groupId)))
+    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
+
+  try {
+    const [expense] = await db.insert(expenses).values({
+      groupId,
+      paidByMemberId: membership.id, // admin is always the payer for circle pool expenses
+      description,
+      category,
+      customCategory: customCategory ?? null,
+      amount:         String(amount),
+      currency,
+      expenseDate,
+      notes:          notes || null,
+      isAdvance,
+      createdByUserId: user.id,
+      // No expense_splits for circles — pool absorbs the full cost
+    }).returning();
+
+    revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
+
+    return { ok: true, expenseId: expense.id } as const;
+  } catch {
+    return { ok: false, error: "Failed to log wallet expense" } as const;
+  }
+}
+
+// ── Update circle goal lifecycle status (admin only) ──────────────────────────
+
+export async function updateCircleStatus(
+  groupId: string,
+  newStatus: "purchased" | "complete",
+) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only circle admins can update the goal status" } as const;
+
+  try {
+    await db
+      .update(groups)
+      .set({ circleStatus: newStatus })
+      .where(and(eq(groups.id, groupId), eq(groups.circleMode, "goal")));
+
+    revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`group-${groupId}`, "max");
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to update goal status" } as const;
   }
 }

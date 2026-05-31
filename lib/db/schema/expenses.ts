@@ -16,6 +16,7 @@ export const expenses = pgTable("expenses", {
   endDate: date("end_date"),
   notes: text("notes"),
   isTemplate: boolean("is_template").notNull().default(false),
+  isAdvance: boolean("is_advance").notNull().default(false),
   recurrence: text("recurrence"),
   sourceTemplateId: uuid("source_template_id"),
   createdByUserId: uuid("created_by_user_id").notNull(),

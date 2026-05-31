@@ -1,9 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { canUseNonEqualSplit } from "@/lib/subscription/gates";
-import { ArrowLeft, Receipt } from "lucide-react";
+import { getGroupConfig } from "@/lib/group-config";
+import { ArrowLeft, Receipt, Coins } from "lucide-react";
 import Link from "next/link";
 import { AddExpenseForm } from "./add-expense-form";
+import { AddCircleExpenseForm } from "@/components/circle/add-circle-expense-form";
 
 export default async function NewExpensePage({
   params,
@@ -20,9 +22,45 @@ export default async function NewExpensePage({
   if (!data) notFound();
 
   const { group, members, currentMember } = data;
+  const config   = getGroupConfig(group.groupType);
   const backHref = from === "groups" ? "/groups" : `/groups/${id}/expenses`;
   const backLabel = from === "groups" ? "Home" : "Back to expenses";
 
+  // ── Circle: admin-only pool expense form ──────────────────────────────────
+  if (config.isCircle) {
+    // Non-admins cannot log pool expenses
+    if (currentMember?.role !== "admin") {
+      redirect(`/groups/${id}`);
+    }
+
+    return (
+      <div>
+        <div className="hidden md:flex items-center gap-2 mb-6">
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {backLabel}
+          </Link>
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
+              <Coins className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
+              Log wallet expense
+            </h1>
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-6">
+          <AddCircleExpenseForm group={group} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Trip / Nest: standard expense form ────────────────────────────────────
   return (
     <div>
       {/* Desktop header — mobile nav carries the icon + title */}

@@ -3,7 +3,9 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenses, getGroupTemplates } from "@/lib/db/queries/expenses";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getExpenseInteractionCounts } from "@/lib/db/queries/interactions";
-import { ArrowLeft, Plus, Receipt } from "lucide-react";
+import { getGroupConfig } from "@/lib/group-config";
+import { formatCurrency } from "@/lib/utils";
+import { ArrowLeft, Plus, Receipt, Coins } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ExpenseFilters } from "@/components/expense/expense-filters";
@@ -15,6 +17,7 @@ import { ExportCsvButton } from "./export-csv-button";
 import { getExpenseNudge, canUseTemplates, canUseAI } from "@/lib/subscription/gates";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
 import { getCurrentUser } from "@/lib/db/queries/auth";
+import { CircleExpenseList } from "@/components/circle/circle-expense-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -36,15 +39,109 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   if (!data) notFound();
 
   const { group, members, currentMember, currentUser } = data;
-  const isAdmin = currentMember?.role === "admin";
-  const isNest = group.groupType === "nest";
+  const config   = getGroupConfig(group.groupType);
+  const isAdmin  = currentMember?.role === "admin";
+  const isNest   = group.groupType === "nest";
+  const isCircle = config.isCircle;
   const currentMemberId = currentMember?.id ?? "";
+
+  // ── Circle wallet expenses page ───────────────────────────────────────────
+  if (isCircle) {
+    const totalDrawn = expenses.reduce((s, e) => s + Number(e.amount), 0);
+
+    return (
+      <div>
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <Link
+            href={`/groups/${id}`}
+            className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Link>
+          <div className="hidden md:flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
+              <Coins className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl text-slate-800 dark:text-slate-100 leading-tight" style={{ fontFamily: "var(--font-fraunces)" }}>
+                Wallet expenses
+              </h1>
+            </div>
+          </div>
+          {/* Admin-only add button */}
+          {isAdmin && (
+            <div className="flex items-center gap-2 shrink-0 ml-auto md:ml-0">
+              <Link
+                href={`/groups/${id}/expenses/new`}
+                className="inline-flex items-center gap-1.5 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md shadow-violet-500/25 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Log wallet expense
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Summary strip */}
+        {expenses.length > 0 && (
+          <div className="glass rounded-xl px-4 py-3 mb-6 flex items-center justify-between">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              Total drawn from wallet
+            </span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+              {formatCurrency(totalDrawn, group.defaultCurrency)}
+            </span>
+          </div>
+        )}
+
+        {/* Expense list */}
+        {expenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-violet-500/25">
+              <Coins className="w-7 h-7 text-white" />
+            </div>
+            <h2 className="text-lg text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
+              No wallet expenses yet
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">
+              {isAdmin
+                ? "Log your first wallet draw or advance."
+                : "The admin hasn't logged any wallet expenses yet."}
+            </p>
+            {isAdmin && (
+              <Link
+                href={`/groups/${id}/expenses/new`}
+                className="inline-flex items-center gap-1.5 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl px-5 py-2.5 shadow-md shadow-violet-500/25 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Log first wallet expense
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="glass rounded-2xl overflow-hidden">
+            <CircleExpenseList
+              expenses={expenses}
+              members={members}
+              currency={group.defaultCurrency}
+              isAdmin={isAdmin}
+              groupId={id}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Trip / Nest expenses page (unchanged) ─────────────────────────────────
 
   // Fetch interaction counts (reactions, comments, disputes) for all expenses on this page
   const interactionCounts = expenses.length > 0
     ? await getExpenseInteractionCounts(expenses.map((e) => e.id), currentMemberId)
     : {};
-const templateList = isNest ? templates : [];
+  const templateList = isNest ? templates : [];
 
   return (
     <div className="pb-24 md:pb-0">

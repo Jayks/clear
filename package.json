@@ -20,6 +20,7 @@
     "seed:temple": "tsx --env-file=.env.local scripts/seed-temple-tour.ts",
     "seed:us": "tsx --env-file=.env.local scripts/seed-us.ts",
     "seed:streams": "tsx --env-file=.env.local scripts/seed-streams.ts",
+    "seed:circles": "tsx --env-file=.env.local scripts/seed-circles.ts",
     "manual:screenshots": "node --experimental-vm-modules scripts/take-screenshots.js",
     "manual:pdf": "node scripts/generate-manual-pdf.js"
   },

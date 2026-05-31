@@ -18,13 +18,13 @@
 - **Circle** — shared fund managed by an organiser. Two modes: **recurring** (fixed monthly contributions) and **goal** (one-time target with deadline). No individual debts — everyone is accountable to a shared pool. Pool balance = contributions − pool expenses.
 
 **Navigation (mobile bottom nav + desktop top nav):**
-- **Home** (`/groups`) — Trips · Nests · Circles sections (split, not mixed). Section jump pills (cyan=Trips, emerald=Nests, violet=Circles, amber=Archived).
+- **Home** (`/groups`) — Trips · Nests · Circles sections (split, not mixed). `HomeControlBar` provides underline-tab Active/Archived toggle + inline search (collapses to filter chip when blurred with a query).
 - **Streams** (`/stream`) — bilateral personal debt dashboard.
 - **Insights** (`/insights`) — analytics across all contexts.
 
 **Stream terminology:** The feature = "Streams". The bilateral relationship with one person = "a Stream". An individual debt record within a stream = an **"entry"** (NOT "stream"). This distinction matters in all UI copy.
 
-**Circle terminology:** The feature = "Circles". One circle group = "a Circle". Each member's monthly payment = "a contribution" (NOT "expense"). Pool draws = "pool expenses" (logged by admin). Ghost members = added by name without a Clear account; admin records contributions on their behalf.
+**Circle terminology:** The feature = "Circles". One circle group = "a Circle". Each member's monthly payment = "a contribution" (NOT "expense"). Admin pool draws = **"wallet expenses"** (logged by admin, `is_advance=false`). Admin personal advances = **"wallet advances"** (`is_advance=true`). Ghost members = added by name without a Clear account; admin records contributions on their behalf.
 
 ---
 

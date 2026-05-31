@@ -102,85 +102,87 @@ export function CircleCard({ group, cardData }: Props) {
   return (
     <>
       <div className="glass rounded-2xl overflow-hidden h-full flex flex-col">
-        {/* Mode-coloured accent strip */}
-        <div
-          className={`h-1 w-full ${isGoal
-            ? "bg-gradient-to-r from-rose-400 to-pink-500"
-            : "bg-gradient-to-r from-violet-500 to-purple-600"}`}
-        />
 
-        <div className="flex flex-col flex-1 p-4 gap-3">
-          {/* ── Card header ───────────────────────────────────────────────── */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              {/* Mode badge + period / countdown */}
-              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide
-                                  px-1.5 py-0.5 rounded
-                  ${isGoal
-                    ? "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400"
-                    : "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"}`}
-                >
-                  {isGoal ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
-                  {isGoal ? "goal" : "monthly"}
-                </span>
-                {isGoal && daysLeft !== null && (
-                  <span className={`text-[10px] font-medium ${daysLeft <= 3 ? "text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}>
-                    {daysLeft === 0 ? "today!" : `${daysLeft}d left`}
+        {/* ── Clickable header + progress — navigates to group dashboard ──── */}
+        <Link
+          href={`/groups/${group.id}`}
+          className="block hover:bg-white/30 dark:hover:bg-slate-700/20 transition-colors"
+        >
+          {/* Mode-coloured accent strip */}
+          <div
+            className={`h-1 w-full ${isGoal
+              ? "bg-gradient-to-r from-rose-400 to-pink-500"
+              : "bg-gradient-to-r from-violet-500 to-purple-600"}`}
+          />
+
+          <div className="px-4 pt-4 pb-3 space-y-3">
+            {/* ── Card header ─────────────────────────────────────────────── */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                {/* Mode badge + period / countdown */}
+                <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                  <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide
+                                    px-1.5 py-0.5 rounded
+                    ${isGoal
+                      ? "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400"
+                      : "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"}`}
+                  >
+                    {isGoal ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
+                    {isGoal ? "goal" : "monthly"}
                   </span>
-                )}
-                {isRecurring && (
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{monthShort}</span>
-                )}
+                  {isGoal && daysLeft !== null && (
+                    <span className={`text-[10px] font-medium ${daysLeft <= 3 ? "text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}>
+                      {daysLeft === 0 ? "today!" : `${daysLeft}d left`}
+                    </span>
+                  )}
+                  {isRecurring && (
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{monthShort}</span>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight">
+                  {group.name}
+                </p>
               </div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight">
-                {group.name}
-              </p>
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
             </div>
-            {/* Link to full dashboard */}
-            <Link
-              href={`/groups/${group.id}`}
-              className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center
-                         text-slate-400 hover:text-slate-600 dark:hover:text-slate-200
-                         hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
-            >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
 
-          {/* ── Progress bar ──────────────────────────────────────────────── */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              {targetNum ? (
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
-                  {formatCurrency(totalContributed, group.defaultCurrency)}
-                  <span className="text-slate-400 dark:text-slate-500 font-normal">
-                    {" "}/ {formatCurrency(targetNum, group.defaultCurrency)}
+            {/* ── Progress bar ────────────────────────────────────────────── */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                {targetNum ? (
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+                    {formatCurrency(totalContributed, group.defaultCurrency)}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal">
+                      {" "}/ {formatCurrency(targetNum, group.defaultCurrency)}
+                    </span>
                   </span>
+                ) : (
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {formatCurrency(totalContributed, group.defaultCurrency)} collected
+                  </span>
+                )}
+                <span className="text-xs font-medium tabular-nums text-slate-500 dark:text-slate-400">
+                  {localPaidCount}/{totalMembers}
                 </span>
-              ) : (
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {formatCurrency(totalContributed, group.defaultCurrency)} collected
-                </span>
-              )}
-              <span className="text-xs font-medium tabular-nums text-slate-500 dark:text-slate-400">
-                {localPaidCount}/{totalMembers}
-              </span>
-            </div>
-            <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  progressPct >= 100
-                    ? "bg-gradient-to-r from-emerald-400 to-green-500"
-                    : isGoal
-                    ? "bg-gradient-to-r from-rose-400 to-pink-500"
-                    : "bg-gradient-to-r from-violet-500 to-purple-600"
-                }`}
-                style={{ width: `${progressPct}%` }}
-              />
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    progressPct >= 100
+                      ? "bg-gradient-to-r from-emerald-400 to-green-500"
+                      : isGoal
+                      ? "bg-gradient-to-r from-rose-400 to-pink-500"
+                      : "bg-gradient-to-r from-violet-500 to-purple-600"
+                  }`}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
             </div>
           </div>
+        </Link>
 
+        {/* ── Action section — interactive buttons, outside the Link ──────── */}
+        <div className="flex flex-col flex-1 px-4 pb-4 gap-3">
           {/* ── Admin view ────────────────────────────────────────────────── */}
           {isAdmin && localPending.length > 0 && (
             <div className="flex-1">
@@ -290,7 +292,7 @@ export function CircleCard({ group, cardData }: Props) {
               )}
             </div>
           )}
-        </div>
+        </div>{/* end action section */}
       </div>
 
       {/* Record contribution sheet — admin one-tap confirm */}

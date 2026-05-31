@@ -37,7 +37,7 @@ export async function getAllGroups() {
     db.select().from(groups)
       .where(inArray(groups.id, groupIds))
       .orderBy(
-        sql`case when ${groups.isDemo} then 0 else 1 end`,
+        sql`case when ${groups.isDemo} then 1 else 0 end`,
         sql`case when ${groups.startDate} >= current_date then 0 else 1 end`,
         sql`case when ${groups.startDate} >= current_date then ${groups.startDate} end asc`,
         sql`case when ${groups.startDate} < current_date or ${groups.startDate} is null then ${groups.createdAt} end desc`

@@ -14,6 +14,13 @@ html { scroll-behavior: smooth; }
   to   { opacity: 1; transform: none; }
 }
 
+/* ─── Circle goal celebration confetti keyframe ─────────────────────────── */
+@keyframes confettiFall {
+  0%   { transform: translateY(0)    rotate(0deg)   scaleX(1);   opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translateY(180px) rotate(720deg) scaleX(0.6); opacity: 0; }
+}
+
 /* ─── Wayfare design tokens ─────────────────────────────────────────────── */
 @theme inline {
   /* Fonts */

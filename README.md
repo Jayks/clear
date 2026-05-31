@@ -14,7 +14,7 @@ Clear is a shared expense and personal debt tracking app. Log what each person p
 
 **Streams** — bilateral personal debt ledger. Track what you owe (and who owes you) without creating a group. "He covered my Uber." "I owe her lunch." Each relationship is a Stream; individual debt records are entries. Guests can confirm or dispute via a shareable link — no account required.
 
-**Circles** — shared fund management. Two modes: **Recurring** (fixed monthly contributions — cricket club, office kitty, RWA, savings circle) and **Goal** (one-time target with a deadline — birthday gift pool, farewell fund, trip pool). No individual debts — everyone is accountable to a shared pool. Pool balance = total contributions − pool expenses. Admin records contributions with one tap on member chips; members can self-report payments or pay via UPI deep link directly from the card.
+**Circles** — shared fund management. Two modes: **Recurring** (fixed monthly contributions — cricket club, office kitty, RWA, savings circle) and **Goal** (one-time target with a deadline — birthday gift pool, farewell fund, trip pool). No individual debts — everyone is accountable to a shared wallet. Wallet balance = total contributions − wallet expenses. Admin records contributions with one tap on member chips; members can self-report payments or pay via UPI deep link directly from the card. Admin logs wallet expenses (direct draws or personal advances). Goal lifecycle: Collecting → Purchased → Complete with surplus acknowledgment.
 
 ---
 
@@ -22,13 +22,13 @@ Clear is a shared expense and personal debt tracking app. Log what each person p
 
 Three-tab structure: **Home** (Trips + Nests + Circles) · **Streams** · **Insights**
 
-The Home page splits groups into distinct sections (Trips · Nests · Circles · Archived) with colour-coded section headers, a sticky section-jump pill bar (cyan/emerald/violet/amber), and a live search filter for users with 5+ groups.
+The Home page has an **Active / Archived** underline-tab toggle above the section pills. Active view shows Trips · Nests · Circles with colour-coded headers and a sticky pill nav. Archived view shows the same type groupings at full opacity. The tab row doubles as a search bar — a 🔍 icon expands to a full search input; blurring with a query collapses it to a filter chip `[🔍 query ×]` so the tabs stay accessible.
 
 ---
 
 ## Features
 
-- **Circles** — shared fund with two modes. **Recurring**: fixed monthly contributions (cricket fund, office kitty, RWA, savings circle); cycle navigation ← → to browse history; admin records with one chip-tap; members pay via UPI deep link or self-report. **Goal**: one-time target (birthday gift, farewell fund, trip pool) with deadline countdown and progress bar. Both modes: organiser chip grid (all member statuses), pool balance, monthly runway health signal (🟢/🟡/🔴), WhatsApp reminder message generator (ASCII progress bar + pending names + UPI link), ghost members (added by name, no Clear account required), and a 3-step creation wizard (mode → details → invite) that generates a shareable WhatsApp invite with UPI + join link in 60 seconds.
+- **Circles** — shared fund with two modes. **Recurring**: fixed monthly contributions (cricket fund, office kitty, RWA, savings circle); cycle navigation ← → to browse history; admin records with one chip-tap; members pay via UPI deep link or self-report. **Goal**: one-time target (birthday gift, farewell fund, trip pool) with deadline countdown and progress bar; goal lifecycle stepper (Collecting → Purchased → Complete); 🎯 goal-hit celebration with confetti when 100%+ collected; surplus card when wallet > 0 after purchase ("Keep in wallet" / "Note as distributed"). Both modes: organiser chip grid (all member statuses), wallet balance, monthly runway health signal (🟢/🟡/🔴), WhatsApp reminder message generator (ASCII progress bar + pending names + UPI link), ghost members (added by name, no Clear account required), 3-step creation wizard (mode → details → invite), shareable WhatsApp invite with UPI + join link in 60 seconds. **Wallet expenses**: admin logs draws from wallet ("From wallet") or personal advances ("I paid from my pocket") — advance expenses show an amber "Advanced by [name]" badge in the expense list. Contribution privacy toggle (goal mode): "Organiser only" hides ₹ totals from non-admin members (shows count only).
 - **Streams** — bilateral debt tracking without a group. Log entries like "Rahul paid my cab" or "I owe her dinner"; each person gets a Stream page with a bilateral spine timeline (they owe me on one side, I owe them on the other); running net delta shown on every spine node; swipe left on any entry to access Forgive/Mark Paid/Share; partial settle with editable amount; all-square confetti celebration. Guest confirm/dispute via token link (no login required). Nav badge on the Streams tab shows new activity across all streams.
 - **Streams — spine view** — bilateral timeline showing entries directionally left/right of a centre spine line. Running cumulative net (`↑₹10.6k`) on each spine node so you can read the full history of a relationship at a glance. Disputed entries show amber tint with stronger border (attention treatment, not muted). Mobile: swipe left → Mark Paid / Forgive / Share overlay. Desktop: hover → inline action pills.
 - **Global quick-add FAB** — warm sunset `+` button fixed on the Home page; taps open a fan with two options: **Log expense** (picks a group via cover-photo tiles + full list, then opens the quick-add form; auto-skips picker when only one group) and **Log entry** (opens the Stream log sheet directly). Auto-hides when scrolling down, reappears on scroll up. Back-button / Escape dismisses the group picker correctly on all platforms.
@@ -149,6 +149,7 @@ pnpm dev
 3. Add `http://localhost:3000/**` to Authentication → URL Configuration → Redirect URLs
 4. Run `drizzle/policies.sql` in the SQL Editor to apply RLS policies (includes policies for `expense_reactions`, `expense_comments`, and `expense_disputes`)
 5. Run `drizzle/circle-tables.sql` in the SQL Editor to add Circle support (extends `group_type` enum, adds circle columns to `groups`, creates `circle_contributions` table with RLS)
+5b. Run `drizzle/circle-phase4.sql` to add `is_advance` column to `expenses` (required for wallet expense logging)
 6. Enable Realtime for tables: `expenses`, `expense_splits`, `settlements`, `group_members`
 6. Create a Storage bucket named `cover-photos` (public, 5 MB limit) and run the Storage RLS policies from CLAUDE.md
 7. Generate VAPID keys: `node -e "const wp=require('web-push');console.log(wp.generateVAPIDKeys())"` and add to `.env.local`
@@ -172,6 +173,7 @@ pnpm db:studio        # open Drizzle Studio
 pnpm seed             # seed Goa trip demo data
 pnpm seed:temple      # seed South India temple tour
 pnpm seed:streams     # seed 3 stream counterparts, 30 entries (all statuses)
+pnpm seed:circles     # seed 4 circles covering Phase 4+5 test scenarios
 ```
 
 ---

@@ -49,8 +49,9 @@ created_at: timestamptz NOT NULL
 Schema: `lib/db/schema/circle-contributions.ts`. RLS: all group members read; admin members write.
 Applied via `drizzle/circle-tables.sql` (run once in Supabase SQL Editor).
 
-**Pool balance = `SUM(circle_contributions.amount) − SUM(expenses.amount WHERE is_template=false)`** — computed, never stored.
-**Runway = `pool_balance / (contribution_amount × total_members)`** — months the pool can sustain itself.
+**Wallet balance = `SUM(circle_contributions.amount) − SUM(expenses.amount WHERE is_template=false)`** — computed, never stored.
+**Runway = `wallet_balance / (contribution_amount × total_members)`** — months the wallet can sustain itself.
+**`is_advance=true`** expenses are "organiser advances" (admin paid personally; wallet owes them back). Applied via `drizzle/circle-phase4.sql`.
 
 ### group_members
 ```
@@ -72,6 +73,7 @@ description: text, category: text   -- text, not enum (validated by Zod + GROUP_
 custom_category: text nullable      -- free-text label when category = 'other'
 amount: numeric(12,2), currency: text, expense_date: date, end_date: date, notes: text
 is_template: boolean default false  -- recurring template (nest)
+is_advance: boolean default false   -- circle only: admin paid from own pocket (wallet advance)
 recurrence: text                    -- 'monthly' | 'weekly' (templates only)
 source_template_id: uuid nullable
 created_by_user_id: uuid

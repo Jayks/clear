@@ -11,7 +11,7 @@ import type { ActivityEvent } from "@/lib/db/queries/activity";
 interface Props {
   groupId: string;
   currentMemberId: string | undefined;
-  groupType: "trip" | "nest";
+  groupType: string;
 }
 
 export function ActivityFeedSkeleton() {

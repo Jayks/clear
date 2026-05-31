@@ -1,6 +1,6 @@
 import {
   Utensils, Hotel, Car, Camera, ShoppingBag, Ticket, ShoppingCart, MoreHorizontal,
-  Home, Zap, CreditCard, Heart, Wrench, Package, Backpack,
+  Home, Zap, CreditCard, Heart, Wrench, Package, Backpack, Building2, Gift,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -38,8 +38,19 @@ export const NEST_CATEGORIES: Category[] = [
   { value: "other",         label: "Other",         icon: MoreHorizontal, color: "bg-slate-100 dark:bg-slate-700",       textColor: "text-slate-500 dark:text-slate-400",     gradient: "from-slate-400 to-slate-500"    },
 ];
 
+export const CIRCLE_CATEGORIES: Category[] = [
+  { value: "food",       label: "Food & Drink",  shortLabel: "Food",   icon: Utensils,       color: "bg-orange-100 dark:bg-orange-900/30",  textColor: "text-orange-600 dark:text-orange-400",   gradient: "from-orange-400 to-red-400"     },
+  { value: "activities", label: "Activities",    shortLabel: "Events", icon: Ticket,         color: "bg-green-100 dark:bg-green-900/30",    textColor: "text-green-600 dark:text-green-400",     gradient: "from-green-400 to-emerald-500"  },
+  { value: "venue",      label: "Venue",         icon: Building2,      color: "bg-blue-100 dark:bg-blue-900/30",      textColor: "text-blue-600 dark:text-blue-400",       gradient: "from-blue-400 to-indigo-500"    },
+  { value: "supplies",   label: "Supplies",      icon: Package,        color: "bg-teal-100 dark:bg-teal-900/30",      textColor: "text-teal-600 dark:text-teal-400",       gradient: "from-teal-400 to-cyan-500"      },
+  { value: "transport",  label: "Transport",     shortLabel: "Transit",icon: Car,            color: "bg-purple-100 dark:bg-purple-900/30",  textColor: "text-purple-600 dark:text-purple-400",   gradient: "from-purple-400 to-violet-500"  },
+  { value: "gift",       label: "Gift",          icon: Gift,           color: "bg-pink-100 dark:bg-pink-900/30",      textColor: "text-pink-600 dark:text-pink-400",       gradient: "from-pink-400 to-rose-500"      },
+  { value: "equipment",  label: "Equipment",     shortLabel: "Gear",   icon: Wrench,         color: "bg-orange-100 dark:bg-orange-900/30",  textColor: "text-orange-600 dark:text-orange-400",   gradient: "from-orange-400 to-amber-500"   },
+  { value: "other",      label: "Other",         icon: MoreHorizontal, color: "bg-slate-100 dark:bg-slate-700",       textColor: "text-slate-500 dark:text-slate-400",     gradient: "from-slate-400 to-slate-500"    },
+];
+
 // All categories merged — used by getCategory() for display of historical data
-const ALL_CATEGORIES = [...TRIP_CATEGORIES, ...NEST_CATEGORIES];
+const ALL_CATEGORIES = [...TRIP_CATEGORIES, ...NEST_CATEGORIES, ...CIRCLE_CATEGORIES];
 
 export function getCategory(value: string): Category {
   return ALL_CATEGORIES.find((c) => c.value === value) ?? ALL_CATEGORIES[ALL_CATEGORIES.length - 1];
@@ -61,7 +72,17 @@ export const CATEGORY_HEX: Record<string, string> = {
   healthcare:    "#DC2626",
   maintenance:   "#EA580C",
   supplies:      "#0D9488",
+  venue:         "#2563EB",
+  gift:          "#DB2777",
+  equipment:     "#EA580C",
   other:         "#64748B",
+};
+
+// Hex colors for circle categories
+export const CIRCLE_CATEGORY_HEX: Record<string, string> = {
+  venue:     "#2563EB",
+  gift:      "#DB2777",
+  equipment: "#EA580C",
 };
 
 // All valid category value strings — used by AI action Zod schemas
@@ -69,6 +90,7 @@ export const CATEGORY_VALUES = [
   ...new Set([
     ...TRIP_CATEGORIES.map((c) => c.value),
     ...NEST_CATEGORIES.map((c) => c.value),
+    ...CIRCLE_CATEGORIES.map((c) => c.value),
   ]),
 ] as [string, ...string[]];
 

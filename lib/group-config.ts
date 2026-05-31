@@ -1,5 +1,5 @@
-import { MapPin, Home } from "lucide-react";
-import { TRIP_CATEGORIES, NEST_CATEGORIES } from "./categories";
+import { MapPin, Home, Coins } from "lucide-react";
+import { TRIP_CATEGORIES, NEST_CATEGORIES, CIRCLE_CATEGORIES } from "./categories";
 
 export const GROUP_CONFIG = {
   trip: {
@@ -19,6 +19,7 @@ export const GROUP_CONFIG = {
     showAdherence: true,
     showRecurring: false,
     showBudget: true,
+    isCircle: false as const,
     categories: TRIP_CATEGORIES,
   },
   nest: {
@@ -38,7 +39,28 @@ export const GROUP_CONFIG = {
     showAdherence: false,
     showRecurring: true,
     showBudget: false,
+    isCircle: false as const,
     categories: NEST_CATEGORIES,
+  },
+  circle: {
+    labels: {
+      singular: "Circle",
+      plural: "Circles",
+      members: "Members",
+      newGroup: "New circle",
+      noGroups: "No circles yet",
+      noGroupsDesc: "Create a Circle to collect fixed contributions each month or pool money toward a shared goal.",
+      createFirst: "Start your first Circle",
+    },
+    icon: Coins,
+    showDates: false,
+    showItinerary: false,
+    showNarrative: false,
+    showAdherence: false,
+    showRecurring: false,
+    showBudget: false,
+    isCircle: true as const,
+    categories: CIRCLE_CATEGORIES,
   },
 } as const;
 

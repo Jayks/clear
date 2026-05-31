@@ -1,4 +1,4 @@
-import { Plus, Archive, MapPin, Home } from "lucide-react";
+import { Plus, Archive, MapPin, Home, Coins } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getAllGroups } from "@/lib/db/queries/groups";
@@ -28,8 +28,9 @@ export default async function GroupsPage() {
   ]);
 
   // Split active groups by type
-  const trips = groups.filter((g) => g.group.groupType === "trip");
-  const nests = groups.filter((g) => g.group.groupType === "nest");
+  const trips   = groups.filter((g) => g.group.groupType === "trip");
+  const nests   = groups.filter((g) => g.group.groupType === "nest");
+  const circles = groups.filter((g) => g.group.groupType === "circle");
 
   const allIds    = [...groups, ...archived].map((g) => g.group.id);
   const activeIds = groups.map((g) => g.group.id);
@@ -79,12 +80,14 @@ export default async function GroupsPage() {
         const sections: NavSection[] = [
           ...(trips.length    > 0 ? [{ id: "trips",    label: "Trips",    count: trips.length,    color: "cyan"    as const }] : []),
           ...(nests.length    > 0 ? [{ id: "nests",    label: "Nests",    count: nests.length,    color: "emerald" as const }] : []),
+          ...(circles.length  > 0 ? [{ id: "circles",  label: "Circles",  count: circles.length,  color: "violet"  as const }] : []),
           ...(archived.length > 0 ? [{ id: "archived", label: "Archived", count: archived.length, color: "amber"   as const }] : []),
         ];
         // Dashed create pills for missing section types
         const createPills: CreatePill[] = [
-          ...(trips.length === 0 && groups.length > 0 ? [{ label: "New Trip",  href: "/groups/new?type=trip", color: "cyan"    as const }] : []),
-          ...(nests.length === 0 && groups.length > 0 ? [{ label: "New Nest",  href: "/groups/new?type=nest", color: "emerald" as const }] : []),
+          ...(trips.length === 0 && groups.length > 0   ? [{ label: "New Trip",   href: "/groups/new?type=trip",   color: "cyan"    as const }] : []),
+          ...(nests.length === 0 && groups.length > 0   ? [{ label: "New Nest",   href: "/groups/new?type=nest",   color: "emerald" as const }] : []),
+          ...(circles.length === 0 && groups.length > 0 ? [{ label: "New Circle", href: "/groups/new?type=circle", color: "violet"  as const }] : []),
         ];
         return (sections.length > 1 || createPills.length > 0)
           ? <SectionPillNav sections={sections} createPills={createPills} />
@@ -255,6 +258,62 @@ export default async function GroupsPage() {
         </section>
       )}
 
+      {/* ── Circles section ────────────────────────────────────────────────── */}
+      {circles.length > 0 && (
+        <section id="circles" data-group-section="" className="scroll-mt-28 mb-10">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30
+                            flex items-center justify-center shrink-0">
+              <Coins className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Circles</span>
+            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+                            from-violet-200/70 to-transparent
+                            dark:from-violet-800/40 dark:to-transparent" />
+            <Link
+              href="/groups/new?type=circle"
+              aria-label="New circle"
+              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+                         bg-gradient-to-br from-violet-500 to-purple-600
+                         hover:from-violet-600 hover:to-purple-700
+                         text-white shadow-sm shadow-violet-500/20 transition-all active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <AnimatedList
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+            initialDelayMs={(trips.length + nests.length) > 0 ? (trips.length + nests.length) * 80 : 0}
+          >
+            {circles.map(({ group, memberCount }, index) => {
+              const memberId = memberIds[group.id];
+              return (
+                <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
+                  <TripCard
+                    group={group}
+                    memberCount={Number(memberCount)}
+                    priority={index < 2 && trips.length === 0 && nests.length === 0}
+                    isPlusPlan={adminPlans[group.id] === "plus"}
+                    balanceBadge={
+                      memberId ? (
+                        <Suspense key={group.id} fallback={balanceFallback()}>
+                          <GroupBalanceBadge
+                            groupId={group.id}
+                            memberId={memberId}
+                            currency={group.defaultCurrency}
+                          />
+                        </Suspense>
+                      ) : undefined
+                    }
+                  />
+                </div>
+              );
+            })}
+          </AnimatedList>
+        </section>
+      )}
+
       {/* ── Archived section ───────────────────────────────────────────────── */}
       {archived.length > 0 && (
         <section id="archived" className="scroll-mt-28 mt-2">
@@ -277,7 +336,7 @@ export default async function GroupsPage() {
       )}
 
       {/* ── Global FAB — log expense (with group picker) or log stream entry ── */}
-      {!isEmpty && <GlobalFab trips={trips} nests={nests} />}
+      {!isEmpty && <GlobalFab trips={trips} nests={nests} circles={circles} />}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus, Receipt, ArrowLeftRight, MapPin, Home, ChevronRight, X } from "lucide-react";
+import { Plus, Receipt, ArrowLeftRight, MapPin, Home, ChevronRight, X, Coins } from "lucide-react";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
 import { StreamLogSheet } from "@/components/stream/stream-log-sheet";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
@@ -20,8 +20,9 @@ export interface GroupItem {
 }
 
 interface Props {
-  trips: GroupItem[];
-  nests: GroupItem[];
+  trips:   GroupItem[];
+  nests:   GroupItem[];
+  circles: GroupItem[];
 }
 
 // Max tiles shown in "Recent" section
@@ -33,7 +34,7 @@ const FAB_SHADOW   = "shadow-orange-500/35";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function GlobalFab({ trips, nests }: Props) {
+export function GlobalFab({ trips, nests, circles }: Props) {
   const [mounted,        setMounted]        = useState(false);
   const [fabOpen,        setFabOpen]        = useState(false);
   const [pickerOpen,     setPickerOpen]     = useState(false);
@@ -61,7 +62,7 @@ export function GlobalFab({ trips, nests }: Props) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const allActive = [...trips, ...nests];
+  const allActive = [...trips, ...nests, ...circles];
   const hasGroups = allActive.length > 0;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -193,6 +194,7 @@ export function GlobalFab({ trips, nests }: Props) {
         onSelect={handleGroupSelect}
         trips={trips}
         nests={nests}
+        circles={circles}
       />
 
       {/* ── QuickAdd sheet — always rendered so exit animation plays cleanly ── */}
@@ -279,16 +281,17 @@ interface PickerProps {
   onSelect: (item: GroupItem) => void;
   trips:    GroupItem[];
   nests:    GroupItem[];
+  circles:  GroupItem[];
 }
 
-function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests }: PickerProps) {
+function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: PickerProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
   // Escape key + Android back-button dismissal (same pattern as all other sheets)
   useSheetDismiss(isOpen, onClose);
 
-  const allActive  = [...trips, ...nests];
+  const allActive  = [...trips, ...nests, ...circles];
   const nonDemo    = allActive.filter((g) => !g.group.isDemo);
 
   // "Recent" tiles = first N non-demo groups (already sorted by recency from getAllGroups)
@@ -296,9 +299,10 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests }: PickerPro
   const recentIds  = new Set(recent.map((r) => r.group.id));
 
   // Remaining groups for the full list (exclude recent, keep demo in the list)
-  const remainingTrips = trips.filter((g) => !recentIds.has(g.group.id));
-  const remainingNests = nests.filter((g) => !recentIds.has(g.group.id));
-  const showFullList   = remainingTrips.length + remainingNests.length > 0;
+  const remainingTrips   = trips.filter((g) => !recentIds.has(g.group.id));
+  const remainingNests   = nests.filter((g) => !recentIds.has(g.group.id));
+  const remainingCircles = circles.filter((g) => !recentIds.has(g.group.id));
+  const showFullList     = remainingTrips.length + remainingNests.length + remainingCircles.length > 0;
 
   if (!mounted) return null;
 
@@ -436,6 +440,24 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests }: PickerPro
                       </div>
                     </div>
                   )}
+                  {remainingCircles.length > 0 && (
+                    <div>
+                      <ListSectionHeader
+                        label="Circles"
+                        color="violet"
+                        icon={<Coins className="w-3 h-3 text-violet-600 dark:text-violet-400" />}
+                      />
+                      <div className="space-y-0.5 mt-1.5">
+                        {remainingCircles.map((item) => (
+                          <GroupListRow
+                            key={item.group.id}
+                            item={item}
+                            onClick={() => onSelect(item)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -470,7 +492,8 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests }: PickerPro
 
 function GroupTile({ item, onClick }: { item: GroupItem; onClick: () => void }) {
   const { group, memberCount } = item;
-  const isTrip = group.groupType === "trip";
+  const isTrip   = group.groupType === "trip";
+  const isCircle = group.groupType === "circle";
 
   return (
     <button
@@ -491,7 +514,9 @@ function GroupTile({ item, onClick }: { item: GroupItem; onClick: () => void }) 
         />
       ) : (
         <div className={`absolute inset-0 bg-gradient-to-br
-          ${isTrip ? "from-cyan-400 to-teal-500" : "from-emerald-400 to-teal-500"}`}
+          ${isTrip ? "from-cyan-400 to-teal-500"
+            : isCircle ? "from-violet-500 to-purple-600"
+            : "from-emerald-400 to-teal-500"}`}
         />
       )}
 
@@ -501,9 +526,11 @@ function GroupTile({ item, onClick }: { item: GroupItem; onClick: () => void }) 
       {/* Type badge */}
       <div className="absolute top-2 left-2">
         <div className={`w-5 h-5 rounded-md flex items-center justify-center
-                        ${isTrip ? "bg-cyan-500/80" : "bg-emerald-500/80"}`}>
+                        ${isTrip ? "bg-cyan-500/80" : isCircle ? "bg-violet-500/80" : "bg-emerald-500/80"}`}>
           {isTrip
             ? <MapPin className="w-3 h-3 text-white" />
+            : isCircle
+            ? <Coins  className="w-3 h-3 text-white" />
             : <Home   className="w-3 h-3 text-white" />}
         </div>
       </div>
@@ -535,7 +562,8 @@ function GroupTile({ item, onClick }: { item: GroupItem; onClick: () => void }) 
 
 function GroupListRow({ item, onClick }: { item: GroupItem; onClick: () => void }) {
   const { group, memberCount } = item;
-  const isTrip = group.groupType === "trip";
+  const isTrip   = group.groupType === "trip";
+  const isCircle = group.groupType === "circle";
 
   return (
     <button
@@ -558,9 +586,13 @@ function GroupListRow({ item, onClick }: { item: GroupItem; onClick: () => void 
           />
         ) : (
           <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br
-            ${isTrip ? "from-cyan-400 to-teal-500" : "from-emerald-400 to-teal-500"}`}>
+            ${isTrip ? "from-cyan-400 to-teal-500"
+              : isCircle ? "from-violet-500 to-purple-600"
+              : "from-emerald-400 to-teal-500"}`}>
             {isTrip
               ? <MapPin className="w-[15px] h-[15px] text-white" />
+              : isCircle
+              ? <Coins  className="w-[15px] h-[15px] text-white" />
               : <Home   className="w-[15px] h-[15px] text-white" />}
           </div>
         )}
@@ -592,15 +624,19 @@ function ListSectionHeader({
   icon,
 }: {
   label: string;
-  color: "cyan" | "emerald";
+  color: "cyan" | "emerald" | "violet";
   icon:  React.ReactNode;
 }) {
   const badge = color === "cyan"
     ? "bg-cyan-50 dark:bg-cyan-900/30"
-    : "bg-emerald-50 dark:bg-emerald-900/30";
+    : color === "emerald"
+    ? "bg-emerald-50 dark:bg-emerald-900/30"
+    : "bg-violet-50 dark:bg-violet-900/30";
   const rule = color === "cyan"
     ? "from-cyan-200/70 dark:from-cyan-800/40"
-    : "from-emerald-200/70 dark:from-emerald-800/40";
+    : color === "emerald"
+    ? "from-emerald-200/70 dark:from-emerald-800/40"
+    : "from-violet-200/70 dark:from-violet-800/40";
 
   return (
     <div className="flex items-center gap-2 mb-0.5">

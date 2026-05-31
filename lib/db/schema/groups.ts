@@ -1,7 +1,7 @@
-import { pgTable, uuid, text, timestamp, date, numeric, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, date, numeric, boolean, integer, pgEnum } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const groupTypeEnum = pgEnum("group_type", ["trip", "nest"]);
+export const groupTypeEnum = pgEnum("group_type", ["trip", "nest", "circle"]);
 
 export const groups = pgTable("groups", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -19,6 +19,17 @@ export const groups = pgTable("groups", {
   shareToken: uuid("share_token").notNull().unique().default(sql`gen_random_uuid()`),
   createdBy: uuid("created_by").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
+
+  // ── Circle-specific columns ────────────────────────────────────────────────
+  circleMode: text("circle_mode"),              // 'recurring' | 'goal'
+  contributionAmount: numeric("contribution_amount", { precision: 12, scale: 2 }),
+  contributionPeriod: text("contribution_period"),  // 'monthly'
+  contributionDay: integer("contribution_day"),      // 1–28: day of month due
+  targetAmount: numeric("target_amount", { precision: 12, scale: 2 }),
+  eventDate: date("event_date"),
+  circleStatus: text("circle_status"),              // 'active' | 'purchased' | 'complete'
+  upiId: text("upi_id"),
+  contributionPrivacy: text("contribution_privacy"), // 'public' | 'admin_only'
 });
 
 export type Group = typeof groups.$inferSelect;

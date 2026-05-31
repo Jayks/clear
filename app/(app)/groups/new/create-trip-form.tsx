@@ -10,14 +10,13 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import { useWarnBeforeLeave } from "@/hooks/use-warn-before-leave";
-import { Upload, Loader2, ChevronDown } from "lucide-react";
+import { Upload, Loader2, ChevronDown, Coins } from "lucide-react";
 import { parseItineraryFromFile } from "@/app/actions/parse-itinerary";
 import { GROUP_CONFIG } from "@/lib/group-config";
-import type { GroupType } from "@/lib/group-config";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 
-export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType?: GroupType }) {
+export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType?: "trip" | "nest" }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -37,11 +36,11 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
 
   useWarnBeforeLeave(isDirty);
   const coverPhotoUrl = watch("coverPhotoUrl");
-  const groupType = (watch("groupType") ?? "trip") as GroupType;
+  const groupType = (watch("groupType") ?? "trip") as "trip" | "nest";
   const itinerary = watch("itinerary") ?? "";
   const config = GROUP_CONFIG[groupType];
 
-  function selectType(type: GroupType) {
+  function selectType(type: "trip" | "nest") {
     setValue("groupType", type);
     if (type === "nest") {
       setValue("startDate", "");
@@ -119,8 +118,8 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
       {/* Type selector */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Group type</label>
-        <div className="grid grid-cols-2 gap-3">
-          {(["trip", "nest"] as GroupType[]).map((type) => {
+        <div className="grid grid-cols-3 gap-2">
+          {(["trip", "nest"] as ("trip" | "nest")[]).map((type) => {
             const cfg = GROUP_CONFIG[type];
             const Icon = cfg.icon;
             const active = groupType === type;
@@ -129,26 +128,43 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
                 key={type}
                 type="button"
                 onClick={() => selectType(type)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left ${
+                className={`flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 transition-all text-left ${
                   active
                     ? "border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20"
                     : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-600"
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${active ? "bg-gradient-to-br from-cyan-500 to-teal-500" : "bg-slate-100 dark:bg-slate-700"}`}>
-                  <Icon className={`w-4 h-4 ${active ? "text-white" : "text-slate-500 dark:text-slate-400"}`} />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${active ? "bg-gradient-to-br from-cyan-500 to-teal-500" : "bg-slate-100 dark:bg-slate-700"}`}>
+                  <Icon className={`w-3.5 h-3.5 ${active ? "text-white" : "text-slate-500 dark:text-slate-400"}`} />
                 </div>
                 <div>
                   <p className={`text-sm font-medium ${active ? "text-cyan-700 dark:text-cyan-300" : "text-slate-700 dark:text-slate-200"}`}>
                     {cfg.labels.singular}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
-                    {type === "trip" ? "One-time trips & events" : "Home, flatmates & recurring"}
+                  <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">
+                    {type === "trip" ? "One-time trips" : "Flatmates & recurring"}
                   </p>
                 </div>
               </button>
             );
           })}
+          {/* Circle — navigates to dedicated creation flow */}
+          <button
+            type="button"
+            onClick={() => router.push("/groups/new?type=circle")}
+            className="flex items-center gap-2.5 px-3 py-3 rounded-xl border-2 transition-all text-left
+                       border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60
+                       hover:border-violet-400 dark:hover:border-violet-500
+                       hover:bg-violet-50/60 dark:hover:bg-violet-900/20"
+          >
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-700">
+              <Coins className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Circle</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">Shared fund</p>
+            </div>
+          </button>
         </div>
         <input type="hidden" {...register("groupType")} />
       </div>

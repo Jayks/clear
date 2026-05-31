@@ -32,7 +32,20 @@ export function LoginModal({ error, returnTo, intent }: LoginModalProps) {
 
   function close() {
     setIsOpen(false);
-    setTimeout(() => router.back(), 250);
+    setTimeout(() => {
+      if (returnTo?.startsWith("/join/")) {
+        // Join preview is a public page — send them there so they can still see it
+        router.replace(returnTo);
+      } else if (returnTo) {
+        // Came here via AutoLoginRedirect (expired session redirected from an app
+        // route). router.back() would return to /?returnTo=… which re-mounts
+        // AutoLoginRedirect and loops. Navigate to the clean landing page instead.
+        router.replace("/");
+      } else {
+        // User explicitly clicked "Sign in" — go back to wherever they were
+        router.back();
+      }
+    }, 250);
   }
 
   // Escape key

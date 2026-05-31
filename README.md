@@ -182,13 +182,14 @@ app/
   api/pwa-icon/   — PWA icon endpoint (192 + 512 px, edge runtime)
   manifest.ts     — PWA manifest
   icon.tsx        — favicon (32 px)
-  page.tsx        — landing / marketing page
+  page.tsx        — landing page (redirects authed users → /groups; renders CarouselLanding)
+  about/          — full-feature marketing page (/about)
   pricing/        — public pricing page (plan-cards async RSC + faq-section client)
 components/
   expense/        — expense cards, quick-add sheet, split editor, detail sheet (WhatsApp-style), reaction/question/dispute forms, thread discussion (bubble UI), thread comment input
   trip/           — group cards, cover photo picker, budget bar, overview badge RSCs (balance, insights, activity feed)
   settlement/     — debt-flow-graph (interactive SVG), settle-hero-card, settled-celebration
-  marketing/      — settle-flow-demo (animated SVG debt-flow mockup for landing page)
+  marketing/      — carousel-landing (9-slide fullscreen carousel with HD phone frames), settle-flow-demo (animated SVG debt-flow, used in /about and inside carousel phone)
   insights/       — charts and insights tabs
   shared/         — clear-logo, nav, skeletons, animated-list, tour layer, member profile sheet
   tour/           — tour context and spotlight layer

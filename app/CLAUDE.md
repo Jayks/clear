@@ -130,18 +130,38 @@ No auth. UUID validation. 4 server-rendered states + `ConfirmStreamClient` for a
 
 ## Landing Page (`app/page.tsx`)
 
-RSC. Redirects authenticated users to `/groups`. Section order (top → bottom):
+RSC. Redirects authenticated users to `/groups`. Renders `<CarouselLanding />`.
 
-1. Nav → Hero → Ticker → How it works → Why Clear? (comparison table + feature pills)
-2. Recurring templates → Trip timeline → AI features → Notifications → Social layer
-3. **Settlement** — "One payment each / No chasing" before/after table (Goa 2025 example, 5 people → 3 transfers)
-4. **Debt Flow** — animated `SettleFlowDemo` mockup (`components/marketing/settle-flow-demo.tsx`) + copy + 3 feature bullets (2-column desktop)
-5. **Insights** — category bars + member contributions mockup + copy
-6. Plus teaser → Bottom CTA → Footer
+### `CarouselLanding` (`components/marketing/carousel-landing.tsx`)
 
-**Why Clear? table** — 6-row comparison (Other apps vs Clear ✦): AI parsing · guest members · minimum transactions · **Debt Flow graph** · notifications · in-app disputes. Feature pills below include "Debt flow graph".
+`"use client"` fullscreen horizontal carousel. 9 slides (SLIDE_COUNT = 9):
 
-`SettleFlowDemo` is a `"use client"` component with hardcoded Goa 2025 data (same 5 members and 3 transfers as the Settlement section). Shared node gradients (`AVATAR_COLORS`) and particle patterns with the real `DebtFlowGraph`.
+| # | Slide | Key visual |
+|---|---|---|
+| 0 | **Hero** | Animated gradient mesh blobs, ClearIcon 72px, 3 context pills, social proof ticker |
+| 1 | **Overview** | 2×2 context grid: Trips · Nests · Streams · Circle (coming soon, dashed border) |
+| 2 | **AI-powered** | Phone frame: Type/Speak toggle + waveform + parsed chips |
+| 3 | **Debt Flow** | Phone frame: `SettleFlowDemo` inside phone (AppBar + graph + summary bar) |
+| 4 | **Settle Up** | Phone frame: balance hero + net table + min-payment UPI cards |
+| 5 | **Insights** | Phone frame: KPI 2×2 + category bars + member contribution bars |
+| 6 | **Nests** | Phone frame: recurring templates list with 1-tap Log buttons |
+| 7 | **Streams** | Phone frame: bilateral spine view with confirmed/pending entries |
+| 8 | **CTA** | Glass gradient card: "You've seen it. Now clear yours." |
+
+**`PhoneFrame`** — HD Deep Purple iPhone 15 Pro style (`290×628px`). `tilt` prop (`rotateY` degrees) for 3-D lean. Realistic dynamic island, chamfered edge gradient, side buttons, screen glare overlay, ambient shadow.
+
+**`ResponsivePhone`** — mobile: `310px` wide, `78%` height clipped (phone "rises" from bottom, bottom nav hidden). Desktop: full frame with optional tilt. `accentGlow` prop = per-slide radial glow behind phone.
+
+**`FeatureSlide`** — standard slide shell (phone top on mobile, side-by-side on desktop). Props: `labelHex` (renders a pill/badge label with tinted bg), `pills` (2 feature chips shown on mobile AND desktop), `bullets` (desktop sidebar only), `callouts` (overlay `<Callout>` badges).
+
+**`Callout`** — glass pill overlaid inside the phone's visible clip area (not outside/beside it). Positioned `absolute` within `div.relative` wrapping `ResponsivePhone`. Visible on all screen sizes (`z-30`, no `hidden md:`).
+
+**Behaviour:**
+- **Auto-advance**: slides 0→1→2, 8s each; cancels immediately on any touch/key/pointer
+- **Keyboard nav**: `←` / `→` arrow keys
+- **Right-edge peek**: subtle `backdrop-blur` gradient on the right edge signals more slides
+- **Bottom bar**: dots + slide label (left) · About · Pricing · Changelog links (right). No duplicate CTA.
+- **Hero blobs**: 3 animated radial gradient divs (`blob1/2/3` CSS keyframes), ~14–22s drift cycles
 
 ---
 

@@ -348,9 +348,13 @@ Gated by `sessionStorage.getItem(`clear_settled_confetti_${groupId}`)` — write
 **Rules of Hooks**: the `if (members.length === 0) return null` early exit is placed BEFORE all hook calls — required because the component has many hooks.
 
 ### SettleFlowDemo
-`components/marketing/settle-flow-demo.tsx` — `"use client"` static animated demo for the marketing landing page. No DB dependency — all data hardcoded (Goa 2025 trip, 5 members, 3 settlement transfers).
+`components/marketing/settle-flow-demo.tsx` — `"use client"` static animated debt-flow showcase. No DB dependency — all data hardcoded (Goa 2025 trip, 5 members, 3 transfers).
 
-Shares the same `AVATAR_COLORS`, arc math (`quadPath`/`quadMid`), and particle pattern as `DebtFlowGraph`. Key difference: no drag, no selection — pure animation showcase.
+Shares the same `AVATAR_COLORS`, arc math (`quadPath`/`quadMid`), and SMIL particle pattern as `DebtFlowGraph`. Key difference: no drag, no selection — pure animation showcase.
+
+**Used in two places:**
+1. **`/about` page** — rendered standalone as a glass card (`max-w-[340px]`)
+2. **`CarouselLanding` Debt Flow slide (slide 3)** — rendered inside `PhoneFrame` beneath a dark `AppBar`. The `width="100%"` SVG scales to ~270px. The `drawn` state fires 420ms after mount; since all carousel slides mount simultaneously, the animation plays shortly after page load.
 
 **Node animation fix**: uses separate outer `<g transform="translate(x,y)">` for positioning + inner `motion.g style={{ transformOrigin:"0px 0px" }}` for scale/opacity spring. See CLAUDE.md SVG+Framer Motion gotcha.
 

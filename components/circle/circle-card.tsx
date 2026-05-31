@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Check, Clock, Repeat2, Target } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
@@ -20,6 +20,7 @@ export function CircleCard({ group, cardData }: Props) {
   const {
     totalMembers, paidThisCycle, totalContributed, poolBalance,
     isAdmin, currentUserPaid, pendingMembers,
+    currentUserPendingConfirm: serverPendingConfirm,
     currentPeriod, currentPeriodLabel,
   } = cardData;
 
@@ -27,12 +28,59 @@ export function CircleCard({ group, cardData }: Props) {
   const isGoal      = group.circleMode === "goal";
 
   // Optimistic state — updated immediately on self-report / admin record
-  const [localUserPaid,  setLocalUserPaid]  = useState(currentUserPaid);
-  const [localPaidCount, setLocalPaidCount] = useState(paidThisCycle);
-  const [localPending,   setLocalPending]   = useState<PendingMember[]>(pendingMembers);
+  const [localUserPaid,         setLocalUserPaid]         = useState(currentUserPaid);
+  const [localPendingConfirm,   setLocalPendingConfirm]   = useState(serverPendingConfirm);
+  const [localPaidCount,        setLocalPaidCount]        = useState(paidThisCycle);
+  const [localPending,          setLocalPending]          = useState<PendingMember[]>(pendingMembers);
 
-  const [recordMember,   setRecordMember]   = useState<PendingMember | null>(null);
-  const [selfReporting,  setSelfReporting]  = useState(false);
+  const [recordMember,          setRecordMember]          = useState<PendingMember | null>(null);
+  const [selfReporting,         setSelfReporting]         = useState(false);
+
+  // ── Return-from-UPI prompt ────────────────────────────────────────────────
+  const [showUpiPrompt,  setShowUpiPrompt]  = useState(false);
+  const [reportingUpi,   setReportingUpi]   = useState(false);
+  const upiTappedRef = useRef(false);
+  const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible" && upiTappedRef.current) {
+        upiTappedRef.current = false;
+        setShowUpiPrompt(true);
+        promptTimerRef.current = setTimeout(() => setShowUpiPrompt(false), 8000);
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+      if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
+    };
+  }, []);
+
+  function handleUpiTap() {
+    upiTappedRef.current = true;
+  }
+
+  async function handleUpiReported() {
+    if (!amount) return;
+    setReportingUpi(true);
+    const result = await selfReportContribution({
+      groupId:  group.id,
+      amount,
+      period:   isRecurring ? currentPeriod : null,
+      currency: group.defaultCurrency,
+    });
+    setReportingUpi(false);
+    setShowUpiPrompt(false);
+    if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
+    if (result.ok) {
+      hapticSuccess();
+      setLocalPendingConfirm(true);
+      toast.success("Reported — pending admin confirmation");
+    }
+  }
 
   // ── Progress ────────────────────────────────────────────────────────────────
   const targetNum  = isGoal && group.targetAmount ? Number(group.targetAmount) : null;
@@ -89,9 +137,8 @@ export function CircleCard({ group, cardData }: Props) {
     setSelfReporting(false);
     if (result.ok) {
       hapticSuccess();
-      setLocalUserPaid(true);
-      setLocalPaidCount((n) => n + 1);
-      toast.success(`Marked as paid for ${monthShort}`);
+      setLocalPendingConfirm(true); // awaiting admin confirmation, not yet "paid"
+      toast.success("Reported — pending admin confirmation");
     } else {
       toast.error(result.error ?? "Failed to record");
     }
@@ -240,8 +287,16 @@ export function CircleCard({ group, cardData }: Props) {
             </div>
           )}
 
+          {/* ── Member view — pending confirmation (self-reported) ────────── */}
+          {!isAdmin && !localUserPaid && localPendingConfirm && (
+            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 mt-auto">
+              <span className="text-sm">🟡</span>
+              <span className="text-xs font-medium">Pending admin confirmation</span>
+            </div>
+          )}
+
           {/* ── Member view — unpaid ──────────────────────────────────────── */}
-          {!isAdmin && !localUserPaid && (
+          {!isAdmin && !localUserPaid && !localPendingConfirm && (
             <div className="mt-auto space-y-2">
               {/* Status line */}
               <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
@@ -253,12 +308,13 @@ export function CircleCard({ group, cardData }: Props) {
                   {amount ? ` · ${formatCurrency(amount, group.defaultCurrency)}` : ""}
                 </span>
               </div>
-              {/* Action buttons — only when a fixed amount is set */}
+              {/* Action buttons */}
               {amount && (
                 <div className="flex gap-2">
                   {upiLink && (
                     <a
                       href={upiLink}
+                      onClick={handleUpiTap}
                       className="flex-1 py-1.5 text-center text-[11px] font-semibold rounded-lg
                                  bg-gradient-to-br from-violet-500 to-purple-600 text-white
                                  shadow-sm shadow-violet-500/20 hover:opacity-90 transition-opacity"
@@ -281,7 +337,6 @@ export function CircleCard({ group, cardData }: Props) {
                   </button>
                 </div>
               )}
-              {/* Goal with open amounts — just link to dashboard */}
               {!amount && isGoal && (
                 <Link
                   href={`/groups/${group.id}`}
@@ -290,6 +345,38 @@ export function CircleCard({ group, cardData }: Props) {
                   Contribute →
                 </Link>
               )}
+            </div>
+          )}
+
+          {/* ── Return-from-UPI prompt ─────────────────────────────────────── */}
+          {showUpiPrompt && (
+            <div className="mt-2 p-2.5 rounded-xl bg-violet-50 dark:bg-violet-900/20
+                            border border-violet-200/60 dark:border-violet-700/40 space-y-2">
+              <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+                💸 Payment sent?
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => { setShowUpiPrompt(false); if (promptTimerRef.current) clearTimeout(promptTimerRef.current); }}
+                  className="flex-1 py-1 text-[10px] font-medium rounded-lg border
+                             border-slate-200 dark:border-slate-700
+                             text-slate-500 dark:text-slate-400
+                             hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                >
+                  Not yet
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpiReported}
+                  disabled={reportingUpi}
+                  className="flex-1 py-1 text-[10px] font-semibold rounded-lg
+                             bg-gradient-to-br from-violet-500 to-purple-600 text-white
+                             hover:opacity-90 transition-opacity disabled:opacity-60"
+                >
+                  {reportingUpi ? "…" : "Yes, report it ✓"}
+                </button>
+              </div>
             </div>
           )}
         </div>{/* end action section */}

@@ -36,14 +36,13 @@ export function LoginModal({ error, returnTo, intent }: LoginModalProps) {
       if (returnTo?.startsWith("/join/")) {
         // Join preview is a public page — send them there so they can still see it
         router.replace(returnTo);
-      } else if (returnTo) {
-        // Came here via AutoLoginRedirect (expired session redirected from an app
-        // route). router.back() would return to /?returnTo=… which re-mounts
-        // AutoLoginRedirect and loops. Navigate to the clean landing page instead.
-        router.replace("/");
       } else {
-        // User explicitly clicked "Sign in" — go back to wherever they were
-        router.back();
+        // Always replace (never back()). router.back() pops the intercepted /login
+        // entry from history but Next.js 16 caches the intercepted route state —
+        // subsequent <Link href="/login"> clicks then fail to re-trigger the
+        // interception and the modal never opens again. replace('/') gives the
+        // router a clean state so the next Sign in click works correctly.
+        router.replace("/");
       }
     }, 250);
   }

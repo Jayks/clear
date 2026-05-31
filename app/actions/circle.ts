@@ -11,7 +11,7 @@ import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { canCreateGroup, canAddExpense } from "@/lib/subscription/gates";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 // ── Create circle group ───────────────────────────────────────────────────────
 
@@ -135,14 +135,30 @@ export async function selfReportContribution(input: {
     return { ok: false, error: "Not a member of this circle" } as const;
 
   try {
+    // Check if member already has an unconfirmed self-report for this period
+    // to prevent duplicates
+    const existing = await db
+      .select({ id: circleContributions.id })
+      .from(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.groupId, input.groupId),
+          eq(circleContributions.memberId, membership.id),
+          eq(circleContributions.isConfirmed, false),
+          ...(input.period ? [eq(circleContributions.period, input.period)] : []),
+        )
+      );
+    if (existing.length > 0) return { ok: true } as const; // already pending
+
     await db.insert(circleContributions).values({
-      groupId:    input.groupId,
-      memberId:   membership.id,
-      amount:     String(input.amount),
-      currency:   input.currency,
-      period:     input.period,
-      recordedBy: user.id, // self-reported — recorded_by = own user id
-      note:       null,
+      groupId:     input.groupId,
+      memberId:    membership.id,
+      amount:      String(input.amount),
+      currency:    input.currency,
+      period:      input.period,
+      recordedBy:  user.id,
+      isConfirmed: false,  // ← awaits admin confirmation
+      note:        null,
     });
 
     revalidatePath("/groups");
@@ -150,6 +166,162 @@ export async function selfReportContribution(input: {
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to record contribution" } as const;
+  }
+}
+
+// ── Confirm self-reported contributions (admin) ───────────────────────────────
+
+export async function confirmContributions(input: {
+  groupId:        string;
+  contributionIds: string[];
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(input.groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can confirm contributions" } as const;
+
+  if (input.contributionIds.length === 0) return { ok: true } as const;
+
+  try {
+    // Get the contributions to know who to notify
+    const contribs = await db
+      .select({
+        id:       circleContributions.id,
+        memberId: circleContributions.memberId,
+        amount:   circleContributions.amount,
+        currency: circleContributions.currency,
+        period:   circleContributions.period,
+      })
+      .from(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.groupId, input.groupId),
+          inArray(circleContributions.id, input.contributionIds),
+        )
+      );
+
+    // Confirm them all
+    await db
+      .update(circleContributions)
+      .set({ isConfirmed: true })
+      .where(
+        and(
+          eq(circleContributions.groupId, input.groupId),
+          inArray(circleContributions.id, input.contributionIds),
+        )
+      );
+
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${input.groupId}`, "layout");
+    revalidateTag(`balances-${input.groupId}`, "max");
+
+    // Push notification to each confirmed member (fire-and-forget)
+    const { groupName } = await db
+      .select({ groupName: groups.name })
+      .from(groups)
+      .where(eq(groups.id, input.groupId))
+      .then(([r]) => ({ groupName: r?.groupName ?? "your circle" }));
+
+    const notifyPromises = contribs.map(async (c) => {
+      // Get the userId of the member whose contribution was confirmed
+      const [member] = await db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(eq(groupMembers.id, c.memberId));
+      if (!member?.userId) return;
+
+      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+      const periodLabel = c.period
+        ? new Date(c.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
+        : null;
+
+      return sendPushToUser({
+        targetUserId: member.userId,
+        groupId:      input.groupId,
+        title:        `✓ Payment confirmed — ${groupName}`,
+        body:         periodLabel
+          ? `Your ${periodLabel} contribution has been confirmed.`
+          : "Your contribution has been confirmed.",
+        url: `/groups/${input.groupId}`,
+      }).catch(() => {});
+    });
+    Promise.all(notifyPromises).catch(() => {});
+
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to confirm contributions" } as const;
+  }
+}
+
+// ── Reject / delete a self-reported contribution (admin) ─────────────────────
+
+export async function rejectContribution(input: {
+  groupId:        string;
+  contributionId: string;
+  memberUserId:   string | null;  // null for ghost members (no push)
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(input.groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can reject contributions" } as const;
+
+  try {
+    // Get contribution details before deleting
+    const [contrib] = await db
+      .select({ period: circleContributions.period, currency: circleContributions.currency })
+      .from(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.id, input.contributionId),
+          eq(circleContributions.groupId, input.groupId),
+          eq(circleContributions.isConfirmed, false), // only reject unconfirmed
+        )
+      );
+    if (!contrib) return { ok: false, error: "Contribution not found" } as const;
+
+    await db
+      .delete(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.id, input.contributionId),
+          eq(circleContributions.groupId, input.groupId),
+        )
+      );
+
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${input.groupId}`, "layout");
+
+    // Notify the member if they have a Clear account
+    if (input.memberUserId) {
+      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+      const { groupName } = await db
+        .select({ groupName: groups.name })
+        .from(groups)
+        .where(eq(groups.id, input.groupId))
+        .then(([r]) => ({ groupName: r?.groupName ?? "your circle" }));
+
+      const periodLabel = contrib.period
+        ? new Date(contrib.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
+        : null;
+
+      sendPushToUser({
+        targetUserId: input.memberUserId,
+        groupId:      input.groupId,
+        title:        `Payment not confirmed — ${groupName}`,
+        body:         periodLabel
+          ? `Your ${periodLabel} payment wasn't confirmed. Please check your UPI app and try again.`
+          : "Your payment wasn't confirmed. Please check your UPI app and try again.",
+        url: `/groups/${input.groupId}`,
+      }).catch(() => {});
+    }
+
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to reject contribution" } as const;
   }
 }
 

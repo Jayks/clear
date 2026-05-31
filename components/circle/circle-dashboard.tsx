@@ -9,6 +9,7 @@ import { CircleChipGrid } from "./circle-chip-grid";
 import { CircleReminderButton } from "./circle-reminder-button";
 import { CircleGoalCelebration } from "./circle-goal-celebration";
 import { CircleGoalStatus } from "./circle-goal-status";
+import { CircleBatchConfirmBanner } from "./circle-batch-confirm-banner";
 import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 import { CategoryIcon } from "@/components/expense/category-icon";
 import { Coins, Repeat2, Target } from "lucide-react";
@@ -205,6 +206,15 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         </div>
       </div>
 
+      {/* ── Batch confirm banner (admin, when members have self-reported) ─────── */}
+      {isAdmin && dash.pendingConfirmMembers.length > 0 && (
+        <CircleBatchConfirmBanner
+          groupId={group.id}
+          pendingMembers={dash.pendingConfirmMembers}
+          periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
+        />
+      )}
+
       {/* ── Goal celebration (100% reached) ──────────────────────────────────── */}
       {isGoal && goalHit && targetNum && (
         <CircleGoalCelebration
@@ -214,6 +224,49 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           currency={group.defaultCurrency}
         />
       )}
+
+      {/* ── Admin personal status card ──────────────────────────────────────── */}
+      {isAdmin && dash.currentMemberId && (() => {
+        const myStatus = dash.memberStatuses.find((m) => m.id === dash.currentMemberId);
+        if (!myStatus) return null;
+        const myPaid = myStatus.isPaid;
+        return (
+          <div className={`glass rounded-2xl px-4 py-3 mb-6 flex items-center gap-3 border-l-4 ${
+            myPaid
+              ? "border-emerald-400 dark:border-emerald-600"
+              : "border-violet-400 dark:border-violet-600"
+          }`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+              myPaid
+                ? "bg-emerald-100 dark:bg-emerald-900/30"
+                : "bg-violet-100 dark:bg-violet-900/30"
+            }`}>
+              <span className="text-base">{myPaid ? "✓" : "⏳"}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-semibold ${
+                myPaid
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-violet-700 dark:text-violet-300"
+              }`}>
+                {myPaid
+                  ? isRecurring ? `You're clear for ${dash.selectedPeriodLabel}` : "You've contributed"
+                  : "You haven't contributed yet"}
+              </p>
+              {myPaid && myStatus.contributionDate && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  {formatCurrency(myStatus.contributionAmount ?? 0, group.defaultCurrency)} · {myStatus.contributionDate}
+                </p>
+              )}
+              {!myPaid && amount && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Tap your chip below to record
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Personal status card (member view) ──────────────────────────────── */}
       {/* Recurring — current period only */}

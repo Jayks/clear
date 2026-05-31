@@ -30,16 +30,18 @@ export interface PendingMember {
 }
 
 export interface CircleCardData {
-  totalMembers:      number;
-  paidThisCycle:     number;
-  totalContributed:  number;
-  poolBalance:       number;
-  currentMemberId:   string | null;
-  isAdmin:           boolean;
-  currentUserPaid:   boolean;
-  pendingMembers:    PendingMember[];
-  currentPeriod:     string;   // "2026-06"
-  currentPeriodLabel: string;  // "June 2026"
+  totalMembers:              number;
+  paidThisCycle:             number;
+  totalContributed:          number;
+  poolBalance:               number;
+  currentMemberId:           string | null;
+  isAdmin:                   boolean;
+  currentUserPaid:           boolean;
+  currentUserPendingConfirm: boolean;   // member self-reported, awaiting admin confirmation
+  pendingMembers:            PendingMember[];
+  pendingConfirmCount:       number;    // admin: how many unconfirmed self-reports
+  currentPeriod:             string;   // "2026-06"
+  currentPeriodLabel:        string;  // "June 2026"
 }
 
 /**
@@ -70,10 +72,10 @@ export async function getCircleCardData(
       .from(groupMembers)
       .where(eq(groupMembers.groupId, groupId)),
 
-    // Recurring → filter by current month period.
-    // Goal → all contributions (period is null for goal mode).
+    // Only confirmed contributions count toward totals and "paid" state.
+    // Unconfirmed self-reports are tracked separately for the pending-confirm state.
     db
-      .select({ memberId: circleContributions.memberId, amount: circleContributions.amount })
+      .select({ memberId: circleContributions.memberId, amount: circleContributions.amount, isConfirmed: circleContributions.isConfirmed })
       .from(circleContributions)
       .where(
         circleMode === "recurring"
@@ -91,15 +93,24 @@ export async function getCircleCardData(
       .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false))),
   ]);
 
-  const paidMemberIds   = new Set(cycleContribs.map((c) => c.memberId));
-  const totalContributed = cycleContribs.reduce((sum, c) => sum + Number(c.amount), 0);
+  // Separate confirmed from unconfirmed self-reports
+  const confirmedContribs   = cycleContribs.filter((c) => c.isConfirmed);
+  const unconfirmedContribs = cycleContribs.filter((c) => !c.isConfirmed);
+
+  const paidMemberIds          = new Set(confirmedContribs.map((c) => c.memberId));
+  const pendingConfirmMemberIds = new Set(unconfirmedContribs.map((c) => c.memberId));
+
+  // Only confirmed contributions count toward pool balance
+  const totalContributed = confirmedContribs.reduce((sum, c) => sum + Number(c.amount), 0);
   const totalExpenses    = Number(expenseRows[0]?.total ?? 0);
 
   const currentMember   = allMembers.find((m) => m.userId === user.id);
   const currentMemberId = currentMember?.id ?? null;
   const isAdmin         = currentMember?.role === "admin";
-  const currentUserPaid = currentMemberId ? paidMemberIds.has(currentMemberId) : false;
+  const currentUserPaid             = currentMemberId ? paidMemberIds.has(currentMemberId) : false;
+  const currentUserPendingConfirm   = currentMemberId ? pendingConfirmMemberIds.has(currentMemberId) : false;
 
+  // Admin sees chips for all unpaid members (both ⏳ and 🟡)
   const pendingMembers: PendingMember[] = allMembers
     .filter((m) => !paidMemberIds.has(m.id))
     .map((m) => ({
@@ -109,14 +120,16 @@ export async function getCircleCardData(
     }));
 
   return {
-    totalMembers:       allMembers.length,
-    paidThisCycle:      paidMemberIds.size,
+    totalMembers:              allMembers.length,
+    paidThisCycle:             paidMemberIds.size,
     totalContributed,
-    poolBalance:        totalContributed - totalExpenses,
+    poolBalance:               totalContributed - totalExpenses,
     currentMemberId,
     isAdmin,
     currentUserPaid,
+    currentUserPendingConfirm,
     pendingMembers,
+    pendingConfirmCount:       unconfirmedContribs.length,
     currentPeriod,
     currentPeriodLabel,
   };
@@ -125,14 +138,16 @@ export async function getCircleCardData(
 // ── Dashboard data ────────────────────────────────────────────────────────────
 
 export interface MemberDashboardStatus {
-  id:                 string;
-  name:               string;
-  isGuest:            boolean;
-  role:               "admin" | "member";
-  userId:             string | null;
-  isPaid:             boolean;
-  contributionDate:   string | null;  // ISO date of this cycle's payment
-  contributionAmount: number | null;
+  id:                       string;
+  name:                     string;
+  isGuest:                  boolean;
+  role:                     "admin" | "member";
+  userId:                   string | null;
+  isPaid:                   boolean;
+  isPendingConfirm:         boolean;    // self-reported, awaiting admin confirmation
+  unconfirmedContributionId: string | null; // used by admin to confirm/reject
+  contributionDate:         string | null;
+  contributionAmount:       number | null;
 }
 
 export interface RecentPoolExpense {
@@ -179,6 +194,9 @@ export interface CircleDashboardData {
 
   // Recent pool expenses (last 3, for dashboard inline list)
   recentExpenses: RecentPoolExpense[];
+
+  // Batch confirm — members with unconfirmed self-reports
+  pendingConfirmMembers: { memberId: string; name: string; contributionId: string; amount: number }[];
 }
 
 /**
@@ -214,19 +232,21 @@ export async function getCircleDashboardData(
 
     // Contributions for the selected period (recurring) or all (goal)
     db.select({
-      memberId:  circleContributions.memberId,
-      amount:    circleContributions.amount,
-      createdAt: circleContributions.createdAt,
+      id:          circleContributions.id,
+      memberId:    circleContributions.memberId,
+      amount:      circleContributions.amount,
+      createdAt:   circleContributions.createdAt,
+      isConfirmed: circleContributions.isConfirmed,
     }).from(circleContributions).where(
       isRecurring
         ? and(eq(circleContributions.groupId, groupId), eq(circleContributions.period, period))
         : eq(circleContributions.groupId, groupId),
     ),
 
-    // All-time contribution total
+    // All-time confirmed contribution total (unconfirmed self-reports excluded)
     db.select({ total: sql<string>`COALESCE(SUM(${circleContributions.amount}), 0)` })
       .from(circleContributions)
-      .where(eq(circleContributions.groupId, groupId)),
+      .where(and(eq(circleContributions.groupId, groupId), eq(circleContributions.isConfirmed, true))),
 
     // All-time expense total (pool draws)
     db.select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
@@ -251,7 +271,11 @@ export async function getCircleDashboardData(
       .limit(3),
   ]);
 
-  const paidMap = new Map(cycleContribs.map((c) => [c.memberId, c]));
+  // Split confirmed vs unconfirmed contributions
+  const confirmedMap   = new Map(cycleContribs.filter((c) => c.isConfirmed).map((c) => [c.memberId, c]));
+  const unconfirmedMap = new Map(cycleContribs.filter((c) => !c.isConfirmed).map((c) => [c.memberId, c]));
+
+  // Only confirmed contributions count toward pool balance and cycle totals
   const allTimeCollected = Number(allTimeRows[0]?.total ?? 0);
   const allTimeExpenses  = Number(expenseRows[0]?.total ?? 0);
   const poolBalance      = allTimeCollected - allTimeExpenses;
@@ -260,27 +284,44 @@ export async function getCircleDashboardData(
   const currentMemberId = currentMember?.id ?? null;
   const isAdmin         = currentMember?.role === "admin";
 
-  const myContrib = currentMemberId ? paidMap.get(currentMemberId) : undefined;
+  const myContrib = currentMemberId ? confirmedMap.get(currentMemberId) : undefined;
 
   const memberStatuses: MemberDashboardStatus[] = allMembers.map((m) => {
-    const contrib = paidMap.get(m.id);
+    const confirmed   = confirmedMap.get(m.id);
+    const unconfirmed = unconfirmedMap.get(m.id);
     return {
-      id:                 m.id,
-      name:               m.displayName ?? m.guestName ?? "Member",
-      isGuest:            !m.userId,
-      role:               m.role,
-      userId:             m.userId ?? null,
-      isPaid:             paidMap.has(m.id),
-      contributionDate:   contrib?.createdAt
-        ? new Date(contrib.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+      id:                        m.id,
+      name:                      m.displayName ?? m.guestName ?? "Member",
+      isGuest:                   !m.userId,
+      role:                      m.role,
+      userId:                    m.userId ?? null,
+      isPaid:                    confirmedMap.has(m.id),
+      isPendingConfirm:          unconfirmedMap.has(m.id),
+      unconfirmedContributionId: unconfirmed?.id ?? null,
+      contributionDate:          confirmed?.createdAt
+        ? new Date(confirmed.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
         : null,
-      contributionAmount: contrib ? Number(contrib.amount) : null,
+      contributionAmount:        confirmed ? Number(confirmed.amount) : null,
     };
   });
 
-  const paidCount    = [...paidMap.keys()].length;
+  const paidCount    = confirmedMap.size;
   const pendingCount = allMembers.length - paidCount;
-  const cycleCollected = cycleContribs.reduce((s, c) => s + Number(c.amount), 0);
+  // Cycle collected = confirmed only (unconfirmed don't count until admin confirms)
+  const cycleCollected = [...confirmedMap.values()].reduce((s, c) => s + Number(c.amount), 0);
+
+  // Members with unconfirmed self-reports — for batch confirm banner
+  const pendingConfirmMembers = allMembers
+    .filter((m) => unconfirmedMap.has(m.id))
+    .map((m) => {
+      const uc = unconfirmedMap.get(m.id)!;
+      return {
+        memberId:       m.id,
+        name:           m.displayName ?? m.guestName ?? "Member",
+        contributionId: uc.id,
+        amount:         Number(uc.amount),
+      };
+    });
 
   // Runway: how many months of collection would the pool sustain at zero inflow
   // Only meaningful when there are expenses (there's actually a drain).
@@ -316,11 +357,12 @@ export async function getCircleDashboardData(
     runwayMonths,
     isAdmin,
     currentMemberId,
-    currentUserPaid:      currentMemberId ? paidMap.has(currentMemberId) : false,
+    currentUserPaid:      currentMemberId ? confirmedMap.has(currentMemberId) : false,
     myContributionDate:   myContrib?.createdAt
       ? new Date(myContrib.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
       : null,
     myContributionAmount: myContrib ? Number(myContrib.amount) : null,
     recentExpenses,
+    pendingConfirmMembers,
   };
 }

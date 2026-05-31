@@ -3,11 +3,14 @@
 import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
+import { circleContributions } from "@/lib/db/schema/circle-contributions";
 import { createCircleActionSchema, type CreateCircleActionInput } from "@/lib/validations/circle";
-import { getCurrentUser } from "@/lib/db/queries/auth";
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { canCreateGroup } from "@/lib/subscription/gates";
+
+// ── Create circle group ───────────────────────────────────────────────────────
 
 export async function createCircle(input: CreateCircleActionInput) {
   const user = await getCurrentUser();
@@ -74,5 +77,75 @@ export async function createCircle(input: CreateCircleActionInput) {
     } as const;
   } catch {
     return { ok: false, error: "Failed to create circle" } as const;
+  }
+}
+
+// ── Record contribution (admin) ───────────────────────────────────────────────
+
+export async function recordContribution(input: {
+  groupId:  string;
+  memberId: string;
+  amount:   number;
+  period:   string | null;
+  currency: string;
+  note?:    string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(input.groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can record contributions" } as const;
+
+  try {
+    await db.insert(circleContributions).values({
+      groupId:    input.groupId,
+      memberId:   input.memberId,
+      amount:     String(input.amount),
+      currency:   input.currency,
+      period:     input.period,
+      recordedBy: user.id,
+      note:       input.note ?? null,
+    });
+
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${input.groupId}`);
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to record contribution" } as const;
+  }
+}
+
+// ── Self-report contribution (member) ─────────────────────────────────────────
+
+export async function selfReportContribution(input: {
+  groupId:  string;
+  amount:   number;
+  period:   string | null;
+  currency: string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(input.groupId, user.id);
+  if (!membership)
+    return { ok: false, error: "Not a member of this circle" } as const;
+
+  try {
+    await db.insert(circleContributions).values({
+      groupId:    input.groupId,
+      memberId:   membership.id,
+      amount:     String(input.amount),
+      currency:   input.currency,
+      period:     input.period,
+      recordedBy: user.id, // self-reported — recorded_by = own user id
+      note:       null,
+    });
+
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${input.groupId}`);
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to record contribution" } as const;
   }
 }

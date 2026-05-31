@@ -6,6 +6,7 @@ import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
 import { autoLogDueTemplates } from "@/app/actions/expenses";
 import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
 import { TripCardQuickAdd } from "@/components/trip/trip-card-quick-add";
+import { CircleDashboard } from "@/components/circle/circle-dashboard";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -25,8 +26,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: name ? `${name} | Clear` : "Clear" };
 }
 
-export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function GroupPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ period?: string }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+
   const [data, totalSpent] = await Promise.all([
     getGroupWithMembers(id),
     getGroupTotalSpent(id),
@@ -34,8 +43,21 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   if (!data) notFound();
 
   const { group, members, currentMember, currentUser } = data;
+  const config  = getGroupConfig(group.groupType);
   const isAdmin = currentMember?.role === "admin";
-  const isNest = group.groupType === "nest";
+  const isNest  = group.groupType === "nest";
+
+  // ── Circle groups get their own dedicated dashboard ───────────────────────
+  if (config.isCircle) {
+    return (
+      <CircleDashboard
+        group={group}
+        members={members}
+        currentMember={currentMember}
+        selectedPeriod={sp.period}
+      />
+    );
+  }
 
   // Show the repeat-trip prompt when the trip has ended or is archived (trips only, admins only)
   const today = new Date().toISOString().slice(0, 10);
@@ -50,7 +72,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     : [];
 
   if (isNest) await autoLogDueTemplates(group.id).catch(() => {});
-  const config = getGroupConfig(group.groupType);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
 

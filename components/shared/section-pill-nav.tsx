@@ -82,37 +82,33 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
   useEffect(() => {
     if (sections.length === 0) return;
 
-    // Track which sections are currently intersecting the trigger band.
-    // We keep a Set so we always know the full picture, not just what changed.
-    const intersecting = new Set<string>();
+    // Scroll-position approach: on each scroll tick find the last section whose
+    // top has crossed the trigger line. Reliable regardless of section height —
+    // works for short Circles (1 card) just as well as tall Nests/Trips.
+    //
+    // TRIGGER_OFFSET: 45% of viewport height. This is well above scroll-mt-28 (112px)
+    // so any section that has been scrolled into view will reliably register,
+    // even on small screens. Using a viewport-relative value adapts to device size.
+    function getOffset() { return window.innerHeight * 0.45; }
 
-    // A section is "active" when its top edge is in the upper-middle viewport band.
-    // rootMargin "-16% 0px -72% 0px" means the trigger zone is ~16%–28% from top.
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            intersecting.add(entry.target.id);
-          } else {
-            intersecting.delete(entry.target.id);
-          }
-        }
+    function updateActive() {
+      const offset = getOffset();
+      // Measure each section's distance from the viewport top
+      const positions = sections.map((s) => ({
+        id:  s.id,
+        top: document.getElementById(s.id)?.getBoundingClientRect().top ?? Infinity,
+      }));
 
-        // When multiple sections overlap the trigger band (e.g. a tall Nests section
-        // whose bottom is still visible while Archived has entered from below), always
-        // prefer the LAST section in page order — that's the one the user scrolled to.
-        const active = [...sections].reverse().find((s) => intersecting.has(s.id));
-        if (active) setActiveId(active.id);
-      },
-      { rootMargin: "-16% 0px -72% 0px", threshold: 0 },
-    );
-
-    for (const { id } of sections) {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
+      // The active section is the LAST one in page order whose top has crossed
+      // the trigger line. Reversing lets .find() return the furthest-down match.
+      const hit = [...positions].reverse().find((p) => p.top <= offset);
+      setActiveId(hit?.id ?? sections[0]?.id ?? "");
     }
 
-    return () => observer.disconnect();
+    window.addEventListener("scroll", updateActive, { passive: true });
+    updateActive(); // set correct pill on mount / after navigation
+
+    return () => window.removeEventListener("scroll", updateActive);
   }, [sections]);
 
   if (sections.length === 0) return null;

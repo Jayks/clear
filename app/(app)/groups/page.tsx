@@ -19,6 +19,7 @@ import { StreamBadgeSync } from "@/components/stream/stream-badge-sync";
 import { getStreamBadgeData } from "@/lib/db/queries/stream";
 import { GlobalFab } from "@/components/shared/global-fab";
 import { HomeGreeting } from "@/components/shared/home-greeting";
+import { CircleCardServer, CircleCardSkeleton } from "@/components/circle/circle-card-server";
 
 export default async function GroupsPage() {
   await ensureDemoGroup().catch(() => {});
@@ -286,30 +287,13 @@ export default async function GroupsPage() {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
             initialDelayMs={(trips.length + nests.length) > 0 ? (trips.length + nests.length) * 80 : 0}
           >
-            {circles.map(({ group, memberCount }, index) => {
-              const memberId = memberIds[group.id];
-              return (
-                <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
-                  <TripCard
-                    group={group}
-                    memberCount={Number(memberCount)}
-                    priority={index < 2 && trips.length === 0 && nests.length === 0}
-                    isPlusPlan={adminPlans[group.id] === "plus"}
-                    balanceBadge={
-                      memberId ? (
-                        <Suspense key={group.id} fallback={balanceFallback()}>
-                          <GroupBalanceBadge
-                            groupId={group.id}
-                            memberId={memberId}
-                            currency={group.defaultCurrency}
-                          />
-                        </Suspense>
-                      ) : undefined
-                    }
-                  />
-                </div>
-              );
-            })}
+            {circles.map(({ group }) => (
+              <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
+                <Suspense fallback={<CircleCardSkeleton />}>
+                  <CircleCardServer group={group} />
+                </Suspense>
+              </div>
+            ))}
           </AnimatedList>
         </section>
       )}

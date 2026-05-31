@@ -14,12 +14,18 @@ const createCircleBaseSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   defaultCurrency: z.string().length(3).default("INR"),
 
-  // Recurring-specific (coerce handles string → number from form inputs)
-  contributionAmount: z.coerce.number().positive().optional(),
+  // Recurring-specific — preprocess empty string → undefined so optional fields don't fail .positive()
+  contributionAmount: z.preprocess(
+    (v) => (!v || v === "" ? undefined : Number(v)),
+    z.number().positive().optional(),
+  ),
   contributionDay: z.coerce.number().int().min(1).max(28).default(1),
 
   // Goal-specific
-  targetAmount: z.coerce.number().positive().optional(),
+  targetAmount: z.preprocess(
+    (v) => (!v || v === "" ? undefined : Number(v)),
+    z.number().positive().optional(),
+  ),
   eventDate: z.string().optional(),
   contributionPrivacy: z.enum(["public", "admin_only"]).default("public"),
 

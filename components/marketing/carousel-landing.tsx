@@ -9,6 +9,29 @@ import {
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SettleFlowDemo } from "@/components/marketing/settle-flow-demo";
+import { motion } from "framer-motion";
+
+// ─── Motion presets ───────────────────────────────────────────────────────────
+// Shared easing + variants used across all 9 slides.
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+/** Fade up — used for text lines, pills, body copy */
+const fadeUp = {
+  hidden:  { opacity: 0, y: 18 },
+  visible: { opacity: 1, y: 0,  transition: { duration: 0.45, ease: EASE } },
+};
+
+/** Scale + fade — used for logo, phone frame, cards */
+const fadeScale = {
+  hidden:  { opacity: 0, scale: 0.93, y: 12 },
+  visible: { opacity: 1, scale: 1,    y: 0,  transition: { duration: 0.45, ease: EASE } },
+};
+
+/** Stagger container — children animate with 70 ms apart; optional initial delay */
+const stagger = (delayChildren = 0) => ({
+  hidden:  {},
+  visible: { transition: { staggerChildren: 0.07, delayChildren } },
+});
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 // 9 slides: Hero → Overview → AI → Debt Flow → Settle → Insights → Nests → Streams → CTA
@@ -479,6 +502,7 @@ function FeatureSlide({
   phone, phoneRight = true,
   tilt, accentGlow,
   callouts,
+  isActive = false,
 }: {
   label: string; labelColor?: string; labelHex?: string;
   headline: React.ReactNode;
@@ -489,7 +513,9 @@ function FeatureSlide({
   tilt?: number;
   accentGlow?: string;
   callouts?: React.ReactNode;
+  isActive?: boolean;
 }) {
+  const animState = isActive ? "visible" : "hidden";
   return (
     <div
       className={`snap-start snap-always flex h-full w-full shrink-0
@@ -498,52 +524,64 @@ function FeatureSlide({
         md:px-14 lg:px-20 md:py-0
         ${phoneRight ? "" : "md:flex-row-reverse"}`}
     >
-      {/* ── Phone (top on mobile, side on desktop) ── */}
-      <div className="shrink-0 order-1 w-full md:w-auto flex justify-center pt-3 md:pt-0 relative">
+      {/* ── Phone — scales + fades in first ── */}
+      <motion.div
+        className="shrink-0 order-1 w-full md:w-auto flex justify-center pt-3 md:pt-0 relative"
+        variants={fadeScale}
+        initial="hidden"
+        animate={animState}
+      >
         <div className="relative">
           <ResponsivePhone tilt={tilt} accentGlow={accentGlow}>
             {phone}
           </ResponsivePhone>
           {callouts}
         </div>
-      </div>
+      </motion.div>
 
-      {/* ── Copy (below phone on mobile, beside on desktop) ── */}
-      <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left order-2 min-w-0 max-w-sm md:max-w-xs lg:max-w-sm px-5 md:px-0 pb-4 md:pb-0">
-        {/* Label — pill/badge when labelHex given, plain text otherwise */}
-        {labelHex ? (
-          <div
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-xs font-bold tracking-wide"
-            style={{
-              background: `${labelHex}20`,
-              border: `1px solid ${labelHex}40`,
-              color: labelHex,
-            }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: labelHex }} />
-            {label}
-          </div>
-        ) : (
-          <p className={`text-[10px] font-bold uppercase tracking-[0.18em] mb-1.5 ${labelColor}`}>{label}</p>
-        )}
-        <h2
+      {/* ── Copy — staggered children after 120 ms delay ── */}
+      <motion.div
+        className="flex-1 flex flex-col items-center md:items-start text-center md:text-left order-2 min-w-0 max-w-sm md:max-w-xs lg:max-w-sm px-5 md:px-0 pb-4 md:pb-0"
+        variants={stagger(0.12)}
+        initial="hidden"
+        animate={animState}
+      >
+        {/* Label */}
+        <motion.div variants={fadeUp}>
+          {labelHex ? (
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-xs font-bold tracking-wide"
+              style={{
+                background: `${labelHex}20`,
+                border: `1px solid ${labelHex}40`,
+                color: labelHex,
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: labelHex }} />
+              {label}
+            </div>
+          ) : (
+            <p className={`text-[10px] font-bold uppercase tracking-[0.18em] mb-1.5 ${labelColor}`}>{label}</p>
+          )}
+        </motion.div>
+
+        <motion.h2
           className="text-2xl md:text-3xl lg:text-4xl font-normal leading-[1.1] text-slate-800 dark:text-slate-100 mb-2.5"
           style={{ fontFamily: "var(--font-fraunces)" }}
+          variants={fadeUp}
         >
           {headline}
-        </h2>
+        </motion.h2>
 
-        {/* Feature pills — 2 visible on mobile AND desktop */}
+        {/* Feature pills */}
         {pills && pills.length > 0 && (
-          <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-3">
+          <motion.div className="flex flex-wrap gap-2 justify-center md:justify-start mb-3" variants={fadeUp}>
             {pills.map((p) => (
               <div
                 key={p.text}
                 className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
                 style={{
-                  background: p.color
-                    ? `${p.color}18`
-                    : "rgba(6,182,212,0.1)",
+                  background: p.color ? `${p.color}18` : "rgba(6,182,212,0.1)",
                   border: `1px solid ${p.color ?? "#06B6D4"}28`,
                   color: p.color ?? "#22D3EE",
                 }}
@@ -552,26 +590,26 @@ function FeatureSlide({
                 <span>{p.text}</span>
               </div>
             ))}
-          </div>
+          </motion.div>
         )}
 
         {/* Body — desktop only */}
-        <p className="hidden md:block text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4 max-w-xs">
+        <motion.p className="hidden md:block text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4 max-w-xs" variants={fadeUp}>
           {body}
-        </p>
+        </motion.p>
 
-        {/* Extra bullets — desktop sidebar */}
+        {/* Bullets — stagger individually on desktop */}
         {bullets && (
-          <div className="hidden md:block space-y-1.5">
+          <motion.div className="hidden md:block space-y-1.5" variants={stagger(0)}>
             {bullets.map((b) => (
-              <div key={b.t} className="flex items-center gap-2">
+              <motion.div key={b.t} className="flex items-center gap-2" variants={fadeUp}>
                 <span className="text-sm shrink-0">{b.e}</span>
                 <span className="text-sm text-slate-600 dark:text-slate-300">{b.t}</span>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -642,7 +680,6 @@ export function CarouselLanding() {
         @keyframes blob2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-30px,20px) scale(1.04)}70%{transform:translate(25px,-35px) scale(1.08)}}
         @keyframes blob3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-25px) scale(0.94)}}
         @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-        @keyframes slide-in-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
         @keyframes waveBar0{0%,100%{transform:scaleY(1)}50%{transform:scaleY(0.4)}}
         @keyframes waveBar1{0%,100%{transform:scaleY(0.6)}50%{transform:scaleY(1)}}
         @keyframes waveBar2{0%,100%{transform:scaleY(1)}33%{transform:scaleY(0.3)}66%{transform:scaleY(0.8)}}
@@ -653,7 +690,7 @@ export function CarouselLanding() {
       <nav className="shrink-0 h-14 flex items-center justify-between px-4 sm:px-6 z-50 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-100/80 dark:border-slate-800/60">
         <ClearLogo iconSize={30} wordmarkClassName="text-base font-semibold text-slate-800 dark:text-slate-100" className="flex items-center gap-2" />
         <div className="flex items-center gap-1">
-          <span className="hidden sm:flex items-center mr-1"><ThemeToggle /></span>
+          <ThemeToggle />
           <Link href="/login" scroll={false} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</Link>
           <Link href="/login?intent=signup" scroll={false} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
             Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
@@ -664,16 +701,21 @@ export function CarouselLanding() {
       {/* ── Carousel wrapper (relative so right-edge overlay can be absolute) ── */}
       <div className="relative flex-1 overflow-hidden">
 
-        {/* Right-edge peek — very subtle glass-like fade, suggests more content */}
+        {/* Right-edge peek — signals "more slides" on both themes.
+            Light: dark shadow overlay (transparent → 22 % black) is visible against
+                   bright slide content.
+            Dark:  strong opaque fade to page bg (slate-950) cuts the slide off cleanly. */}
         {active < SLIDE_COUNT - 1 && (
-          <div
-            className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none z-20"
-            style={{
-              background:
-                "linear-gradient(to right,transparent 0%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.18) 100%)",
-              backdropFilter: "blur(1px)",
-            }}
-          />
+          <>
+            <div
+              className="absolute right-0 top-0 bottom-0 w-20 pointer-events-none z-20 dark:hidden"
+              style={{ background: "linear-gradient(to right,transparent 0%,rgba(0,0,0,0.06) 45%,rgba(0,0,0,0.22) 100%)" }}
+            />
+            <div
+              className="absolute right-0 top-0 bottom-0 w-20 pointer-events-none z-20 hidden dark:block"
+              style={{ background: "linear-gradient(to right,transparent 0%,rgba(2,6,23,0.55) 50%,rgba(2,6,23,0.97) 100%)" }}
+            />
+          </>
         )}
 
       {/* ── Horizontal scroll container ── */}
@@ -704,33 +746,40 @@ export function CarouselLanding() {
             <div className="hidden dark:block absolute inset-0" style={{ background:"radial-gradient(ellipse at 30% 40%,rgba(6,182,212,0.08) 0%,transparent 60%)" }} />
           </div>
 
-          {/* ── Content ── */}
-          <div className="relative z-10 flex flex-col items-center text-center max-w-xl" style={{ animation:"slide-in-up 0.7s ease both" }}>
+          {/* ── Content — staggered Framer Motion entrance, replays on each visit ── */}
+          <motion.div
+            className="relative z-10 flex flex-col items-center text-center max-w-xl"
+            variants={stagger(0)}
+            initial="hidden"
+            animate={active === 0 ? "visible" : "hidden"}
+          >
 
             {/* Logo mark */}
-            <div
+            <motion.div
               className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-cyan-500/20"
+              variants={fadeScale}
               style={{
                 background: "linear-gradient(140deg,#0EA5E9 0%,#0891B2 50%,#0D9488 100%)",
                 boxShadow: "0 0 0 1px rgba(255,255,255,0.15) inset, 0 20px 48px rgba(8,145,178,0.35)",
               }}
             >
               <ClearIcon size={52} />
-            </div>
+            </motion.div>
 
             {/* Headline */}
-            <h1
+            <motion.h1
               className="text-4xl sm:text-5xl lg:text-6xl font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-4"
               style={{ fontFamily: "var(--font-fraunces)" }}
+              variants={fadeUp}
             >
               Split it.{" "}
               <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
                 Clear it.
               </span>
-            </h1>
+            </motion.h1>
 
             {/* 3 context pills */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap justify-center">
+            <motion.div className="flex items-center gap-2 mb-4 flex-wrap justify-center" variants={fadeUp}>
               {[
                 { icon:"🏖️", label:"Trips",   bg:"rgba(6,182,212,0.1)",   border:"rgba(6,182,212,0.25)",   text:"#0891B2"  },
                 { icon:"🏠", label:"Nests",   bg:"rgba(13,148,136,0.1)",  border:"rgba(13,148,136,0.25)",  text:"#0D9488"  },
@@ -745,15 +794,18 @@ export function CarouselLanding() {
                   <span>{p.label}</span>
                 </div>
               ))}
-            </div>
+            </motion.div>
 
             {/* Body */}
-            <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 leading-relaxed mb-7 max-w-sm">
+            <motion.p
+              className="text-base sm:text-lg text-slate-500 dark:text-slate-400 leading-relaxed mb-7 max-w-sm"
+              variants={fadeUp}
+            >
               Every shared expense — trips, home, one-to-one — logged in seconds, settled in the fewest payments.
-            </p>
+            </motion.p>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mb-6">
+            <motion.div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mb-6" variants={fadeUp}>
               <Link
                 href="/login?intent=signup"
                 scroll={false}
@@ -767,10 +819,10 @@ export function CarouselLanding() {
               >
                 See how it works <ChevronRight className="w-3.5 h-3.5" />
               </button>
-            </div>
+            </motion.div>
 
             {/* Trust badges */}
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-6">
+            <motion.div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-6" variants={fadeUp}>
               {[
                 { icon:"🔐", text:"Google sign-in" },
                 { icon:"💳", text:"No credit card"  },
@@ -780,10 +832,10 @@ export function CarouselLanding() {
                   <span>{b.icon}</span>{b.text}
                 </span>
               ))}
-            </div>
+            </motion.div>
 
             {/* Social proof ticker */}
-            <div className="w-full overflow-hidden rounded-xl" style={{ maxWidth:380 }}>
+            <motion.div className="w-full overflow-hidden rounded-xl" style={{ maxWidth:380 }} variants={fadeUp}>
               <div
                 className="flex gap-8 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap"
                 style={{ animation:"ticker 20s linear infinite" }}
@@ -801,8 +853,8 @@ export function CarouselLanding() {
                   <span key={i} className="shrink-0">{t}</span>
                 ))}
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
@@ -810,25 +862,37 @@ export function CarouselLanding() {
             Designed for 4 contexts from day 1 — Circle shown as "coming soon".
         ══════════════════════════════════════════════════════════════════ */}
         <div className="snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-5 sm:px-8 py-6 overflow-hidden">
-          {/* Headline */}
-          <div className="text-center mb-5 sm:mb-6">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500 mb-2">One app</p>
-            <h2
+          {/* Headline — stagger in when slide 1 is active */}
+          <motion.div
+            className="text-center mb-5 sm:mb-6"
+            variants={stagger(0)}
+            initial="hidden"
+            animate={active === 1 ? "visible" : "hidden"}
+          >
+            <motion.p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500 mb-2" variants={fadeUp}>One app</motion.p>
+            <motion.h2
               className="text-2xl sm:text-3xl md:text-4xl font-normal leading-[1.08] text-slate-800 dark:text-slate-100 mb-1.5"
               style={{ fontFamily:"var(--font-fraunces)" }}
+              variants={fadeUp}
             >
               Every shared expense,{" "}
               <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
                 covered.
               </span>
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+            </motion.h2>
+            <motion.p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto" variants={fadeUp}>
               Four contexts for every financial relationship — pick the one that fits.
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
 
-          {/* 2×2 context grid */}
-          <div className="grid grid-cols-2 gap-3 w-full" style={{ maxWidth:560 }}>
+          {/* 2×2 context grid — cards stagger in after headline */}
+          <motion.div
+            className="grid grid-cols-2 gap-3 w-full"
+            style={{ maxWidth:560 }}
+            variants={stagger(0.18)}
+            initial="hidden"
+            animate={active === 1 ? "visible" : "hidden"}
+          >
             {([
               {
                 icon:"🏖️", name:"Trips",
@@ -859,9 +923,10 @@ export function CarouselLanding() {
                 comingSoon: true,
               },
             ] as const).map((ctx) => (
-              <div
+              <motion.div
                 key={ctx.name}
                 className="relative rounded-2xl p-3 sm:p-4 flex flex-col gap-1.5 transition-all"
+                variants={fadeScale}
                 style={{
                   background: ctx.comingSoon
                     ? `${ctx.hex}08`
@@ -915,15 +980,16 @@ export function CarouselLanding() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 2 — AI Quick-add
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
+          isActive={active === 2}
           label="AI-powered"
           labelHex="#7C3AED"
           headline={<>Just type — or <span style={{ background:"linear-gradient(135deg,#7C3AED 0%,#0891B2 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>speak.</span></>}
@@ -941,7 +1007,7 @@ export function CarouselLanding() {
           accentGlow="rgba(124,58,237,0.22)"
           tilt={-5}
           callouts={
-            <Callout text="✨ Parses in &lt;1s" icon="⚡" side="right" top={130} accentColor="rgba(124,58,237,0.22)" textColor="#C4B5FD" />
+            <Callout text="✨ Parses in &lt;1s" icon="⚡" side="right" top={265} accentColor="rgba(124,58,237,0.22)" textColor="#C4B5FD" />
           }
           phone={
             /* Full-screen layout — avoids the bottom-sheet clip problem.
@@ -1054,6 +1120,7 @@ export function CarouselLanding() {
             SLIDE 3 — Debt Flow  (SettleFlowDemo rendered inside phone frame)
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
+          isActive={active === 3}
           label="Debt Flow"
           labelHex="#0891B2"
           headline={<>See every IOU <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>at a glance.</span></>}
@@ -1085,7 +1152,7 @@ export function CarouselLanding() {
               {/* SettleFlowDemo fills the remaining space above the nav.
                   pb-14 (56px) prevents content going behind PhoneNav. */}
               <div className="flex-1 overflow-hidden flex flex-col justify-center pb-14 px-1 pt-1">
-                <SettleFlowDemo />
+                <SettleFlowDemo dark />
               </div>
               <PhoneNav active={0} />
             </div>
@@ -1096,6 +1163,7 @@ export function CarouselLanding() {
             SLIDE 3 — Settle Up
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
+          isActive={active === 4}
           label="Settle up"
           labelHex="#059669"
           headline={<>One payment each. <span style={{ background:"linear-gradient(135deg,#059669 0%,#0891B2 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>No math.</span></>}
@@ -1176,6 +1244,7 @@ export function CarouselLanding() {
             SLIDE 4 — Insights
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
+          isActive={active === 5}
           label="Insights"
           labelHex="#D97706"
           headline={<>Understand <span style={{ background:"linear-gradient(135deg,#D97706 0%,#0891B2 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>where it went.</span></>}
@@ -1257,6 +1326,7 @@ export function CarouselLanding() {
             SLIDE 5 — Nests
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
+          isActive={active === 6}
           label="Nests"
           labelHex="#0D9488"
           headline={<>Household bills, <span style={{ background:"linear-gradient(135deg,#0D9488 0%,#059669 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>one tap a month.</span></>}
@@ -1333,6 +1403,7 @@ export function CarouselLanding() {
             SLIDE 6 — Streams
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
+          isActive={active === 7}
           label="Streams"
           labelHex="#6366F1"
           headline={<>Track 1:1 money <span style={{ background:"linear-gradient(135deg,#6366F1 0%,#8B5CF6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>with anyone.</span></>}
@@ -1415,7 +1486,12 @@ export function CarouselLanding() {
             <div style={{ position:"absolute", top:"-20%", left:"-10%", width:"60%", height:"60%", borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.12) 0%,transparent 70%)", animation:"blob1 16s ease-in-out infinite" }} />
             <div style={{ position:"absolute", bottom:"-20%", right:"-10%", width:"55%", height:"55%", borderRadius:"50%", background:"radial-gradient(circle,rgba(5,150,105,0.10) 0%,transparent 70%)", animation:"blob2 20s ease-in-out infinite" }} />
           </div>
-          <div className="relative z-10 w-full max-w-lg text-center">
+          <motion.div
+            className="relative z-10 w-full max-w-lg text-center"
+            variants={fadeScale}
+            initial="hidden"
+            animate={active === 8 ? "visible" : "hidden"}
+          >
             {/* Glass card */}
             <div
               className="rounded-3xl overflow-hidden px-8 py-12 sm:py-16"
@@ -1454,7 +1530,7 @@ export function CarouselLanding() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
       </div>{/* end scroll container */}

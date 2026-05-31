@@ -67,7 +67,7 @@ export default function AboutPage() {
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="hidden sm:flex items-center"><ThemeToggle /></span>
+            <ThemeToggle />
             <Link href="/changelog" className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
               What&apos;s New
             </Link>

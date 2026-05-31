@@ -61,7 +61,12 @@ function quadMid(x1: number, y1: number, x2: number, y2: number) {
   };
 }
 
-export function SettleFlowDemo() {
+/**
+ * `dark` — forces dark-on-dark styling (phone frame usage in carousel).
+ *           Without it the `.glass` class evaluates to a whitish card on
+ *           light theme, clashing with the always-dark #080C14 phone bg.
+ */
+export function SettleFlowDemo({ dark: forceDark = false }: { dark?: boolean }) {
   const [drawn, setDrawn] = useState(false);
 
   useEffect(() => {
@@ -82,7 +87,13 @@ export function SettleFlowDemo() {
 
   return (
     <div className="w-full max-w-[340px] mx-auto select-none">
-      <div className="glass rounded-3xl overflow-hidden shadow-2xl shadow-cyan-500/10 border border-white/60 dark:border-slate-700/40">
+      {/* When `forceDark`, skip the .glass card — the phone frame is the visual
+          container. .glass on light theme = rgba(255,255,255,0.6) which turns
+          the SVG area grey-white against the dark #080C14 phone interior. */}
+      <div className={forceDark
+        ? "rounded-3xl overflow-hidden"
+        : "glass rounded-3xl overflow-hidden shadow-2xl shadow-cyan-500/10 border border-white/60 dark:border-slate-700/40"
+      }>
 
         {/* ── Fake top bar ────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-4 pt-3.5 pb-0.5">
@@ -147,7 +158,7 @@ export function SettleFlowDemo() {
                   dominantBaseline="middle"
                   fontSize={8}
                   fontWeight={600}
-                  fill="#64748B"
+                  fill={forceDark ? "rgba(148,163,184,0.85)" : "#64748B"}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: arc.delay + 0.88 }}
@@ -237,7 +248,7 @@ export function SettleFlowDemo() {
                     dominantBaseline="middle"
                     fontSize={8.5}
                     fontWeight={600}
-                    fill="#475569"
+                    fill={forceDark ? "rgba(226,232,240,0.85)" : "#475569"}
                   >
                     {node.label}
                   </text>
@@ -263,7 +274,11 @@ export function SettleFlowDemo() {
 
         {/* ── Footer summary bar ──────────────────────────────────── */}
         <div className="px-4 pb-4 pt-0">
-          <div className="rounded-2xl bg-white/60 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/40 px-4 py-2.5 flex items-center justify-between">
+          <div className={`rounded-2xl px-4 py-2.5 flex items-center justify-between ${
+            forceDark
+              ? "bg-slate-800/70 border border-slate-700/50"
+              : "bg-white/60 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/40"
+          }`}>
             <div>
               <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                 3 transfers · ₹4,000

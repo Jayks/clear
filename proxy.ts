@@ -42,10 +42,14 @@ export async function proxy(request: NextRequest) {
     // /stream routes are protected — but /stream/confirm/[token] is public (guest confirmation)
     (pathname.startsWith("/stream") && !pathname.startsWith("/stream/confirm"));
 
-  // Redirect unauthenticated users to login, preserving the destination
+  // Redirect unauthenticated users to the landing page, preserving the destination.
+  // The landing page renders the carousel (visible behind the blur), then a client
+  // component triggers router.replace("/login?returnTo=…") so the @modal/(.)login
+  // intercepting route shows the login modal as an overlay — same as any client-side
+  // navigation from a marketing page.
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/";
     url.searchParams.set("returnTo", pathname);
     return NextResponse.redirect(url);
   }

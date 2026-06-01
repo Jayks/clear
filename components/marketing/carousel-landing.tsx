@@ -35,19 +35,20 @@ const stagger = (delayChildren = 0) => ({
 });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// 9 slides: Hero → Overview → AI → Debt Flow → Settle → Insights → Nests → Streams → CTA
-const SLIDE_COUNT = 9;
+// 10 slides: Hero → Overview → AI → Debt Flow → Settle → Insights → Nests → Streams → Circles → CTA
+const SLIDE_COUNT = 10;
 
 const SLIDES = [
-  { label: "Clear",      short: "Home"      },
-  { label: "Overview",   short: "Overview"  },
-  { label: "AI",         short: "AI"        },
-  { label: "Debt Flow",  short: "Debt Flow" },
-  { label: "Settle Up",  short: "Settle"    },
-  { label: "Insights",   short: "Insights"  },
-  { label: "Nests",      short: "Nests"     },
-  { label: "Streams",    short: "Streams"   },
-  { label: "Get started", short: "Start"   },
+  { label: "Clear",       short: "Home"      },
+  { label: "Overview",    short: "Overview"  },
+  { label: "AI",          short: "AI"        },
+  { label: "Debt Flow",   short: "Debt Flow" },
+  { label: "Settle Up",   short: "Settle"    },
+  { label: "Insights",    short: "Insights"  },
+  { label: "Nests",       short: "Nests"     },
+  { label: "Streams",     short: "Streams"   },
+  { label: "Circles",     short: "Circles"   },
+  { label: "Get started", short: "Start"    },
 ];
 
 // ─── HD iPhone 15 Pro–style frame ─────────────────────────────────────────────
@@ -734,7 +735,7 @@ export function CarouselLanding() {
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 0 — Hero
             Gradient mesh background, no phone, centered content.
-            Large logo → headline → 3 context pills → CTAs → trust badges → ticker
+            Large logo → headline → 4 context pills → CTAs → trust badges → ticker
         ══════════════════════════════════════════════════════════════════ */}
         <div className="snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden">
 
@@ -782,12 +783,13 @@ export function CarouselLanding() {
               </span>
             </motion.h1>
 
-            {/* 3 context pills */}
-            <motion.div className="flex items-center gap-2 mb-4 flex-wrap justify-center" variants={fadeUp}>
+            {/* 4 context pills — 2×2 grid */}
+            <motion.div className="grid grid-cols-2 gap-2 mb-4" variants={fadeUp}>
               {[
                 { icon:"🏖️", label:"Trips",   bg:"rgba(6,182,212,0.1)",   border:"rgba(6,182,212,0.25)",   text:"#0891B2"  },
                 { icon:"🏠", label:"Nests",   bg:"rgba(13,148,136,0.1)",  border:"rgba(13,148,136,0.25)",  text:"#0D9488"  },
                 { icon:"⇌",  label:"Streams", bg:"rgba(99,102,241,0.1)",  border:"rgba(99,102,241,0.25)",  text:"#6366F1"  },
+                { icon:"🪙", label:"Circles", bg:"rgba(139,92,246,0.1)",  border:"rgba(139,92,246,0.25)",  text:"#8B5CF6"  },
               ].map((p) => (
                 <div
                   key={p.label}
@@ -805,7 +807,7 @@ export function CarouselLanding() {
               className="text-base sm:text-lg text-slate-500 dark:text-slate-400 leading-relaxed mb-7 max-w-sm"
               variants={fadeUp}
             >
-              Every shared expense — trips, home, one-to-one — logged in seconds, settled in the fewest payments.
+              Trips, households, shared funds, 1:1 debts — every shared expense logged in seconds, settled in the fewest payments.
             </motion.p>
 
             {/* CTAs */}
@@ -847,10 +849,12 @@ export function CarouselLanding() {
                   "🏖️ Goa trip · ₹45,000 split between 8 · settled in 3 payments",
                   "🏠 Mumbai Flat · ₹8,200/mo recurring templates",
                   "⇌ Settled ₹12,400 with Priya in 2 taps",
+                  "🪙 Bali Fund · ₹50,000 collected · 6 members · goal reached 🎯",
                   "✈️ Manali · ₹1.2L across 12 people · zero confusion",
                   "🏖️ Goa trip · ₹45,000 split between 8 · settled in 3 payments",
                   "🏠 Mumbai Flat · ₹8,200/mo recurring templates",
                   "⇌ Settled ₹12,400 with Priya in 2 taps",
+                  "🪙 Bali Fund · ₹50,000 collected · 6 members · goal reached 🎯",
                   "✈️ Manali · ₹1.2L across 12 people · zero confusion",
                 ].map((t, i) => (
                   <span key={i} className="shrink-0">{t}</span>
@@ -919,11 +923,11 @@ export function CarouselLanding() {
                 comingSoon: false,
               },
               {
-                icon:"⬡", name:"Circle",
-                hex:"#F43F5E", gradStart:"#FB7185", gradEnd:"#F97316",
-                desc:"Group savings & contributions",
-                features:["Fixed monthly amounts", "Calendar-month cycles"],
-                comingSoon: true,
+                icon:"🪙", name:"Circles",
+                hex:"#8B5CF6", gradStart:"#A78BFA", gradEnd:"#7C3AED",
+                desc:"Shared fund & contributions",
+                features:["Recurring & one-time modes", "Ghost members + reminders"],
+                comingSoon: false,
               },
             ] as const).map((ctx) => (
               <motion.div
@@ -1481,7 +1485,103 @@ export function CarouselLanding() {
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 7 — CTA
+            SLIDE 8 — Circles
+        ══════════════════════════════════════════════════════════════════ */}
+        <FeatureSlide
+          isActive={active === 8}
+          label="Circles"
+          labelHex="#8B5CF6"
+          headline={<>Shared funds, <span style={{ background:"linear-gradient(135deg,#8B5CF6 0%,#F43F5E 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>everyone accountable.</span></>}
+          body="Create a shared pool — recurring monthly or collect toward a one-time goal. Every contribution tracked, admin in control, WhatsApp reminders for stragglers."
+          pills={[
+            { icon:"🪙", text:"Recurring & one-time",  color:"#8B5CF6" },
+            { icon:"📲", text:"WhatsApp reminders",    color:"#F43F5E" },
+          ]}
+          bullets={[
+            { e:"🪙", t:"Recurring or one-time contributions" },
+            { e:"🏆", t:"Set a target amount + deadline" },
+            { e:"📲", t:"WhatsApp group reminder in 1 tap" },
+            { e:"👻", t:"Ghost members — no app needed" },
+          ]}
+          phoneRight={false}
+          accentGlow="rgba(139,92,246,0.2)"
+          tilt={5}
+          callouts={
+            <Callout text="₹26k to go" icon="🏆" side="right" top={108} accentColor="rgba(244,63,94,0.2)" textColor="#FB7185" />
+          }
+          phone={
+            <div className="h-full flex flex-col" style={{ background:"#080C14" }}>
+              <AppBar
+                title="Bali Trip Fund"
+                right={
+                  <div className="flex items-center gap-1.5 rounded-full px-2 py-0.5" style={{ background:"rgba(139,92,246,0.15)", border:"1px solid rgba(139,92,246,0.3)" }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                    <span style={{ fontSize:9, color:"#A78BFA", fontWeight:600 }}>One-time</span>
+                  </div>
+                }
+              />
+              <div className="flex-1 overflow-hidden px-3 pt-3 pb-14 space-y-2.5">
+                {/* Progress hero */}
+                <div className="rounded-2xl px-4 py-3" style={{ background:"linear-gradient(135deg,rgba(139,92,246,0.18),rgba(244,63,94,0.08))", border:"1px solid rgba(139,92,246,0.3)" }}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p style={{ fontSize:9, color:"rgba(148,163,184,0.6)" }}>Collected</p>
+                      <p className="font-bold" style={{ fontSize:22, color:"#A78BFA", fontFamily:"var(--font-fraunces)" }}>₹24,000</p>
+                    </div>
+                    <div className="text-right">
+                      <p style={{ fontSize:8, color:"rgba(148,163,184,0.5)" }}>of ₹50,000</p>
+                      <p style={{ fontSize:10, color:"#FB7185", fontWeight:600 }}>3 of 6 paid</p>
+                    </div>
+                  </div>
+                  <div className="h-2 rounded-full mt-2" style={{ background:"rgba(255,255,255,0.07)" }}>
+                    <div className="h-2 rounded-full" style={{ width:"48%", background:"linear-gradient(90deg,#8B5CF6,#F43F5E)" }} />
+                  </div>
+                </div>
+                {/* Pending */}
+                <p className="font-semibold" style={{ fontSize:9, color:"rgba(226,232,240,0.4)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pending (2)</p>
+                <div className="space-y-1.5">
+                  {[
+                    { name:"Anil" },
+                    { name:"Meera" },
+                  ].map((m, i) => (
+                    <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2" style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold shrink-0" style={{ fontSize:10, background:"#334155" }}>{m.name[0]}</div>
+                      <span style={{ fontSize:11, color:"rgba(226,232,240,0.55)", flex:1 }}>{m.name}</span>
+                      <div className="flex items-center gap-1 rounded-lg px-2 py-1 shrink-0" style={{ background:"rgba(139,92,246,0.12)", border:"1px solid rgba(139,92,246,0.25)" }}>
+                        <Bell style={{ width:10, height:10, color:"#A78BFA" }} />
+                        <span style={{ fontSize:9, color:"#A78BFA", fontWeight:600 }}>Remind</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Paid */}
+                <p className="font-semibold" style={{ fontSize:9, color:"rgba(226,232,240,0.4)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Paid (3)</p>
+                <div className="space-y-1.5">
+                  {[
+                    { name:"Priya", amt:"₹8,000", bg:"#0891B2" },
+                    { name:"Raj",   amt:"₹8,000", bg:"#16A34A" },
+                    { name:"You",   amt:"₹8,000", bg:"#8B5CF6" },
+                  ].map((m, i) => (
+                    <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2" style={{ background:"rgba(16,185,129,0.06)", border:"1px solid rgba(16,185,129,0.12)" }}>
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold shrink-0" style={{ fontSize:10, background:m.bg }}>{m.name[0]}</div>
+                      <span style={{ fontSize:11, color:"rgba(226,232,240,0.85)", flex:1 }}>{m.name}</span>
+                      <CheckCircle2 style={{ width:11, height:11, color:"#10B981" }} />
+                      <span style={{ fontSize:11, color:"#10B981", fontWeight:700, fontFamily:"var(--font-fraunces)" }}>{m.amt}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* WhatsApp reminder CTA */}
+                <div className="rounded-2xl py-3 text-center font-bold text-white" style={{ fontSize:13, background:"linear-gradient(135deg,#8B5CF6,#F43F5E)", boxShadow:"0 4px 16px rgba(139,92,246,0.3)" }}>
+                  📲 WhatsApp reminder →
+                </div>
+              </div>
+              <PhoneNav active={0} />
+            </div>
+          }
+        />
+
+        {/* ══════════════════════════════════════════════════════════════════
+            SLIDE 9 — CTA
         ══════════════════════════════════════════════════════════════════ */}
         <div className="snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-6 relative overflow-hidden">
           {/* Ambient blobs */}
@@ -1493,7 +1593,7 @@ export function CarouselLanding() {
             className="relative z-10 w-full max-w-lg text-center"
             variants={fadeScale}
             initial="hidden"
-            animate={active === 8 ? "visible" : "hidden"}
+            animate={active === 9 ? "visible" : "hidden"}
           >
             {/* Glass card */}
             <div

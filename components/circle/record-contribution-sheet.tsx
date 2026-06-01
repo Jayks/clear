@@ -19,14 +19,25 @@ interface Props {
   periodLabel:   string | null;
   groupId:       string;
   isAdditional?: boolean;   // true when recording on top of an existing confirmed contribution
+  isOneTime?:    boolean;   // controls button/accent colour
   isOpen:        boolean;
   onClose:       () => void;
   onSuccess:     () => void;
 }
 
 export function RecordContributionSheet({
-  member, amount, currency, period, periodLabel, groupId, isAdditional, isOpen, onClose, onSuccess,
+  member, amount, currency, period, periodLabel, groupId, isAdditional, isOneTime, isOpen, onClose, onSuccess,
 }: Props) {
+  // Mode-aware colour tokens
+  const amountTextCls = isOneTime
+    ? "text-amber-600 dark:text-amber-400"
+    : "text-indigo-600 dark:text-indigo-400";
+  const inputFocusCls = isOneTime
+    ? "focus:ring-amber-500/20 focus:border-amber-400 dark:focus:border-amber-600"
+    : "focus:ring-indigo-500/20 focus:border-indigo-400 dark:focus:border-indigo-600";
+  const btnGradient = isOneTime
+    ? "from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20"
+    : "from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20";
   const [mounted,      setMounted]      = useState(false);
   const [submitting,   setSubmitting]   = useState(false);
   // Used when no fixed amount is set (amount === 0) — admin enters custom amount
@@ -114,7 +125,7 @@ export function RecordContributionSheet({
               <div className="glass rounded-xl p-4 space-y-3">
                 {hasFixedAmount ? (
                   <div className="text-center space-y-1">
-                    <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">
+                    <p className={`text-2xl font-bold tabular-nums ${amountTextCls}`}>
                       {formatCurrency(amount, currency)}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -149,8 +160,7 @@ export function RecordContributionSheet({
                                    bg-white/60 dark:bg-slate-800/60
                                    text-slate-800 dark:text-slate-100
                                    placeholder:text-slate-400 dark:placeholder:text-slate-500
-                                   focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400
-                                   dark:focus:border-violet-600 transition-colors"
+                                   focus:outline-none focus:ring-2 ${inputFocusCls} transition-colors"
                       />
                     </div>
                   </div>
@@ -172,13 +182,12 @@ export function RecordContributionSheet({
                   type="button"
                   onClick={handleConfirm}
                   disabled={!canSubmit}
-                  className="flex-1 py-3 rounded-xl
-                             bg-gradient-to-br from-violet-500 to-purple-600
-                             hover:from-violet-600 hover:to-purple-700
+                  className={`flex-1 py-3 rounded-xl
+                             bg-gradient-to-br ${btnGradient}
                              text-white text-sm font-medium
-                             shadow-md shadow-violet-500/20 transition-all
+                             shadow-md transition-all
                              disabled:opacity-40 disabled:cursor-not-allowed
-                             flex items-center justify-center gap-2"
+                             flex items-center justify-center gap-2`}
                 >
                   {submitting
                     ? "Recording…"

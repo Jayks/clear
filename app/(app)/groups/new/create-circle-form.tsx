@@ -12,7 +12,7 @@ import { trackEvent } from "@/lib/analytics";
 import {
   ArrowLeft, ArrowRight, Plus, Trash2, RotateCcw,
   MessageCircle, Copy, Check, ExternalLink,
-  Repeat2, Target, Coins,
+  Repeat2, Target, Coins, Waves,
 } from "lucide-react";
 
 interface Props {
@@ -24,6 +24,7 @@ type FormStep = 1 | 2 | 3;
 // Explicit form values type — avoids zodResolver generic complexity with superRefine
 type FormValues = {
   circleMode: "recurring" | "one_time";
+  contributionSubType: "fixed" | "flexi";
   name: string;
   defaultCurrency: string;
   contributionAmount: number | undefined;
@@ -58,22 +59,31 @@ function buildRecurringMessage(
   return `Hey! ${creatorName} added you to ${name} on Clear 💰\n₹${amount}/month · Due on the ${ordinal(contributionDay)} of each month${upiLine}\nTrack it on Clear: ${joinUrl}`;
 }
 
-function buildGoalMessage(
+function buildOneTimeMessage(
   name: string,
-  targetAmount: number,
+  targetAmount: number | undefined,
   currency: string,
-  eventDate: string,
+  eventDate: string | undefined,
   contributionAmount: number | undefined,
   creatorName: string,
   upiId: string | undefined,
   joinUrl: string,
 ): string {
-  const perPersonLine = contributionAmount ? `\nYour share: ₹${contributionAmount}` : "";
-  const deadline = new Date(eventDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const icon = targetAmount ? "🎯" : "💸";
+  const meta: string[] = [];
+  if (targetAmount) meta.push(`Target: ₹${targetAmount}`);
+  if (eventDate) {
+    const deadline = new Date(eventDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    meta.push(`Deadline: ${deadline}`);
+  }
+  const metaLine = meta.length ? `\n${meta.join(" · ")}` : "";
+  const shareLine = contributionAmount
+    ? `\nYour share: ₹${contributionAmount}`
+    : "\nContribute any amount you choose";
   const upiLine = upiId && contributionAmount
     ? `\nPay: upi://pay?pa=${upiId}&am=${contributionAmount}&cu=${currency}&tn=${encodeURIComponent(name)}`
     : "";
-  return `Hey! We're chipping in for ${name} 🎯\nTarget: ₹${targetAmount} · Deadline: ${deadline}${perPersonLine}${upiLine}\nTrack the fund: ${joinUrl}`;
+  return `Hey! We're chipping in for ${name} ${icon}${metaLine}${shareLine}${upiLine}\nTrack the fund: ${joinUrl}`;
 }
 
 function ordinal(n: number): string {
@@ -109,10 +119,12 @@ export function CreateCircleForm({ firstName }: Props) {
       contributionDay: 1,
       contributionPrivacy: "public",
       walletExpensesEnabled: true,
+      contributionSubType: "fixed",
     } as Partial<FormValues>,
   });
 
   const circleMode = watch("circleMode");
+  const contributionSubType = watch("contributionSubType") ?? "fixed";
   const name = watch("name") ?? "";
   const contributionAmount = watch("contributionAmount");
   const contributionDay = watch("contributionDay") ?? 1;
@@ -121,11 +133,46 @@ export function CreateCircleForm({ firstName }: Props) {
   const upiId = watch("upiId") ?? "";
   const defaultCurrency = watch("defaultCurrency") ?? "INR";
 
+  const isFixed   = circleMode === "one_time" && contributionSubType === "fixed";
+  const isFlexi   = circleMode === "one_time" && contributionSubType === "flexi";
+  const isOneTime = circleMode === "one_time";
+
+  // ── Mode-aware colour tokens (reactive to circleMode selection) ───────────
+  const modeGrad      = isOneTime ? "from-amber-500 to-orange-500"   : "from-indigo-500 to-violet-600";
+  const modeGradBtn   = isOneTime
+    ? "from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20"
+    : "from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20";
+  const modeIconShadow = isOneTime ? "shadow-amber-500/25"  : "shadow-indigo-500/25";
+  const modeBadge      = isOneTime
+    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+    : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300";
+  const modeLinkText   = isOneTime ? "text-amber-600 dark:text-amber-400" : "text-indigo-600 dark:text-indigo-400";
+  const modeHover      = isOneTime ? "hover:text-amber-600 dark:hover:text-amber-400" : "hover:text-indigo-600 dark:hover:text-indigo-400";
+  const modeFocus      = isOneTime ? "focus:ring-amber-400" : "focus:ring-indigo-400";
+  const modeAccent     = isOneTime ? "accent-amber-500"     : "accent-indigo-500";
+  const modeAddBtn     = isOneTime
+    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/50"
+    : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/50";
+  const modeInfoBox    = isOneTime
+    ? "bg-amber-50/60 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-800/30"
+    : "bg-indigo-50/60 dark:bg-indigo-900/20 border border-indigo-200/50 dark:border-indigo-800/30";
+  const modePrivacy    = isOneTime
+    ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300"
+    : "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300";
+
   // ── Step 1: mode selection ──────────────────────────────────────────────────
 
   function selectMode(mode: "recurring" | "one_time") {
     setValue("circleMode", mode);
     setStep(2);
+  }
+
+  function selectSubType(subType: "fixed" | "flexi") {
+    setValue("contributionSubType", subType);
+    // Clear amount when switching to Flexi so stale value isn't submitted
+    if (subType === "flexi") {
+      setValue("contributionAmount", undefined);
+    }
   }
 
   // ── Member management ───────────────────────────────────────────────────────
@@ -146,9 +193,17 @@ export function CreateCircleForm({ firstName }: Props) {
 
   async function onSubmit(data: FormValues) {
     setSubmitting(true);
+    // Strip UI-only contributionSubType; clear amount for Flexi before sending to action
+    const { contributionSubType: subType, ...rest } = data;
+    const actionData = {
+      ...rest,
+      contributionAmount: subType === "flexi" ? undefined : rest.contributionAmount,
+      members,
+    };
+
     let result: Awaited<ReturnType<typeof createCircle>>;
     try {
-      result = await createCircle({ ...data, members });
+      result = await createCircle(actionData);
     } catch (e) {
       setSubmitting(false);
       toast.error("Failed to create Circle. Please try again.");
@@ -184,11 +239,11 @@ export function CreateCircleForm({ firstName }: Props) {
         joinUrl,
       )
     : created && circleMode === "one_time"
-    ? buildGoalMessage(
+    ? buildOneTimeMessage(
         name,
-        Number(targetAmount),
+        targetAmount ? Number(targetAmount) : undefined,
         defaultCurrency,
-        eventDate,
+        eventDate || undefined,
         contributionAmount ? Number(contributionAmount) : undefined,
         created.creatorName,
         upiId || undefined,
@@ -223,11 +278,11 @@ export function CreateCircleForm({ firstName }: Props) {
             type="button"
             onClick={() => selectMode("recurring")}
             className="group text-left p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700
-                       bg-white/60 dark:bg-slate-800/60 hover:border-violet-400 dark:hover:border-violet-500
-                       hover:bg-violet-50/60 dark:hover:bg-violet-900/20 transition-all"
+                       bg-white/60 dark:bg-slate-800/60 hover:border-indigo-400 dark:hover:border-indigo-500
+                       hover:bg-indigo-50/60 dark:hover:bg-indigo-900/20 transition-all"
           >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600
-                            flex items-center justify-center mb-3 shadow-md shadow-violet-500/25
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600
+                            flex items-center justify-center mb-3 shadow-md shadow-indigo-500/25
                             group-hover:scale-105 transition-transform">
               <Repeat2 className="w-6 h-6 text-white" />
             </div>
@@ -244,16 +299,16 @@ export function CreateCircleForm({ firstName }: Props) {
             type="button"
             onClick={() => selectMode("one_time")}
             className="group text-left p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700
-                       bg-white/60 dark:bg-slate-800/60 hover:border-violet-400 dark:hover:border-violet-500
-                       hover:bg-violet-50/60 dark:hover:bg-violet-900/20 transition-all"
+                       bg-white/60 dark:bg-slate-800/60 hover:border-amber-400 dark:hover:border-amber-500
+                       hover:bg-amber-50/60 dark:hover:bg-amber-900/20 transition-all"
           >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600
-                            flex items-center justify-center mb-3 shadow-md shadow-rose-500/25
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500
+                            flex items-center justify-center mb-3 shadow-md shadow-amber-500/25
                             group-hover:scale-105 transition-transform">
               <Target className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-1">
-              One-time goal
+              One-time
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">
               Collect toward a target by a deadline. Birthday gift, farewell, trip fund, wedding pool.
@@ -270,12 +325,12 @@ export function CreateCircleForm({ firstName }: Props) {
       <div className="space-y-5">
         {/* Success header */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600
-                          flex items-center justify-center shadow-md shadow-violet-500/25 shrink-0">
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${modeGrad}
+                          flex items-center justify-center shadow-md ${modeIconShadow} shrink-0`}>
             <Coins className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-xs text-violet-600 dark:text-violet-400 font-medium uppercase tracking-wide">
+            <p className={`text-xs ${modeLinkText} font-medium uppercase tracking-wide`}>
               Circle created
             </p>
             <p className="text-base font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -335,10 +390,9 @@ export function CreateCircleForm({ firstName }: Props) {
         <button
           type="button"
           onClick={() => router.replace(`/groups/${created.groupId}`)}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl
-                     bg-gradient-to-br from-violet-500 to-purple-600
-                     hover:from-violet-600 hover:to-purple-700
-                     text-white font-medium text-sm shadow-md shadow-violet-500/20 transition-all"
+          className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl
+                     bg-gradient-to-br ${modeGradBtn}
+                     text-white font-medium text-sm shadow-md transition-all`}
         >
           Go to my Circle
           <ArrowRight className="w-4 h-4" />
@@ -367,10 +421,7 @@ export function CreateCircleForm({ firstName }: Props) {
 
       {/* Mode badge */}
       <div className="flex items-center gap-2">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
-          ${circleMode === "recurring"
-            ? "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300"
-            : "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300"}`}>
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${modeBadge}`}>
           {circleMode === "recurring" ? <Repeat2 className="w-3 h-3" /> : <Target className="w-3 h-3" />}
           {circleMode === "recurring" ? "Recurring · monthly" : "One-time"}
         </span>
@@ -386,7 +437,7 @@ export function CreateCircleForm({ firstName }: Props) {
           placeholder={circleMode === "recurring" ? "e.g. Cricket Club Circle" : "e.g. Priya's 30th 🎂"}
           className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                      bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                     focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                     focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
                      placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
         {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
@@ -410,7 +461,7 @@ export function CreateCircleForm({ firstName }: Props) {
                 placeholder="500"
                 className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                            bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                           focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                           focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
                            placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
               {errors.contributionAmount && (
@@ -425,7 +476,7 @@ export function CreateCircleForm({ firstName }: Props) {
                 {...register("defaultCurrency")}
                 className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                            bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                           focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                           focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent"
               >
                 {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -436,7 +487,7 @@ export function CreateCircleForm({ firstName }: Props) {
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
               Due on the{" "}
-              <span className="text-violet-600 dark:text-violet-400 font-semibold">
+              <span className={`${modeLinkText} font-semibold`}>
                 {ordinal(Number(contributionDay))}
               </span>{" "}
               of each month
@@ -447,7 +498,7 @@ export function CreateCircleForm({ firstName }: Props) {
               min="1"
               max="28"
               step="1"
-              className="w-full accent-violet-500"
+              className={`w-full ${modeAccent}`}
             />
             <div className="flex justify-between text-xs text-slate-400 dark:text-slate-500 mt-0.5">
               <span>1st</span>
@@ -455,13 +506,13 @@ export function CreateCircleForm({ firstName }: Props) {
             </div>
           </div>
 
-          {/* More options — UPI */}
+          {/* More options — UPI + wallet */}
           <div>
             <button
               type="button"
               onClick={() => setShowMoreOptions((v) => !v)}
               className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500
-                         hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                         ${modeHover} transition-colors"
             >
               <span>{showMoreOptions ? "▾" : "▸"}</span>
               {showMoreOptions ? "Fewer options" : "More options"}
@@ -479,7 +530,7 @@ export function CreateCircleForm({ firstName }: Props) {
                     placeholder="you@upi"
                     className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                                bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                               focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                               focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
                                placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
@@ -496,7 +547,7 @@ export function CreateCircleForm({ firstName }: Props) {
                     type="button"
                     onClick={() => setValue("walletExpensesEnabled", !watch("walletExpensesEnabled"))}
                     className={`relative shrink-0 w-10 h-6 rounded-full transition-colors overflow-hidden ${
-                      watch("walletExpensesEnabled") ? "bg-violet-500" : "bg-slate-300 dark:bg-slate-600"
+                      watch("walletExpensesEnabled") ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"
                     }`}
                   >
                     <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
@@ -510,14 +561,98 @@ export function CreateCircleForm({ firstName }: Props) {
         </>
       )}
 
-      {/* ── One-time: essential fields ───────────────────────────────────── */}
+      {/* ── One-time: Fixed / Flexi picker + fields ──────────────────────── */}
       {circleMode === "one_time" && (
         <>
-          {/* Target + currency */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Sub-type picker */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+              How will people contribute?
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => selectSubType("fixed")}
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                  isFixed
+                    ? "border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300"
+                    : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
+                }`}
+              >
+                <Target className="w-4 h-4 shrink-0" />
+                <div className="text-left">
+                  <p className="font-semibold leading-none">Fixed</p>
+                  <p className="text-xs font-normal opacity-70 mt-0.5">Set amount each</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => selectSubType("flexi")}
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                  isFlexi
+                    ? "border-teal-400 dark:border-teal-500 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300"
+                    : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
+                }`}
+              >
+                <Waves className="w-4 h-4 shrink-0" />
+                <div className="text-left">
+                  <p className="font-semibold leading-none">Flexi</p>
+                  <p className="text-xs font-normal opacity-70 mt-0.5">Any amount</p>
+                </div>
+              </button>
+            </div>
+            {isFlexi && (
+              <p className="mt-2 text-xs text-teal-600 dark:text-teal-400">
+                Members contribute whatever amount they choose — great for casual collections.
+              </p>
+            )}
+          </div>
+
+          {/* Fixed: amount per person (required) + currency */}
+          {isFixed && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                  Amount per person <span className="text-red-400">*</span>
+                </label>
+                <input
+                  {...register("contributionAmount")}
+                  type="number"
+                  inputMode="decimal"
+                  min="1"
+                  step="1"
+                  placeholder="500"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                             bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                             focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
+                             placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                />
+                {errors.contributionAmount && (
+                  <p className="mt-1 text-xs text-red-500">{errors.contributionAmount.message}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                  Currency
+                </label>
+                <select
+                  {...register("defaultCurrency")}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                             bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                             focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent"
+                >
+                  {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Fixed: total target (optional) */}
+          {isFixed && (
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                Target amount <span className="text-red-400">*</span>
+                Total target{" "}
+                <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
               </label>
               <input
                 {...register("targetAmount")}
@@ -525,55 +660,59 @@ export function CreateCircleForm({ firstName }: Props) {
                 inputMode="decimal"
                 min="1"
                 step="1"
-                placeholder="10000"
+                placeholder="e.g. 10000"
                 className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                            bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                           focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                           focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
                            placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
-              {errors.targetAmount && (
-                <p className="mt-1 text-xs text-red-500">{errors.targetAmount.message}</p>
-              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                Currency
-              </label>
-              <select
-                {...register("defaultCurrency")}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
-                           bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                           focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
-              >
-                {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+          )}
+
+          {/* Flexi: soft target + currency */}
+          {isFlexi && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                  Soft target{" "}
+                  <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+                </label>
+                <input
+                  {...register("targetAmount")}
+                  type="number"
+                  inputMode="decimal"
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 10000"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                             bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                             focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
+                             placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                  Currency
+                </label>
+                <select
+                  {...register("defaultCurrency")}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                             bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                             focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent"
+                >
+                  {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Deadline */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-              Deadline <span className="text-red-400">*</span>
-            </label>
-            <input
-              {...register("eventDate")}
-              type="date"
-              className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
-                         bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                         focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
-            />
-            {errors.eventDate && (
-              <p className="mt-1 text-xs text-red-500">{errors.eventDate.message}</p>
-            )}
-          </div>
-
-          {/* More options — per-person, privacy, UPI */}
+          {/* More options — deadline, privacy, UPI, wallet */}
           <div>
             <button
               type="button"
               onClick={() => setShowMoreOptions((v) => !v)}
               className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500
-                         hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                         ${modeHover} transition-colors"
             >
               <span>{showMoreOptions ? "▾" : "▸"}</span>
               {showMoreOptions ? "Fewer options" : "More options"}
@@ -581,23 +720,18 @@ export function CreateCircleForm({ firstName }: Props) {
 
             {showMoreOptions && (
               <div className="mt-3 space-y-4">
-                {/* Per person */}
+                {/* Deadline */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                    Per person{" "}
+                    Deadline{" "}
                     <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
                   </label>
                   <input
-                    {...register("contributionAmount")}
-                    type="number"
-                    inputMode="decimal"
-                    min="1"
-                    step="1"
-                    placeholder="auto"
+                    {...register("eventDate")}
+                    type="date"
                     className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                                bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                               focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
-                               placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                               focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent"
                   />
                 </div>
 
@@ -616,7 +750,7 @@ export function CreateCircleForm({ firstName }: Props) {
                           onClick={() => setValue("contributionPrivacy", opt)}
                           className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all text-left ${
                             active
-                              ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300"
+                              ? modePrivacy
                               : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
                           }`}
                         >
@@ -643,7 +777,7 @@ export function CreateCircleForm({ firstName }: Props) {
                     placeholder="you@upi"
                     className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                                bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                               focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                               focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
                                placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
@@ -660,7 +794,7 @@ export function CreateCircleForm({ firstName }: Props) {
                     type="button"
                     onClick={() => setValue("walletExpensesEnabled", !watch("walletExpensesEnabled"))}
                     className={`relative shrink-0 w-10 h-6 rounded-full transition-colors overflow-hidden ${
-                      watch("walletExpensesEnabled") ? "bg-violet-500" : "bg-slate-300 dark:bg-slate-600"
+                      watch("walletExpensesEnabled") ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"
                     }`}
                   >
                     <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
@@ -682,7 +816,7 @@ export function CreateCircleForm({ firstName }: Props) {
             <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — can be added later)</span>
           </p>
           {members.length > 0 && (
-            <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">
+            <span className={`text-xs ${modeLinkText} font-medium`}>
               {members.length} added
             </span>
           )}
@@ -692,8 +826,7 @@ export function CreateCircleForm({ firstName }: Props) {
         {members.length > 0 && (
           <div className="space-y-2">
             {members.map((m, i) => (
-              <div key={i} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg
-                                      bg-violet-50/60 dark:bg-violet-900/20 border border-violet-200/50 dark:border-violet-800/30">
+              <div key={i} className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${modeInfoBox}`}>
                 <div>
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{m.name}</p>
                   {m.phone && (
@@ -723,7 +856,7 @@ export function CreateCircleForm({ firstName }: Props) {
             placeholder="Name"
             className="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                        bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                       focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                       focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
                        placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           <input
@@ -734,17 +867,15 @@ export function CreateCircleForm({ firstName }: Props) {
             placeholder="Phone"
             className="w-20 sm:w-32 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                        bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                       focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                       focus:outline-none focus:ring-2 ${modeFocus} focus:border-transparent
                        placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           <button
             type="button"
             onClick={addMember}
             disabled={!newMemberName.trim()}
-            className="px-3 py-2 rounded-xl bg-violet-100 dark:bg-violet-900/30
-                       text-violet-700 dark:text-violet-300 font-medium text-sm
-                       hover:bg-violet-200 dark:hover:bg-violet-800/50 disabled:opacity-40
-                       disabled:cursor-not-allowed transition-colors shrink-0"
+            className={`px-3 py-2 rounded-xl ${modeAddBtn} font-medium text-sm
+                       disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0`}
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -768,10 +899,9 @@ export function CreateCircleForm({ firstName }: Props) {
         <button
           type="submit"
           disabled={submitting}
-          className="flex-1 py-3 bg-gradient-to-br from-violet-500 to-purple-600
-                     hover:from-violet-600 hover:to-purple-700 text-white font-medium rounded-xl
-                     shadow-md shadow-violet-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed
-                     flex items-center justify-center gap-2"
+          className={`flex-1 py-3 bg-gradient-to-br ${modeGradBtn} text-white font-medium rounded-xl
+                     shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed
+                     flex items-center justify-center gap-2`}
         >
           {submitting ? (
             <><RotateCcw className="w-4 h-4 animate-spin" />Creating…</>

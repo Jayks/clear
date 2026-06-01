@@ -35,21 +35,24 @@ const createCircleBaseSchema = z.object({
 });
 
 // ── Cross-field validation for the client form ────────────────────────────────
-export const createCircleSchema = createCircleBaseSchema.superRefine((data, ctx) => {
-  if (data.circleMode === "recurring") {
-    if (!data.contributionAmount) {
-      ctx.addIssue({ code: "custom", message: "Monthly contribution amount is required", path: ["contributionAmount"] });
+// contributionSubType is UI-only: drives Fixed vs Flexi UX, stripped before calling action
+export const createCircleSchema = createCircleBaseSchema
+  .extend({
+    contributionSubType: z.enum(["fixed", "flexi"]).default("fixed"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.circleMode === "recurring") {
+      if (!data.contributionAmount) {
+        ctx.addIssue({ code: "custom", message: "Monthly contribution amount is required", path: ["contributionAmount"] });
+      }
     }
-  }
-  if (data.circleMode === "one_time") {
-    if (!data.targetAmount) {
-      ctx.addIssue({ code: "custom", message: "Target amount is required", path: ["targetAmount"] });
+    if (data.circleMode === "one_time" && data.contributionSubType === "fixed") {
+      if (!data.contributionAmount) {
+        ctx.addIssue({ code: "custom", message: "Amount per person is required", path: ["contributionAmount"] });
+      }
     }
-    if (!data.eventDate) {
-      ctx.addIssue({ code: "custom", message: "Deadline date is required", path: ["eventDate"] });
-    }
-  }
-});
+    // One-time: targetAmount and eventDate are optional for both Fixed and Flexi
+  });
 
 export type CreateCircleInput = z.infer<typeof createCircleSchema>;
 
@@ -64,14 +67,8 @@ export const createCircleActionSchema = createCircleActionBaseSchema.superRefine
       ctx.addIssue({ code: "custom", message: "Monthly contribution amount is required", path: ["contributionAmount"] });
     }
   }
-  if (data.circleMode === "one_time") {
-    if (!data.targetAmount) {
-      ctx.addIssue({ code: "custom", message: "Target amount is required", path: ["targetAmount"] });
-    }
-    if (!data.eventDate) {
-      ctx.addIssue({ code: "custom", message: "Deadline date is required", path: ["eventDate"] });
-    }
-  }
+  // One-time: targetAmount and eventDate are optional (Fixed/Flexi both support no target/deadline)
+  // Fixed vs Flexi distinction is enforced client-side via contributionSubType; server just stores what it gets
 });
 
 export type CreateCircleActionInput = z.infer<typeof createCircleActionSchema>;

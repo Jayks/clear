@@ -69,8 +69,8 @@ clear/
 │   │   ├── record-contribution-sheet.tsx # "use client": admin one-tap confirm sheet; calls recordContribution action
 │   │   ├── add-circle-expense-form.tsx  # "use client": wallet expense form (From wallet / I paid from my pocket toggle)
 │   │   ├── circle-expense-list.tsx      # "use client": expense list with delete + amber advance badge
-│   │   ├── circle-goal-celebration.tsx  # "use client": 🎯 confetti burst + "Goal reached!" banner (sessionStorage-gated)
-│   │   └── circle-goal-status.tsx       # "use client": lifecycle stepper (Collecting→Purchased→Complete) + surplus card
+│   │   ├── circle-one-time-celebration.tsx  # "use client": confetti burst + "Goal/Target reached!" banner (sessionStorage-gated); isFlexi prop switches copy
+│   │   └── circle-one-time-status.tsx       # "use client": lifecycle stepper (Collecting→Purchased→Complete) + surplus card; goalReached=true when no target (Flexi)
 │   ├── ui/, expense/, trip/, settlement/, marketing/, insights/, tour/
 │   └── shared/
 │       ├── section-pill-nav.tsx         # sticky section pills; scroll-position active detection (45% viewport threshold); px-4 py-2 text-sm
@@ -182,7 +182,7 @@ Branches on `config.isCircle`. Non-admins → redirected to `/groups/[id]`. Admi
 
 3-step wizard:
 - **Step 1**: Mode selection — Recurring (violet) vs One-time (rose).
-- **Step 2**: Details — recurring: name, ₹/month, contribution day (1–28); one-time: name, target, deadline, per-person (optional), privacy toggle (`public` | `admin_only`), UPI ID. Add ghost members (name + phone; phone used for WhatsApp invite, not persisted).
+- **Step 2**: Details — recurring: name, ₹/month, contribution day (1–28); one-time: **Fixed/Flexi picker** first (Fixed=set amount per person, Flexi=any amount), then Fixed: amount per person (required) + optional total target; Flexi: optional soft target + currency; both: deadline/UPI/privacy/wallet toggle under "More options". Add ghost members (name + phone; phone used for WhatsApp invite, not persisted). `contributionSubType: "fixed"|"flexi"` is UI-only state stripped before `createCircle` action — Flexi sends `contributionAmount: undefined`.
 - **Step 3**: Invite — WhatsApp wa.me deep link, copy button, "Go to my Circle".
 
 `createCircle` returns `{ groupId, shareToken, creatorName }`. Circle created at end of Step 2.

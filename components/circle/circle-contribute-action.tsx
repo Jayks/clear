@@ -38,6 +38,8 @@ interface Props {
   upiId:               string | null;
   /** "dashboard" = full-size; "card" = compact home-card */
   size:                "dashboard" | "card";
+  /** Controls button/accent colour — indigo for recurring, amber for one_time */
+  circleMode?:         "recurring" | "one_time";
   contributionDate?:   string | null;
   contributionAmount?: number | null;
 }
@@ -45,9 +47,25 @@ interface Props {
 export function CircleContributeAction({
   groupId, groupName, isPaid, isPendingConfirm,
   amount, currency, period, periodLabel, isRecurring, upiId,
-  size, contributionDate, contributionAmount,
+  size, circleMode = "recurring", contributionDate, contributionAmount,
 }: Props) {
   const isDash = size === "dashboard";
+
+  // ── Mode-aware colour tokens ──────────────────────────────────────────────
+  // Recurring = indigo/violet; One-time = amber/orange
+  const isOneTimeMode   = circleMode === "one_time";
+  const btnGradient     = isOneTimeMode ? "from-amber-500 to-orange-500"    : "from-indigo-500 to-violet-600";
+  const btnShadowCls    = isOneTimeMode ? "shadow-amber-500/20"              : "shadow-indigo-500/20";
+  const inputFocusCls   = isOneTimeMode ? "focus:ring-amber-500/20 focus:border-amber-400"
+                                        : "focus:ring-indigo-500/20 focus:border-indigo-400";
+  const promptBgCls     = isOneTimeMode
+    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200/60 dark:border-amber-700/40"
+    : "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200/60 dark:border-indigo-700/40";
+  const promptTextCls   = isOneTimeMode ? "text-amber-700 dark:text-amber-300" : "text-indigo-700 dark:text-indigo-300";
+  const moreTextCls     = isOneTimeMode ? "text-amber-600 dark:text-amber-400" : "text-indigo-600 dark:text-indigo-400";
+  const hoverTextCls    = isOneTimeMode
+    ? "hover:text-amber-600 dark:hover:text-amber-400"
+    : "hover:text-indigo-600 dark:hover:text-indigo-400";
 
   // ── Optimistic state ──────────────────────────────────────────────────────
   const [localPaid,           setLocalPaid]           = useState(isPaid);
@@ -124,9 +142,11 @@ export function CircleContributeAction({
   }
 
   async function handleUpiReported() {
-    if (!amount) return;
+    // Fixed: use the set amount; Flexi: use whatever the user typed before tapping UPI
+    const reportAmount = amount ?? parseFloat(customAmount);
+    if (!reportAmount || reportAmount <= 0) return;
     setReportingUpi(true);
-    const result = await selfReportContribution({ groupId, amount, period, currency });
+    const result = await selfReportContribution({ groupId, amount: reportAmount, period, currency });
     setReportingUpi(false);
     setShowUpiPrompt(false);
     if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
@@ -152,7 +172,7 @@ export function CircleContributeAction({
       const canSubmit = !selfReporting && !!parsed && parsed > 0;
       return (
         <div className="space-y-2">
-          <p className={`${label} font-semibold text-violet-700 dark:text-violet-300`}>
+          <p className={`${label} font-semibold ${promptTextCls}`}>
             Additional contribution
           </p>
           <div className="flex gap-2">
@@ -169,14 +189,13 @@ export function CircleContributeAction({
                 className={`w-full pl-7 pr-3 ${inputPy} ${sub} rounded-xl border
                   border-slate-200 dark:border-slate-700
                   bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                  placeholder:text-slate-400 focus:outline-none
-                  focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400`}
+                  placeholder:text-slate-400 focus:outline-none focus:ring-2 ${inputFocusCls}`}
               />
             </div>
             <button
               type="button" onClick={handleCustomReport} disabled={!canSubmit}
               className={`px-3 ${btnPy} ${sub} font-medium rounded-xl
-                bg-gradient-to-br from-violet-500 to-purple-600 text-white
+                bg-gradient-to-br ${btnGradient} text-white
                 hover:opacity-90 transition-opacity disabled:opacity-40 whitespace-nowrap`}
             >
               {selfReporting ? "…" : "Report"}
@@ -215,7 +234,7 @@ export function CircleContributeAction({
           <button
             type="button"
             onClick={() => setShowAdditional(true)}
-            className={`${sub} text-violet-600 dark:text-violet-400 font-medium hover:underline whitespace-nowrap`}
+            className={`${sub} ${moreTextCls} font-medium hover:underline whitespace-nowrap`}
           >
             + More
           </button>
@@ -239,15 +258,22 @@ export function CircleContributeAction({
     );
   }
 
-  // ── Unpaid, no fixed amount (goal) ─────────────────────────────────────────
+  // ── Unpaid, Flexi (no fixed amount) ───────────────────────────────────────
   if (!amount) {
-    const parsed    = parseFloat(customAmount);
-    const canSubmit = !selfReporting && !!parsed && parsed > 0;
+    const parsed       = parseFloat(customAmount);
+    const canSubmit    = !selfReporting && !!parsed && parsed > 0;
+    // Dynamic UPI link — only active once an amount is entered
+    const flexiUpiLink = upiId && parsed > 0
+      ? `upi://pay?pa=${encodeURIComponent(upiId)}&am=${parsed}&cu=${currency}&tn=${encodeURIComponent(groupName)}`
+      : null;
+
     return (
       <div className="space-y-2">
         <p className={`${sub} text-slate-500 dark:text-slate-400`}>
-          Enter the amount you paid — the admin will confirm
+          Enter your contribution amount — admin will confirm
         </p>
+
+        {/* Amount input row — inline button only when no UPI */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${sub} text-slate-400 pointer-events-none select-none`}>
@@ -265,16 +291,82 @@ export function CircleContributeAction({
                 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400`}
             />
           </div>
-          <button
-            type="button" onClick={handleCustomReport} disabled={!canSubmit}
-            className={`px-3 ${btnPy} ${sub} font-medium rounded-xl
-              bg-gradient-to-br from-violet-500 to-purple-600 text-white
-              shadow-sm shadow-violet-500/20 hover:opacity-90
-              disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap`}
-          >
-            {selfReporting ? "…" : "I've paid"}
-          </button>
+          {/* No UPI — show "I've contributed" inline */}
+          {!upiId && (
+            <button
+              type="button" onClick={handleCustomReport} disabled={!canSubmit}
+              className={`px-3 ${btnPy} ${sub} font-medium rounded-xl
+                bg-gradient-to-br ${btnGradient} text-white
+                shadow-sm ${btnShadowCls} hover:opacity-90
+                disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap`}
+            >
+              {selfReporting ? "…" : "I've contributed"}
+            </button>
+          )}
         </div>
+
+        {/* UPI available — dynamic Pay button + secondary report link */}
+        {upiId && (
+          <div className="space-y-1.5">
+            <a
+              href={flexiUpiLink ?? "#"}
+              onClick={(e) => {
+                if (!flexiUpiLink) { e.preventDefault(); return; }
+                upiTappedRef.current = true;
+              }}
+              className={`block w-full text-center ${btnPy} ${label} font-semibold rounded-xl
+                bg-gradient-to-br ${btnGradient} text-white
+                shadow-sm ${btnShadowCls} transition-opacity
+                ${flexiUpiLink ? "hover:opacity-90" : "opacity-40 cursor-not-allowed pointer-events-none"}`}
+            >
+              Pay via UPI ↗
+            </a>
+            <button
+              type="button"
+              onClick={handleCustomReport}
+              disabled={!canSubmit}
+              className={`block w-full text-center ${sub} text-slate-400 dark:text-slate-500
+                ${hoverTextCls} transition-colors
+                disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {selfReporting ? "Reporting…" : "Already contributed elsewhere? Report it →"}
+            </button>
+          </div>
+        )}
+
+        {/* Return-from-UPI prompt (uses customAmount for Flexi) */}
+        {showUpiPrompt && (
+          <div className={`p-2.5 rounded-xl ${promptBgCls} space-y-2`}>
+            <p className={`${sub} font-semibold ${promptTextCls}`}>
+              💸 Payment sent?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUpiPrompt(false);
+                  if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
+                }}
+                className={`flex-1 py-1 ${sub} font-medium rounded-lg border
+                  border-slate-200 dark:border-slate-700
+                  text-slate-500 dark:text-slate-400
+                  hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors`}
+              >
+                Not yet
+              </button>
+              <button
+                type="button"
+                onClick={handleUpiReported}
+                disabled={reportingUpi}
+                className={`flex-1 py-1 ${sub} font-semibold rounded-lg
+                  bg-gradient-to-br ${btnGradient} text-white
+                  hover:opacity-90 transition-opacity disabled:opacity-60`}
+              >
+                {reportingUpi ? "…" : "Yes, report it ✓"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -296,8 +388,8 @@ export function CircleContributeAction({
             href={upiLink}
             onClick={() => { upiTappedRef.current = true; }}
             className={`block w-full text-center ${btnPy} ${label} font-semibold rounded-xl
-              bg-gradient-to-br from-violet-500 to-purple-600 text-white
-              shadow-sm shadow-violet-500/20 hover:opacity-90 transition-opacity`}
+              bg-gradient-to-br ${btnGradient} text-white
+              shadow-sm ${btnShadowCls} hover:opacity-90 transition-opacity`}
           >
             Pay {formatCurrency(amount, currency)} ↗
           </a>
@@ -307,7 +399,7 @@ export function CircleContributeAction({
             onClick={() => handleSelfReport()}
             disabled={selfReporting}
             className={`block w-full text-center ${sub} text-slate-400 dark:text-slate-500
-              hover:text-violet-600 dark:hover:text-violet-400 transition-colors
+              ${hoverTextCls} transition-colors
               disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {selfReporting ? "Reporting…" : "Already paid elsewhere? Report it →"}
@@ -320,8 +412,8 @@ export function CircleContributeAction({
           onClick={() => handleSelfReport()}
           disabled={selfReporting}
           className={`w-full ${btnPy} ${label} font-semibold rounded-xl
-            bg-gradient-to-br from-violet-500 to-purple-600 text-white
-            shadow-sm shadow-violet-500/20 hover:opacity-90 transition-opacity
+            bg-gradient-to-br ${btnGradient} text-white
+            shadow-sm ${btnShadowCls} hover:opacity-90 transition-opacity
             disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {selfReporting ? "…" : "I've paid"}
@@ -330,9 +422,8 @@ export function CircleContributeAction({
 
       {/* Return-from-UPI prompt */}
       {showUpiPrompt && (
-        <div className="p-2.5 rounded-xl bg-violet-50 dark:bg-violet-900/20
-                        border border-violet-200/60 dark:border-violet-700/40 space-y-2">
-          <p className={`${sub} font-semibold text-violet-700 dark:text-violet-300`}>
+        <div className={`p-2.5 rounded-xl ${promptBgCls} space-y-2`}>
+          <p className={`${sub} font-semibold ${promptTextCls}`}>
             💸 Payment sent?
           </p>
           <div className="flex gap-2">
@@ -354,7 +445,7 @@ export function CircleContributeAction({
               onClick={handleUpiReported}
               disabled={reportingUpi}
               className={`flex-1 py-1 ${sub} font-semibold rounded-lg
-                bg-gradient-to-br from-violet-500 to-purple-600 text-white
+                bg-gradient-to-br ${btnGradient} text-white
                 hover:opacity-90 transition-opacity disabled:opacity-60`}
             >
               {reportingUpi ? "…" : "Yes, report it ✓"}

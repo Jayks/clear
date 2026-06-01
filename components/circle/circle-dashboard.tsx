@@ -7,8 +7,8 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { CircleCycleNav } from "./circle-cycle-nav";
 import { CircleContributionRoster } from "./circle-contribution-roster";
 import { CircleReminderButton } from "./circle-reminder-button";
-import { CircleGoalCelebration } from "./circle-goal-celebration";
-import { CircleGoalStatus } from "./circle-goal-status";
+import { CircleGoalCelebration } from "./circle-one-time-celebration";
+import { CircleGoalStatus } from "./circle-one-time-status";
 import { CircleBatchConfirmBanner } from "./circle-batch-confirm-banner";
 import { CircleContributeAction } from "./circle-contribute-action";
 import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
@@ -40,6 +40,19 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
 
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
+
+  // ── Mode-aware colour tokens ─────────────────────────────────────────────
+  const heroGrad     = isOneTime ? "from-amber-500 to-orange-600"      : "from-indigo-600 to-violet-700";
+  const progressCls  = isOneTime ? "from-amber-400 to-orange-500"      : "from-indigo-400 to-violet-500";
+  const sectionBg    = isOneTime ? "bg-amber-50 dark:bg-amber-900/30"  : "bg-indigo-50 dark:bg-indigo-900/30";
+  const sectionIcon  = isOneTime ? "text-amber-600 dark:text-amber-400": "text-indigo-600 dark:text-indigo-400";
+  const sectionRule  = isOneTime
+    ? "from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent"
+    : "from-indigo-200/70 to-transparent dark:from-indigo-800/40 dark:to-transparent";
+  const linkCls      = isOneTime ? "text-amber-600 dark:text-amber-400": "text-indigo-600 dark:text-indigo-400";
+  const walletBtnCls = isOneTime
+    ? "from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20"
+    : "from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20";
 
   // Runway health signal
   const runwayHealth =
@@ -93,9 +106,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
       {/* ── Hero card ───────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl overflow-hidden mb-6">
         {/* Gradient header */}
-        <div className={`h-32 relative flex items-end px-5 pb-4 bg-gradient-to-br
-          ${isOneTime ? "from-rose-500 to-pink-600" : "from-violet-600 to-purple-700"}`}
-        >
+        <div className={`h-32 relative flex items-end px-5 pb-4 bg-gradient-to-br ${heroGrad}`}>
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 
           {/* Admin actions */}
@@ -177,7 +188,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                 )
               ) : (
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
-                  {formatCurrency(dash.cycleCollected, group.defaultCurrency)}
+                  {formatCurrency(isFlexi ? dash.allTimeCollected : dash.cycleCollected, group.defaultCurrency)}
                   <span className="text-slate-400 dark:text-slate-500 font-normal"> collected</span>
                 </span>
               )}
@@ -187,12 +198,10 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             </div>
             <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 ${
+                className={`h-full rounded-full transition-all duration-700 bg-gradient-to-r ${
                   progressPct >= 100
-                    ? "bg-gradient-to-r from-emerald-400 to-green-500"
-                    : isOneTime
-                    ? "bg-gradient-to-r from-rose-400 to-pink-500"
-                    : "bg-gradient-to-r from-violet-500 to-purple-600"
+                    ? "from-emerald-400 to-green-500"
+                    : progressCls
                 }`}
                 style={{ width: `${progressPct}%` }}
               />
@@ -248,6 +257,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                 isRecurring={isRecurring}
                 upiId={group.upiId ?? null}
                 size="dashboard"
+                circleMode={(group.circleMode as "recurring" | "one_time") ?? undefined}
                 contributionDate={dash.myContributionDate}
                 contributionAmount={dash.myContributionAmount}
               />
@@ -272,6 +282,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           collectedAmount={dash.allTimeCollected}
           targetAmount={targetNum}
           currency={group.defaultCurrency}
+          isFlexi={isFlexi}
         />
       )}
 
@@ -279,17 +290,17 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
       <div className="glass rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-              <Users className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+            <div className={`w-6 h-6 rounded-md ${sectionBg} flex items-center justify-center shrink-0`}>
+              <Users className={`w-3.5 h-3.5 ${sectionIcon}`} />
             </div>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               {isRecurring ? dash.selectedPeriodLabel : "Contributors"}
             </span>
-            <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
+            <div className={`flex-1 h-[1.5px] w-12 bg-gradient-to-r ${sectionRule}`} />
           </div>
           <Link
             href={`/groups/${group.id}/members`}
-            className="text-xs text-violet-600 dark:text-violet-400 font-medium hover:underline"
+            className={`text-xs ${linkCls} font-medium hover:underline`}
           >
             Manage →
           </Link>
@@ -321,6 +332,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           currency={group.defaultCurrency}
           upiId={group.upiId ?? null}
           joinUrl={joinUrl}
+          isOneTime={isOneTime}
         />
       )}
 
@@ -397,10 +409,10 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           {isAdmin && (
             <Link
               href={`/groups/${group.id}/expenses/new`}
-              className="mt-4 w-full inline-flex items-center justify-center gap-1.5
-                         bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700
+              className={`mt-4 w-full inline-flex items-center justify-center gap-1.5
+                         bg-gradient-to-br ${walletBtnCls}
                          text-white text-sm font-medium rounded-xl px-4 py-2.5
-                         shadow-sm shadow-violet-500/20 transition-all"
+                         shadow-sm transition-all`}
             >
               <Plus className="w-4 h-4" />
               Log wallet expense
@@ -416,7 +428,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             </p>
             <Link
               href={`/groups/${group.id}/edit`}
-              className="text-xs text-violet-600 dark:text-violet-400 font-medium hover:underline"
+              className={`text-xs ${linkCls} font-medium hover:underline`}
             >
               Enable →
             </Link>

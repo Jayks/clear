@@ -32,7 +32,7 @@ export default async function NewGroupPage({ searchParams }: Props) {
           Create a Circle
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">
-          A shared fund — fixed monthly contributions or a one-time goal.
+          A shared fund — fixed monthly contributions or a one-time collection.
         </p>
 
         <div className="glass rounded-2xl p-4 sm:p-6">

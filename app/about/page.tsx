@@ -18,8 +18,8 @@ const steps = [
   {
     n: "01",
     icon: LayoutGrid,
-    title: "Create a group",
-    body: "Choose Trip for travel or Nest for home expenses. Add members in seconds.",
+    title: "Pick your context",
+    body: "Trip for travel, Nest for home bills, Circle for a shared fund, or Streams for direct 1:1 tracking between two people.",
   },
   {
     n: "02",
@@ -93,7 +93,7 @@ export default function AboutPage() {
             <div className="flex-1 text-center lg:text-left">
               <div className="animate-hero-1 inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-200 mb-8 shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 animate-pulse shrink-0" />
-                Trips & nests · 30-day Plus trial
+                Trips · Nests · Streams · Circles · 30-day trial
               </div>
 
               <h1 className="animate-hero-2 text-5xl sm:text-6xl lg:text-[66px] xl:text-[72px] font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-7" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -104,7 +104,7 @@ export default function AboutPage() {
               </h1>
 
               <p className="animate-hero-3 text-lg sm:text-xl text-slate-500 dark:text-slate-400 leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
-                Group expenses for trips and nests — log, split, and settle up with the{" "}
+                Four financial contexts — trips, home bills, 1:1 debts, and shared funds — all in one place, settled with the{" "}
                 <span className="text-slate-700 dark:text-slate-200 font-medium">fewest payments possible.</span>
               </p>
 
@@ -285,26 +285,26 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── Two kinds of groups ───────────────────────────────────────────── */}
+      {/* ── Four financial contexts ───────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
         <FadeIn className="text-center mb-14">
-          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Group types</p>
+          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Financial contexts</p>
           <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
-            Two kinds of groups.
+            Four contexts.
             <br />
             <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
               One simple app.
             </span>
           </h2>
           <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-            Choose what fits your situation. Both use the same splitting engine and settlement optimizer.
+            Pick the one that fits — or use all four. Same splitting engine and settlement optimizer throughout.
           </p>
         </FadeIn>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Trip card */}
           <FadeIn direction="left" className="glass rounded-3xl overflow-hidden">
-            <div className="relative h-48">
+            <div className="relative h-44">
               <Image src={HERO_IMAGE} alt="Travel trip" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
               <div className="absolute bottom-4 left-5">
@@ -316,13 +316,12 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="p-6">
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {[
                   "Hotels, meals, transport — all in one place",
-                  "Trip dates, cover photo, shared itinerary",
-                  "Visual timeline of expenses and events",
-                  "AI travel narrative and budget tracking",
-                  "Daily spend chart and trip insights",
+                  "Day-by-day timeline + AI trip narrative",
+                  "Daily spend chart and budget tracking",
+                  "Cover photo, dates, shared itinerary",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
                     <CheckCircle2 className="w-4 h-4 text-cyan-500 shrink-0 mt-0.5" />
@@ -335,7 +334,7 @@ export default function AboutPage() {
 
           {/* Nest card */}
           <FadeIn direction="right" className="glass rounded-3xl overflow-hidden">
-            <div className="relative h-48">
+            <div className="relative h-44">
               <Image src={NEST_IMAGE} alt="Nest group" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover object-center" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
               <div className="absolute bottom-4 left-5">
@@ -347,15 +346,102 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="p-6">
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {[
                   "Rent, utilities, subscriptions — split monthly",
                   "Recurring templates: log with one tap",
                   "Expenses grouped by month for clarity",
-                  "Monthly context on every settle-up",
+                  "Monthly pace tracker + settle-up context",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
                     <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </FadeIn>
+
+          {/* Streams card */}
+          <FadeIn direction="left" className="glass rounded-3xl overflow-hidden">
+            <div
+              className="relative h-44 flex flex-col justify-end p-5"
+              style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #1e1b4b 100%)" }}
+            >
+              {/* Decorative spine lines */}
+              <div className="absolute inset-0 overflow-hidden opacity-20">
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-indigo-400" style={{ transform: "translateX(-50%)" }} />
+                {[18, 58, 98, 138].map((y) => (
+                  <div key={y} className="absolute flex items-center w-full" style={{ top: y }}>
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-indigo-400 mr-5" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-300 shrink-0" />
+                    <div className="flex-1 ml-5" />
+                  </div>
+                ))}
+              </div>
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-3 py-1 mb-2">
+                  <span className="text-xs text-indigo-300">⇌</span>
+                  <span className="text-xs font-semibold text-white">Stream</span>
+                </div>
+                <p className="text-white text-xl" style={{ fontFamily: "var(--font-fraunces)" }}>1:1 debts</p>
+              </div>
+            </div>
+            <div className="p-6">
+              <ul className="space-y-2.5">
+                {[
+                  "No group needed — track with one person",
+                  "Bilateral spine: every IOU chronologically",
+                  "Guest confirmation via shareable link",
+                  "Partial settle or forgive anytime",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </FadeIn>
+
+          {/* Circles card */}
+          <FadeIn direction="right" className="glass rounded-3xl overflow-hidden">
+            <div
+              className="relative h-44 flex flex-col justify-end p-5"
+              style={{ background: "linear-gradient(135deg, #2e1065 0%, #4c1d95 40%, #881337 100%)" }}
+            >
+              {/* Decorative progress */}
+              <div className="absolute inset-0 flex items-center px-6 opacity-25">
+                <div className="w-full">
+                  <div className="h-3 rounded-full bg-white/20 overflow-hidden mb-3">
+                    <div className="h-3 rounded-full" style={{ width: "62%", background: "linear-gradient(90deg,#a78bfa,#fb7185)" }} />
+                  </div>
+                  <div className="flex gap-1.5">
+                    {["P","R","Y","A"].map((l) => (
+                      <div key={l} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">{l}</div>
+                    ))}
+                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-xs">+2</div>
+                  </div>
+                </div>
+              </div>
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-3 py-1 mb-2">
+                  <span className="text-xs text-violet-300">🪙</span>
+                  <span className="text-xs font-semibold text-white">Circle</span>
+                </div>
+                <p className="text-white text-xl" style={{ fontFamily: "var(--font-fraunces)" }}>Shared fund</p>
+              </div>
+            </div>
+            <div className="p-6">
+              <ul className="space-y-2.5">
+                {[
+                  "Recurring monthly or one-time collection",
+                  "Fixed (equal shares) or Flexi (any amount)",
+                  "WhatsApp group reminder for stragglers",
+                  "Ghost members — no Clear account needed",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
                     {item}
                   </li>
                 ))}
@@ -413,6 +499,14 @@ export default function AboutPage() {
                 them: "Disagreements go to WhatsApp",
                 us:   "Raise a dispute in-app — payer accepts, split updates automatically",
               },
+              {
+                them: "No way to track direct 1:1 debts outside a group",
+                us:   "Streams — bilateral ledger for any two people, guest confirmation, partial settle",
+              },
+              {
+                them: "No shared fund or kitty management",
+                us:   "Circles — recurring or one-time pool, contribution tracking, WhatsApp reminders",
+              },
             ].map((row, i) => (
               <div key={i} className={`grid grid-cols-2 border-b border-slate-100/60 dark:border-slate-700/40 last:border-0 ${i % 2 === 1 ? "bg-slate-50/30 dark:bg-slate-800/20" : ""}`}>
                 <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60 flex items-start gap-2.5">
@@ -435,6 +529,9 @@ export default function AboutPage() {
             "Per-group insights", "Trip timeline", "Email & push alerts", "UPI pay links",
             "Debt flow graph", "CSV export", "Expense audit trail", "Installs on any device",
             "Inline comments", "In-app dispute resolution",
+            "Streams · bilateral 1:1 ledger", "Guest confirmation link", "Partial settle",
+            "Circles · shared fund", "Recurring & one-time modes", "WhatsApp group reminder",
+            "Ghost members", "Flexi contributions",
           ].map((pill) => (
             <span key={pill} className="glass-sm rounded-full px-4 py-1.5 text-sm text-slate-600 dark:text-slate-300 border border-white/60 dark:border-slate-700/40">
               {pill}
@@ -501,6 +598,104 @@ export default function AboutPage() {
               Set up recurring templates for rent, electricity, subscriptions. Every month, tap "Log for May" and it's recorded — split exactly as you configured, ready to settle.
             </p>
           </FadeIn>
+        </div>
+      </section>
+
+      {/* ── Streams showcase ─────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+
+          {/* Left: copy */}
+          <FadeIn direction="left" className="flex-1 text-center lg:text-left">
+            <p className="text-sm font-semibold text-indigo-600 uppercase tracking-widest mb-3">Streams</p>
+            <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
+              Track 1:1 money
+              <br />
+              <span style={{ background: "linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                with anyone.
+              </span>
+            </h2>
+            <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto lg:mx-0 mb-6">
+              No group needed. Log direct debts between you and one other person — even if they don&apos;t have Clear yet. Guest confirmation, partial settle, or forgive anytime.
+            </p>
+            <ul className="space-y-3 text-left max-w-md mx-auto lg:mx-0">
+              {[
+                { icon: "⇌", label: "Bilateral spine view",    desc: "Every IOU shown chronologically — who paid what, confirmed and pending." },
+                { icon: "✅", label: "Guest confirmation",      desc: "Share a link — the other person confirms or disputes, no Clear account needed." },
+                { icon: "💚", label: "Partial settle or forgive", desc: "Settle just part of the net amount, or write off a debt entirely in one tap." },
+                { icon: "⚡", label: "Swipe quick actions",     desc: "Swipe left on any entry to Mark Paid, Share, or Forgive instantly." },
+              ].map((item) => (
+                <li key={item.label} className="flex items-start gap-3">
+                  <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                  <div>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label} </span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{item.desc}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </FadeIn>
+
+          {/* Right: bilateral spine mockup */}
+          <FadeIn direction="right" className="flex-1 w-full max-w-sm">
+            <div className="glass rounded-2xl p-5 shadow-xl shadow-indigo-500/10">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100 dark:border-slate-700/40">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Stream · Priya</p>
+                  <p className="text-xs text-slate-400 mt-0.5">5 entries · net ₹1,200 owed to you</p>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400">₹1,200 owed</span>
+              </div>
+
+              {/* Bilateral spine */}
+              <div className="relative">
+                <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-slate-100 dark:bg-slate-700/50" />
+                <div className="space-y-3">
+                  {[
+                    { side: "right", label: "Priya covered cab",      amount: "₹800", status: "confirmed", date: "Jun 2" },
+                    { side: "left",  label: "You paid lunch",          amount: "₹400", status: "pending",   date: "Jun 1" },
+                    { side: "right", label: "Priya bought coffee",     amount: "₹320", status: "confirmed", date: "May 30" },
+                    { side: "left",  label: "You covered groceries",   amount: "₹680", status: "confirmed", date: "May 28" },
+                  ].map((e, i) => (
+                    <div key={i} className={`flex items-center gap-2 relative ${e.side === "right" ? "flex-row-reverse" : ""}`}>
+                      <div
+                        className="flex-1 rounded-xl px-3 py-2 text-xs"
+                        style={{
+                          background: e.side === "right" ? "rgba(99,102,241,0.06)" : "rgba(6,182,212,0.06)",
+                          border: `1px solid ${e.side === "right" ? "rgba(99,102,241,0.18)" : "rgba(6,182,212,0.18)"}`,
+                          ...(e.side === "right" ? { marginLeft: 12 } : { marginRight: 12 }),
+                        }}
+                      >
+                        <p className="font-medium text-slate-700 dark:text-slate-200 truncate">{e.label}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="font-bold" style={{ color: e.side === "right" ? "#6366F1" : "#0891B2" }}>{e.amount}</span>
+                          <span style={{ color: e.status === "confirmed" ? "#10B981" : "#F59E0B" }}>
+                            {e.status === "confirmed" ? "✓ confirmed" : "⏳ pending"}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0 z-10 absolute left-1/2 -translate-x-1/2"
+                        style={{ background: e.status === "confirmed" ? "#10B981" : "#F59E0B", boxShadow: `0 0 6px ${e.status === "confirmed" ? "rgba(16,185,129,0.5)" : "rgba(245,158,11,0.5)"}` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Settle CTA */}
+              <div className="mt-4 flex gap-2">
+                <div className="flex-1 text-xs font-semibold text-white py-2.5 rounded-xl text-center" style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}>
+                  Settle ₹1,200 →
+                </div>
+                <div className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Forgive
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+
         </div>
       </section>
 
@@ -676,6 +871,110 @@ export default function AboutPage() {
                 { icon: "🔥", label: "Busiest day highlight", desc: "The big-spend day is automatically flagged so it's never buried." },
                 { icon: "🎨", label: "Category colour bars", desc: "See whether a day was mostly transport, food, or accommodation — instantly." },
                 { icon: "👤", label: "Per-payer chips", desc: "Colour-coded initials sized by each person's share of the day." },
+              ].map((item) => (
+                <li key={item.label} className="flex items-start gap-3">
+                  <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
+                  <div>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label} </span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{item.desc}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </FadeIn>
+
+        </div>
+      </section>
+
+      {/* ── Circles showcase ─────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pb-24">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+
+          {/* Left: contribution progress mockup */}
+          <FadeIn direction="left" className="flex-1 w-full max-w-md">
+            <div className="glass rounded-2xl p-6 shadow-xl shadow-violet-500/10">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Bali Trip Fund</p>
+                  <p className="text-xs text-slate-400 mt-0.5">One-time circle · 6 members · ₹8,000 each</p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  🪙 Circle
+                </div>
+              </div>
+
+              {/* Progress */}
+              <div className="mb-5">
+                <div className="flex items-end justify-between mb-2">
+                  <div>
+                    <p className="text-xs text-slate-400">Collected</p>
+                    <p className="text-2xl font-bold text-violet-600 dark:text-violet-400" style={{ fontFamily: "var(--font-fraunces)" }}>₹24,000</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400">of ₹50,000 target</p>
+                    <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">48% · 3 of 6 paid</p>
+                  </div>
+                </div>
+                <div className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-700/60 overflow-hidden">
+                  <div className="h-2.5 rounded-full" style={{ width: "48%", background: "linear-gradient(90deg, #8B5CF6, #F43F5E)" }} />
+                </div>
+              </div>
+
+              {/* Paid */}
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Paid (3)</p>
+              <div className="space-y-1.5 mb-4">
+                {[
+                  { name: "Priya", amt: "₹8,000" },
+                  { name: "Raj",   amt: "₹8,000" },
+                  { name: "You",   amt: "₹8,000" },
+                ].map((m, i) => (
+                  <div key={i} className="flex items-center gap-2.5 glass-sm rounded-xl px-3 py-2.5">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal-400 to-emerald-400 flex items-center justify-center text-xs font-bold text-white shrink-0">{m.name[0]}</div>
+                    <span className="text-sm text-slate-700 dark:text-slate-200 flex-1">{m.name}</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">{m.amt}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pending */}
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Pending (2)</p>
+              <div className="space-y-1.5">
+                {[
+                  { name: "Anil" },
+                  { name: "Meera" },
+                ].map((m, i) => (
+                  <div key={i} className="flex items-center gap-2.5 glass-sm rounded-xl px-3 py-2.5">
+                    <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">{m.name[0]}</div>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 flex-1">{m.name}</span>
+                    <div className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/50 px-2.5 py-1 rounded-lg shrink-0">
+                      <Bell className="w-3 h-3" /> Remind
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Right: copy */}
+          <FadeIn direction="right" className="flex-1 text-center lg:text-left">
+            <p className="text-sm font-semibold text-violet-600 uppercase tracking-widest mb-3">Circles</p>
+            <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-5" style={{ fontFamily: "var(--font-fraunces)" }}>
+              Shared fund,
+              <br />
+              <span style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #F43F5E 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                everyone accountable.
+              </span>
+            </h2>
+            <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto lg:mx-0 mb-6">
+              Create a shared pool — recurring monthly or a one-time drive toward a target. Every contribution is tracked, the admin stays in control, and a single tap sends WhatsApp reminders to anyone who hasn&apos;t paid yet.
+            </p>
+            <ul className="space-y-3 text-left max-w-md mx-auto lg:mx-0">
+              {[
+                { icon: "🔁", label: "Recurring or one-time",   desc: "Monthly cycles or a single collection drive — both supported from day one." },
+                { icon: "🏆", label: "Target + deadline",        desc: "Optional target amount and end date — progress bar keeps everyone aligned." },
+                { icon: "📲", label: "WhatsApp group reminder",  desc: "One tap sends a personalised message to all pending members with a progress bar." },
+                { icon: "👻", label: "Ghost members",            desc: "Add people by name only — no Clear account. Admin records contributions on their behalf." },
               ].map((item) => (
                 <li key={item.label} className="flex items-start gap-3">
                   <span className="text-xl shrink-0 mt-0.5">{item.icon}</span>
@@ -1238,7 +1537,7 @@ export default function AboutPage() {
                 Ready to get clear?
               </h2>
               <p className="text-teal-100 text-lg mb-10 max-w-sm mx-auto">
-                Create a trip or a nest in seconds. No credit card required.
+                Create a trip, nest, stream, or circle in seconds. No credit card required.
               </p>
               <Link href="/login?intent=signup" scroll={false} className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl shadow-teal-900/30 transition-all hover:-translate-y-0.5">
                 Get started free <ArrowRight className="w-4 h-4" />

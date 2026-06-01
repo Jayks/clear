@@ -26,8 +26,8 @@ export function CircleGoalStatus({
   const stillNeeded = targetAmount !== null ? Math.max(0, targetAmount - allTimeCollected) : 0;
   const hasSurplus  = poolBalance > 0;
 
-  const [busy,       setBusy]       = useState(false);
-  const [wrapping,   setWrapping]   = useState(false); // inline wrap-up confirm visible
+  const [busy,     setBusy]     = useState(false);
+  const [wrapping, setWrapping] = useState(false);
 
   async function handleWrapUp() {
     setBusy(true);
@@ -45,13 +45,13 @@ export function CircleGoalStatus({
 
   return (
     <div className="glass rounded-2xl p-5 mb-6">
-      {/* Section header */}
+      {/* Section header — amber accent for one-time mode */}
       <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-6 h-6 rounded-md bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
-          <ShoppingBag className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
+        <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+          <ShoppingBag className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
         </div>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Goal status</span>
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-rose-200/70 to-transparent dark:from-rose-800/40 dark:to-transparent" />
+        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
       </div>
 
       {/* Status badge */}
@@ -64,7 +64,7 @@ export function CircleGoalStatus({
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                           bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+                           bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
             <Target className="w-3.5 h-3.5" />
             Collecting
           </span>
@@ -99,8 +99,8 @@ export function CircleGoalStatus({
               type="button"
               onClick={() => setWrapping(true)}
               className="w-full py-2.5 text-sm font-medium rounded-xl transition-all
-                         bg-gradient-to-br from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600
-                         text-white shadow-sm shadow-rose-500/20"
+                         bg-gradient-to-br from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600
+                         text-white shadow-sm shadow-amber-500/20"
             >
               Wrap up →
             </button>

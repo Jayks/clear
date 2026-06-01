@@ -8,6 +8,7 @@ interface Props {
   collectedAmount: number;
   targetAmount:    number;
   currency:        string;
+  isFlexi?:        boolean;
 }
 
 // 28-piece confetti burst — same approach as SettledCelebration
@@ -20,11 +21,11 @@ const COLORS = [
   "#3B82F6", "#93C5FD",              // blues
 ];
 
-export function CircleGoalCelebration({ groupId, collectedAmount, targetAmount, currency }: Props) {
+export function CircleGoalCelebration({ groupId, collectedAmount, targetAmount, currency, isFlexi }: Props) {
   const storageKey = `clear_circle_goal_${groupId}`;
   const goalHit = collectedAmount >= targetAmount && targetAmount > 0;
 
-  const [show, setShow]           = useState(false);
+  const [show, setShow]            = useState(false);
   const [showConfetti, setConfetti] = useState(false);
 
   useEffect(() => {
@@ -72,14 +73,14 @@ export function CircleGoalCelebration({ groupId, collectedAmount, targetAmount, 
         </div>
       )}
 
-      {/* Goal reached banner */}
+      {/* Target/goal reached banner */}
       <div className="glass rounded-2xl px-5 py-4 border border-emerald-200/60 dark:border-emerald-700/40
                       bg-gradient-to-r from-emerald-50/80 to-violet-50/60 dark:from-emerald-900/20 dark:to-violet-900/20">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🎯</span>
+          <span className="text-2xl">{isFlexi ? "🎉" : "🎯"}</span>
           <div>
             <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
-              Goal reached!
+              {isFlexi ? "Target reached!" : "Goal reached!"}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {formatCurrency(collectedAmount, currency)} collected

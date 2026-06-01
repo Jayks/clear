@@ -49,7 +49,7 @@ export function CircleWalletToggle({ groupId, walletExpensesEnabled }: Props) {
         aria-checked={enabled}
         role="switch"
         className={`relative shrink-0 w-10 h-6 rounded-full transition-colors overflow-hidden disabled:opacity-60 ${
-          enabled ? "bg-violet-500" : "bg-slate-300 dark:bg-slate-600"
+          enabled ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"
         }`}
       >
         <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${

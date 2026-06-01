@@ -32,6 +32,7 @@ type FormValues = {
   eventDate: string | undefined;
   upiId: string | undefined;
   contributionPrivacy: "public" | "admin_only";
+  walletExpensesEnabled: boolean;
 };
 
 interface CreatedCircle {
@@ -107,6 +108,7 @@ export function CreateCircleForm({ firstName }: Props) {
       defaultCurrency: "INR",
       contributionDay: 1,
       contributionPrivacy: "public",
+      walletExpensesEnabled: true,
     } as Partial<FormValues>,
   });
 
@@ -481,6 +483,27 @@ export function CreateCircleForm({ firstName }: Props) {
                                placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
+
+                {/* Wallet expenses toggle */}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Track wallet expenses</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      Disable for savings-only circles that don&apos;t spend from the wallet
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setValue("walletExpensesEnabled", !watch("walletExpensesEnabled"))}
+                    className={`relative shrink-0 w-10 h-6 rounded-full transition-colors overflow-hidden ${
+                      watch("walletExpensesEnabled") ? "bg-violet-500" : "bg-slate-300 dark:bg-slate-600"
+                    }`}
+                  >
+                    <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      watch("walletExpensesEnabled") ? "translate-x-4" : "translate-x-0"
+                    }`} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -623,6 +646,27 @@ export function CreateCircleForm({ firstName }: Props) {
                                focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
                                placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
+                </div>
+
+                {/* Wallet expenses toggle */}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Track wallet expenses</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                      Disable for pools that just collect and distribute without logging spends
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setValue("walletExpensesEnabled", !watch("walletExpensesEnabled"))}
+                    className={`relative shrink-0 w-10 h-6 rounded-full transition-colors overflow-hidden ${
+                      watch("walletExpensesEnabled") ? "bg-violet-500" : "bg-slate-300 dark:bg-slate-600"
+                    }`}
+                  >
+                    <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      watch("walletExpensesEnabled") ? "translate-x-4" : "translate-x-0"
+                    }`} />
+                  </button>
                 </div>
               </div>
             )}

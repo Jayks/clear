@@ -30,6 +30,7 @@ export const groups = pgTable("groups", {
   circleStatus: text("circle_status"),              // 'active' | 'purchased' | 'complete'
   upiId: text("upi_id"),
   contributionPrivacy: text("contribution_privacy"), // 'public' | 'admin_only'
+  walletExpensesEnabled: boolean("wallet_expenses_enabled").notNull().default(true),
 });
 
 export type Group = typeof groups.$inferSelect;

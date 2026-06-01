@@ -6,6 +6,7 @@ import { BackButton } from "@/components/shared/back-button";
 import { EditTripForm } from "./edit-trip-form";
 import { ArchiveButton } from "../archive-button";
 import { ResetInviteButton } from "@/components/trip/reset-invite-button";
+import { CircleWalletToggle } from "@/components/circle/circle-wallet-toggle";
 import type { Metadata } from "next";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupConfig } from "@/lib/group-config";
@@ -43,6 +44,23 @@ export default async function EditGroupPage({ params }: { params: Promise<{ id: 
       <div className="glass rounded-2xl p-6 mb-4">
         <EditTripForm group={group} />
       </div>
+
+      {/* Circle-specific settings */}
+      {config.isCircle && (
+        <div className="glass rounded-2xl p-5 mb-4">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+              <Settings2 className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Circle settings</span>
+            <div className="flex-1 h-[1.5px] bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
+          </div>
+          <CircleWalletToggle
+            groupId={group.id}
+            walletExpensesEnabled={group.walletExpensesEnabled}
+          />
+        </div>
+      )}
 
       {/* Admin actions */}
       <div className="glass rounded-2xl p-5">

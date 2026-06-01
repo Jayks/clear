@@ -28,7 +28,7 @@ export async function createCircle(input: CreateCircleActionInput) {
     circleMode, name, defaultCurrency,
     contributionAmount, contributionDay,
     targetAmount, eventDate, contributionPrivacy,
-    upiId, members,
+    upiId, walletExpensesEnabled, members,
   } = parsed.data;
 
   try {
@@ -49,6 +49,7 @@ export async function createCircle(input: CreateCircleActionInput) {
       circleStatus: "active",
       upiId: upiId || null,
       contributionPrivacy: circleMode === "goal" ? (contributionPrivacy ?? "public") : null,
+      walletExpensesEnabled: walletExpensesEnabled ?? true,
       createdBy: user.id,
     }).returning();
 
@@ -428,5 +429,86 @@ export async function updateCircleStatus(
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to update goal status" } as const;
+  }
+}
+
+// ── Send contribution reminder (push notification) to a single member ────────
+
+export async function sendContributionReminder(groupId: string, memberId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can send reminders" } as const;
+
+  try {
+    const [[targetMember], [groupRow]] = await Promise.all([
+      db
+        .select({ userId: groupMembers.userId, displayName: groupMembers.displayName, guestName: groupMembers.guestName })
+        .from(groupMembers)
+        .where(and(eq(groupMembers.id, memberId), eq(groupMembers.groupId, groupId))),
+      db
+        .select({ name: groups.name, contributionAmount: groups.contributionAmount, circleMode: groups.circleMode })
+        .from(groups)
+        .where(eq(groups.id, groupId)),
+    ]);
+
+    if (!targetMember?.userId)
+      return { ok: false, error: "Member has no account to notify" } as const;
+    if (!groupRow)
+      return { ok: false, error: "Circle not found" } as const;
+
+    const fixedAmount = groupRow.contributionAmount ? Number(groupRow.contributionAmount) : null;
+    const isRecurring = groupRow.circleMode === "recurring";
+    const periodLabel = isRecurring
+      ? new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })
+      : null;
+
+    const body = fixedAmount && periodLabel
+      ? `Your ₹${fixedAmount.toLocaleString("en-IN")} contribution for ${periodLabel} is still pending.`
+      : fixedAmount
+      ? `Your ₹${fixedAmount.toLocaleString("en-IN")} contribution to ${groupRow.name} is still pending.`
+      : `Your contribution to ${groupRow.name} is still pending.`;
+
+    const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+    sendPushToUser({
+      targetUserId: targetMember.userId,
+      groupId,
+      title:        `Reminder — ${groupRow.name}`,
+      body,
+      url:          `/groups/${groupId}`,
+    }).catch(() => {});
+
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to send reminder" } as const;
+  }
+}
+
+// ── Toggle wallet expense tracking (admin only) ───────────────────────────────
+
+export async function updateWalletExpensesSetting(
+  groupId: string,
+  enabled: boolean,
+) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can change this setting" } as const;
+
+  try {
+    await db
+      .update(groups)
+      .set({ walletExpensesEnabled: enabled })
+      .where(eq(groups.id, groupId));
+
+    revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`group-${groupId}`, "max");
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to update setting" } as const;
   }
 }

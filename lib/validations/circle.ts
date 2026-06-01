@@ -31,6 +31,7 @@ const createCircleBaseSchema = z.object({
 
   // Common optional
   upiId: z.string().max(100).optional(),
+  walletExpensesEnabled: z.boolean().default(true),
 });
 
 // ── Cross-field validation for the client form ────────────────────────────────

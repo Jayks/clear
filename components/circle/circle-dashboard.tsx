@@ -5,7 +5,7 @@ import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getCircleDashboardData } from "@/lib/db/queries/circle";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CircleCycleNav } from "./circle-cycle-nav";
-import { CircleChipGrid } from "./circle-chip-grid";
+import { CircleContributionRoster } from "./circle-contribution-roster";
 import { CircleReminderButton } from "./circle-reminder-button";
 import { CircleGoalCelebration } from "./circle-goal-celebration";
 import { CircleGoalStatus } from "./circle-goal-status";
@@ -197,7 +197,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             </div>
           </div>
 
-          {/* Wallet balance + runway */}
+          {/* Wallet balance + runway (runway hidden when expense tracking is off) */}
           <div className="flex items-center justify-between pt-1">
             <span className="text-xs text-slate-500 dark:text-slate-400">
               Wallet balance:{" "}
@@ -205,7 +205,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                 {formatCurrency(dash.poolBalance, group.defaultCurrency)}
               </span>
             </span>
-            {runwayHealth && (
+            {runwayHealth && group.walletExpensesEnabled && (
               <span className={`text-xs font-medium ${runwayHealth.color}`}>
                 {runwayHealth.dot} {runwayHealth.label}
               </span>
@@ -273,14 +273,16 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Chip grid ───────────────────────────────────────────────────────── */}
+      {/* ── Contribution roster ─────────────────────────────────────────────── */}
       <div className="glass rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
               <Users className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
             </div>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Members</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              {isRecurring ? dash.selectedPeriodLabel : "Contributors"}
+            </span>
             <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
           </div>
           <Link
@@ -291,15 +293,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           </Link>
         </div>
 
-        {isAdmin && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-            {isGoal
-              ? "Tap any chip to record a contribution · ✓ chips with + can receive more"
-              : "Tap a pending chip to record contribution"}
-          </p>
-        )}
-
-        <CircleChipGrid
+        <CircleContributionRoster
           members={dash.memberStatuses}
           isAdmin={isAdmin}
           currentMemberId={dash.currentMemberId}
@@ -309,6 +303,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
           groupId={group.id}
           isGoal={isGoal}
+          hideAmounts={hideAmounts}
         />
       </div>
 
@@ -341,74 +336,91 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Recent wallet expenses ───────────────────────────────────────── */}
-      <div className="glass rounded-2xl p-5 mt-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-              <Receipt className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-            </div>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Wallet expenses</span>
-            <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
-          </div>
-          <Link
-            href={`/groups/${group.id}/expenses`}
-            className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline"
-          >
-            View all →
-          </Link>
-        </div>
-
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          {formatCurrency(dash.allTimeExpenses, group.defaultCurrency)} drawn from wallet
-        </p>
-
-        {dash.recentExpenses.length === 0 ? (
-          <p className="text-xs text-slate-400 dark:text-slate-500 py-2">
-            No expenses logged yet.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {dash.recentExpenses.map((exp) => (
-              <div key={exp.id} className="flex items-center gap-2.5 py-1.5">
-                <CategoryIcon category={exp.category} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{exp.description}</p>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                      {formatDate(exp.expenseDate)}
-                    </span>
-                    {exp.isAdvance && (
-                      <>
-                        <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
-                        <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                          Advanced by {exp.paidByName}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 tabular-nums shrink-0">
-                  {formatCurrency(exp.amount, group.defaultCurrency)}
-                </span>
+      {/* ── Wallet expenses ──────────────────────────────────────────────── */}
+      {group.walletExpensesEnabled ? (
+        <div className="glass rounded-2xl p-5 mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                <Receipt className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
               </div>
-            ))}
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Wallet expenses</span>
+              <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+            </div>
+            <Link
+              href={`/groups/${group.id}/expenses`}
+              className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline"
+            >
+              View all →
+            </Link>
           </div>
-        )}
 
-        {isAdmin && (
-          <Link
-            href={`/groups/${group.id}/expenses/new`}
-            className="mt-4 w-full inline-flex items-center justify-center gap-1.5
-                       bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700
-                       text-white text-sm font-medium rounded-xl px-4 py-2.5
-                       shadow-sm shadow-violet-500/20 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Log wallet expense
-          </Link>
-        )}
-      </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            {formatCurrency(dash.allTimeExpenses, group.defaultCurrency)} drawn from wallet
+          </p>
+
+          {dash.recentExpenses.length === 0 ? (
+            <p className="text-xs text-slate-400 dark:text-slate-500 py-2">
+              No expenses logged yet.
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {dash.recentExpenses.map((exp) => (
+                <div key={exp.id} className="flex items-center gap-2.5 py-1.5">
+                  <CategoryIcon category={exp.category} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{exp.description}</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
+                        {formatDate(exp.expenseDate)}
+                      </span>
+                      {exp.isAdvance && (
+                        <>
+                          <span className="text-slate-300 dark:text-slate-600 text-xs">·</span>
+                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                            Advanced by {exp.paidByName}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 tabular-nums shrink-0">
+                    {formatCurrency(exp.amount, group.defaultCurrency)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isAdmin && (
+            <Link
+              href={`/groups/${group.id}/expenses/new`}
+              className="mt-4 w-full inline-flex items-center justify-center gap-1.5
+                         bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700
+                         text-white text-sm font-medium rounded-xl px-4 py-2.5
+                         shadow-sm shadow-violet-500/20 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Log wallet expense
+            </Link>
+          )}
+        </div>
+      ) : (
+        /* Expenses disabled — quiet one-liner for admin, nothing for members */
+        isAdmin && (
+          <div className="mt-6 flex items-center justify-between px-1">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Expense tracking is off for this circle
+            </p>
+            <Link
+              href={`/groups/${group.id}/edit`}
+              className="text-xs text-violet-600 dark:text-violet-400 font-medium hover:underline"
+            >
+              Enable →
+            </Link>
+          </div>
+        )
+      )}
     </div>
   );
 }

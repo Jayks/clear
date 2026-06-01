@@ -29,8 +29,8 @@ export default async function NewExpensePage({
 
   // ── Circle: admin-only pool expense form ──────────────────────────────────
   if (config.isCircle) {
-    // Non-admins cannot log pool expenses
-    if (currentMember?.role !== "admin") {
+    // Non-admins cannot log pool expenses; also blocked when expense tracking is off
+    if (currentMember?.role !== "admin" || !group.walletExpensesEnabled) {
       redirect(`/groups/${id}`);
     }
 

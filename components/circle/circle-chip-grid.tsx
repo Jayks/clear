@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Ghost } from "lucide-react";
 import { RecordContributionSheet } from "./record-contribution-sheet";
-import { ConfirmContributionSheet } from "./confirm-contribution-sheet";
 import type { MemberDashboardStatus } from "@/lib/db/queries/circle";
 import type { PendingMember } from "@/lib/db/queries/circle";
 
@@ -26,19 +25,11 @@ export function CircleChipGrid({
 }: Props) {
   const router = useRouter();
 
-  // For recording a new/additional contribution (⏳ or ✓ chip tap in goal mode)
-  const [recordMember,   setRecordMember]   = useState<PendingMember | null>(null);
-  const [isAdditional,   setIsAdditional]   = useState(false);
-
-  // For confirming/rejecting a self-report (🟡 chip tap)
-  const [confirmMember, setConfirmMember] = useState<{
-    id: string; name: string; userId: string | null;
-    contributionId: string; amount: number;
-  } | null>(null);
+  const [recordMember, setRecordMember] = useState<PendingMember | null>(null);
+  const [isAdditional, setIsAdditional] = useState(false);
 
   const handleSuccess = useCallback(() => {
     setRecordMember(null);
-    setConfirmMember(null);
     setIsAdditional(false);
     router.refresh();
   }, [router]);
@@ -49,35 +40,25 @@ export function CircleChipGrid({
         {members.map((m) => {
           const isMe = m.id === currentMemberId;
 
-          // Admin can tap ⏳ chips to record (always — amount input shown when no fixed amount)
-          const canRecord = isAdmin && !m.isPaid && !m.isPendingConfirm;
-          // Admin can tap 🟡 chips to confirm or reject
-          const canConfirm = isAdmin && m.isPendingConfirm && !!m.unconfirmedContributionId;
+          // Admin taps ⏳ chips to record a fresh contribution.
+          // isPendingConfirm chips are non-tappable — confirming happens in the batch banner.
+          const canRecord  = isAdmin && !m.isPaid && !m.isPendingConfirm;
           // Admin can tap ✓ chips in goal mode to record additional contributions
           const canAddMore = isAdmin && isGoal && m.isPaid && !m.isPendingConfirm;
 
-          // ── Chip colour ──────────────────────────────────────────────────
+          const tappable = canRecord || canAddMore;
+
+          // ── Chip colour — two states only (paid ✓ / unpaid ⏳) ──────────
+          // isPendingConfirm chips stay grey — "says paid" text is the signal
           let chipClass: string;
           if (m.isPaid) {
             chipClass = "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-300";
-          } else if (m.isPendingConfirm) {
-            chipClass = "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-300";
           } else {
             chipClass = "bg-slate-100 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700/60 text-slate-600 dark:text-slate-300";
           }
 
-          const tappable = canRecord || canConfirm || canAddMore;
-
           function handleTap() {
-            if (canConfirm) {
-              setConfirmMember({
-                id:             m.id,
-                name:           m.name,
-                userId:         m.userId,
-                contributionId: m.unconfirmedContributionId!,
-                amount:         amount ?? 0,
-              });
-            } else if (canRecord) {
+            if (canRecord) {
               setIsAdditional(false);
               setRecordMember({ id: m.id, name: m.name, isGuest: m.isGuest });
             } else if (canAddMore) {
@@ -93,7 +74,6 @@ export function CircleChipGrid({
                 ${chipClass}
                 ${tappable ? "cursor-pointer active:scale-95" : ""}
                 ${canRecord  ? "hover:border-violet-400 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20" : ""}
-                ${canConfirm ? "hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20" : ""}
                 ${canAddMore ? "hover:border-violet-300 dark:hover:border-violet-600 hover:bg-violet-50/40 dark:hover:bg-violet-900/10" : ""}
               `}
               onClick={tappable ? handleTap : undefined}
@@ -104,12 +84,10 @@ export function CircleChipGrid({
               {/* Status icon */}
               {m.isPaid ? (
                 <Check className="w-3 h-3 text-emerald-500 dark:text-emerald-400 shrink-0" />
-              ) : m.isPendingConfirm ? (
-                <span className="text-amber-500 text-[10px] shrink-0">🟡</span>
               ) : m.isGuest ? (
                 <Ghost className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
               ) : (
-                <span className="text-amber-500 text-[10px] shrink-0">⏳</span>
+                <span className="text-[10px] shrink-0">⏳</span>
               )}
 
               {/* Name */}
@@ -129,10 +107,10 @@ export function CircleChipGrid({
                 </span>
               )}
 
-              {/* "Says paid" label — pending confirm */}
-              {m.isPendingConfirm && isAdmin && (
-                <span className="text-[9px] text-amber-600/70 dark:text-amber-400/60 font-normal leading-none hidden sm:inline">
-                  says paid
+              {/* "says paid" marker — member self-reported, awaiting banner confirm */}
+              {!m.isPaid && m.isPendingConfirm && (
+                <span className="text-[9px] text-amber-500/80 dark:text-amber-400/70 font-medium leading-none">
+                  {isMe ? "you say paid" : "says paid"}
                 </span>
               )}
 
@@ -157,19 +135,6 @@ export function CircleChipGrid({
           isAdditional={isAdditional}
           isOpen={!!recordMember}
           onClose={() => { setRecordMember(null); setIsAdditional(false); }}
-          onSuccess={handleSuccess}
-        />
-      )}
-
-      {/* Confirm / reject self-report (🟡 chip) */}
-      {confirmMember && (
-        <ConfirmContributionSheet
-          member={confirmMember}
-          currency={currency}
-          periodLabel={periodLabel}
-          groupId={groupId}
-          isOpen={!!confirmMember}
-          onClose={() => setConfirmMember(null)}
           onSuccess={handleSuccess}
         />
       )}

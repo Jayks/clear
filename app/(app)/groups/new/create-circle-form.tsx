@@ -92,6 +92,7 @@ export function CreateCircleForm({ firstName }: Props) {
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberPhone, setNewMemberPhone] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   const {
     register,
@@ -287,9 +288,9 @@ export function CreateCircleForm({ firstName }: Props) {
             Invite message
           </label>
           <div className="relative">
-            <pre className="w-full p-4 pr-10 rounded-xl border border-slate-200 dark:border-slate-700
+            <pre className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700
                             bg-white/60 dark:bg-slate-800/60 text-sm text-slate-700 dark:text-slate-200
-                            whitespace-pre-wrap leading-relaxed font-sans">
+                            whitespace-pre-wrap break-all leading-relaxed font-sans">
               {inviteMessage}
             </pre>
           </div>
@@ -331,7 +332,7 @@ export function CreateCircleForm({ firstName }: Props) {
         {/* Skip to circle */}
         <button
           type="button"
-          onClick={() => router.push(`/groups/${created.groupId}`)}
+          onClick={() => router.replace(`/groups/${created.groupId}`)}
           className="flex items-center justify-center gap-2 w-full py-3 rounded-xl
                      bg-gradient-to-br from-violet-500 to-purple-600
                      hover:from-violet-600 hover:to-purple-700
@@ -389,10 +390,10 @@ export function CreateCircleForm({ firstName }: Props) {
         {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
       </div>
 
-      {/* ── Recurring-specific fields ─────────────────────────────────────── */}
+      {/* ── Recurring: essential fields ──────────────────────────────────── */}
       {circleMode === "recurring" && (
         <>
-          {/* Contribution amount */}
+          {/* Amount + currency */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
@@ -429,7 +430,7 @@ export function CreateCircleForm({ firstName }: Props) {
             </div>
           </div>
 
-          {/* Contribution day */}
+          {/* Due day slider */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
               Due on the{" "}
@@ -451,13 +452,45 @@ export function CreateCircleForm({ firstName }: Props) {
               <span>28th</span>
             </div>
           </div>
+
+          {/* More options — UPI */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowMoreOptions((v) => !v)}
+              className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500
+                         hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+            >
+              <span>{showMoreOptions ? "▾" : "▸"}</span>
+              {showMoreOptions ? "Fewer options" : "More options"}
+            </button>
+
+            {showMoreOptions && (
+              <div className="mt-3 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                    Your UPI ID{" "}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — enables Pay Now button)</span>
+                  </label>
+                  <input
+                    {...register("upiId")}
+                    placeholder="you@upi"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                               bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                               focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                               placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
 
-      {/* ── Goal-specific fields ──────────────────────────────────────────── */}
+      {/* ── Goal: essential fields ────────────────────────────────────────── */}
       {circleMode === "goal" && (
         <>
-          {/* Target amount + deadline */}
+          {/* Target + currency */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
@@ -481,43 +514,6 @@ export function CreateCircleForm({ firstName }: Props) {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                Deadline <span className="text-red-400">*</span>
-              </label>
-              <input
-                {...register("eventDate")}
-                type="date"
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
-                           bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                           focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
-              />
-              {errors.eventDate && (
-                <p className="mt-1 text-xs text-red-500">{errors.eventDate.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Per-person amount + currency */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                Per person{" "}
-                <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
-              </label>
-              <input
-                {...register("contributionAmount")}
-                type="number"
-                inputMode="decimal"
-                min="1"
-                step="1"
-                placeholder="auto"
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
-                           bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                           focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
-                           placeholder:text-slate-400 dark:placeholder:text-slate-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
                 Currency
               </label>
               <select
@@ -531,54 +527,108 @@ export function CreateCircleForm({ firstName }: Props) {
             </div>
           </div>
 
-          {/* Contribution privacy */}
+          {/* Deadline */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-              Contribution amounts visible to
+              Deadline <span className="text-red-400">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(["public", "admin_only"] as const).map((opt) => {
-                const active = watch("contributionPrivacy") === opt;
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setValue("contributionPrivacy", opt)}
-                    className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all text-left ${
-                      active
-                        ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300"
-                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    {opt === "public" ? "All members" : "Organiser only"}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
-              {watch("contributionPrivacy") === "admin_only"
-                ? "Only you can see who contributed how much — good for colleague groups"
-                : "Everyone can see the full contribution list"}
-            </p>
+            <input
+              {...register("eventDate")}
+              type="date"
+              className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                         bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                         focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+            />
+            {errors.eventDate && (
+              <p className="mt-1 text-xs text-red-500">{errors.eventDate.message}</p>
+            )}
+          </div>
+
+          {/* More options — per-person, privacy, UPI */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowMoreOptions((v) => !v)}
+              className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500
+                         hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+            >
+              <span>{showMoreOptions ? "▾" : "▸"}</span>
+              {showMoreOptions ? "Fewer options" : "More options"}
+            </button>
+
+            {showMoreOptions && (
+              <div className="mt-3 space-y-4">
+                {/* Per person */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                    Per person{" "}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+                  </label>
+                  <input
+                    {...register("contributionAmount")}
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    step="1"
+                    placeholder="auto"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                               bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                               focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                               placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  />
+                </div>
+
+                {/* Privacy */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                    Contribution amounts visible to
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["public", "admin_only"] as const).map((opt) => {
+                      const active = watch("contributionPrivacy") === opt;
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setValue("contributionPrivacy", opt)}
+                          className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all text-left ${
+                            active
+                              ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300"
+                              : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
+                          }`}
+                        >
+                          {opt === "public" ? "All members" : "Organiser only"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+                    {watch("contributionPrivacy") === "admin_only"
+                      ? "Only you can see who contributed how much — good for colleague groups"
+                      : "Everyone can see the full contribution list"}
+                  </p>
+                </div>
+
+                {/* UPI */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                    Your UPI ID{" "}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — enables Pay Now button)</span>
+                  </label>
+                  <input
+                    {...register("upiId")}
+                    placeholder="you@upi"
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+                               bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
+                               focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
+                               placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
-
-      {/* ── UPI ID (both modes) ──────────────────────────────────────────────── */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-          Your UPI ID{" "}
-          <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — enables Pay Now button)</span>
-        </label>
-        <input
-          {...register("upiId")}
-          placeholder="you@upi"
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700
-                     bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
-                     focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
-                     placeholder:text-slate-400 dark:placeholder:text-slate-500"
-        />
-      </div>
 
       {/* ── Add initial members ──────────────────────────────────────────────── */}
       <div className="border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3">

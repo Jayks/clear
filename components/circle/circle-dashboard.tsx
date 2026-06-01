@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Users, Receipt, Pencil, Plus } from "lucide-react";
+import { Users, Receipt, Pencil, Plus, Check } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getCircleDashboardData } from "@/lib/db/queries/circle";
@@ -10,10 +10,10 @@ import { CircleReminderButton } from "./circle-reminder-button";
 import { CircleGoalCelebration } from "./circle-goal-celebration";
 import { CircleGoalStatus } from "./circle-goal-status";
 import { CircleBatchConfirmBanner } from "./circle-batch-confirm-banner";
+import { CircleContributeAction } from "./circle-contribute-action";
 import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 import { CategoryIcon } from "@/components/expense/category-icon";
 import { Coins, Repeat2, Target } from "lucide-react";
-import { CircleMemberStatusCard } from "./circle-member-status-card";
 import { BackButton } from "@/components/shared/back-button";
 
 interface Props {
@@ -68,11 +68,14 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   // Pending member names for the reminder
   const pendingNames = dash.memberStatuses.filter((m) => !m.isPaid).map((m) => m.name);
 
-  // Current member's pending-confirm status (non-admin members only)
-  const myMemberStatus = !isAdmin && dash.currentMemberId
+  // Current member's pending-confirm status (shown in hero action zone)
+  const myMemberStatus = dash.currentMemberId
     ? dash.memberStatuses.find((m) => m.id === dash.currentMemberId) ?? null
     : null;
   const myPendingConfirm = myMemberStatus?.isPendingConfirm ?? false;
+
+  // Show hero action zone on current period (recurring) or always (goal)
+  const showActionZone = dash.currentMemberId && ((isRecurring && dash.isCurrentPeriod) || isGoal);
 
   return (
     <div>
@@ -158,7 +161,6 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             <div className="flex items-center justify-between mb-1.5">
               {targetNum ? (
                 hideAmounts ? (
-                  // Privacy: non-admin sees count only, not ₹ totals
                   <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
                     {dash.paidCount}/{dash.memberStatuses.length}
                     <span className="text-slate-400 dark:text-slate-500 font-normal"> contributed</span>
@@ -195,7 +197,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             </div>
           </div>
 
-          {/* Pool balance + runway (below progress bar) */}
+          {/* Wallet balance + runway */}
           <div className="flex items-center justify-between pt-1">
             <span className="text-xs text-slate-500 dark:text-slate-400">
               Wallet balance:{" "}
@@ -210,9 +212,49 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             )}
           </div>
         </div>
+
+        {/* ── Action zone — personal status + CTA, role-aware ─────────────── */}
+        {showActionZone && (
+          <div className="border-t border-slate-200/60 dark:border-slate-700/40 px-5 py-3">
+            {isAdmin ? (
+              // Admin: simple one-liner — recording happens via the chip grid
+              myMemberStatus?.isPaid ? (
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                  <Check className="w-3.5 h-3.5" />
+                  <span className="text-sm font-medium">
+                    {isRecurring
+                      ? `You're clear for ${dash.selectedPeriodLabel}`
+                      : "You've contributed"}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Tap your chip below to record your own contribution
+                </p>
+              )
+            ) : (
+              // Member: full contribute action
+              <CircleContributeAction
+                groupId={group.id}
+                groupName={group.name}
+                isPaid={dash.currentUserPaid}
+                isPendingConfirm={myPendingConfirm}
+                amount={amount}
+                currency={group.defaultCurrency}
+                period={isRecurring ? dash.selectedPeriod : null}
+                periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
+                isRecurring={isRecurring}
+                upiId={group.upiId ?? null}
+                size="dashboard"
+                contributionDate={dash.myContributionDate}
+                contributionAmount={dash.myContributionAmount}
+              />
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── Batch confirm banner (admin, when members have self-reported) ─────── */}
+      {/* ── Batch confirm banner (admin, when members have self-reported) ─── */}
       {isAdmin && dash.pendingConfirmMembers.length > 0 && (
         <CircleBatchConfirmBanner
           groupId={group.id}
@@ -221,74 +263,13 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Goal celebration (100% reached) ──────────────────────────────────── */}
+      {/* ── Goal celebration (100% reached) ─────────────────────────────── */}
       {isGoal && goalHit && targetNum && (
         <CircleGoalCelebration
           groupId={group.id}
           collectedAmount={dash.allTimeCollected}
           targetAmount={targetNum}
           currency={group.defaultCurrency}
-        />
-      )}
-
-      {/* ── Admin personal status card ──────────────────────────────────────── */}
-      {isAdmin && dash.currentMemberId && (() => {
-        const myStatus = dash.memberStatuses.find((m) => m.id === dash.currentMemberId);
-        if (!myStatus) return null;
-        const myPaid = myStatus.isPaid;
-        return (
-          <div className={`glass rounded-2xl px-4 py-3 mb-6 flex items-center gap-3 border-l-4 ${
-            myPaid
-              ? "border-emerald-400 dark:border-emerald-600"
-              : "border-violet-400 dark:border-violet-600"
-          }`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-              myPaid
-                ? "bg-emerald-100 dark:bg-emerald-900/30"
-                : "bg-violet-100 dark:bg-violet-900/30"
-            }`}>
-              <span className="text-base">{myPaid ? "✓" : "⏳"}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-semibold ${
-                myPaid
-                  ? "text-emerald-700 dark:text-emerald-300"
-                  : "text-violet-700 dark:text-violet-300"
-              }`}>
-                {myPaid
-                  ? isRecurring ? `You're clear for ${dash.selectedPeriodLabel}` : "You've contributed"
-                  : "You haven't contributed yet"}
-              </p>
-              {myPaid && myStatus.contributionDate && (
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  {formatCurrency(myStatus.contributionAmount ?? 0, group.defaultCurrency)} · {myStatus.contributionDate}
-                </p>
-              )}
-              {!myPaid && amount && (
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  Tap your chip below to record
-                </p>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── Personal status card (member view) — interactive with Pay + I've paid ─ */}
-      {!isAdmin && dash.currentMemberId && ((isRecurring && dash.isCurrentPeriod) || isGoal) && (
-        <CircleMemberStatusCard
-          groupId={group.id}
-          groupName={group.name}
-          isPaid={dash.currentUserPaid}
-          isPendingConfirm={myPendingConfirm}
-          amount={amount}
-          currency={group.defaultCurrency}
-          period={isRecurring ? dash.selectedPeriod : null}
-          periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
-          isRecurring={isRecurring}
-          upiId={group.upiId ?? null}
-          contributionDate={dash.myContributionDate}
-          contributionAmount={dash.myContributionAmount}
         />
       )}
 
@@ -331,7 +312,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       </div>
 
-      {/* ── Send reminder (admin, when pending members exist) ────────────────── */}
+      {/* ── Send reminder (admin, when pending members exist) ────────────── */}
       {isAdmin && dash.pendingCount > 0 && (
         <CircleReminderButton
           circleName={group.name}
@@ -346,7 +327,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Goal lifecycle status (goal mode only) ──────────────────────────── */}
+      {/* ── Goal lifecycle status (goal mode only) ──────────────────────── */}
       {isGoal && (
         <CircleGoalStatus
           groupId={group.id}
@@ -360,7 +341,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Recent wallet expenses ───────────────────────────────────────────── */}
+      {/* ── Recent wallet expenses ───────────────────────────────────────── */}
       <div className="glass rounded-2xl p-5 mt-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
@@ -378,12 +359,10 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           </Link>
         </div>
 
-        {/* Summary line */}
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           {formatCurrency(dash.allTimeExpenses, group.defaultCurrency)} drawn from wallet
         </p>
 
-        {/* Recent rows */}
         {dash.recentExpenses.length === 0 ? (
           <p className="text-xs text-slate-400 dark:text-slate-500 py-2">
             No expenses logged yet.
@@ -417,7 +396,6 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           </div>
         )}
 
-        {/* Admin CTA */}
         {isAdmin && (
           <Link
             href={`/groups/${group.id}/expenses/new`}
@@ -430,25 +408,6 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             Log wallet expense
           </Link>
         )}
-      </div>
-
-      {/* ── Members quick link ────────────────────────────────────────────────── */}
-      <div className="mt-3">
-        <Link
-          href={`/groups/${group.id}/members`}
-          className="glass rounded-xl p-4 flex items-center gap-3
-                     hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-0.5 transition-all"
-        >
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30">
-            <Users className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Members</p>
-            <p className="text-xs text-violet-500 dark:text-violet-400">
-              {dash.memberStatuses.length} {dash.memberStatuses.length === 1 ? "person" : "people"}
-            </p>
-          </div>
-        </Link>
       </div>
     </div>
   );

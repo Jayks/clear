@@ -39,7 +39,7 @@ export interface CircleCardData {
   currentUserPaid:           boolean;
   currentUserPendingConfirm: boolean;   // member self-reported, awaiting admin confirmation
   pendingMembers:            PendingMember[];
-  paidMembers:               PendingMember[];  // goal mode: admin can record additional contributions
+  paidMembers:               PendingMember[];  // one-time mode: admin can record additional contributions
   pendingConfirmCount:       number;    // admin: how many unconfirmed self-reports
   currentPeriod:             string;   // "2026-06"
   currentPeriodLabel:        string;  // "June 2026"
@@ -212,7 +212,7 @@ export interface CircleDashboardData {
 
 /**
  * Full data for the Circle dashboard page.
- * `selectedPeriod` = "YYYY-MM" (recurring) or null (goal — fetches all contributions).
+ * `selectedPeriod` = "YYYY-MM" (recurring) or null (one_time — fetches all contributions).
  */
 export async function getCircleDashboardData(
   groupId: string,

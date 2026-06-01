@@ -10,7 +10,7 @@ export type CircleMember = z.infer<typeof circleMemberSchema>;
 
 // ── Base schema (no superRefine — allows .extend()) ──────────────────────────
 const createCircleBaseSchema = z.object({
-  circleMode: z.enum(["recurring", "goal"]),
+  circleMode: z.enum(["recurring", "one_time"]),
   name: z.string().min(1, "Name is required").max(100),
   defaultCurrency: z.string().length(3).default("INR"),
 
@@ -21,7 +21,7 @@ const createCircleBaseSchema = z.object({
   ),
   contributionDay: z.coerce.number().int().min(1).max(28).default(1),
 
-  // Goal-specific
+  // One-time-specific
   targetAmount: z.preprocess(
     (v) => (!v || v === "" ? undefined : Number(v)),
     z.number().positive().optional(),
@@ -41,7 +41,7 @@ export const createCircleSchema = createCircleBaseSchema.superRefine((data, ctx)
       ctx.addIssue({ code: "custom", message: "Monthly contribution amount is required", path: ["contributionAmount"] });
     }
   }
-  if (data.circleMode === "goal") {
+  if (data.circleMode === "one_time") {
     if (!data.targetAmount) {
       ctx.addIssue({ code: "custom", message: "Target amount is required", path: ["targetAmount"] });
     }
@@ -64,7 +64,7 @@ export const createCircleActionSchema = createCircleActionBaseSchema.superRefine
       ctx.addIssue({ code: "custom", message: "Monthly contribution amount is required", path: ["contributionAmount"] });
     }
   }
-  if (data.circleMode === "goal") {
+  if (data.circleMode === "one_time") {
     if (!data.targetAmount) {
       ctx.addIssue({ code: "custom", message: "Target amount is required", path: ["targetAmount"] });
     }

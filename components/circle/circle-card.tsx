@@ -23,7 +23,9 @@ export function CircleCard({ group, cardData }: Props) {
   } = cardData;
 
   const isRecurring = group.circleMode === "recurring";
-  const isGoal      = group.circleMode === "goal";
+  const isOneTime   = group.circleMode === "one_time";
+  const isFixed     = isOneTime && group.contributionAmount !== null;
+  const isFlexi     = isOneTime && group.contributionAmount === null;
 
   // Optimistic state for admin chip recording
   const [localPaidCount, setLocalPaidCount] = useState(paidThisCycle);
@@ -32,7 +34,7 @@ export function CircleCard({ group, cardData }: Props) {
   const [recordIsAdditional,   setRecordIsAdditional]   = useState(false);
 
   // ── Progress ──────────────────────────────────────────────────────────────
-  const targetNum  = isGoal && group.targetAmount ? Number(group.targetAmount) : null;
+  const targetNum  = isOneTime && group.targetAmount ? Number(group.targetAmount) : null;
   const progressPct = targetNum
     ? Math.min(100, (totalContributed / targetNum) * 100)
     : totalMembers > 0
@@ -40,7 +42,7 @@ export function CircleCard({ group, cardData }: Props) {
     : 0;
 
   // ── Deadline countdown ────────────────────────────────────────────────────
-  const daysLeft = isGoal && group.eventDate
+  const daysLeft = isOneTime && group.eventDate
     ? Math.max(0, Math.ceil((new Date(group.eventDate).getTime() - Date.now()) / 86_400_000))
     : null;
 
@@ -77,7 +79,7 @@ export function CircleCard({ group, cardData }: Props) {
         >
           {/* Mode-coloured accent strip */}
           <div
-            className={`h-1 w-full ${isGoal
+            className={`h-1 w-full ${isOneTime
               ? "bg-gradient-to-r from-rose-400 to-pink-500"
               : "bg-gradient-to-r from-violet-500 to-purple-600"}`}
           />
@@ -89,14 +91,14 @@ export function CircleCard({ group, cardData }: Props) {
                 <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                   <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide
                                     px-1.5 py-0.5 rounded
-                    ${isGoal
+                    ${isOneTime
                       ? "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400"
                       : "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"}`}
                   >
-                    {isGoal ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
-                    {isGoal ? "goal" : "monthly"}
+                    {isOneTime ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
+                    {isOneTime ? "one-time" : "monthly"}
                   </span>
-                  {isGoal && daysLeft !== null && (
+                  {isOneTime && daysLeft !== null && (
                     <span className={`text-[10px] font-medium ${daysLeft <= 3 ? "text-red-500 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}>
                       {daysLeft === 0 ? "today!" : `${daysLeft}d left`}
                     </span>
@@ -136,7 +138,7 @@ export function CircleCard({ group, cardData }: Props) {
                   className={`h-full rounded-full transition-all duration-500 ${
                     progressPct >= 100
                       ? "bg-gradient-to-r from-emerald-400 to-green-500"
-                      : isGoal
+                      : isOneTime
                       ? "bg-gradient-to-r from-rose-400 to-pink-500"
                       : "bg-gradient-to-r from-violet-500 to-purple-600"
                   }`}
@@ -196,8 +198,8 @@ export function CircleCard({ group, cardData }: Props) {
                   {isRecurring ? `Everyone paid for ${monthShort} 🎉` : "All contributed 🎉"}
                 </span>
               </div>
-              {/* Goal mode — tappable paid chips for additional contributions */}
-              {isGoal && paidMembers.length > 0 && (
+              {/* One-time mode — tappable paid chips for additional contributions */}
+              {isOneTime && paidMembers.length > 0 && (
                 <div>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5 leading-none">
                     Tap to record more ↓

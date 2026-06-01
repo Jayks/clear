@@ -15,7 +15,7 @@
 - **Trip** — multi-day travel groups. Has dates, itinerary, AI narrative, budget adherence, travel categories.
 - **Nest** — ongoing household groups. Has recurring expense templates, monthly grouping, household categories. No dates/itinerary.
 - **Stream** — bilateral personal debt ledger (no group needed). One stream per person; individual debt records within = **entries**.
-- **Circle** — shared fund managed by an organiser. Two modes: **recurring** (fixed monthly contributions) and **goal** (one-time target with deadline). No individual debts — everyone is accountable to a shared pool. Pool balance = contributions − pool expenses.
+- **Circle** — shared fund managed by an organiser. Two modes: **recurring** (fixed monthly contributions) and **one_time** (collect toward an optional target/deadline; sub-types: **Fixed** = `contributionAmount != null`, everyone pays the same; **Flexi** = `contributionAmount === null`, everyone contributes any amount). No individual debts — everyone is accountable to a shared pool. Pool balance = contributions − pool expenses.
 
 **Navigation (mobile bottom nav + desktop top nav):**
 - **Home** (`/groups`) — Trips · Nests · Circles sections (split, not mixed). `HomeControlBar` provides underline-tab Active/Archived toggle + inline search (collapses to filter chip when blurred with a query).
@@ -24,7 +24,7 @@
 
 **Stream terminology:** The feature = "Streams". The bilateral relationship with one person = "a Stream". An individual debt record within a stream = an **"entry"** (NOT "stream"). This distinction matters in all UI copy.
 
-**Circle terminology:** The feature = "Circles". One circle group = "a Circle". Each member's monthly payment = "a contribution" (NOT "expense"). Admin pool draws = **"wallet expenses"** (logged by admin, `is_advance=false`). Admin personal advances = **"wallet advances"** (`is_advance=true`). Ghost members = added by name without a Clear account; admin records contributions on their behalf.
+**Circle terminology:** The feature = "Circles". One circle group = "a Circle". Each member's payment = "a contribution" (NOT "expense"). Admin pool draws = **"wallet expenses"** (logged by admin, `is_advance=false`). Admin personal advances = **"wallet advances"** (`is_advance=true`). Ghost members = added by name without a Clear account; admin records contributions on their behalf. `circleMode: 'recurring' | 'one_time'`. One-time sub-types: **Fixed** (`contributionAmount != null`) = equal contributions; **Flexi** (`contributionAmount === null`) = any amount. Derived helpers: `isFixed = isOneTime && group.contributionAmount !== null`; `isFlexi = isOneTime && group.contributionAmount === null`.
 
 ---
 

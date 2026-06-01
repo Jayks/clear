@@ -23,15 +23,15 @@ share_token: uuid unique default gen_random_uuid()
 created_at: timestamptz
 
 -- Circle-specific columns (null for trip/nest):
-circle_mode: text                   -- 'recurring' | 'goal'
-contribution_amount: numeric(12,2)  -- fixed per-person amount
+circle_mode: text                   -- 'recurring' | 'one_time'
+contribution_amount: numeric(12,2)  -- fixed per-person amount (null for Flexi one-time)
 contribution_period: text           -- 'monthly' (recurring only)
 contribution_day: int               -- 1–28: day of month due
-target_amount: numeric(12,2)        -- total goal target (goal only)
-event_date: date                    -- deadline (goal only)
-circle_status: text default 'active' -- 'active' | 'purchased' | 'complete' (goal lifecycle)
+target_amount: numeric(12,2)        -- optional goal target (one-time only)
+event_date: date                    -- deadline (one-time only)
+circle_status: text default 'active' -- 'active' | 'purchased' | 'complete' (one-time lifecycle)
 upi_id: text                        -- organiser UPI ID for Pay Now deep link
-contribution_privacy: text          -- 'public' | 'admin_only' (goal only)
+contribution_privacy: text          -- 'public' | 'admin_only' (one-time only)
 ```
 
 ### circle_contributions
@@ -41,7 +41,7 @@ group_id: uuid NOT NULL FK → groups(cascade)
 member_id: uuid NOT NULL FK → group_members
 amount: numeric(12,2) NOT NULL
 currency: text NOT NULL default 'INR'
-period: text nullable                -- "2026-06" for recurring; null for goal mode
+period: text nullable                -- "2026-06" for recurring; null for one-time mode
 recorded_by: uuid                   -- auth.users.id who logged it
 note: text nullable
 created_at: timestamptz NOT NULL

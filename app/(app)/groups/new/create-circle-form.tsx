@@ -23,7 +23,7 @@ type FormStep = 1 | 2 | 3;
 
 // Explicit form values type — avoids zodResolver generic complexity with superRefine
 type FormValues = {
-  circleMode: "recurring" | "goal";
+  circleMode: "recurring" | "one_time";
   name: string;
   defaultCurrency: string;
   contributionAmount: number | undefined;
@@ -123,7 +123,7 @@ export function CreateCircleForm({ firstName }: Props) {
 
   // ── Step 1: mode selection ──────────────────────────────────────────────────
 
-  function selectMode(mode: "recurring" | "goal") {
+  function selectMode(mode: "recurring" | "one_time") {
     setValue("circleMode", mode);
     setStep(2);
   }
@@ -183,7 +183,7 @@ export function CreateCircleForm({ firstName }: Props) {
         upiId || undefined,
         joinUrl,
       )
-    : created && circleMode === "goal"
+    : created && circleMode === "one_time"
     ? buildGoalMessage(
         name,
         Number(targetAmount),
@@ -239,10 +239,10 @@ export function CreateCircleForm({ firstName }: Props) {
             </p>
           </button>
 
-          {/* Goal mode card */}
+          {/* One-time mode card */}
           <button
             type="button"
-            onClick={() => selectMode("goal")}
+            onClick={() => selectMode("one_time")}
             className="group text-left p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700
                        bg-white/60 dark:bg-slate-800/60 hover:border-violet-400 dark:hover:border-violet-500
                        hover:bg-violet-50/60 dark:hover:bg-violet-900/20 transition-all"
@@ -362,7 +362,7 @@ export function CreateCircleForm({ firstName }: Props) {
                    hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        {circleMode === "recurring" ? "Recurring" : "One-time goal"}
+        {circleMode === "recurring" ? "Recurring" : "One-time"}
       </button>
 
       {/* Mode badge */}
@@ -372,7 +372,7 @@ export function CreateCircleForm({ firstName }: Props) {
             ? "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300"
             : "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300"}`}>
           {circleMode === "recurring" ? <Repeat2 className="w-3 h-3" /> : <Target className="w-3 h-3" />}
-          {circleMode === "recurring" ? "Recurring · monthly" : "One-time goal"}
+          {circleMode === "recurring" ? "Recurring · monthly" : "One-time"}
         </span>
       </div>
 
@@ -510,8 +510,8 @@ export function CreateCircleForm({ firstName }: Props) {
         </>
       )}
 
-      {/* ── Goal: essential fields ────────────────────────────────────────── */}
-      {circleMode === "goal" && (
+      {/* ── One-time: essential fields ───────────────────────────────────── */}
+      {circleMode === "one_time" && (
         <>
           {/* Target + currency */}
           <div className="grid grid-cols-2 gap-3">

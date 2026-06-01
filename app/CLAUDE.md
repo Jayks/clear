@@ -59,10 +59,10 @@ clear/
 │   │   ├── stream-badge-sync.tsx        # invisible RSC companion — writes clear_stream_has_badge to localStorage
 │   │   └── confirm-stream-client.tsx
 │   ├── circle/                          # All circle UI
-│   │   ├── circle-dashboard.tsx         # RSC: hero, cycle nav, progress (privacy-aware), chip grid, goal celebration, goal status, wallet expenses
+│   │   ├── circle-dashboard.tsx         # RSC: hero, cycle nav, progress (privacy-aware), contribution roster, one-time celebration, lifecycle status, wallet expenses
 │   │   ├── circle-card.tsx              # "use client": clickable header+progress (Link), interactive action area below (chips, Pay, I've paid)
 │   │   ├── circle-card-server.tsx       # RSC data loader + CircleCardSkeleton; Suspense-wrapped on home page
-│   │   ├── circle-chip-grid.tsx         # "use client": full member chip grid; admin taps → RecordContributionSheet + router.refresh
+│   │   ├── circle-contribution-roster.tsx # "use client": search + pending list (🔔 remind, admin tap→record) + collapsed paid section
 │   │   ├── circle-cycle-nav.tsx         # "use client": ← YYYY-MM → navigation via router.push(?period=)
 │   │   ├── circle-reminder-button.tsx   # "use client": wraps CircleReminderSheet state
 │   │   ├── circle-reminder-sheet.tsx    # "use client": WhatsApp group reminder message generator (ASCII progress bar)
@@ -136,17 +136,17 @@ RSC. **No stream strip** — Streams has its own nav tab. Sections (top → bott
 `GroupPage` detects `config.isCircle` and renders `CircleDashboard` instead of the trip/nest layout. `searchParams.period` ("YYYY-MM") controls cycle navigation for recurring mode.
 
 **Dashboard sections (top → bottom):**
-1. **Hero card** — violet/rose gradient header (based on mode), circle name, mode badge, deadline countdown (goal), edit + share buttons (admin).
+1. **Hero card** — violet/rose gradient header (based on mode), circle name, mode badge, deadline countdown (one-time), edit + share buttons (admin).
 2. **Progress section** (inside hero card):
    - Cycle nav (`CircleCycleNav`) — ← prev | "June 2026" | next → (next hidden on current period). Recurring only.
    - Committed line — "N × ₹X = ₹Y committed this cycle" (recurring).
-   - Progress bar — privacy-aware: goal + `admin_only` + non-admin → shows "X/Y contributed" count only (no ₹ total). Otherwise shows `₹collected / ₹target` or `₹cycleCollected collected`.
+   - Progress bar — privacy-aware: one-time + `admin_only` + non-admin → shows "X/Y contributed" count only (no ₹ total). Otherwise shows `₹collected / ₹target` or `₹cycleCollected collected`.
    - **Wallet balance** + runway health (🟢 >2mo / 🟡 1-2mo / 🔴 <1mo). Recurring only.
-3. **Goal celebration** (`CircleGoalCelebration`) — goal mode; fires 🎯 confetti + "Goal reached!" banner when `allTimeCollected ≥ targetAmount`. SessionStorage-gated (`clear_circle_goal_${groupId}`). CSS `@keyframes confettiFall`.
-4. **Personal status card** — Recurring: member view, current period only. Goal: member view, any time. Shows ✓ contributed or ⏳ pending with amount.
-5. **Chip grid** (`CircleChipGrid`) — all members. Admin: tapping `⏳` chip → `RecordContributionSheet` → `router.refresh()`. Member: read-only. States: ✓ paid (green), ⏳ pending (grey), 👻 ghost (grey, no userId).
+3. **One-time celebration** (`CircleGoalCelebration`) — one-time mode; fires 🎯 confetti + "Goal reached!" banner when `allTimeCollected ≥ targetAmount`. SessionStorage-gated (`clear_circle_goal_${groupId}`). CSS `@keyframes confettiFall`.
+4. **Personal status card** — Recurring: member view, current period only. One-time: member view, any time. Shows ✓ contributed or ⏳ pending with amount.
+5. **Contribution roster** (`CircleContributionRoster`) — search bar + pending section (🔔 remind bell for admin, tap → `RecordContributionSheet`) + collapsed paid section (shows individual amounts). One-time mode: admin can tap paid member to record additional contributions.
 6. **Send reminder** (`CircleReminderButton` + `CircleReminderSheet`) — admin only when pending members exist. WhatsApp group message with ASCII progress bar + pending names + UPI link.
-7. **Goal lifecycle status** (`CircleGoalStatus`) — goal mode only. Stepper: Collecting → Purchased → Complete. Admin sees transition buttons. Surplus card when status=purchased and walletBalance > 0 ("Keep in wallet" / "Note as distributed → Complete").
+7. **One-time lifecycle status** (`CircleGoalStatus`) — one-time mode only. Stepper: Collecting → Purchased → Complete. Admin sees transition buttons. Surplus card when status=purchased and walletBalance > 0 ("Keep in wallet" / "Note as distributed → Complete").
 8. **Wallet expenses** section — last 3 expenses inline (category icon, description, date, amount, advance badge). "View all →" links to `/expenses`. Admin CTA: "Log wallet expense" → `/expenses/new`.
 9. **Members quick link** → `/members`.
 
@@ -176,13 +176,13 @@ Branches on `config.isCircle`. Non-admins → redirected to `/groups/[id]`. Admi
 - `recordContribution` — admin records for any member.
 - `selfReportContribution` — member self-reports.
 - `addCircleExpense` — admin only; no splits; sets `isAdvance`; revalidates wallet balance tags.
-- `updateCircleStatus` — admin only; goal mode; transitions `active → purchased → complete`; revalidates group cache.
+- `updateCircleStatus` — admin only; one-time mode; transitions `active → purchased → complete`; revalidates group cache.
 
 ### `/groups/new?type=circle` — Circle creation (`create-circle-form.tsx`)
 
 3-step wizard:
-- **Step 1**: Mode selection — Recurring (violet) vs One-time goal (rose).
-- **Step 2**: Details — recurring: name, ₹/month, contribution day (1–28); goal: name, target, deadline, per-person (optional), privacy toggle (`public` | `admin_only`), UPI ID. Add ghost members (name + phone; phone used for WhatsApp invite, not persisted).
+- **Step 1**: Mode selection — Recurring (violet) vs One-time (rose).
+- **Step 2**: Details — recurring: name, ₹/month, contribution day (1–28); one-time: name, target, deadline, per-person (optional), privacy toggle (`public` | `admin_only`), UPI ID. Add ghost members (name + phone; phone used for WhatsApp invite, not persisted).
 - **Step 3**: Invite — WhatsApp wa.me deep link, copy button, "Go to my Circle".
 
 `createCircle` returns `{ groupId, shareToken, creatorName }`. Circle created at end of Step 2.

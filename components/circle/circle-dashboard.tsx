@@ -25,7 +25,9 @@ interface Props {
 
 export async function CircleDashboard({ group, members, currentMember, selectedPeriod }: Props) {
   const isRecurring = group.circleMode === "recurring";
-  const isGoal      = group.circleMode === "goal";
+  const isOneTime   = group.circleMode === "one_time";
+  const isFixed     = isOneTime && group.contributionAmount !== null;
+  const isFlexi     = isOneTime && group.contributionAmount === null;
   const isAdmin     = currentMember?.role === "admin";
   const amount      = group.contributionAmount ? Number(group.contributionAmount) : null;
 
@@ -47,23 +49,23 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
     :                           { color: "text-red-600 dark:text-red-400",       dot: "🔴", label: `${dash.runwayMonths}mo runway` };
 
   // Progress
-  const targetNum  = isGoal && group.targetAmount ? Number(group.targetAmount) : null;
+  const targetNum  = isOneTime && group.targetAmount ? Number(group.targetAmount) : null;
   const progressPct = targetNum
     ? Math.min(100, (dash.allTimeCollected / targetNum) * 100)
     : dash.memberStatuses.length > 0
     ? Math.min(100, (dash.paidCount / dash.memberStatuses.length) * 100)
     : 0;
 
-  // Days until goal deadline
-  const daysLeft = isGoal && group.eventDate
+  // Days until one-time deadline
+  const daysLeft = isOneTime && group.eventDate
     ? Math.max(0, Math.ceil((new Date(group.eventDate).getTime() - Date.now()) / 86_400_000))
     : null;
 
-  // Contribution privacy — hide ₹ totals from non-admins for goal mode
-  const hideAmounts = isGoal && group.contributionPrivacy === "admin_only" && !isAdmin;
+  // Contribution privacy — hide ₹ totals from non-admins for one-time mode
+  const hideAmounts = isOneTime && group.contributionPrivacy === "admin_only" && !isAdmin;
 
   // Goal-hit detection
-  const goalHit = isGoal && targetNum !== null && dash.allTimeCollected >= targetNum;
+  const goalHit = isOneTime && targetNum !== null && dash.allTimeCollected >= targetNum;
 
   // Pending member names for the reminder
   const pendingNames = dash.memberStatuses.filter((m) => !m.isPaid).map((m) => m.name);
@@ -74,8 +76,8 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
     : null;
   const myPendingConfirm = myMemberStatus?.isPendingConfirm ?? false;
 
-  // Show hero action zone on current period (recurring) or always (goal)
-  const showActionZone = dash.currentMemberId && ((isRecurring && dash.isCurrentPeriod) || isGoal);
+  // Show hero action zone on current period (recurring) or always (one-time)
+  const showActionZone = dash.currentMemberId && ((isRecurring && dash.isCurrentPeriod) || isOneTime);
 
   return (
     <div>
@@ -92,7 +94,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
       <div className="glass rounded-2xl overflow-hidden mb-6">
         {/* Gradient header */}
         <div className={`h-32 relative flex items-end px-5 pb-4 bg-gradient-to-br
-          ${isGoal ? "from-rose-500 to-pink-600" : "from-violet-600 to-purple-700"}`}
+          ${isOneTime ? "from-rose-500 to-pink-600" : "from-violet-600 to-purple-700"}`}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 
@@ -116,10 +118,10 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             <div className="flex items-center gap-2 mb-1">
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide
                                bg-white/20 text-white px-2 py-0.5 rounded-full">
-                {isGoal ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
-                {isGoal ? "one-time goal" : "recurring"}
+                {isOneTime ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
+                {isOneTime ? "one-time" : "recurring"}
               </span>
-              {isGoal && daysLeft !== null && (
+              {isOneTime && daysLeft !== null && (
                 <span className={`text-xs font-medium text-white/80 ${daysLeft <= 3 ? "!text-red-300" : ""}`}>
                   {daysLeft === 0 ? "deadline today!" : `${daysLeft} days left`}
                 </span>
@@ -180,7 +182,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                 </span>
               )}
               <span className="text-xs font-medium tabular-nums text-slate-500 dark:text-slate-400">
-                {dash.paidCount}/{dash.memberStatuses.length} {isGoal ? "contributed" : "paid"}
+                {dash.paidCount}/{dash.memberStatuses.length} {isOneTime ? "contributed" : "paid"}
               </span>
             </div>
             <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
@@ -188,7 +190,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                 className={`h-full rounded-full transition-all duration-700 ${
                   progressPct >= 100
                     ? "bg-gradient-to-r from-emerald-400 to-green-500"
-                    : isGoal
+                    : isOneTime
                     ? "bg-gradient-to-r from-rose-400 to-pink-500"
                     : "bg-gradient-to-r from-violet-500 to-purple-600"
                 }`}
@@ -263,8 +265,8 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Goal celebration (100% reached) ─────────────────────────────── */}
-      {isGoal && goalHit && targetNum && (
+      {/* ── One-time celebration (100% reached) ─────────────────────────── */}
+      {isOneTime && goalHit && targetNum && (
         <CircleGoalCelebration
           groupId={group.id}
           collectedAmount={dash.allTimeCollected}
@@ -302,7 +304,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           period={isRecurring ? dash.selectedPeriod : null}
           periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
           groupId={group.id}
-          isGoal={isGoal}
+          isOneTime={isOneTime}
           hideAmounts={hideAmounts}
         />
       </div>
@@ -322,8 +324,8 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       )}
 
-      {/* ── Goal lifecycle status (goal mode only) ──────────────────────── */}
-      {isGoal && (
+      {/* ── One-time lifecycle status (one-time mode only) ───────────────── */}
+      {isOneTime && (
         <CircleGoalStatus
           groupId={group.id}
           status={group.circleStatus}

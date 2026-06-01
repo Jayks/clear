@@ -18,13 +18,13 @@ interface Props {
   period:          string | null;
   periodLabel:     string | null;
   groupId:         string;
-  isGoal?:         boolean;
+  isOneTime?:      boolean;
   hideAmounts?:    boolean;   // admin_only privacy — hide ₹ totals from non-admin members
 }
 
 export function CircleContributionRoster({
   members, isAdmin, currentMemberId, amount, currency, period, periodLabel,
-  groupId, isGoal, hideAmounts,
+  groupId, isOneTime, hideAmounts,
 }: Props) {
   const router = useRouter();
 
@@ -240,8 +240,8 @@ export function CircleContributionRoster({
           {showPaidRows && (
             <div className="space-y-1 mt-1">
               {paidMembers.map((m) => {
-                // Goal mode: admin can record additional contributions on paid members
-                const canAddMore = isAdmin && !!isGoal;
+                // One-time mode: admin can record additional contributions on paid members
+                const canAddMore = isAdmin && !!isOneTime;
 
                 return (
                   <div

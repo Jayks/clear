@@ -48,7 +48,7 @@ export async function createCircle(input: CreateCircleActionInput) {
       eventDate: eventDate || null,
       circleStatus: "active",
       upiId: upiId || null,
-      contributionPrivacy: circleMode === "goal" ? (contributionPrivacy ?? "public") : null,
+      contributionPrivacy: circleMode === "one_time" ? (contributionPrivacy ?? "public") : null,
       walletExpensesEnabled: walletExpensesEnabled ?? true,
       createdBy: user.id,
     }).returning();
@@ -371,7 +371,7 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
   }
 }
 
-// ── Update circle goal lifecycle status (admin only) ──────────────────────────
+// ── Update circle one-time lifecycle status (admin only) ─────────────────────
 
 export async function updateCircleStatus(
   groupId: string,
@@ -382,7 +382,7 @@ export async function updateCircleStatus(
 
   const membership = await getMembership(groupId, user.id);
   if (!membership || membership.role !== "admin")
-    return { ok: false, error: "Only circle admins can update the goal status" } as const;
+    return { ok: false, error: "Only circle admins can update the status" } as const;
 
   try {
     // Fetch target amount and confirmed contributions total for server-side guard
@@ -394,8 +394,8 @@ export async function updateCircleStatus(
       .from(groups)
       .where(eq(groups.id, groupId));
 
-    if (!group || group.circleMode !== "goal")
-      return { ok: false, error: "Not a goal circle" } as const;
+    if (!group || group.circleMode !== "one_time")
+      return { ok: false, error: "Not a one-time circle" } as const;
 
     // Gate: cannot transition to purchased/complete unless goal is fully funded
     if (group.targetAmount) {
@@ -422,13 +422,13 @@ export async function updateCircleStatus(
     await db
       .update(groups)
       .set({ circleStatus: newStatus })
-      .where(and(eq(groups.id, groupId), eq(groups.circleMode, "goal")));
+      .where(and(eq(groups.id, groupId), eq(groups.circleMode, "one_time")));
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`group-${groupId}`, "max");
     return { ok: true } as const;
   } catch {
-    return { ok: false, error: "Failed to update goal status" } as const;
+    return { ok: false, error: "Failed to update status" } as const;
   }
 }
 

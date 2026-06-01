@@ -21,7 +21,7 @@ export const groups = pgTable("groups", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
 
   // ── Circle-specific columns ────────────────────────────────────────────────
-  circleMode: text("circle_mode"),              // 'recurring' | 'goal'
+  circleMode: text("circle_mode"),              // 'recurring' | 'one_time'
   contributionAmount: numeric("contribution_amount", { precision: 12, scale: 2 }),
   contributionPeriod: text("contribution_period"),  // 'monthly'
   contributionDay: integer("contribution_day"),      // 1–28: day of month due

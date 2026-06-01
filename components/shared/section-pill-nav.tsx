@@ -115,8 +115,11 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
 
   return (
     // Sticks just below the AppNav (h-14 = 56px → top-14)
-    // -mx-6 px-6 breaks out of main padding to be full-width
-    <div className="sticky top-14 z-40 -mx-6 px-6 pt-2 pb-2 backdrop-blur-sm mb-4">
+    // -mx-6 px-6 breaks out of main's p-6; md:-mx-8 md:px-8 handles p-8 on desktop
+    // bg ensures the bar is opaque when it overlaps scrolling content
+    <div className="sticky top-14 z-40 -mx-6 px-6 md:-mx-8 md:px-8 pt-2 pb-2
+                    bg-white/75 dark:bg-slate-900/80 backdrop-blur-sm
+                    border-b border-slate-100/60 dark:border-slate-800/50 mb-4">
       <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-0.5">
         {/* Dashed create pills — for missing section types */}
         {createPills.map(({ label, href, color }) => {

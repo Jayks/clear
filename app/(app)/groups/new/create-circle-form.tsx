@@ -627,7 +627,7 @@ export function CreateCircleForm({ firstName }: Props) {
             onChange={(e) => setNewMemberName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addMember())}
             placeholder="Name"
-            className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+            className="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                        bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
                        focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
                        placeholder:text-slate-400 dark:placeholder:text-slate-500"
@@ -637,8 +637,8 @@ export function CreateCircleForm({ firstName }: Props) {
             value={newMemberPhone}
             onChange={(e) => setNewMemberPhone(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addMember())}
-            placeholder="Phone (optional)"
-            className="w-36 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700
+            placeholder="Phone"
+            className="w-20 sm:w-32 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700
                        bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100
                        focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent
                        placeholder:text-slate-400 dark:placeholder:text-slate-500"

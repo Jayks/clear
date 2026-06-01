@@ -35,7 +35,7 @@ export default async function NewGroupPage({ searchParams }: Props) {
           A shared fund — fixed monthly contributions or a one-time goal.
         </p>
 
-        <div className="glass rounded-2xl p-6">
+        <div className="glass rounded-2xl p-4 sm:p-6">
           <CreateCircleForm firstName={firstName} />
         </div>
       </div>
@@ -64,7 +64,7 @@ export default async function NewGroupPage({ searchParams }: Props) {
         Only the name is required — everything else can be added later.
       </p>
 
-      <div className="glass rounded-2xl p-6">
+      <div className="glass rounded-2xl p-4 sm:p-6">
         <CreateTripForm defaultGroupType={defaultGroupType} />
       </div>
     </div>

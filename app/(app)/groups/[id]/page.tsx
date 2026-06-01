@@ -19,6 +19,7 @@ import { SettleBalanceBadge, SettleBalanceSkeleton } from "@/components/trip/set
 import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components/trip/insights-summary-badge";
 import { NestMonthlyBadge, NestMonthlyBadgeSkeleton } from "@/components/trip/nest-monthly-badge";
 import { RepeatTripPrompt } from "@/components/trip/repeat-trip-prompt";
+import { HeroBalancePill } from "@/components/trip/hero-balance-pill";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -131,15 +132,28 @@ export default async function GroupPage({
             <h1 className="text-white text-2xl sm:text-3xl" style={{ fontFamily: "var(--font-fraunces)" }}>
               {group.name}
             </h1>
-            {isNest ? (
-              <p className="text-white/75 text-sm mt-1">{members.length} {members.length === 1 ? "member" : "members"}</p>
-            ) : (group.startDate || group.endDate) ? (
-              <p className="text-white/75 text-sm mt-1">
-                {group.startDate ? formatDate(group.startDate) : ""}
-                {group.startDate && group.endDate ? " → " : ""}
-                {group.endDate ? formatDate(group.endDate) : ""}
-              </p>
-            ) : null}
+            {/* Date / member count row + personal net pill side-by-side */}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {isNest ? (
+                <p className="text-white/75 text-sm">{members.length} {members.length === 1 ? "member" : "members"}</p>
+              ) : (group.startDate || group.endDate) ? (
+                <p className="text-white/75 text-sm">
+                  {group.startDate ? formatDate(group.startDate) : ""}
+                  {group.startDate && group.endDate ? " → " : ""}
+                  {group.endDate ? formatDate(group.endDate) : ""}
+                </p>
+              ) : null}
+              {/* Personal net — streamed; Suspense fallback = null so hero renders instantly */}
+              {currentMember && !group.isArchived && (
+                <Suspense fallback={null}>
+                  <HeroBalancePill
+                    groupId={group.id}
+                    currentMemberId={currentMember.id}
+                    defaultCurrency={group.defaultCurrency}
+                  />
+                </Suspense>
+              )}
+            </div>
           </div>
         </div>
         {group.description && (
@@ -149,18 +163,9 @@ export default async function GroupPage({
         )}
       </div>
 
-      {/* Quick actions */}
+      {/* Quick actions — Expenses + Settle up lead on mobile (most-used first row) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="trip-quick-actions">
-        <Link href={`/groups/${group.id}/members`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30">
-            <Users className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{config.labels.members}</p>
-            <p className="text-xs text-violet-500 dark:text-violet-400">{members.length} {members.length === 1 ? "person" : "people"}</p>
-          </div>
-        </Link>
-
+        {/* 1 — Expenses (most frequent action) */}
         <Link href={`/groups/${group.id}/expenses`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-0.5 transition-all">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30">
             <Receipt className="w-4 h-4 text-white" />
@@ -181,6 +186,7 @@ export default async function GroupPage({
           </div>
         </Link>
 
+        {/* 2 — Settle up (most urgent question: what do I owe?) */}
         <Link href={`/groups/${group.id}/settle`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 transition-all">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm shadow-emerald-500/30">
             <Wallet className="w-4 h-4 text-white" />
@@ -201,6 +207,18 @@ export default async function GroupPage({
           </div>
         </Link>
 
+        {/* 3 — Members */}
+        <Link href={`/groups/${group.id}/members`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-0.5 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30">
+            <Users className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{config.labels.members}</p>
+            <p className="text-xs text-violet-500 dark:text-violet-400">{members.length} {members.length === 1 ? "person" : "people"}</p>
+          </div>
+        </Link>
+
+        {/* 4 — Insights */}
         <Link href={`/groups/${group.id}/insights`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-amber-500/10 hover:-translate-y-0.5 transition-all">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-sm shadow-amber-500/30">
             <BarChart2 className="w-4 h-4 text-white" />

@@ -14,7 +14,7 @@ import { hapticLight } from "@/lib/haptics";
 import { useWarnBeforeLeave } from "@/hooks/use-warn-before-leave";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
-import { getMemberName, smartDefaultDate } from "@/lib/utils";
+import { getMemberName, smartDefaultDate, formatCurrency } from "@/lib/utils";
 import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import { useRecentCategories } from "@/hooks/use-recent-categories";
@@ -174,6 +174,26 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
             />
           </div>
           {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
+          {/* Quick-amount chips — tap to fill, common Indian round amounts */}
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {[50, 100, 200, 500, 1000, 2000].map((amt) => (
+              <button
+                key={amt}
+                type="button"
+                onClick={() => setValue("amount", amt, { shouldValidate: true })}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg
+                           bg-slate-100 dark:bg-slate-800
+                           text-slate-600 dark:text-slate-300
+                           border border-slate-200 dark:border-slate-700
+                           hover:bg-cyan-50 dark:hover:bg-cyan-950/40
+                           hover:text-cyan-700 dark:hover:text-cyan-300
+                           hover:border-cyan-300 dark:hover:border-cyan-700/50
+                           active:scale-95 transition-all"
+              >
+                {formatCurrency(amt, currency)}
+              </button>
+            ))}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Currency</label>

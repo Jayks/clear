@@ -118,7 +118,7 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
       {/* Type selector */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Group type</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {(["trip", "nest"] as ("trip" | "nest")[]).map((type) => {
             const cfg = GROUP_CONFIG[type];
             const Icon = cfg.icon;
@@ -137,7 +137,7 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${active ? "bg-gradient-to-br from-cyan-500 to-teal-500" : "bg-slate-100 dark:bg-slate-700"}`}>
                   <Icon className={`w-3.5 h-3.5 ${active ? "text-white" : "text-slate-500 dark:text-slate-400"}`} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className={`text-sm font-medium ${active ? "text-cyan-700 dark:text-cyan-300" : "text-slate-700 dark:text-slate-200"}`}>
                     {cfg.labels.singular}
                   </p>
@@ -160,7 +160,7 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
             <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-700">
               <Coins className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Circle</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">Shared fund</p>
             </div>

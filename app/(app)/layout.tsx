@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import AppNav from "./app-nav";
 import { MobileNav } from "@/components/shared/mobile-nav";
+import { PageTransition } from "@/components/shared/page-transition";
 import { isPlatformAdmin } from "@/lib/db/queries/admin";
 import { TourProvider } from "@/components/tour/tour-context";
 import { getCurrentUser } from "@/lib/db/queries/auth";
@@ -33,7 +34,7 @@ export default async function AppLayout({
         <AppNav user={user} isAdmin={isAdmin} plan={plan} />
         <TrialBanner />
         <main className="flex-1 flex flex-col p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
         <MobileNav />
         <PushPermissionPrompt />

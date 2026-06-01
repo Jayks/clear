@@ -2,7 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { canUseNonEqualSplit } from "@/lib/subscription/gates";
 import { getGroupConfig } from "@/lib/group-config";
-import { ArrowLeft, Receipt, Coins } from "lucide-react";
+import { Receipt, Coins } from "lucide-react";
+import { BackButton } from "@/components/shared/back-button";
 import Link from "next/link";
 import { AddExpenseForm } from "./add-expense-form";
 import { AddCircleExpenseForm } from "@/components/circle/add-circle-expense-form";
@@ -36,13 +37,11 @@ export default async function NewExpensePage({
     return (
       <div>
         <div className="hidden md:flex items-center gap-2 mb-6">
-          <Link
+          <BackButton
             href={backHref}
+            label={backLabel}
             className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {backLabel}
-          </Link>
+          />
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
               <Coins className="w-4 h-4 text-white" />
@@ -65,13 +64,11 @@ export default async function NewExpensePage({
     <div>
       {/* Desktop header — mobile nav carries the icon + title */}
       <div className="hidden md:flex items-center gap-2 mb-6">
-        <Link
+        <BackButton
           href={backHref}
+          label={backLabel}
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {backLabel}
-        </Link>
+        />
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">
             <Receipt className="w-4 h-4 text-white" />

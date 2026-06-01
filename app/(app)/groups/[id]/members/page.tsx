@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
-import { ArrowLeft, UserPlus, Users, Link2 } from "lucide-react";
+import { UserPlus, Users, Link2 } from "lucide-react";
 import Link from "next/link";
+import { BackButton } from "@/components/shared/back-button";
 import type { Metadata } from "next";
 import { AddGuestForm } from "./add-guest-form";
 import { MemberListClient } from "./member-list-client";
@@ -43,13 +44,11 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
 
   return (
     <div>
-      <Link
+      <BackButton
         href={`/groups/${group.id}`}
+        label={`Back to ${config.labels.singular.toLowerCase()}`}
         className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to {config.labels.singular.toLowerCase()}
-      </Link>
+      />
       {memberNudge && <PlanNudgeBanner nudge={memberNudge} resource="members" />}
 
       {/* Spacer — replaces the title block's mb-6 on mobile */}

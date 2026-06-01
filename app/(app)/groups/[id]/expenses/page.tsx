@@ -5,8 +5,9 @@ import { getGroupName } from "@/lib/db/queries/meta";
 import { getExpenseInteractionCounts } from "@/lib/db/queries/interactions";
 import { getGroupConfig } from "@/lib/group-config";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Plus, Receipt, Coins } from "lucide-react";
+import { Plus, Receipt, Coins } from "lucide-react";
 import Link from "next/link";
+import { BackButton } from "@/components/shared/back-button";
 import type { Metadata } from "next";
 import { ExpenseFilters } from "@/components/expense/expense-filters";
 import { ChatImportDialog } from "@/components/expense/chat-import-dialog";
@@ -53,13 +54,11 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
       <div>
         {/* Header */}
         <div className="flex items-center gap-2 mb-6 flex-wrap">
-          <Link
+          <BackButton
             href={`/groups/${id}`}
+            label="Back"
             className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Link>
+          />
           <div className="hidden md:flex items-center gap-2.5 flex-1 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
               <Coins className="w-4 h-4 text-white" />
@@ -148,13 +147,11 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
       {expenseNudge && <PlanNudgeBanner nudge={expenseNudge} resource="expenses" />}
       {/* Header */}
       <div className="flex items-center gap-2 mb-6 flex-wrap" data-tour="expense-add-btn">
-        <Link
+        <BackButton
           href={`/groups/${id}`}
+          label="Back"
           className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Link>
+        />
         {/* Icon + title — desktop only; mobile nav carries these */}
         <div className="hidden md:flex items-center gap-2.5 flex-1 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">

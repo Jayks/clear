@@ -19,7 +19,7 @@ interface Props {
 export function CircleCard({ group, cardData }: Props) {
   const {
     totalMembers, paidThisCycle, totalContributed, poolBalance,
-    isAdmin, currentUserPaid, pendingMembers,
+    isAdmin, currentUserPaid, pendingMembers, paidMembers,
     currentUserPendingConfirm: serverPendingConfirm,
     currentPeriod, currentPeriodLabel,
   } = cardData;
@@ -34,6 +34,7 @@ export function CircleCard({ group, cardData }: Props) {
   const [localPending,          setLocalPending]          = useState<PendingMember[]>(pendingMembers);
 
   const [recordMember,          setRecordMember]          = useState<PendingMember | null>(null);
+  const [recordIsAdditional,    setRecordIsAdditional]    = useState(false);
   const [selfReporting,         setSelfReporting]         = useState(false);
 
   // ── Return-from-UPI prompt ────────────────────────────────────────────────
@@ -110,8 +111,9 @@ export function CircleCard({ group, cardData }: Props) {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  function handleChipTap(m: PendingMember) {
+  function handleChipTap(m: PendingMember, additional = false) {
     hapticLight();
+    setRecordIsAdditional(additional);
     setRecordMember(m);
   }
 
@@ -267,23 +269,75 @@ export function CircleCard({ group, cardData }: Props) {
             </div>
           )}
 
-          {/* Admin — all paid celebration */}
+          {/* Admin — all paid: show paid chips in goal mode for additional contributions */}
           {isAdmin && localPending.length === 0 && (
-            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 mt-auto">
-              <Check className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">
-                {isRecurring ? `Everyone paid for ${monthShort} 🎉` : "All contributed 🎉"}
-              </span>
+            <div className="mt-auto space-y-2">
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <Check className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">
+                  {isRecurring ? `Everyone paid for ${monthShort} 🎉` : "All contributed 🎉"}
+                </span>
+              </div>
+              {/* Goal mode — tappable paid chips for additional contributions */}
+              {isGoal && paidMembers.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5 leading-none">
+                    Tap to record more ↓
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {paidMembers.slice(0, 3).map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => handleChipTap(m, true)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium
+                                   bg-emerald-50 dark:bg-emerald-900/20
+                                   text-emerald-700 dark:text-emerald-300
+                                   border border-emerald-200 dark:border-emerald-800/40
+                                   hover:border-violet-400 dark:hover:border-violet-600
+                                   hover:bg-violet-50 dark:hover:bg-violet-900/20
+                                   hover:text-violet-700 dark:hover:text-violet-300
+                                   active:scale-95 transition-all"
+                      >
+                        <Check className="w-2.5 h-2.5 shrink-0" />
+                        <span className="max-w-[60px] truncate">{m.name}</span>
+                        <span className="font-bold text-violet-500 dark:text-violet-400 text-[10px]">+</span>
+                      </button>
+                    ))}
+                    {paidMembers.length > 3 && (
+                      <Link
+                        href={`/groups/${group.id}`}
+                        className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium
+                                   bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400
+                                   hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        +{paidMembers.length - 3}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* ── Member view — paid ────────────────────────────────────────── */}
           {!isAdmin && localUserPaid && (
-            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 mt-auto">
-              <Check className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">
-                {isRecurring ? `You're clear for ${monthShort}` : "You've contributed"}
-              </span>
+            <div className="mt-auto space-y-1">
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <Check className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">
+                  {isRecurring ? `You're clear for ${monthShort}` : "You've contributed"}
+                </span>
+              </div>
+              {/* Goal mode — link to dashboard to contribute more */}
+              {isGoal && (
+                <Link
+                  href={`/groups/${group.id}`}
+                  className="text-[11px] text-violet-600 dark:text-violet-400 font-medium hover:underline"
+                >
+                  + Contribute more →
+                </Link>
+              )}
             </div>
           )}
 
@@ -340,7 +394,9 @@ export function CircleCard({ group, cardData }: Props) {
               {!amount && isGoal && (
                 <Link
                   href={`/groups/${group.id}`}
-                  className="text-xs text-violet-600 dark:text-violet-400 font-medium hover:underline"
+                  className="w-full py-1.5 text-center text-[11px] font-semibold rounded-lg
+                             bg-gradient-to-br from-violet-500 to-purple-600 text-white
+                             shadow-sm shadow-violet-500/20 hover:opacity-90 transition-opacity block"
                 >
                   Contribute →
                 </Link>
@@ -391,8 +447,9 @@ export function CircleCard({ group, cardData }: Props) {
           period={isRecurring ? currentPeriod : null}
           periodLabel={isRecurring ? currentPeriodLabel : null}
           groupId={group.id}
+          isAdditional={recordIsAdditional}
           isOpen={!!recordMember}
-          onClose={() => setRecordMember(null)}
+          onClose={() => { setRecordMember(null); setRecordIsAdditional(false); }}
           onSuccess={handleRecordSuccess}
         />
       )}

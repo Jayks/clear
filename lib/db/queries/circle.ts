@@ -39,6 +39,7 @@ export interface CircleCardData {
   currentUserPaid:           boolean;
   currentUserPendingConfirm: boolean;   // member self-reported, awaiting admin confirmation
   pendingMembers:            PendingMember[];
+  paidMembers:               PendingMember[];  // goal mode: admin can record additional contributions
   pendingConfirmCount:       number;    // admin: how many unconfirmed self-reports
   currentPeriod:             string;   // "2026-06"
   currentPeriodLabel:        string;  // "June 2026"
@@ -119,6 +120,15 @@ export async function getCircleCardData(
       isGuest: !m.userId,
     }));
 
+  // Goal mode: paid members can receive additional contributions
+  const paidMembers: PendingMember[] = allMembers
+    .filter((m) => paidMemberIds.has(m.id))
+    .map((m) => ({
+      id:      m.id,
+      name:    m.displayName ?? m.guestName ?? "Member",
+      isGuest: !m.userId,
+    }));
+
   return {
     totalMembers:              allMembers.length,
     paidThisCycle:             paidMemberIds.size,
@@ -129,6 +139,7 @@ export async function getCircleCardData(
     currentUserPaid,
     currentUserPendingConfirm,
     pendingMembers,
+    paidMembers,
     pendingConfirmCount:       unconfirmedContribs.length,
     currentPeriod,
     currentPeriodLabel,

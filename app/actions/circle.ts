@@ -11,7 +11,7 @@ import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { canCreateGroup, canAddExpense } from "@/lib/subscription/gates";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 // ── Create circle group ───────────────────────────────────────────────────────
 
@@ -384,6 +384,40 @@ export async function updateCircleStatus(
     return { ok: false, error: "Only circle admins can update the goal status" } as const;
 
   try {
+    // Fetch target amount and confirmed contributions total for server-side guard
+    const [group] = await db
+      .select({
+        targetAmount:    groups.targetAmount,
+        circleMode:      groups.circleMode,
+      })
+      .from(groups)
+      .where(eq(groups.id, groupId));
+
+    if (!group || group.circleMode !== "goal")
+      return { ok: false, error: "Not a goal circle" } as const;
+
+    // Gate: cannot transition to purchased/complete unless goal is fully funded
+    if (group.targetAmount) {
+      const target = Number(group.targetAmount);
+      const [{ collected }] = await db
+        .select({ collected: sql<string>`COALESCE(SUM(${circleContributions.amount}), 0)` })
+        .from(circleContributions)
+        .where(
+          and(
+            eq(circleContributions.groupId, groupId),
+            eq(circleContributions.isConfirmed, true),
+          )
+        );
+
+      if (Number(collected) < target) {
+        const stillNeeded = target - Number(collected);
+        return {
+          ok: false,
+          error: `Goal not yet reached — ₹${stillNeeded.toLocaleString("en-IN")} still needed`,
+        } as const;
+      }
+    }
+
     await db
       .update(groups)
       .set({ circleStatus: newStatus })

@@ -10,13 +10,14 @@ import { CheckCircle2, ShoppingBag, Circle } from "lucide-react";
 type LifecycleStatus = "active" | "purchased" | "complete";
 
 interface Props {
-  groupId:         string;
-  status:          string | null;   // 'active' | 'purchased' | 'complete'
-  isAdmin:         boolean;
-  poolBalance:     number;
-  allTimeExpenses: number;
+  groupId:          string;
+  status:           string | null;   // 'active' | 'purchased' | 'complete'
+  isAdmin:          boolean;
+  poolBalance:      number;
+  allTimeExpenses:  number;
   allTimeCollected: number;
-  currency:        string;
+  targetAmount:     number | null;
+  currency:         string;
 }
 
 const STEPS: { key: LifecycleStatus; label: string; icon: React.ReactNode }[] = [
@@ -33,13 +34,17 @@ function normalise(s: string | null): LifecycleStatus {
 }
 
 export function CircleGoalStatus({
-  groupId, status, isAdmin, poolBalance, allTimeExpenses, allTimeCollected, currency,
+  groupId, status, isAdmin, poolBalance, allTimeExpenses, allTimeCollected, targetAmount, currency,
 }: Props) {
   const current = normalise(status);
   const currentIdx = STEP_INDEX[current];
   const [optimisticStatus, setOptimisticStatus] = useState<LifecycleStatus>(current);
   const [busy, setBusy] = useState(false);
   const [surplusDismissed, setSurplusDismissed] = useState(false);
+
+  // Gate — cannot purchase/complete until all contributions are in
+  const goalReached = targetAmount === null || allTimeCollected >= targetAmount;
+  const stillNeeded = targetAmount !== null ? Math.max(0, targetAmount - allTimeCollected) : 0;
 
   const displayStatus = optimisticStatus;
   const displayIdx    = STEP_INDEX[displayStatus];
@@ -120,18 +125,30 @@ export function CircleGoalStatus({
         })}
       </div>
 
-      {/* Admin transition button */}
+      {/* Admin transition button — gated on goal being fully funded */}
       {isAdmin && displayStatus === "active" && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => transition("purchased")}
-          className="w-full py-2.5 text-sm font-medium rounded-xl transition-all disabled:opacity-50
-                     bg-gradient-to-br from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600
-                     text-white shadow-sm shadow-rose-500/20"
-        >
-          {busy ? "Updating…" : "Mark as purchased 🛍️"}
-        </button>
+        goalReached ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => transition("purchased")}
+            className="w-full py-2.5 text-sm font-medium rounded-xl transition-all disabled:opacity-50
+                       bg-gradient-to-br from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600
+                       text-white shadow-sm shadow-rose-500/20"
+          >
+            {busy ? "Updating…" : "Mark as purchased 🛍️"}
+          </button>
+        ) : (
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700
+                          bg-slate-50 dark:bg-slate-800/60 px-4 py-3 text-center space-y-1">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Goal not yet reached
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {formatCurrency(stillNeeded, currency)} still needed before purchasing
+            </p>
+          </div>
+        )
       )}
 
       {isAdmin && displayStatus === "purchased" && !showSurplus && (

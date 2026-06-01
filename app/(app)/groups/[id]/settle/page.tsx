@@ -4,8 +4,9 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { Skeleton } from "@/components/shared/skeleton";
 import { BalancesSection } from "./balances-section";
-import { ArrowLeft, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 import Link from "next/link";
+import { BackButton } from "@/components/shared/back-button";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -26,13 +27,11 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
   return (
     <div>
       <div className="hidden md:flex items-center gap-3 mb-6">
-        <Link
+        <BackButton
           href={`/groups/${id}`}
+          label="Back"
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Link>
+        />
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm shadow-emerald-500/30 shrink-0">
           <Wallet className="w-4 h-4 text-white" />
         </div>

@@ -3,9 +3,8 @@
 import { useCallback, useState } from "react";
 import { ArrowLeft, MoreHorizontal, Receipt, Wallet, Users, BarChart2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { TripCardNavSheet } from "@/components/trip/trip-card-nav-sheet";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface Props {
   groupId: string;
@@ -80,6 +79,7 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
 export function GroupMobileNav({ groupId, groupName }: Props) {
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
+  const router   = useRouter();
 
   // Stable reference — prevents the history useEffect in TripCardNavSheet from
   // re-running (and re-pushing fake history entries) on every re-render.
@@ -91,14 +91,15 @@ export function GroupMobileNav({ groupId, groupName }: Props) {
     <>
       {/* relative so the absolutely-centred title anchors to the bar, not the page */}
       <div className="h-14 px-4 flex items-center justify-between gap-2 backdrop-blur-sm relative">
-        {/* Back link — kept small so the centre title dominates */}
-        <Link
+        {/* Back button — router.back() pops the stack so hardware back never loops */}
+        <a
           href={backHref}
+          onClick={(e) => { e.preventDefault(); router.back(); }}
           className="relative z-10 flex items-center gap-1 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors py-3 shrink-0 max-w-[30%] min-w-0"
         >
           <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{backLabel}</span>
-        </Link>
+        </a>
 
         {/* Centre — absolutely anchored, prominent icon + title */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

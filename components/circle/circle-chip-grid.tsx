@@ -17,15 +17,18 @@ interface Props {
   period:          string | null;
   periodLabel:     string | null;
   groupId:         string;
+  /** Goal mode — allows recording additional contributions on already-paid chips */
+  isGoal?:         boolean;
 }
 
 export function CircleChipGrid({
-  members, isAdmin, currentMemberId, amount, currency, period, periodLabel, groupId,
+  members, isAdmin, currentMemberId, amount, currency, period, periodLabel, groupId, isGoal,
 }: Props) {
   const router = useRouter();
 
-  // For recording a new contribution (⏳ chip tap)
-  const [recordMember, setRecordMember] = useState<PendingMember | null>(null);
+  // For recording a new/additional contribution (⏳ or ✓ chip tap in goal mode)
+  const [recordMember,   setRecordMember]   = useState<PendingMember | null>(null);
+  const [isAdditional,   setIsAdditional]   = useState(false);
 
   // For confirming/rejecting a self-report (🟡 chip tap)
   const [confirmMember, setConfirmMember] = useState<{
@@ -36,6 +39,7 @@ export function CircleChipGrid({
   const handleSuccess = useCallback(() => {
     setRecordMember(null);
     setConfirmMember(null);
+    setIsAdditional(false);
     router.refresh();
   }, [router]);
 
@@ -45,10 +49,12 @@ export function CircleChipGrid({
         {members.map((m) => {
           const isMe = m.id === currentMemberId;
 
-          // Admin can tap ⏳ chips to record (when amount is set)
-          const canRecord = isAdmin && !m.isPaid && !m.isPendingConfirm && !!amount;
+          // Admin can tap ⏳ chips to record (always — amount input shown when no fixed amount)
+          const canRecord = isAdmin && !m.isPaid && !m.isPendingConfirm;
           // Admin can tap 🟡 chips to confirm or reject
           const canConfirm = isAdmin && m.isPendingConfirm && !!m.unconfirmedContributionId;
+          // Admin can tap ✓ chips in goal mode to record additional contributions
+          const canAddMore = isAdmin && isGoal && m.isPaid && !m.isPendingConfirm;
 
           // ── Chip colour ──────────────────────────────────────────────────
           let chipClass: string;
@@ -60,7 +66,7 @@ export function CircleChipGrid({
             chipClass = "bg-slate-100 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700/60 text-slate-600 dark:text-slate-300";
           }
 
-          const tappable = canRecord || canConfirm;
+          const tappable = canRecord || canConfirm || canAddMore;
 
           function handleTap() {
             if (canConfirm) {
@@ -72,6 +78,10 @@ export function CircleChipGrid({
                 amount:         amount ?? 0,
               });
             } else if (canRecord) {
+              setIsAdditional(false);
+              setRecordMember({ id: m.id, name: m.name, isGuest: m.isGuest });
+            } else if (canAddMore) {
+              setIsAdditional(true);
               setRecordMember({ id: m.id, name: m.name, isGuest: m.isGuest });
             }
           }
@@ -84,6 +94,7 @@ export function CircleChipGrid({
                 ${tappable ? "cursor-pointer active:scale-95" : ""}
                 ${canRecord  ? "hover:border-violet-400 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20" : ""}
                 ${canConfirm ? "hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20" : ""}
+                ${canAddMore ? "hover:border-violet-300 dark:hover:border-violet-600 hover:bg-violet-50/40 dark:hover:bg-violet-900/10" : ""}
               `}
               onClick={tappable ? handleTap : undefined}
               role={tappable ? "button" : undefined}
@@ -124,12 +135,17 @@ export function CircleChipGrid({
                   says paid
                 </span>
               )}
+
+              {/* "+" hint — goal mode, paid chip, admin can add more */}
+              {canAddMore && (
+                <span className="text-[9px] font-bold text-violet-500 dark:text-violet-400 shrink-0 leading-none">+</span>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Record new contribution (⏳ chip) */}
+      {/* Record new / additional contribution */}
       {recordMember && (
         <RecordContributionSheet
           member={recordMember}
@@ -138,8 +154,9 @@ export function CircleChipGrid({
           period={period}
           periodLabel={periodLabel}
           groupId={groupId}
+          isAdditional={isAdditional}
           isOpen={!!recordMember}
-          onClose={() => setRecordMember(null)}
+          onClose={() => { setRecordMember(null); setIsAdditional(false); }}
           onSuccess={handleSuccess}
         />
       )}

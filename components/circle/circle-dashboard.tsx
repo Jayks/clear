@@ -13,6 +13,8 @@ import { CircleBatchConfirmBanner } from "./circle-batch-confirm-banner";
 import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 import { CategoryIcon } from "@/components/expense/category-icon";
 import { Coins, Repeat2, Target } from "lucide-react";
+import { CircleMemberStatusCard } from "./circle-member-status-card";
+import { BackButton } from "@/components/shared/back-button";
 
 interface Props {
   group:          Group;
@@ -66,18 +68,22 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   // Pending member names for the reminder
   const pendingNames = dash.memberStatuses.filter((m) => !m.isPaid).map((m) => m.name);
 
+  // Current member's pending-confirm status (non-admin members only)
+  const myMemberStatus = !isAdmin && dash.currentMemberId
+    ? dash.memberStatuses.find((m) => m.id === dash.currentMemberId) ?? null
+    : null;
+  const myPendingConfirm = myMemberStatus?.isPendingConfirm ?? false;
+
   return (
     <div>
       {/* Desktop back link */}
-      <Link
+      <BackButton
         href="/groups"
+        label="All groups"
         className="hidden md:inline-flex items-center gap-1.5 min-h-[44px]
                    text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200
                    text-sm font-medium mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        All groups
-      </Link>
+      />
 
       {/* ── Hero card ───────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl overflow-hidden mb-6">
@@ -268,79 +274,22 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         );
       })()}
 
-      {/* ── Personal status card (member view) ──────────────────────────────── */}
-      {/* Recurring — current period only */}
-      {!isAdmin && isRecurring && dash.isCurrentPeriod && (
-        <div className={`glass rounded-2xl px-4 py-3 mb-6 flex items-center gap-3 border-l-4 ${
-          dash.currentUserPaid
-            ? "border-emerald-400 dark:border-emerald-600"
-            : "border-amber-400 dark:border-amber-600"
-        }`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-            dash.currentUserPaid
-              ? "bg-emerald-100 dark:bg-emerald-900/30"
-              : "bg-amber-100 dark:bg-amber-900/30"
-          }`}>
-            <span className="text-base">{dash.currentUserPaid ? "✓" : "⏳"}</span>
-          </div>
-          <div>
-            <p className={`text-sm font-semibold ${
-              dash.currentUserPaid
-                ? "text-emerald-700 dark:text-emerald-300"
-                : "text-amber-700 dark:text-amber-300"
-            }`}>
-              {dash.currentUserPaid
-                ? `You're clear for ${dash.selectedPeriodLabel}`
-                : `Your ${dash.selectedPeriodLabel} contribution is pending`}
-            </p>
-            {dash.currentUserPaid && dash.myContributionDate && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {formatCurrency(dash.myContributionAmount ?? 0, group.defaultCurrency)} confirmed · {dash.myContributionDate}
-              </p>
-            )}
-            {!dash.currentUserPaid && amount && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {formatCurrency(amount, group.defaultCurrency)} due
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Goal mode — personal status card for non-admin members */}
-      {!isAdmin && isGoal && (
-        <div className={`glass rounded-2xl px-4 py-3 mb-6 flex items-center gap-3 border-l-4 ${
-          dash.currentUserPaid
-            ? "border-emerald-400 dark:border-emerald-600"
-            : "border-rose-400 dark:border-rose-600"
-        }`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-            dash.currentUserPaid
-              ? "bg-emerald-100 dark:bg-emerald-900/30"
-              : "bg-rose-100 dark:bg-rose-900/30"
-          }`}>
-            <span className="text-base">{dash.currentUserPaid ? "✓" : "⏳"}</span>
-          </div>
-          <div>
-            <p className={`text-sm font-semibold ${
-              dash.currentUserPaid
-                ? "text-emerald-700 dark:text-emerald-300"
-                : "text-rose-700 dark:text-rose-300"
-            }`}>
-              {dash.currentUserPaid ? "You've contributed" : "Your contribution is pending"}
-            </p>
-            {dash.currentUserPaid && dash.myContributionDate && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {formatCurrency(dash.myContributionAmount ?? 0, group.defaultCurrency)} · {dash.myContributionDate}
-              </p>
-            )}
-            {!dash.currentUserPaid && amount && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {formatCurrency(amount, group.defaultCurrency)} expected
-              </p>
-            )}
-          </div>
-        </div>
+      {/* ── Personal status card (member view) — interactive with Pay + I've paid ─ */}
+      {!isAdmin && dash.currentMemberId && ((isRecurring && dash.isCurrentPeriod) || isGoal) && (
+        <CircleMemberStatusCard
+          groupId={group.id}
+          groupName={group.name}
+          isPaid={dash.currentUserPaid}
+          isPendingConfirm={myPendingConfirm}
+          amount={amount}
+          currency={group.defaultCurrency}
+          period={isRecurring ? dash.selectedPeriod : null}
+          periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
+          isRecurring={isRecurring}
+          upiId={group.upiId ?? null}
+          contributionDate={dash.myContributionDate}
+          contributionAmount={dash.myContributionAmount}
+        />
       )}
 
       {/* ── Chip grid ───────────────────────────────────────────────────────── */}
@@ -363,7 +312,9 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
 
         {isAdmin && (
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
-            Tap a pending chip to record contribution
+            {isGoal
+              ? "Tap any chip to record a contribution · ✓ chips with + can receive more"
+              : "Tap a pending chip to record contribution"}
           </p>
         )}
 
@@ -376,6 +327,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           period={isRecurring ? dash.selectedPeriod : null}
           periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
           groupId={group.id}
+          isGoal={isGoal}
         />
       </div>
 
@@ -403,6 +355,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           poolBalance={dash.poolBalance}
           allTimeExpenses={dash.allTimeExpenses}
           allTimeCollected={dash.allTimeCollected}
+          targetAmount={targetNum}
           currency={group.defaultCurrency}
         />
       )}

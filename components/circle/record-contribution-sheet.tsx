@@ -12,29 +12,38 @@ import { formatCurrency } from "@/lib/utils";
 import type { PendingMember } from "@/lib/db/queries/circle";
 
 interface Props {
-  member:      PendingMember;
-  amount:      number;
-  currency:    string;
-  period:      string | null;
-  periodLabel: string | null;
-  groupId:     string;
-  isOpen:      boolean;
-  onClose:     () => void;
-  onSuccess:   () => void;
+  member:        PendingMember;
+  amount:        number;
+  currency:      string;
+  period:        string | null;
+  periodLabel:   string | null;
+  groupId:       string;
+  isAdditional?: boolean;   // true when recording on top of an existing confirmed contribution
+  isOpen:        boolean;
+  onClose:       () => void;
+  onSuccess:     () => void;
 }
 
 export function RecordContributionSheet({
-  member, amount, currency, period, periodLabel, groupId, isOpen, onClose, onSuccess,
+  member, amount, currency, period, periodLabel, groupId, isAdditional, isOpen, onClose, onSuccess,
 }: Props) {
-  const [mounted,    setMounted]    = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [mounted,      setMounted]      = useState(false);
+  const [submitting,   setSubmitting]   = useState(false);
+  // Used when no fixed amount is set (amount === 0) — admin enters custom amount
+  const [customAmount, setCustomAmount] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
   useSheetDismiss(isOpen, onClose);
 
+  // Resolve final amount: use prop if fixed, otherwise parse custom input
+  const hasFixedAmount = amount > 0;
+  const finalAmount    = hasFixedAmount ? amount : parseFloat(customAmount) || 0;
+  const canSubmit      = finalAmount > 0 && !submitting;
+
   async function handleConfirm() {
+    if (!canSubmit) return;
     setSubmitting(true);
-    const result = await recordContribution({ groupId, memberId: member.id, amount, period, currency });
+    const result = await recordContribution({ groupId, memberId: member.id, amount: finalAmount, period, currency });
     setSubmitting(false);
 
     if (result.ok) {
@@ -87,7 +96,7 @@ export function RecordContributionSheet({
                 className="text-base text-slate-800 dark:text-slate-100"
                 style={{ fontFamily: "var(--font-fraunces)" }}
               >
-                Record contribution
+                {isAdditional ? "Additional contribution" : "Record contribution"}
               </h3>
               <button
                 type="button"
@@ -101,16 +110,50 @@ export function RecordContributionSheet({
 
             {/* Body */}
             <div className="px-5 py-6 space-y-4">
-              {/* Summary card */}
-              <div className="glass rounded-xl p-4 text-center space-y-1">
-                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">
-                  {formatCurrency(amount, currency)}
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  for <span className="font-semibold">{member.name}</span>
-                </p>
-                {periodLabel && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500">{periodLabel}</p>
+              {/* Summary card — fixed amount display OR custom amount input */}
+              <div className="glass rounded-xl p-4 space-y-3">
+                {hasFixedAmount ? (
+                  <div className="text-center space-y-1">
+                    <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">
+                      {formatCurrency(amount, currency)}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      for <span className="font-semibold">{member.name}</span>
+                    </p>
+                    {periodLabel && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{periodLabel}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 text-center">
+                      Recording contribution for <span className="font-semibold">{member.name}</span>
+                    </p>
+                    {periodLabel && (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 text-center">{periodLabel}</p>
+                    )}
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 dark:text-slate-500 pointer-events-none select-none">
+                        {currency === "INR" ? "₹" : currency}
+                      </span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="any"
+                        value={customAmount}
+                        onChange={(e) => setCustomAmount(e.target.value)}
+                        placeholder="Enter amount"
+                        autoFocus
+                        className="w-full pl-7 pr-3 py-2.5 text-sm rounded-xl border
+                                   border-slate-200 dark:border-slate-700
+                                   bg-white/60 dark:bg-slate-800/60
+                                   text-slate-800 dark:text-slate-100
+                                   placeholder:text-slate-400 dark:placeholder:text-slate-500
+                                   focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400
+                                   dark:focus:border-violet-600 transition-colors"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -128,13 +171,13 @@ export function RecordContributionSheet({
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  disabled={submitting}
+                  disabled={!canSubmit}
                   className="flex-1 py-3 rounded-xl
                              bg-gradient-to-br from-violet-500 to-purple-600
                              hover:from-violet-600 hover:to-purple-700
                              text-white text-sm font-medium
                              shadow-md shadow-violet-500/20 transition-all
-                             disabled:opacity-60 disabled:cursor-not-allowed
+                             disabled:opacity-40 disabled:cursor-not-allowed
                              flex items-center justify-center gap-2"
                 >
                   {submitting

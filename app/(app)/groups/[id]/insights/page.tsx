@@ -22,7 +22,8 @@ import { MonthlySpendBar } from "@/components/insights/monthly-spend-bar";
 import type { MonthSpend } from "@/components/insights/monthly-spend-bar";
 import { MemberContributions } from "@/components/insights/member-contributions";
 import { AdherenceCard } from "@/components/trip/adherence-card";
-import { ArrowLeft, BarChart2, PieChart, Users, Share2 } from "lucide-react";
+import { BarChart2, PieChart, Users, Share2 } from "lucide-react";
+import { BackButton } from "@/components/shared/back-button";
 
 export default async function GroupInsightsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -241,12 +242,11 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
   if (expensesWithSplits.length === 0) {
     return (
       <div>
-        <Link
+        <BackButton
           href={`/groups/${id}`}
+          label="Back"
           className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </Link>
+        />
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center mb-5 shadow-lg shadow-amber-500/25">
             <BarChart2 className="w-7 h-7 text-white" />
@@ -269,12 +269,11 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
     <div>
       {/* ── Page header (desktop only) ───────────────────────────────────── */}
       <div className="hidden md:flex items-center gap-3 mb-6">
-        <Link
+        <BackButton
           href={`/groups/${id}`}
+          label="Back"
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </Link>
+        />
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-sm shadow-amber-500/30 shrink-0">
           <BarChart2 className="w-4 h-4 text-white" />
         </div>

@@ -4,9 +4,10 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
 import { autoLogDueTemplates } from "@/app/actions/expenses";
-import { ArrowLeft, Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
+import { Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
 import { TripCardQuickAdd } from "@/components/trip/trip-card-quick-add";
 import { CircleDashboard } from "@/components/circle/circle-dashboard";
+import { BackButton } from "@/components/shared/back-button";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -79,13 +80,11 @@ export default async function GroupPage({
   return (
     <div>
       {/* Desktop-only back link — mobile nav handles it */}
-      <Link
+      <BackButton
         href="/groups"
+        label="All groups"
         className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        All groups
-      </Link>
+      />
 
       {/* Hero */}
       <div className="glass rounded-2xl overflow-hidden mb-6">

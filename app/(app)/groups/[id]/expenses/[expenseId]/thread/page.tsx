@@ -6,8 +6,9 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenseReactions, getExpenseDisputes } from "@/lib/db/queries/interactions";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { acceptDispute, declineDispute } from "@/app/actions/interactions";
-import { ArrowLeft, CheckCircle2, XCircle, Smile } from "lucide-react";
+import { CheckCircle2, XCircle, Smile } from "lucide-react";
 import Link from "next/link";
+import { BackButton } from "@/components/shared/back-button";
 import { formatDistanceToNow } from "date-fns";
 import type { Metadata } from "next";
 import { formatCurrency, getMemberName } from "@/lib/utils";
@@ -81,13 +82,11 @@ export default async function ThreadPage({
     <div className="pb-36 md:pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Link
+        <BackButton
           href={`/groups/${groupId}/expenses`}
+          label="Back"
           className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Link>
+        />
       </div>
 
       {/* Expense summary card */}

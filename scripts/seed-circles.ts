@@ -2,9 +2,9 @@
  * Seed script — creates 4 Circle groups covering every Phase 4+5 test scenario.
  *
  *   1. Cricket Club Circle    — recurring, ₹500/mo, 3/5 paid, 1 wallet expense
- *   2. Priya's 30th 🎂        — goal, 85% collected, active status, public privacy
- *   3. Anniversary Gift 💍    — goal, 110% collected, purchased status → surplus card + celebration
- *   4. Office Farewell Fund   — goal, 40% collected, admin_only privacy → privacy test
+ *   2. Priya's 30th 🎂        — one_time/fixed, 85% collected, active status, public privacy
+ *   3. Anniversary Gift 💍    — one_time/fixed, 110% collected, purchased status → surplus card + celebration
+ *   4. Office Farewell Fund   — one_time/flexi, 40% collected, admin_only privacy → privacy test
  *
  * Usage:  pnpm seed:circles
  *
@@ -151,19 +151,19 @@ async function main() {
   console.log(`  ✓ Wallet expense: Ground rental ${fmt(2000)} (${cricketExp.id})`);
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 2. Priya's 30th 🎂 — goal, 85% collected, active, public privacy
-  //    Tests: goal lifecycle (Collecting state), goal personal status card,
-  //           goal progress bar, near-goal state, wallet advance expense
+  // 2. Priya's 30th 🎂 — one_time/fixed, 85% collected, active, public privacy
+  //    Tests: one-time lifecycle (Collecting state), one-time personal status card,
+  //           progress bar, near-goal state, wallet advance expense
   // ══════════════════════════════════════════════════════════════════════════════
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("🎂  2. Priya's 30th  (goal · ₹10,000 · 30 days left · public)");
+  console.log("🎂  2. Priya's 30th  (one-time/fixed · ₹10,000 · 30 days left · public)");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   const [priya30] = await db.insert(groups).values({
     name:                "Priya's 30th 🎂",
     groupType:           "circle",
     defaultCurrency:     "INR",
-    circleMode:          "goal",
+    circleMode:          "one_time",
     contributionAmount:  "500",       // ₹500 per person suggested
     targetAmount:        "10000",
     eventDate:           daysFromNow(30),
@@ -227,19 +227,19 @@ async function main() {
   console.log(`  ✓ Wallet advance: Venue deposit ${fmt(1500)} (advance by You)`);
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 3. Anniversary Gift for Dev 💍 — goal, 110% collected, purchased status
+  // 3. Anniversary Gift for Dev 💍 — one_time/fixed, 110% collected, purchased status
   //    Tests: 🎯 goal-hit celebration, surplus card (₹1,500 surplus),
   //           lifecycle = purchased → "Note as distributed" / "Keep in wallet"
   // ══════════════════════════════════════════════════════════════════════════════
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("💍  3. Anniversary Gift for Dev  (goal · purchased · surplus)");
+  console.log("💍  3. Anniversary Gift for Dev  (one-time/fixed · purchased · surplus)");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   const [devGift] = await db.insert(groups).values({
     name:                "Anniversary Gift for Dev 💍",
     groupType:           "circle",
     defaultCurrency:     "INR",
-    circleMode:          "goal",
+    circleMode:          "one_time",
     contributionAmount:  "1000",
     targetAmount:        "5000",
     eventDate:           daysFromNow(7),
@@ -290,20 +290,20 @@ async function main() {
   console.log(`  ℹ  status = purchased → surplus card should appear for admin`);
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // 4. Office Farewell Fund — goal, admin_only privacy, 40% collected
+  // 4. Office Farewell Fund — one_time/flexi (contributionAmount=null), admin_only privacy, 40% collected
   //    Tests: contribution privacy — non-admins see count only, not ₹ totals
   //    Note: Since seeded user is always admin, privacy hides amounts for OTHER
   //    users who join. To test non-admin view, log in with a second account.
   // ══════════════════════════════════════════════════════════════════════════════
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("👔  4. Office Farewell Fund  (goal · admin_only privacy · 40%)");
+  console.log("👔  4. Office Farewell Fund  (one-time/flexi · admin_only privacy · 40%)");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   const [farewell] = await db.insert(groups).values({
     name:                "Office Farewell Fund",
     groupType:           "circle",
     defaultCurrency:     "INR",
-    circleMode:          "goal",
+    circleMode:          "one_time",
     contributionAmount:  null,        // open amounts — colleagues contribute what they can
     targetAmount:        "15000",
     eventDate:           daysFromNow(14),

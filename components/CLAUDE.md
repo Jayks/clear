@@ -230,17 +230,20 @@ Both exported from `components/insights/nest-pace-card.tsx`. `computeNestPaceDat
 **Colours:**
 - `heroGrad` includes `dark:` variants inline: `"from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900"`.
 - Mode badge: `bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-200` (recurring) / amber equivalent (one-time).
-- Ambient resting shadow: `shadow-md shadow-indigo-500/10` (recurring) / `shadow-amber-500/10` (one-time). Strengthens on hover.
+- Ambient resting shadow: `shadow-md shadow-violet-500/15` (recurring) / `shadow-amber-500/15` (one-time); `hover:shadow-xl` at `/30`. **Two-wrapper structure** (same as TripCard) — outer div owns shadow + hover lift, inner `glass rounded-2xl overflow-hidden` owns clipping. Necessary because `overflow-hidden` + `border-radius` + `box-shadow` on the same element clips the shadow in Chrome/Safari.
 - Card uses `h-full flex flex-col` so all cards in a grid row are equal height.
 
 **Wallet label:** The collected amount is labelled "Wallet" (not "Pool") everywhere on the card. Consistent with "Wallet balance" on the dashboard.
 
 ---
 
-**No-cover-photo SVG patterns** — when `!group.coverPhotoUrl`, the `h-44` header renders a pale gradient + two SVG pattern overlay divs (light/dark toggled via `dark:hidden` / `hidden dark:block`) instead of a photo. Pattern constants live at module level in `trip-card.tsx`:
-- **Trip** — `emerald-50 → green-100` (light) / `slate-800 → emerald-900` (dark) + pine tree silhouettes in emerald-600 (light) / white (dark). Four two-tier pine trees per 200×110 tile, `repeat-x`, `backgroundPosition: bottom` — treeline rises ~63 % up the card.
-- **Nest** — `sky-50 → blue-100` (light) / `slate-800 → blue-900` (dark) + apartment block silhouettes in sky-600 (light) / white (dark). Four buildings with window grids per 200×110 tile, same repeat/position. Window rects at slightly higher opacity than building walls.
-- Legibility overlay is lighter for no-photo cards (`from-slate-900/55 via-slate-900/10`) than for photo cards (`from-slate-900/70 via-slate-900/20`) so the pale gradient + patterns breathe through. Only the overlay div is conditional; the text + badges remain `text-white` in both cases.
+**No-cover-photo SVG patterns** — when `!group.coverPhotoUrl`, the `h-44` header renders a vivid identity gradient + one SVG pattern overlay div. Pattern constants shared via **`lib/group-patterns.ts`** (exports: `TRIP_TREE_LIGHT/DARK`, `TRIP_PATTERN_STYLE`, `NEST_BUILDING_LIGHT/DARK`, `NEST_PATTERN_STYLE`) — imported by both `trip-card.tsx` and the group dashboard page.
+- **Trip** — `from-cyan-500 to-teal-500` gradient (both modes) + rounded-canopy tree silhouettes. Four trees per 220×110 tile — each = ground-shadow ellipse → trunk rect (6px) → wide branch-spread ellipse (shoulder, reads as branches) → dome circle. Colours: `cyan-600 #0891b2` (light variant), `white` at boosted opacity (vivid/dark variant). `repeat-x`, `backgroundPosition: bottom`.
+- **Nest** — `from-emerald-500 to-teal-500` gradient (both modes) + city skyline silhouettes. 14-building panorama per 400×110 tile with 2px gaps between every building; antennae on two tallest; window grids (3-col×5-row, 2-col×4-row) on prominent buildings. Colours: `emerald-600 #059669` (light), `white` (vivid/dark). 400px tile means repeat fires ≤ once per card.
+- **Single pattern div** — no `dark:hidden`/`hidden dark:block` split. White shapes work on vivid gradient in both modes; `TRIP_TREE_LIGHT`/`NEST_BUILDING_LIGHT` (coloured shapes) kept in `lib/group-patterns.ts` for future use.
+- **Legibility overlay unified** — `from-slate-900/70 via-slate-900/20 to-transparent` for both photo and no-photo cases. Vivid gradient needs the same dark protection as a real cover photo.
+- **Card hover shadows** — type-matched: Trip = `shadow-cyan-500/15 hover:shadow-cyan-500/30`; Nest = `shadow-emerald-500/15 hover:shadow-emerald-500/30`. Was Plus-gated violet; now always shown at consistent `/15`→`/30` levels matching Circle cards.
+- **Dashboard hero consistency** — the same pattern (`TRIP_TREE_DARK` / `NEST_BUILDING_DARK`) is layered into `app/(app)/groups/[id]/page.tsx` hero (no-photo state): sits between the gradient and the dark overlay so it shows clearly at the top and disappears behind the text at the bottom.
 
 ### Group Card Balance Badge
 `components/trip/group-balance-badge.tsx` — async RSC streamed into each active `TripCard` via `<Suspense>`. States: owe (amber) / owed (emerald) / settled (muted emerald) / no expenses (slate) / multi-currency (muted). Groups page batch-fetches all member IDs via `getUserMemberIds(groupIds, userId)` (one query). Archived cards get no badge. `TripCard` accepts `balanceBadge?: React.ReactNode`.

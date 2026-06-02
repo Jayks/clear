@@ -42,7 +42,9 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
 
   // ── Mode-aware colour tokens ─────────────────────────────────────────────
-  const heroGrad     = isOneTime ? "from-amber-500 to-orange-600"      : "from-indigo-600 to-violet-700";
+  const heroGrad     = isOneTime
+    ? "from-orange-50 to-amber-100 dark:from-slate-800 dark:to-amber-900"
+    : "from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900";
   const progressCls  = isOneTime ? "from-amber-400 to-orange-500"      : "from-indigo-400 to-violet-500";
   const sectionBg    = isOneTime ? "bg-amber-50 dark:bg-amber-900/30"  : "bg-indigo-50 dark:bg-indigo-900/30";
   const sectionIcon  = isOneTime ? "text-amber-600 dark:text-amber-400": "text-indigo-600 dark:text-indigo-400";
@@ -106,8 +108,39 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
       {/* ── Hero card ───────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl overflow-hidden mb-6">
         {/* Gradient header */}
-        <div className={`h-32 relative flex items-end px-5 pb-4 bg-gradient-to-br ${heroGrad}`}>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        <div className={`h-44 relative flex items-end px-5 pb-4 bg-gradient-to-br ${heroGrad}`}>
+          {/* Legibility overlay — subtle in light mode, stronger in dark */}
+          <div className="absolute inset-0 bg-gradient-to-t
+            from-black/8 via-transparent to-transparent
+            dark:from-black/50 dark:via-black/10 dark:to-transparent" />
+
+          {/* Light mode: coloured pattern */}
+          <div
+            className="absolute inset-0 pointer-events-none dark:hidden"
+            style={isRecurring ? {
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%236366f1' stroke-width='0.5' stroke-opacity='0.18' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%236366f1' stroke-width='2' stroke-opacity='0.22' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3C/svg%3E")`,
+              backgroundSize: "200px 60px",
+              backgroundRepeat: "repeat",
+            } : {
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='20' y1='40' x2='20' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='20' cy='38' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='58' y1='24' x2='58' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='58' cy='22' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='96' y1='44' x2='96' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='96' cy='42' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='132' y1='30' x2='132' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='132' cy='28' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='170' y1='36' x2='170' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='170' cy='34' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3C/svg%3E")`,
+              backgroundSize: "200px 60px",
+              backgroundRepeat: "repeat",
+            }}
+          />
+          {/* Dark mode: white pattern */}
+          <div
+            className="absolute inset-0 pointer-events-none hidden dark:block"
+            style={isRecurring ? {
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%23ffffff' stroke-width='0.5' stroke-opacity='0.07' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%23ffffff' stroke-width='1.5' stroke-opacity='0.10' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%23ffffff' fill-opacity='0.12'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%23ffffff' fill-opacity='0.16'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%23ffffff' fill-opacity='0.12'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%23ffffff' fill-opacity='0.16'/%3E%3C/svg%3E")`,
+              backgroundSize: "200px 60px",
+              backgroundRepeat: "repeat",
+            } : {
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='20' y1='40' x2='20' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='20' cy='38' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='58' y1='24' x2='58' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='58' cy='22' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='96' y1='44' x2='96' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='96' cy='42' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='132' y1='30' x2='132' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='132' cy='28' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='170' y1='36' x2='170' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='170' cy='34' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3C/svg%3E")`,
+              backgroundSize: "200px 60px",
+              backgroundRepeat: "repeat",
+            }}
+          />
+
 
           {/* Admin actions */}
           {isAdmin && (
@@ -128,17 +161,18 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             {/* Mode badge */}
             <div className="flex items-center gap-2 mb-1">
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide
-                               bg-white/20 text-white px-2 py-0.5 rounded-full">
+                               bg-black/10 dark:bg-white/20 backdrop-blur-sm
+                               text-slate-700 dark:text-white px-2 py-0.5 rounded-full">
                 {isOneTime ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
                 {isOneTime ? "one-time" : "recurring"}
               </span>
               {isOneTime && daysLeft !== null && (
-                <span className={`text-xs font-medium text-white/80 ${daysLeft <= 3 ? "!text-red-300" : ""}`}>
+                <span className={`text-xs font-medium text-slate-600 dark:text-white/80 ${daysLeft <= 3 ? "!text-red-500 dark:!text-red-300" : ""}`}>
                   {daysLeft === 0 ? "deadline today!" : `${daysLeft} days left`}
                 </span>
               )}
             </div>
-            <h1 className="text-white text-2xl" style={{ fontFamily: "var(--font-fraunces)" }}>
+            <h1 className="text-slate-800 dark:text-white text-2xl" style={{ fontFamily: "var(--font-fraunces)" }}>
               {group.name}
             </h1>
           </div>

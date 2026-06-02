@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Check, Repeat2, Target } from "lucide-react";
+import { Check, Repeat2, Target } from "lucide-react";
+import { toast } from "sonner";
 import type { Group } from "@/lib/db/schema/groups";
 import type { CircleCardData, PendingMember } from "@/lib/db/queries/circle";
 import { formatCurrency } from "@/lib/utils";
+import { selfReportContribution } from "@/app/actions/circle";
+import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { RecordContributionSheet } from "./record-contribution-sheet";
-import { CircleContributeAction } from "./circle-contribute-action";
+import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 
 interface Props {
   group:    Group;
@@ -17,7 +20,7 @@ interface Props {
 export function CircleCard({ group, cardData }: Props) {
   const {
     totalMembers, paidThisCycle, totalContributed,
-    isAdmin, currentUserPaid, pendingMembers, paidMembers,
+    isAdmin, currentUserPaid, pendingMembers,
     currentUserPendingConfirm: serverPendingConfirm,
     currentPeriod, currentPeriodLabel,
   } = cardData;
@@ -27,44 +30,64 @@ export function CircleCard({ group, cardData }: Props) {
   const isFixed     = isOneTime && group.contributionAmount !== null;
   const isFlexi     = isOneTime && group.contributionAmount === null;
 
-  // Optimistic state for admin chip recording
-  const [localPaidCount, setLocalPaidCount] = useState(paidThisCycle);
-  const [localPending,   setLocalPending]   = useState<PendingMember[]>(pendingMembers);
-  const [recordMember,       setRecordMember]       = useState<PendingMember | null>(null);
-  const [recordIsAdditional, setRecordIsAdditional] = useState(false);
+  const [localPaidCount,      setLocalPaidCount]      = useState(paidThisCycle);
+  const [localPending,        setLocalPending]        = useState<PendingMember[]>(pendingMembers);
+  const [localUserPaid,       setLocalUserPaid]       = useState(currentUserPaid);
+  const [localPendingConfirm, setLocalPendingConfirm] = useState(serverPendingConfirm);
+  const [recordMember,        setRecordMember]        = useState<PendingMember | null>(null);
+  const [selfReporting,       setSelfReporting]       = useState(false);
 
-  // ── Mode-specific styling ─────────────────────────────────────────────────
-  // Recurring = indigo/violet (reliable, calendar rhythm)
-  // One-time  = amber/orange  (celebratory, goal-energy)
-  const modeBarCls = isOneTime
-    ? "bg-gradient-to-b from-amber-400 to-orange-500"
-    : "bg-gradient-to-b from-indigo-400 to-violet-500";
+  // ── Mode-aware colours ────────────────────────────────────────────────────
+  // Light mode:  very pale tinted gradient so coloured pattern pops
+  // Dark mode:   deep dark with slight colour tint so white-ish pattern pops
+  const heroGrad = isOneTime
+    ? "from-orange-50 to-amber-100 dark:from-slate-800 dark:to-amber-900"
+    : "from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900";
 
-  const modeBadgeCls = isOneTime
-    ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/40"
-    : "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/40";
+  const progressCls  = isOneTime ? "from-amber-400 to-orange-500" : "from-indigo-400 to-violet-500";
+  const ctaBtnCls    = isOneTime ? "from-amber-500 to-orange-500" : "from-indigo-500 to-violet-600";
+  // Ambient resting shadow in mode colour — differentiates Circle cards from Trip/Nest at a glance
+  const cardShadow   = isOneTime
+    ? "shadow-md shadow-amber-500/10 hover:shadow-xl hover:shadow-amber-500/20"
+    : "shadow-md shadow-indigo-500/10 hover:shadow-xl hover:shadow-indigo-500/20";
+  // Mode badge tinted with mode colour — reinforces gradient + pattern language
+  const badgeCls     = isOneTime
+    ? "bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200"
+    : "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-200";
+  const pendingCls  = isOneTime
+    ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+    : "text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50";
 
-  const modeProgressCls = isOneTime ? "from-amber-400 to-orange-500" : "from-indigo-400 to-violet-500";
-
-  const chipHoverCls = isOneTime
-    ? "hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-    : "hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20";
-
-  // ── Background pattern ────────────────────────────────────────────────────
-  // Recurring: dot grid (regularity, calendar cadence)
-  // One-time:  diagonal hatching (forward momentum, special occasion)
-  const patternStyle = isRecurring
+  // ── Background patterns ────────────────────────────────────────────────────
+  // Light mode:  coloured strokes (indigo / amber) on pale gradient — pops clearly
+  // Dark mode:   white strokes on deep dark gradient — pops clearly
+  // Two overlay divs, toggled via dark:hidden / hidden dark:block
+  const patternLight = isRecurring
     ? {
-        backgroundImage: "radial-gradient(circle, rgba(99,102,241,0.06) 1px, transparent 1px)",
-        backgroundSize: "16px 16px",
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%236366f1' stroke-width='0.5' stroke-opacity='0.18' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%236366f1' stroke-width='2' stroke-opacity='0.22' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3C/svg%3E")`,
+        backgroundSize: "200px 60px",
+        backgroundRepeat: "repeat" as const,
       }
     : {
-        backgroundImage:
-          "repeating-linear-gradient(-45deg, rgba(251,191,36,0.05) 0px, rgba(251,191,36,0.05) 1px, transparent 1px, transparent 10px)",
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='20' y1='40' x2='20' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='20' cy='38' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='58' y1='24' x2='58' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='58' cy='22' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='96' y1='44' x2='96' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='96' cy='42' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='132' y1='30' x2='132' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='132' cy='28' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3Cline x1='170' y1='36' x2='170' y2='58' stroke='%23f59e0b' stroke-width='1.5' stroke-opacity='0.20'/%3E%3Ccircle cx='170' cy='34' r='2.5' fill='%23f59e0b' fill-opacity='0.28'/%3E%3C/svg%3E")`,
+        backgroundSize: "200px 60px",
+        backgroundRepeat: "repeat" as const,
+      };
+
+  const patternDark = isRecurring
+    ? {
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%23ffffff' stroke-width='0.5' stroke-opacity='0.07' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%23ffffff' stroke-width='1.5' stroke-opacity='0.10' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%23ffffff' fill-opacity='0.12'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%23ffffff' fill-opacity='0.16'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%23ffffff' fill-opacity='0.12'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%23ffffff' fill-opacity='0.16'/%3E%3C/svg%3E")`,
+        backgroundSize: "200px 60px",
+        backgroundRepeat: "repeat" as const,
+      }
+    : {
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='20' y1='40' x2='20' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='20' cy='38' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='58' y1='24' x2='58' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='58' cy='22' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='96' y1='44' x2='96' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='96' cy='42' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='132' y1='30' x2='132' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='132' cy='28' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3Cline x1='170' y1='36' x2='170' y2='58' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.12'/%3E%3Ccircle cx='170' cy='34' r='2.5' fill='%23ffffff' fill-opacity='0.18'/%3E%3C/svg%3E")`,
+        backgroundSize: "200px 60px",
+        backgroundRepeat: "repeat" as const,
       };
 
   // ── Progress ──────────────────────────────────────────────────────────────
-  const targetNum = isOneTime && group.targetAmount ? Number(group.targetAmount) : null;
+  const targetNum   = isOneTime && group.targetAmount ? Number(group.targetAmount) : null;
   const progressPct = targetNum
     ? Math.min(100, (totalContributed / targetNum) * 100)
     : totalMembers > 0
@@ -76,26 +99,36 @@ export function CircleCard({ group, cardData }: Props) {
     ? Math.max(0, Math.ceil((new Date(group.eventDate).getTime() - Date.now()) / 86_400_000))
     : null;
 
-  // Deadline pill: plain text when plenty of time; filled badge when urgent
-  const deadlinePillCls = daysLeft !== null
-    ? daysLeft === 0
-      ? "bg-red-500 text-white px-1.5 py-0.5 rounded"
-      : daysLeft <= 3
-      ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded"
-      : daysLeft <= 7
-      ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded"
-      : "text-slate-500 dark:text-slate-400"
-    : "";
+  const monthShort = new Date().toLocaleString("en-IN", { month: "short" });
+  const amount     = group.contributionAmount ? Number(group.contributionAmount) : null;
 
-  const monthShort     = new Date().toLocaleString("en-IN", { month: "short" });
-  const visiblePending = localPending.slice(0, 2);
-  const morePending    = localPending.length - visiblePending.length;
-  const amount         = group.contributionAmount ? Number(group.contributionAmount) : null;
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const joinUrl = `${appUrl}/join/${group.shareToken}`;
 
-  // ── Admin chip handlers ───────────────────────────────────────────────────
-  function handleChipTap(m: PendingMember, additional = false) {
-    setRecordIsAdditional(additional);
-    setRecordMember(m);
+  // UPI deep-link for strip pay button
+  const upiLink = group.upiId && amount
+    ? `upi://pay?pa=${encodeURIComponent(group.upiId)}&am=${amount}&cu=${group.defaultCurrency}&tn=${encodeURIComponent(`${group.name} ${currentPeriodLabel ?? monthShort}`)}`
+    : null;
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  async function handleSelfReport() {
+    if (selfReporting || localUserPaid || !amount) return;
+    hapticLight();
+    setSelfReporting(true);
+    const result = await selfReportContribution({
+      groupId:  group.id,
+      amount,
+      period:   isRecurring ? currentPeriod : null,
+      currency: group.defaultCurrency,
+    });
+    setSelfReporting(false);
+    if (result.ok) {
+      hapticSuccess();
+      setLocalPendingConfirm(true);
+      toast.success("Reported — pending admin confirmation");
+    } else {
+      toast.error(result.error ?? "Failed to report");
+    }
   }
 
   function handleRecordSuccess() {
@@ -108,215 +141,165 @@ export function CircleCard({ group, cardData }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="glass rounded-2xl overflow-hidden h-full flex flex-row">
+      <div className={`glass rounded-2xl overflow-hidden relative h-full flex flex-col ${cardShadow} hover:-translate-y-0.5 transition-all duration-200`}>
 
-        {/* ── Left accent bar — spans full card height ──────────────────── */}
-        <div className={`w-1.5 shrink-0 ${modeBarCls}`} />
+        {/* ── Top-left: mode badge + deadline / month pill ──────────────── */}
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide
+                           ${badgeCls} backdrop-blur-sm px-2 py-0.5 rounded-full`}>
+            {isOneTime ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
+            {isOneTime ? (isFlexi ? "Flexi" : "One-time") : "Monthly"}
+          </span>
+          {isOneTime && daysLeft !== null && (
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
+              bg-black/10 dark:bg-black/40 backdrop-blur-sm ${
+              daysLeft <= 3
+                ? "text-red-600 dark:text-red-300"
+                : daysLeft <= 7
+                ? "text-amber-700 dark:text-amber-300"
+                : "text-slate-600 dark:text-white/70"
+            }`}>
+              {daysLeft === 0 ? "today!" : `${daysLeft}d left`}
+            </span>
+          )}
+          {isRecurring && (
+            <span className="text-[10px] bg-black/10 dark:bg-black/40 backdrop-blur-sm
+                             text-slate-600 dark:text-white/70 font-medium px-1.5 py-0.5 rounded-full">
+              {monthShort}
+            </span>
+          )}
+        </div>
 
-        {/* ── Right content ─────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* ── Top-right: share ──────────────────────────────────────────── */}
+        <div className="absolute top-3 right-3 z-10">
+          <TripCardShareDrawer url={joinUrl} groupName={group.name} />
+        </div>
 
-          {/* Subtle background pattern overlay */}
-          <div className="absolute inset-0 pointer-events-none" style={patternStyle} />
+        {/* ── Gradient header (h-44 — matches TripCard) ─────────────────── */}
+        <Link href={`/groups/${group.id}`} className="block flex-none">
+          <div className={`h-44 relative bg-gradient-to-br ${heroGrad}`}>
 
-          {/* ── Clickable header + progress — navigates to group dashboard ── */}
-          <Link
-            href={`/groups/${group.id}`}
-            className="block hover:bg-white/30 dark:hover:bg-slate-700/20 transition-colors relative"
-          >
-            <div className="px-4 pt-4 pb-3 space-y-3">
-              {/* Card header */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
+            {/* Subtle shadow at bottom for text legibility — lighter in light mode */}
+            <div className="absolute inset-0 bg-gradient-to-t
+              from-black/8 via-transparent to-transparent
+              dark:from-black/50 dark:via-black/10 dark:to-transparent" />
 
-                  {/* Mode badge + deadline/month pill row */}
-                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase
-                                      tracking-wide px-1.5 py-0.5 rounded ${modeBadgeCls}`}>
-                      {isOneTime ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
-                      {isOneTime ? (isFlexi ? "one-time · flexi" : "one-time") : "monthly"}
-                    </span>
-                    {isOneTime && daysLeft !== null && (
-                      <span className={`text-[10px] font-semibold ${deadlinePillCls}`}>
-                        {daysLeft === 0 ? "today!" : `${daysLeft}d left`}
-                      </span>
-                    )}
-                    {isRecurring && (
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                        {monthShort}
-                      </span>
-                    )}
-                  </div>
+            {/* Light mode: coloured pattern */}
+            <div className="absolute inset-0 pointer-events-none dark:hidden"
+                 style={patternLight} />
+            {/* Dark mode: white pattern */}
+            <div className="absolute inset-0 pointer-events-none hidden dark:block"
+                 style={patternDark} />
 
-                  {/* Group name */}
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight">
-                    {group.name}
+            {/* Name + wallet balance */}
+            <div className="absolute bottom-3 left-4 right-4">
+              <h3 className="text-slate-800 dark:text-white text-xl truncate leading-tight"
+                  style={{ fontFamily: "var(--font-fraunces)" }}>
+                {group.name}
+              </h3>
+              <div className="flex items-center justify-between gap-2 mt-0.5">
+                {/* Left — truncated so it never wraps */}
+                <p className="text-slate-600 dark:text-white/75 text-xs tabular-nums truncate min-w-0">
+                  Wallet · {formatCurrency(totalContributed, group.defaultCurrency)}
+                </p>
+                {/* Right — one secondary hint, shrink-0 so it never wraps */}
+                {targetNum ? (
+                  <p className="text-slate-500 dark:text-white/60 text-xs tabular-nums shrink-0">
+                    of {formatCurrency(targetNum, group.defaultCurrency)}
                   </p>
-
-                  {/* Pool balance + per-person amount hint */}
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
-                    Pool · {formatCurrency(totalContributed, group.defaultCurrency)}
-                    {amount && isRecurring && (
-                      <span className="ml-1.5 text-slate-300 dark:text-slate-600">
-                        · {formatCurrency(amount, group.defaultCurrency)}/mo
-                      </span>
-                    )}
-                    {amount && isFixed && (
-                      <span className="ml-1.5 text-slate-300 dark:text-slate-600">
-                        · {formatCurrency(amount, group.defaultCurrency)} each
-                      </span>
-                    )}
+                ) : amount ? (
+                  <p className="text-slate-400 dark:text-white/50 text-xs tabular-nums shrink-0">
+                    {formatCurrency(amount, group.defaultCurrency)}{isRecurring ? "/mo" : " each"}
                   </p>
-                </div>
-                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
-              </div>
-
-              {/* Progress bar */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  {targetNum ? (
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
-                      {formatCurrency(totalContributed, group.defaultCurrency)}
-                      <span className="text-slate-400 dark:text-slate-500 font-normal">
-                        {" "}/ {formatCurrency(targetNum, group.defaultCurrency)}
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                      {formatCurrency(totalContributed, group.defaultCurrency)} collected
-                    </span>
-                  )}
-                  <span className="text-xs font-medium tabular-nums text-slate-500 dark:text-slate-400">
-                    {localPaidCount}/{totalMembers}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 bg-gradient-to-r ${
-                      progressPct >= 100
-                        ? "from-emerald-400 to-green-500"
-                        : modeProgressCls
-                    }`}
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
+                ) : null}
               </div>
             </div>
-          </Link>
-
-          {/* ── Action section — outside the Link ─────────────────────────── */}
-          <div className="flex flex-col flex-1 px-4 pb-4 gap-2 relative">
-
-            {/* ── Admin: pending chips ─────────────────────────────────────── */}
-            {isAdmin && localPending.length > 0 && (
-              <div className="flex-1">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5 leading-none">
-                  ⏳ {localPending.length} pending · tap to record
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {visiblePending.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => handleChipTap(m)}
-                      className={`inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium
-                                 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300
-                                 border border-slate-200/80 dark:border-slate-700/60
-                                 ${chipHoverCls}
-                                 active:scale-95 transition-all`}
-                    >
-                      <span className="max-w-[72px] truncate">{m.name}</span>
-                    </button>
-                  ))}
-                  {morePending > 0 && (
-                    <Link
-                      href={`/groups/${group.id}`}
-                      className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium
-                                 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400
-                                 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                    >
-                      +{morePending} more
-                    </Link>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── Admin: all paid ──────────────────────────────────────────── */}
-            {isAdmin && localPending.length === 0 && (
-              <div className="mt-auto space-y-2">
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                  <Check className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">
-                    {isRecurring ? `Everyone paid for ${monthShort} 🎉` : "All contributed 🎉"}
-                  </span>
-                </div>
-                {/* One-time: tappable paid chips for additional contributions */}
-                {isOneTime && paidMembers.length > 0 && (
-                  <div>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5 leading-none">
-                      Tap to record more ↓
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {paidMembers.slice(0, 3).map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => handleChipTap(m, true)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium
-                                     bg-emerald-50 dark:bg-emerald-900/20
-                                     text-emerald-700 dark:text-emerald-300
-                                     border border-emerald-200 dark:border-emerald-800/40
-                                     hover:border-amber-400 dark:hover:border-amber-600
-                                     hover:bg-amber-50 dark:hover:bg-amber-900/20
-                                     hover:text-amber-700 dark:hover:text-amber-300
-                                     active:scale-95 transition-all"
-                        >
-                          <Check className="w-2.5 h-2.5 shrink-0" />
-                          <span className="max-w-[60px] truncate">{m.name}</span>
-                          <span className="font-bold text-amber-500 dark:text-amber-400 text-[10px]">+</span>
-                        </button>
-                      ))}
-                      {paidMembers.length > 3 && (
-                        <Link
-                          href={`/groups/${group.id}`}
-                          className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium
-                                     bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400
-                                     hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                        >
-                          +{paidMembers.length - 3}
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── Member view: CircleContributeAction ─────────────────────── */}
-            {!isAdmin && (
-              <div className="mt-auto">
-                <CircleContributeAction
-                  groupId={group.id}
-                  groupName={group.name}
-                  isPaid={currentUserPaid}
-                  isPendingConfirm={serverPendingConfirm}
-                  amount={amount}
-                  currency={group.defaultCurrency}
-                  period={isRecurring ? currentPeriod : null}
-                  periodLabel={isRecurring ? currentPeriodLabel : null}
-                  isRecurring={isRecurring}
-                  upiId={group.upiId ?? null}
-                  size="card"
-                  circleMode={(group.circleMode as "recurring" | "one_time") ?? undefined}
-                />
-              </div>
-            )}
           </div>
+        </Link>
+
+        {/* ── Progress bar — visual divider between header and strip ─────── */}
+        <div className="h-[3px] bg-slate-200 dark:bg-slate-700">
+          <div
+            className={`h-full transition-all duration-500 bg-gradient-to-r ${
+              progressPct >= 100 ? "from-emerald-400 to-green-500" : progressCls
+            }`}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
+        {/* ── Bottom strip — flex-1 so it fills remaining height in the grid row ── */}
+        <div className="flex flex-1 items-center justify-between px-4 py-3 gap-3">
+
+          {/* Left: paid count or all-done state */}
+          {localPaidCount >= totalMembers && totalMembers > 0 ? (
+            <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span className="text-xs font-medium">
+                {isRecurring ? `All paid · ${monthShort}` : "All in 🎉"}
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {localPaidCount}
+              </span>
+              /{totalMembers} paid
+            </span>
+          )}
+
+          {/* Right: role-aware CTA */}
+          {isAdmin ? (
+            localPending.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setRecordMember(localPending[0])}
+                className={`text-[11px] font-medium px-2.5 py-1.5 rounded-lg ${pendingCls} transition-colors`}
+              >
+                {localPending.length} pending →
+              </button>
+            )
+          ) : localUserPaid ? (
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium
+                             flex items-center gap-1 shrink-0">
+              <Check className="w-3 h-3" />
+              You&apos;re clear
+            </span>
+          ) : localPendingConfirm ? (
+            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium shrink-0">
+              ⏳ Pending
+            </span>
+          ) : upiLink ? (
+            <a
+              href={upiLink}
+              className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg
+                bg-gradient-to-br ${ctaBtnCls} text-white shadow-sm hover:opacity-90 transition-opacity shrink-0`}
+            >
+              Pay {amount ? formatCurrency(amount, group.defaultCurrency) : ""} ↗
+            </a>
+          ) : amount ? (
+            <button
+              type="button"
+              onClick={handleSelfReport}
+              disabled={selfReporting}
+              className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg
+                bg-gradient-to-br ${ctaBtnCls} text-white shadow-sm
+                hover:opacity-90 transition-opacity disabled:opacity-50 shrink-0`}
+            >
+              {selfReporting ? "…" : "I've paid"}
+            </button>
+          ) : (
+            <Link
+              href={`/groups/${group.id}`}
+              className="text-[11px] font-medium text-slate-500 dark:text-slate-400
+                hover:text-slate-700 dark:hover:text-slate-200 transition-colors shrink-0"
+            >
+              Contribute →
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Record contribution sheet — admin one-tap confirm */}
+      {/* Record contribution sheet — admin quick-record from card */}
       {recordMember && (
         <RecordContributionSheet
           member={recordMember}
@@ -325,10 +308,10 @@ export function CircleCard({ group, cardData }: Props) {
           period={isRecurring ? currentPeriod : null}
           periodLabel={isRecurring ? currentPeriodLabel : null}
           groupId={group.id}
-          isAdditional={recordIsAdditional}
+          isAdditional={false}
           isOneTime={isOneTime}
           isOpen={!!recordMember}
-          onClose={() => { setRecordMember(null); setRecordIsAdditional(false); }}
+          onClose={() => { setRecordMember(null); }}
           onSuccess={handleRecordSuccess}
         />
       )}

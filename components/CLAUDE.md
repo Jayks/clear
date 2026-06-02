@@ -209,6 +209,34 @@ Both exported from `components/insights/nest-pace-card.tsx`. `computeNestPaceDat
 
 ## Key Components
 
+### CircleCard (`components/circle/circle-card.tsx`)
+
+`"use client"`. Home-page card for Circle groups. Shares the same visual grammar as `TripCard` — do not revert to the old left-bar layout.
+
+**Structure (three zones, top to bottom):**
+1. **Gradient header (`h-44`)** — `bg-gradient-to-br ${heroGrad}` matching TripCard height exactly. Contains absolute-positioned mode badge (top-left), `TripCardShareDrawer` (top-right), group name in Fraunces + `Wallet · ₹X` subtitle (bottom-left), optional target or per-person hint (bottom-right). Entire header is a `<Link>` to the dashboard.
+2. **3px progress bar** — acts as the visual divider between header and strip. Fills left to right; turns emerald at 100%.
+3. **Bottom strip** — `flex-1` (absorbs extra height in grid rows). Left: `X/Y paid` count or `✓ All paid` emerald state. Right: role-aware CTA — admin sees `N pending →` button (taps open `RecordContributionSheet` for first pending member); member sees Pay ↗ / I've paid / ⏳ Pending / You're clear.
+
+**Theme-aware gradient + pattern:**
+- Light mode: pale tinted gradient (`slate-100→indigo-100` for recurring, `orange-50→amber-100` for one-time) + **coloured SVG pattern** (indigo wave / amber lollipops at 20–28% opacity).
+- Dark mode: deep dark gradient (`slate-800→indigo-900` / `slate-800→amber-900`) + **white SVG pattern** (10–18% opacity).
+- Implemented as **two overlay divs**: `dark:hidden` for light pattern, `hidden dark:block` for dark pattern. No JS theme detection needed.
+
+**SVG patterns (conceptual):**
+- Recurring: dashed centre axis + continuous sine wave (`M0,30 C55,2 100,2 100,30 S145,58 200,30`) + filled circles at peaks (x=71,y=9), troughs (x=129,y=51), and zero-crossings. Tile: `200×60px`, `backgroundRepeat: repeat`.
+- One-time: five discrete vertical bars at varying heights with a circle on top of each (lollipop chart). No connecting line — reads as separate individual contributions. Same tile size.
+
+**Colours:**
+- `heroGrad` includes `dark:` variants inline: `"from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900"`.
+- Mode badge: `bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-200` (recurring) / amber equivalent (one-time).
+- Ambient resting shadow: `shadow-md shadow-indigo-500/10` (recurring) / `shadow-amber-500/10` (one-time). Strengthens on hover.
+- Card uses `h-full flex flex-col` so all cards in a grid row are equal height.
+
+**Wallet label:** The collected amount is labelled "Wallet" (not "Pool") everywhere on the card. Consistent with "Wallet balance" on the dashboard.
+
+---
+
 ### Group Card Balance Badge
 `components/trip/group-balance-badge.tsx` — async RSC streamed into each active `TripCard` via `<Suspense>`. States: owe (amber) / owed (emerald) / settled (muted emerald) / no expenses (slate) / multi-currency (muted). Groups page batch-fetches all member IDs via `getUserMemberIds(groupIds, userId)` (one query). Archived cards get no badge. `TripCard` accepts `balanceBadge?: React.ReactNode`.
 

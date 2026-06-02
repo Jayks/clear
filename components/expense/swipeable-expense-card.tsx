@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, animate, AnimatePresence, type PanInfo } from "framer-motion";
 import { Trash2, Copy, Pencil } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { deleteExpense, duplicateExpense } from "@/app/actions/expenses";
 import { toast } from "sonner";
 import { hapticDelete } from "@/lib/haptics";
 import { ExpenseCard } from "./expense-card";
 import { ExpenseDetailSheet } from "./expense-detail-sheet";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
@@ -31,6 +31,8 @@ interface Props {
 
 export function SwipeableExpenseCard(props: Props) {
   const { expense, onDelete, onDeleteFail, interactionCount, currentMemberId } = props;
+  const router = useRouter();
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const x = useMotionValue(0);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -91,16 +93,35 @@ export function SwipeableExpenseCard(props: Props) {
     else toast.success("Expense duplicated — dated today.");
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     setActionsOpen(false);
-    const result = await deleteExpense(expense.id, expense.groupId);
-    if (!result.ok) {
-      toast.error("Failed to delete expense");
-      onDeleteFail?.(expense.id);
-    } else {
-      hapticDelete();
-      onDelete?.(expense.id);
-    }
+    hapticDelete();
+    // Optimistically remove from UI immediately
+    onDelete?.(expense.id);
+
+    // Schedule the actual server delete after 5 s
+    deleteTimerRef.current = setTimeout(async () => {
+      const result = await deleteExpense(expense.id, expense.groupId);
+      if (!result.ok) {
+        toast.error("Failed to delete expense");
+        onDeleteFail?.(expense.id);
+      }
+    }, 5000);
+
+    toast("Expense deleted", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          if (deleteTimerRef.current) {
+            clearTimeout(deleteTimerRef.current);
+            deleteTimerRef.current = null;
+          }
+          onDeleteFail?.(expense.id);
+          router.refresh();
+        },
+      },
+    });
   }
 
   // Non-touch (desktop): plain card with hover-reveal actions
@@ -176,23 +197,14 @@ export function SwipeableExpenseCard(props: Props) {
             </button>
 
             {/* Delete */}
-            <ConfirmDialog
-              title="Delete expense"
-              description="This expense and all its splits will be permanently removed. This cannot be undone."
-              confirmLabel="Delete"
-              destructive
-              onConfirm={handleDelete}
-              trigger={
-                <button
-                  type="button"
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-14 h-14 rounded-2xl bg-red-500/90 shadow-sm text-white flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">Delete</span>
-                </button>
-              }
-            />
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+              className="w-14 h-14 rounded-2xl bg-red-500/90 shadow-sm text-white flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Delete</span>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

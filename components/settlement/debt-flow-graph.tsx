@@ -115,6 +115,9 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   const [isDraggingAny, setIsDraggingAny] = useState(false);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [settled, setSettled]             = useState(false);
+  // Hint is hidden after the user has tapped an arc at least once (persisted in localStorage)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [hasUsedGraph, setHasUsedGraph]   = useState(false);
 
   // ── Drag refs ──────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -191,6 +194,12 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
     const obs = new MutationObserver(update);
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
+  }, []);
+
+  // Hint dismissal — hide after user has tapped an arc at least once
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (localStorage.getItem("clear_graph_hint_done") === "1") setHasUsedGraph(true);
   }, []);
 
   // Reset arc strokeDasharray when first drag begins (Framer Motion pathLength uses it internally)
@@ -345,6 +354,11 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const handleArcClick = useCallback((i: number) => {
     setSelectedId(null);
+    // Dismiss the hint permanently on first arc interaction
+    setHasUsedGraph((prev) => {
+      if (!prev) localStorage.setItem("clear_graph_hint_done", "1");
+      return true;
+    });
     setSelectedArc((prev) => {
       const next = prev === i ? null : i;
       if (next !== null) {
@@ -840,16 +854,18 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
             </button>
           </motion.div>
         ) : (
-          /* Default: contextual hint */
-          <motion.p key="hint"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-2.5"
-          >
-            {isSettled
-              ? "All debts cleared ✓"
-              : "Tap arc → payment · Tap node → details · Drag to rearrange"}
-          </motion.p>
+          /* Default: hint for first-time users only; hidden once they've tapped an arc */
+          (isSettled || !hasUsedGraph) && (
+            <motion.p key="hint"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+              className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-2.5"
+            >
+              {isSettled
+                ? "All debts cleared ✓"
+                : "Tap arc → payment · Tap node → details · Drag to rearrange"}
+            </motion.p>
+          )
         )}
       </AnimatePresence>
       </div>

@@ -462,6 +462,66 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
   revalidateTag(`balances-${groupId}`, "max");
 }
 
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+export async function batchLogTemplates(groupId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership) return { ok: false, error: "Not a member" } as const;
+
+  if (!(await canUseTemplates(groupId)))
+    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
+
+  const templates = await getGroupTemplates(groupId);
+  const due = templates.filter((t) => !t.loggedThisMonth);
+  if (due.length === 0) return { ok: true, count: 0, month: "" } as const;
+
+  const now = new Date();
+  const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const month = MONTH_NAMES[now.getMonth()];
+
+  let count = 0;
+  for (const { template, splits } of due) {
+    try {
+      const [logged] = await db.insert(expenses).values({
+        groupId: template.groupId,
+        paidByMemberId: template.paidByMemberId,
+        description: template.description,
+        category: template.category,
+        amount: template.amount,
+        currency: template.currency,
+        expenseDate: firstOfMonth,
+        notes: template.notes,
+        isTemplate: false,
+        sourceTemplateId: template.id,
+        createdByUserId: user.id,
+      }).returning();
+
+      if (splits.length > 0) {
+        await db.insert(expenseSplits).values(
+          splits.map((s) => ({
+            groupId: template.groupId,
+            expenseId: logged.id,
+            memberId: s.memberId,
+            shareAmount: s.shareAmount,
+            splitType: s.splitType,
+            splitValue: s.splitValue,
+          }))
+        );
+      }
+      count++;
+    } catch {
+      // Skip failed templates, don't abort the batch
+    }
+  }
+
+  revalidatePath(`/groups/${groupId}`, "layout");
+  revalidateTag(`balances-${groupId}`, "max");
+  return { ok: true, count, month } as const;
+}
+
 export async function fetchExpenseSplitsAction(expenseId: string) {
   const user = await getCurrentUser();
   if (!user) return null;

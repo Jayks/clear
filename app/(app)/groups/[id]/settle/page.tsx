@@ -21,8 +21,9 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
   if (!data) notFound();
 
   const { group, members, currentMember } = data;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const settleUrl = `${appUrl}/groups/${id}/settle`;
+  const inviteUrl = `${appUrl}/join/${group.shareToken}`;
 
   return (
     <div>
@@ -80,6 +81,7 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
           currency={group.defaultCurrency}
           groupName={group.name}
           settleUrl={settleUrl}
+          inviteUrl={inviteUrl}
           isNest={group.groupType === "nest"}
         />
       </Suspense>

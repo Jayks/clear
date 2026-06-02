@@ -103,7 +103,8 @@ export default async function GroupsPage() {
       )}
 
       {/* ── Trips ─────────────────────────────────────────────────────────── */}
-      {trips.length > 0 && (
+      {/* Show section when trips exist OR when user has other groups (empty-state nudge) */}
+      {(trips.length > 0 || (groups.length > 0 && nests.length > 0)) && (
         <section id="trips" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
             <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30
@@ -127,39 +128,72 @@ export default async function GroupsPage() {
             </Link>
           </div>
 
-          <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {trips.map(({ group, memberCount }, index) => {
-              const memberId = memberIds[group.id];
-              return (
-                <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
-                  <TripCard
-                    group={group}
-                    memberCount={Number(memberCount)}
-                    priority={index < 2}
-                    isPlusPlan={adminPlans[group.id] === "plus"}
-                    balanceBadge={
-                      memberId && !group.isDemo ? (
-                        <Suspense key={group.id} fallback={balanceFallback()}>
-                          <GroupBalanceBadge
-                            groupId={group.id}
-                            memberId={memberId}
-                            currency={group.defaultCurrency}
-                          />
-                        </Suspense>
-                      ) : undefined
-                    }
-                  />
-                </div>
-              );
-            })}
-          </AnimatedList>
-
-          <LongPressHint demoTripId={trips.find((g) => g.group.isDemo)?.group.id ?? null} />
+          {trips.length === 0 ? (
+            /* Empty-state nudge — only shown when user has nests/circles but no trips */
+            <Link
+              href="/groups/new?type=trip"
+              className="flex items-center gap-3 px-4 py-4 rounded-xl border border-dashed
+                         border-cyan-200 dark:border-cyan-800/50
+                         hover:border-cyan-400 dark:hover:border-cyan-600
+                         hover:bg-cyan-50/50 dark:hover:bg-cyan-900/10
+                         transition-colors group"
+            >
+              <div className="w-9 h-9 rounded-xl bg-cyan-50 dark:bg-cyan-900/20
+                              flex items-center justify-center shrink-0
+                              group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/40 transition-colors">
+                <MapPin className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                  No trips yet
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  Track shared costs for travel, weekends away, and events
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-cyan-600 dark:text-cyan-400
+                               group-hover:text-cyan-700 dark:group-hover:text-cyan-300
+                               transition-colors whitespace-nowrap shrink-0">
+                New trip →
+              </span>
+            </Link>
+          ) : (
+            <>
+              <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {trips.map(({ group, memberCount }, index) => {
+                  const memberId = memberIds[group.id];
+                  return (
+                    <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
+                      <TripCard
+                        group={group}
+                        memberCount={Number(memberCount)}
+                        priority={index < 2}
+                        isPlusPlan={adminPlans[group.id] === "plus"}
+                        balanceBadge={
+                          memberId && !group.isDemo ? (
+                            <Suspense key={group.id} fallback={balanceFallback()}>
+                              <GroupBalanceBadge
+                                groupId={group.id}
+                                memberId={memberId}
+                                currency={group.defaultCurrency}
+                              />
+                            </Suspense>
+                          ) : undefined
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </AnimatedList>
+              <LongPressHint demoTripId={trips.find((g) => g.group.isDemo)?.group.id ?? null} />
+            </>
+          )}
         </section>
       )}
 
       {/* ── Nests ─────────────────────────────────────────────────────────── */}
-      {nests.length > 0 && (
+      {/* Show section when nests exist OR when user has other groups (empty-state nudge) */}
+      {(nests.length > 0 || (groups.length > 0 && trips.length > 0)) && (
         <section id="nests" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
             <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/30
@@ -182,35 +216,66 @@ export default async function GroupsPage() {
             </Link>
           </div>
 
-          <AnimatedList
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-            initialDelayMs={trips.length > 0 ? trips.length * 80 : 0}
-          >
-            {nests.map(({ group, memberCount }, index) => {
-              const memberId = memberIds[group.id];
-              return (
-                <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
-                  <TripCard
-                    group={group}
-                    memberCount={Number(memberCount)}
-                    priority={index < 2 && trips.length === 0}
-                    isPlusPlan={adminPlans[group.id] === "plus"}
-                    balanceBadge={
-                      memberId && !group.isDemo ? (
-                        <Suspense key={group.id} fallback={balanceFallback()}>
-                          <GroupBalanceBadge
-                            groupId={group.id}
-                            memberId={memberId}
-                            currency={group.defaultCurrency}
-                          />
-                        </Suspense>
-                      ) : undefined
-                    }
-                  />
-                </div>
-              );
-            })}
-          </AnimatedList>
+          {nests.length === 0 ? (
+            /* Empty-state nudge — only shown when user has trips/circles but no nests */
+            <Link
+              href="/groups/new?type=nest"
+              className="flex items-center gap-3 px-4 py-4 rounded-xl border border-dashed
+                         border-emerald-200 dark:border-emerald-800/50
+                         hover:border-emerald-400 dark:hover:border-emerald-600
+                         hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10
+                         transition-colors group"
+            >
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20
+                              flex items-center justify-center shrink-0
+                              group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/40 transition-colors">
+                <Home className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                  No nests yet
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  Track recurring household bills with flatmates or family
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400
+                               group-hover:text-emerald-700 dark:group-hover:text-emerald-300
+                               transition-colors whitespace-nowrap shrink-0">
+                New nest →
+              </span>
+            </Link>
+          ) : (
+            <AnimatedList
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              initialDelayMs={trips.length > 0 ? trips.length * 80 : 0}
+            >
+              {nests.map(({ group, memberCount }, index) => {
+                const memberId = memberIds[group.id];
+                return (
+                  <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
+                    <TripCard
+                      group={group}
+                      memberCount={Number(memberCount)}
+                      priority={index < 2 && trips.length === 0}
+                      isPlusPlan={adminPlans[group.id] === "plus"}
+                      balanceBadge={
+                        memberId && !group.isDemo ? (
+                          <Suspense key={group.id} fallback={balanceFallback()}>
+                            <GroupBalanceBadge
+                              groupId={group.id}
+                              memberId={memberId}
+                              currency={group.defaultCurrency}
+                            />
+                          </Suspense>
+                        ) : undefined
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </AnimatedList>
+          )}
         </section>
       )}
 

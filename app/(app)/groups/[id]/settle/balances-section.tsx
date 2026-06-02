@@ -9,6 +9,7 @@ import { SettleBreakdownSection } from "./settle-breakdown-section";
 import { MarkPaidButton } from "./mark-paid-button";
 import { UpiPayButton } from "./upi-pay-button";
 import { WhatsAppRemindButton } from "./whatsapp-remind-button";
+import { SettleShareButton } from "@/components/settlement/settle-share-button";
 import { ArrowRight, CheckCircle2, AlertTriangle, Send, Clock, TrendingUp, TrendingDown, BarChart2 } from "lucide-react";
 import { cn, formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -20,6 +21,7 @@ interface Props {
   currency: string;
   groupName: string;
   settleUrl: string;
+  inviteUrl: string;
   isNest: boolean;
 }
 
@@ -48,6 +50,7 @@ export async function BalancesSection({
   currency,
   groupName,
   settleUrl,
+  inviteUrl,
   isNest,
 }: Props) {
   const [{ balances, suggestions, hasMixedCurrencies }, settlementHistory, monthlySummary] = await Promise.all([
@@ -288,7 +291,7 @@ export async function BalancesSection({
                     </span>
                   </div>
                   {(currentMemberId === s.from || currentMemberId === s.to) && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {currentMemberId === s.from && (
                         <UpiPayButton amount={s.amount} currency={currency} toName={memberName(s.to)} />
                       )}
@@ -306,6 +309,15 @@ export async function BalancesSection({
                         toMemberId={s.to}
                         amount={s.amount}
                         currency={currency}
+                      />
+                      <SettleShareButton
+                        fromName={memberName(s.from)}
+                        toName={memberName(s.to)}
+                        amount={s.amount}
+                        currency={currency}
+                        direction={currentMemberId === s.from ? "owe" : "owed"}
+                        groupName={groupName}
+                        settleUrl={inviteUrl}
                       />
                     </div>
                   )}

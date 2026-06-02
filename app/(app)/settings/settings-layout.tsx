@@ -7,6 +7,7 @@ import { BillingSection } from "./billing-section";
 import { NotificationsSection } from "./notifications-section";
 import { ProfileSection } from "./profile-section";
 import type { Subscription } from "@/lib/db/schema/subscriptions";
+import type { UserUpiId } from "@/lib/db/schema/upi-ids";
 
 type Section = "profile" | "appearance" | "billing" | "notifications";
 
@@ -22,9 +23,10 @@ interface Props {
   currentDisplayName: string;
   userEmail: string;
   userAvatarUrl: string | null;
+  upiIds: UserUpiId[];
 }
 
-export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarUrl }: Props) {
+export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds }: Props) {
   const [active, setActive] = useState<Section>("profile");
 
   return (
@@ -68,6 +70,7 @@ export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarU
               currentDisplayName={currentDisplayName}
               userEmail={userEmail}
               userAvatarUrl={userAvatarUrl}
+              upiIds={upiIds}
             />
           </div>
         </section>

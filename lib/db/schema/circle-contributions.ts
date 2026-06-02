@@ -9,9 +9,12 @@ export const circleContributions = pgTable("circle_contributions", {
   currency: text("currency").notNull().default("INR"),
   period: text("period"),       // "2026-06" for recurring; null for goal mode
   recordedBy:  uuid("recorded_by"),    // user_id who logged it
-  isConfirmed: boolean("is_confirmed").notNull().default(true), // false = member self-report awaiting admin confirmation
-  note: text("note"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
+  isConfirmed:   boolean("is_confirmed").notNull().default(true), // false = member self-report awaiting admin confirmation
+  note:          text("note"),
+  // Phase 1 — UPI payment tracking (is_confirmed already existed)
+  paymentMethod: text("payment_method"),   // 'upi' | 'cash' | 'bank_transfer' | 'other'
+  utrReference:  text("utr_reference"),
+  createdAt:     timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
 });
 
 export type CircleContribution = typeof circleContributions.$inferSelect;

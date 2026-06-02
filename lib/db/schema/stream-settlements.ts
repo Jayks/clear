@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, numeric, boolean } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { streamRecords } from "./stream-records";
 
@@ -15,8 +15,12 @@ export const streamSettlements = pgTable("stream_settlements", {
   amount:     numeric("amount", { precision: 12, scale: 2 }).notNull(),
   currency:   text("currency").notNull().default("INR"),
   note:       text("note"),
-  recordedBy: uuid("recorded_by").notNull(),  // auth.users.id — who recorded the payment
-  settledAt:  timestamp("settled_at", { withTimezone: true }).notNull().default(sql`now()`),
+  recordedBy:    uuid("recorded_by").notNull(),  // auth.users.id — who recorded the payment
+  settledAt:     timestamp("settled_at", { withTimezone: true }).notNull().default(sql`now()`),
+  // Phase 1 — UPI payment tracking
+  isConfirmed:   boolean("is_confirmed").notNull().default(true),
+  paymentMethod: text("payment_method"),   // 'upi' | 'cash' | 'bank_transfer' | 'other'
+  utrReference:  text("utr_reference"),
 });
 
 export type StreamSettlement    = typeof streamSettlements.$inferSelect;

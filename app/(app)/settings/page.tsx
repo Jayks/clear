@@ -9,6 +9,7 @@ import { db } from "@/lib/db/client";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, isNotNull, and } from "drizzle-orm";
 import { extractDisplayName } from "@/lib/utils";
+import { getUserUpiIds } from "@/lib/db/queries/upi";
 
 export const metadata: Metadata = { title: "Settings — Clear" };
 
@@ -25,7 +26,10 @@ export default async function SettingsPage() {
 
   const currentDisplayName = memberRow?.displayName ?? extractDisplayName(user) ?? "";
 
-  const sub = await getUserSubscription(user.id);
+  const [sub, upiIds] = await Promise.all([
+    getUserSubscription(user.id),
+    getUserUpiIds(user.id),
+  ]);
 
   return (
     <div>
@@ -46,6 +50,7 @@ export default async function SettingsPage() {
         currentDisplayName={currentDisplayName}
         userEmail={user.email ?? ""}
         userAvatarUrl={user.user_metadata?.avatar_url as string | null ?? null}
+        upiIds={upiIds}
       />
     </div>
   );

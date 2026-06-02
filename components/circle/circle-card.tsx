@@ -46,10 +46,10 @@ export function CircleCard({ group, cardData }: Props) {
 
   const progressCls  = isOneTime ? "from-amber-400 to-orange-500" : "from-indigo-400 to-violet-500";
   const ctaBtnCls    = isOneTime ? "from-amber-500 to-orange-500" : "from-indigo-500 to-violet-600";
-  // Ambient resting shadow in mode colour — differentiates Circle cards from Trip/Nest at a glance
+  // Ambient resting shadow in mode colour — matches TripCard Plus opacity levels (/15 rest, /30 hover)
   const cardShadow   = isOneTime
-    ? "shadow-md shadow-amber-500/10 hover:shadow-xl hover:shadow-amber-500/20"
-    : "shadow-md shadow-indigo-500/10 hover:shadow-xl hover:shadow-indigo-500/20";
+    ? "shadow-md shadow-amber-500/15 hover:shadow-xl hover:shadow-amber-500/30"
+    : "shadow-md shadow-violet-500/15 hover:shadow-xl hover:shadow-violet-500/30";
   // Mode badge tinted with mode colour — reinforces gradient + pattern language
   const badgeCls     = isOneTime
     ? "bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200"
@@ -141,7 +141,12 @@ export function CircleCard({ group, cardData }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div className={`glass rounded-2xl overflow-hidden relative h-full flex flex-col ${cardShadow} hover:-translate-y-0.5 transition-all duration-200`}>
+      {/* Outer wrapper: shadow + hover lift — NO overflow-hidden so shadow paints cleanly
+          (overflow-hidden + border-radius on the same element as box-shadow clips the shadow
+           in Chrome/Safari — same two-wrapper pattern as TripCard) */}
+      <div className={`relative h-full ${cardShadow} hover:-translate-y-0.5 transition-all duration-200`}>
+      {/* Inner: glass card with overflow-hidden for content clipping */}
+      <div className="glass rounded-2xl overflow-hidden relative h-full flex flex-col">
 
         {/* ── Top-left: mode badge + deadline / month pill ──────────────── */}
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
@@ -297,7 +302,8 @@ export function CircleCard({ group, cardData }: Props) {
             </Link>
           )}
         </div>
-      </div>
+      </div>{/* /inner glass */}
+      </div>{/* /outer shadow wrapper */}
 
       {/* Record contribution sheet — admin quick-record from card */}
       {recordMember && (

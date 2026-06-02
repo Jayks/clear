@@ -21,6 +21,10 @@ import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components
 import { NestMonthlyBadge, NestMonthlyBadgeSkeleton } from "@/components/trip/nest-monthly-badge";
 import { RepeatTripPrompt } from "@/components/trip/repeat-trip-prompt";
 import { HeroBalancePill } from "@/components/trip/hero-balance-pill";
+import {
+  TRIP_TREE_DARK, TRIP_PATTERN_STYLE,
+  NEST_BUILDING_DARK, NEST_PATTERN_STYLE,
+} from "@/lib/group-patterns";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -99,7 +103,21 @@ export default async function GroupPage({
               priority
             />
           ) : (
-            <div className={`w-full h-full bg-gradient-to-br ${isNest ? "from-teal-500 to-emerald-500" : "from-cyan-500 to-teal-500"}`} />
+            // No cover photo: identity-coloured gradient + same tree/building
+            // pattern as the home-page card for visual continuity card → dashboard.
+            // The dark overlay fades from transparent (top) to slate-900/70 (bottom),
+            // so the pattern shows clearly at the top and naturally hides near the text.
+            <>
+              <div className={`absolute inset-0 bg-gradient-to-br ${isNest ? "from-emerald-500 to-teal-500" : "from-cyan-500 to-teal-500"}`} />
+              {/* Pattern — white shapes, same tile as card dark mode */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage: isNest ? NEST_BUILDING_DARK : TRIP_TREE_DARK,
+                  ...(isNest ? NEST_PATTERN_STYLE : TRIP_PATTERN_STYLE),
+                }}
+              />
+            </>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
           {/* Hero action buttons — quick-add for all members, share+edit for admins only */}

@@ -11,32 +11,24 @@ import { TripCardQuickAdd } from "./trip-card-quick-add";
 import { TripCardNavSheet } from "./trip-card-nav-sheet";
 
 // ── No-cover-photo SVG patterns ──────────────────────────────────────────────
-// Mirrors the Circle card approach exactly:
-//   • 200×60 tile with backgroundRepeat:"repeat" → tiles across the whole h-44 header
-//   • Light mode: coloured strokes on pale gradient  (pops clearly)
-//   • Dark mode:  white strokes on deep dark gradient (pops clearly)
 // Two overlay divs toggled via dark:hidden / hidden dark:block.
 //
-// Trip  → 4 two-tier pine trees — travel, outdoors, nature  (cyan-600 #0891b2)
-// Nest  → 4 apartment blocks with window grids — home, urban (teal-600 #0d9488)
+// Trip  → 4 rounded-canopy trees at varying heights — lollipop silhouette
+//          (circle canopy + trunk rect + ground-shadow ellipse), 220×110 tile
+//          emerald-600 #059669 on pale gradient / white on dark gradient
+//          Tree heights from bottom: ~52 px · ~79 px · ~65 px · ~59 px
+//
+// Nest  → 14-building city skyline, 400×110 tile — wider tile means repeat only
+//          triggers once per card; 2 px gaps between every building; antennae on
+//          the two tallest; window grids (3-col or 2-col) on prominent buildings
+//          sky-600 #0284c7 on pale gradient / white on dark gradient
 
-// Trip  → 4 two-tier pine trees, 200×110 tile — repeat-x anchored to the bottom
-//          so the treeline rises ~63 % of the way up the card (110 / 176 px)
-// Nest  → 4 apartment blocks with window grids, same tile size
-
-const TRIP_TREE_LIGHT = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='110'%3E%3Cpolygon points='3,110 20,72 37,110' fill='%23059669' fill-opacity='0.22'/%3E%3Cpolygon points='7,88 20,50 33,88' fill='%23059669' fill-opacity='0.28'/%3E%3Crect x='17.5' y='103' width='5' height='8' fill='%23059669' fill-opacity='0.18'/%3E%3Cpolygon points='44,110 68,54 92,110' fill='%23059669' fill-opacity='0.22'/%3E%3Cpolygon points='50,78 68,12 86,78' fill='%23059669' fill-opacity='0.28'/%3E%3Crect x='65' y='103' width='6' height='8' fill='%23059669' fill-opacity='0.18'/%3E%3Cpolygon points='100,110 122,64 144,110' fill='%23059669' fill-opacity='0.22'/%3E%3Cpolygon points='106,84 122,28 138,84' fill='%23059669' fill-opacity='0.28'/%3E%3Crect x='119.5' y='103' width='5' height='8' fill='%23059669' fill-opacity='0.18'/%3E%3Cpolygon points='157,110 175,74 193,110' fill='%23059669' fill-opacity='0.22'/%3E%3Cpolygon points='161,90 175,54 189,90' fill='%23059669' fill-opacity='0.28'/%3E%3Crect x='172.5' y='103' width='5' height='8' fill='%23059669' fill-opacity='0.18'/%3E%3C/svg%3E")`;
-
-const TRIP_TREE_DARK = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='110'%3E%3Cpolygon points='3,110 20,72 37,110' fill='white' fill-opacity='0.13'/%3E%3Cpolygon points='7,88 20,50 33,88' fill='white' fill-opacity='0.17'/%3E%3Crect x='17.5' y='103' width='5' height='8' fill='white' fill-opacity='0.10'/%3E%3Cpolygon points='44,110 68,54 92,110' fill='white' fill-opacity='0.13'/%3E%3Cpolygon points='50,78 68,12 86,78' fill='white' fill-opacity='0.17'/%3E%3Crect x='65' y='103' width='6' height='8' fill='white' fill-opacity='0.10'/%3E%3Cpolygon points='100,110 122,64 144,110' fill='white' fill-opacity='0.13'/%3E%3Cpolygon points='106,84 122,28 138,84' fill='white' fill-opacity='0.17'/%3E%3Crect x='119.5' y='103' width='5' height='8' fill='white' fill-opacity='0.10'/%3E%3Cpolygon points='157,110 175,74 193,110' fill='white' fill-opacity='0.13'/%3E%3Cpolygon points='161,90 175,54 189,90' fill='white' fill-opacity='0.17'/%3E%3Crect x='172.5' y='103' width='5' height='8' fill='white' fill-opacity='0.10'/%3E%3C/svg%3E")`;
-
-const NEST_BUILDING_LIGHT = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='110'%3E%3Crect x='2' y='58' width='33' height='52' fill='%230284c7' fill-opacity='0.22'/%3E%3Crect x='8' y='64' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='20' y='64' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='8' y='74' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='20' y='74' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='8' y='84' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='20' y='84' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='8' y='94' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='20' y='94' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='43' y='12' width='48' height='98' fill='%230284c7' fill-opacity='0.22'/%3E%3Crect x='49' y='19' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='19' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='19' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='29' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='29' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='29' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='39' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='39' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='39' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='49' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='49' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='49' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='59' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='59' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='59' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='69' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='69' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='69' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='79' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='79' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='79' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='89' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='89' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='89' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='49' y='99' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='61' y='99' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='74' y='99' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='99' y='42' width='30' height='68' fill='%230284c7' fill-opacity='0.22'/%3E%3Crect x='104' y='49' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='116' y='49' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='104' y='59' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='116' y='59' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='104' y='69' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='116' y='69' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='104' y='79' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='116' y='79' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='104' y='89' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='116' y='89' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='104' y='99' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='116' y='99' width='7' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='137' y='22' width='56' height='88' fill='%230284c7' fill-opacity='0.22'/%3E%3Crect x='143' y='29' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='29' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='29' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='143' y='39' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='39' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='39' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='143' y='49' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='49' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='49' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='143' y='59' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='59' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='59' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='143' y='69' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='69' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='69' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='143' y='79' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='79' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='79' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='143' y='89' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='89' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='89' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='143' y='99' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='156' y='99' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3Crect x='169' y='99' width='8' height='5' fill='%230284c7' fill-opacity='0.44'/%3E%3C/svg%3E")`;
-
-const NEST_BUILDING_DARK = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='110'%3E%3Crect x='2' y='58' width='33' height='52' fill='white' fill-opacity='0.12'/%3E%3Crect x='8' y='64' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='20' y='64' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='8' y='74' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='20' y='74' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='8' y='84' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='20' y='84' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='8' y='94' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='20' y='94' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='43' y='12' width='48' height='98' fill='white' fill-opacity='0.12'/%3E%3Crect x='49' y='19' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='19' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='19' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='29' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='29' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='29' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='39' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='39' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='39' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='49' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='49' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='49' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='59' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='59' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='59' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='69' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='69' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='69' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='79' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='79' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='79' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='89' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='89' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='89' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='49' y='99' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='61' y='99' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='74' y='99' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='99' y='42' width='30' height='68' fill='white' fill-opacity='0.12'/%3E%3Crect x='104' y='49' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='116' y='49' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='104' y='59' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='116' y='59' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='104' y='69' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='116' y='69' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='104' y='79' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='116' y='79' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='104' y='89' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='116' y='89' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='104' y='99' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='116' y='99' width='7' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='137' y='22' width='56' height='88' fill='white' fill-opacity='0.12'/%3E%3Crect x='143' y='29' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='29' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='29' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='143' y='39' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='39' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='39' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='143' y='49' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='49' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='49' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='143' y='59' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='59' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='59' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='143' y='69' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='69' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='69' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='143' y='79' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='79' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='79' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='143' y='89' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='89' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='89' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='143' y='99' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='156' y='99' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3Crect x='169' y='99' width='8' height='5' fill='white' fill-opacity='0.24'/%3E%3C/svg%3E")`;
-
-const PATTERN_STYLE = {
-  backgroundSize: "200px 110px",
-  backgroundRepeat: "repeat-x",
-  backgroundPosition: "bottom",
-} as const;
+// SVG patterns — imported from shared lib so both card and dashboard hero
+// use identical visuals.
+import {
+  TRIP_TREE_LIGHT, TRIP_TREE_DARK, TRIP_PATTERN_STYLE,
+  NEST_BUILDING_LIGHT, NEST_BUILDING_DARK, NEST_PATTERN_STYLE,
+} from "@/lib/group-patterns";
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -180,7 +172,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
     // Outer div: positioning context for action buttons, hover effects, touch handlers.
     // No overflow-hidden here — that lives on the inner glass div so buttons aren't clipped.
     <div
-      className={`group/card relative select-none transition-all ${isPlusPlan ? "shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30" : "hover:shadow-xl hover:shadow-cyan-500/10"} hover:-translate-y-0.5 ${isLongPressing ? "scale-[0.97] duration-500" : "duration-200"}`}
+      className={`group/card relative select-none transition-all ${isNest ? "shadow-md shadow-emerald-500/15 hover:shadow-xl hover:shadow-emerald-500/30" : "shadow-md shadow-cyan-500/15 hover:shadow-xl hover:shadow-cyan-500/30"} hover:-translate-y-0.5 ${isLongPressing ? "scale-[0.97] duration-500" : "duration-200"}`}
       data-tour={group.isDemo ? (isNest ? "demo-nest" : "demo-trip") : undefined}
       onTouchStart={startLongPress}
       onTouchEnd={cancelLongPress}
@@ -236,36 +228,24 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
               />
             ) : (
               <>
-                {/* Pale gradient — Trip: soft green (outdoors/nature), Nest: soft blue (home/calm) */}
+                {/* Vivid identity gradient — matches dashboard hero exactly.
+                    Trip: cyan-500→teal-500 · Nest: emerald-500→teal-500 */}
                 <div className={`w-full h-full bg-gradient-to-br ${
-                  isNest
-                    ? "from-sky-50 to-blue-100 dark:from-slate-800 dark:to-blue-900"
-                    : "from-emerald-50 to-green-100 dark:from-slate-800 dark:to-emerald-900"
+                  isNest ? "from-emerald-500 to-teal-500" : "from-cyan-500 to-teal-500"
                 }`} />
-                {/* Light mode pattern — coloured shapes on pale gradient, repeat tiles the whole header */}
+                {/* White pattern shapes — no light/dark split needed; white reads on
+                    any vivid background in both modes */}
                 <div
-                  className="absolute inset-0 pointer-events-none dark:hidden"
-                  style={{
-                    backgroundImage: isNest ? NEST_BUILDING_LIGHT : TRIP_TREE_LIGHT,
-                    ...PATTERN_STYLE,
-                  }}
-                />
-                {/* Dark mode — white shapes on deep slate gradient */}
-                <div
-                  className="absolute inset-0 pointer-events-none hidden dark:block"
+                  className="absolute inset-0 pointer-events-none"
                   style={{
                     backgroundImage: isNest ? NEST_BUILDING_DARK : TRIP_TREE_DARK,
-                    ...PATTERN_STYLE,
+                    ...(isNest ? NEST_PATTERN_STYLE : TRIP_PATTERN_STYLE),
                   }}
                 />
               </>
             )}
-            {/* Legibility overlay — lighter for no-photo (pale bg stays visible); darker for photos */}
-            <div className={`absolute inset-0 bg-gradient-to-t ${
-              group.coverPhotoUrl
-                ? "from-slate-900/70 via-slate-900/20"
-                : "from-slate-900/55 via-slate-900/10"
-            } to-transparent`} />
+            {/* Legibility overlay — same strength for photos and vivid-gradient no-photo */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
 
 
             <div className="absolute bottom-3 left-4 right-4">

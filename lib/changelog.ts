@@ -20,6 +20,153 @@ export type ChangelogRelease = {
 
 export const changelog: ChangelogRelease[] = [
   {
+    id: "v1-8-members-polish",
+    version: "v1.8",
+    name: "Members & Visual Polish",
+    date: "June 2, 2026",
+    tag: "Polish",
+    tagVariant: "slate",
+    headline: "Smarter member-adding, Circle cards redesigned, and ghost-member sharing.",
+    description:
+      "The member-add sheet now surfaces your Clear network — people you've grouped with before — for instant re-invite without retyping. Circle cards were rebuilt to match the Trip/Nest visual language. Ghost members get a per-row share button so admins can send personalised WhatsApp invites in one tap.",
+    features: [
+      {
+        icon: "🧑‍🤝‍🧑",
+        title: "Clear network contacts",
+        description:
+          "Past group members appear as quick-add chips — tap to add, no retyping. Plus-only; free users see a teaser showing the first 3 names.",
+      },
+      {
+        icon: "📥",
+        title: "Bulk paste members",
+        description:
+          "Paste a comma or newline-separated list of names and add them all at once. Always free — no plan gate.",
+      },
+      {
+        icon: "📤",
+        title: "Per-row ghost share",
+        description:
+          "Unclaimed guest members show a share icon. Tap it and the app opens WhatsApp with a personalised invite message pre-filled — no copy-paste needed.",
+      },
+      {
+        icon: "🃏",
+        title: "Circle card redesign",
+        description:
+          "Circle cards on the Home page now match TripCard exactly: gradient photo header, 3px progress divider, and a bottom strip with role-aware CTAs.",
+      },
+      {
+        icon: "👥",
+        title: "Circle members card",
+        description:
+          "The Circle dashboard footer shows a members card with avatar initials, a ghost member notice, and an Add / Manage link for admins.",
+      },
+    ],
+  },
+  {
+    id: "v1-7-circles",
+    version: "v1.7",
+    name: "Circles",
+    date: "June 1–2, 2026",
+    tag: "New",
+    tagVariant: "violet",
+    headline: "A shared fund everyone contributes to — recurring or one-time.",
+    description:
+      "Circles are a shared wallet managed by one admin. Create a monthly fund where everyone chips in a fixed amount each cycle, or run a one-time collection drive toward a target. Every contribution is tracked, the admin stays in control, and a single tap sends WhatsApp reminders to anyone who hasn't paid yet.",
+    features: [
+      {
+        icon: "🔁",
+        title: "Recurring mode",
+        description:
+          "Set a fixed monthly amount, pick a contribution day, and the circle generates a new cycle each month. Full calendar-month navigation — ← June 2026 →.",
+      },
+      {
+        icon: "🎯",
+        title: "One-time mode",
+        description:
+          "Fixed (equal amount per person) or Flexi (any amount). Set an optional target and deadline — a progress bar keeps everyone aligned.",
+      },
+      {
+        icon: "🪙",
+        title: "Contribution roster",
+        description:
+          "Admin taps any pending member to record their payment instantly. Members can self-report. Paid section collapses so pending members stay front and centre.",
+      },
+      {
+        icon: "📲",
+        title: "WhatsApp group reminder",
+        description:
+          "One tap generates a ready-to-send WhatsApp message with an ASCII progress bar, collected amount, and the names of pending members.",
+      },
+      {
+        icon: "👻",
+        title: "Ghost members",
+        description:
+          "Add people by name only — no Clear account required. Admin records contributions on their behalf; they claim with Google sign-in later.",
+      },
+      {
+        icon: "🏦",
+        title: "Wallet expenses",
+        description:
+          "Log draws from the shared pool (wallet expenses) or personal advances the admin covered from their own pocket. Full expense list with category icons and amber advance badges.",
+      },
+      {
+        icon: "🎉",
+        title: "Goal celebration",
+        description:
+          "When a one-time circle hits its target, a confetti burst fires and a 'Target reached!' banner appears — once per session, never on every refresh.",
+      },
+    ],
+  },
+  {
+    id: "v1-6-streams",
+    version: "v1.6",
+    name: "Streams",
+    date: "May 29–31, 2026",
+    tag: "New",
+    tagVariant: "cyan",
+    headline: "Track money directly with one person — no group required.",
+    description:
+      "Streams are a bilateral ledger between you and one other person. Log IOUs, have the other side confirm with a shareable link, settle up fully or partially, or forgive. Every entry sits on a chronological spine — the complete history of money between two people, with a live running net after each one.",
+    features: [
+      {
+        icon: "⇌",
+        title: "Bilateral spine view",
+        description:
+          "Your debts appear left, theirs right. A running net updates after each entry so you always know exactly where you stand — no mental arithmetic.",
+      },
+      {
+        icon: "🔗",
+        title: "Guest confirmation link",
+        description:
+          "Share a link and the other person confirms or disputes the entry — no Clear account needed. Disputed entries turn amber and stay visible until resolved.",
+      },
+      {
+        icon: "💚",
+        title: "Partial settle",
+        description:
+          "Enter any amount and the system settles oldest entries first until the amount is covered — useful when someone can only pay part of what they owe.",
+      },
+      {
+        icon: "🤝",
+        title: "Forgive",
+        description:
+          "Write off a single entry or all active debts with one person in a single tap. Forgiven entries are recorded but removed from the net balance.",
+      },
+      {
+        icon: "📱",
+        title: "Swipe quick actions",
+        description:
+          "Swipe left on any entry on mobile to reveal Mark Paid, Share (guest), and Forgive buttons — no tapping into a detail sheet.",
+      },
+      {
+        icon: "🔔",
+        title: "Streams nav badge",
+        description:
+          "A coloured dot on the Streams tab signals new entries (green) or disputed entries (amber) — clears automatically when you visit the dashboard.",
+      },
+    ],
+  },
+  {
     id: "v1-5-trip-timeline",
     version: "v1.5",
     name: "Trip Timeline",

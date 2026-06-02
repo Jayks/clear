@@ -1664,7 +1664,7 @@ export function CarouselLanding() {
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/about"     className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">About</Link>
           <Link href="/pricing"   className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Pricing</Link>
-          <Link href="/changelog" className="hidden sm:block text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Changelog</Link>
+          <Link href="/changelog" className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">What&apos;s New</Link>
         </div>
       </div>
 

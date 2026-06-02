@@ -170,3 +170,69 @@ export async function getGroupsForImport(targetGroupId: string) {
     }))
     .filter((g) => g.members.length > 0); // only show groups that have someone to import
 }
+
+// Returns a flat deduplicated list of every person across all the admin's OTHER groups —
+// the admin's "Clear network" for quick member-add. Clear users deduplicated by userId;
+// ghost members deduplicated by lowercased name. Excludes the current user.
+export async function getNetworkMembers(targetGroupId: string) {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const groupIds = await getUserGroupIds(user.id);
+  const sourceIds = groupIds.filter((id) => id !== targetGroupId);
+  if (sourceIds.length === 0) return [];
+
+  const [memberRows, groupRows] = await Promise.all([
+    db
+      .select({
+        id: groupMembers.id,
+        groupId: groupMembers.groupId,
+        displayName: groupMembers.displayName,
+        guestName: groupMembers.guestName,
+        userId: groupMembers.userId,
+      })
+      .from(groupMembers)
+      .where(
+        and(
+          inArray(groupMembers.groupId, sourceIds),
+          or(isNull(groupMembers.userId), not(eq(groupMembers.userId, user.id))),
+        ),
+      ),
+    db
+      .select({ id: groups.id, name: groups.name })
+      .from(groups)
+      .where(inArray(groups.id, sourceIds)),
+  ]);
+
+  const groupNameMap = new Map(groupRows.map((g) => [g.id, g.name]));
+
+  // Deduplicate: Clear users by userId (can appear in many groups), guests by lowercased name.
+  const byUserId = new Map<string, { id: string; name: string; userId: string; groupNames: string[] }>();
+  const byName   = new Map<string, { id: string; name: string; userId: null;   groupNames: string[] }>();
+
+  for (const m of memberRows) {
+    const name      = m.displayName ?? m.guestName ?? "Member";
+    const groupName = groupNameMap.get(m.groupId) ?? "";
+
+    if (m.userId) {
+      if (byUserId.has(m.userId)) {
+        byUserId.get(m.userId)!.groupNames.push(groupName);
+      } else {
+        byUserId.set(m.userId, { id: m.id, name, userId: m.userId, groupNames: [groupName] });
+      }
+    } else {
+      const key = name.toLowerCase();
+      if (byName.has(key)) {
+        byName.get(key)!.groupNames.push(groupName);
+      } else {
+        byName.set(key, { id: m.id, name, userId: null, groupNames: [groupName] });
+      }
+    }
+  }
+
+  // Clear users first (they have richer context), then ghosts
+  return [
+    ...Array.from(byUserId.values()),
+    ...Array.from(byName.values()),
+  ];
+}

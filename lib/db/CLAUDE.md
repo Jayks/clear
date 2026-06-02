@@ -259,6 +259,10 @@ Always two args: `revalidateTag(\`group-${groupId}\`, "max")` — single-arg for
 
 **`getAllGroups()`** — one query returning `{ active, archived }`. Replaces `getGroups()` + `getArchivedGroups()`.
 
+**`getGroupsForImport(targetGroupId)`** — returns all user's other groups with their member name lists (excluding the target group and the current user). Used by `AddMembersSheet` for the "Import from a group" sub-flow. Only returns groups that have at least one importable member.
+
+**`getNetworkMembers(targetGroupId)`** — flat deduplicated list of every person across all the admin's OTHER groups — the admin's "Clear network". Clear users deduplicated by `userId` (can appear in many groups; one entry per person with `groupNames[]` context). Ghost members deduplicated by lowercased name. Excludes the current user. Returns `{ id, name, userId: string|null, groupNames: string[] }[]` — Clear users listed first. Used by `AddMembersSheet` for the Plus-gated network picker.
+
 ### `getBalances()` — cached, currency-filtered CTE
 
 `getBalances(groupId, defaultCurrency)` — filters to `defaultCurrency` expenses only. Returns `{ balances, suggestions, hasMixedCurrencies }`. Wrapped in `unstable_cache` tagged `balances-${groupId}`. Must call `revalidateTag('balances-${groupId}', 'max')` on every action touching expenses or settlements: `addExpense`, `updateExpense`, `duplicateExpense`, `deleteExpense`, `logFromTemplate`, `autoLogDueTemplates`, `recordSettlement`, `deleteSettlement`.

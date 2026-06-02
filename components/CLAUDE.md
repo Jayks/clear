@@ -237,6 +237,11 @@ Both exported from `components/insights/nest-pace-card.tsx`. `computeNestPaceDat
 
 ---
 
+**No-cover-photo SVG patterns** — when `!group.coverPhotoUrl`, the `h-44` header renders a pale gradient + two SVG pattern overlay divs (light/dark toggled via `dark:hidden` / `hidden dark:block`) instead of a photo. Pattern constants live at module level in `trip-card.tsx`:
+- **Trip** — `emerald-50 → green-100` (light) / `slate-800 → emerald-900` (dark) + pine tree silhouettes in emerald-600 (light) / white (dark). Four two-tier pine trees per 200×110 tile, `repeat-x`, `backgroundPosition: bottom` — treeline rises ~63 % up the card.
+- **Nest** — `sky-50 → blue-100` (light) / `slate-800 → blue-900` (dark) + apartment block silhouettes in sky-600 (light) / white (dark). Four buildings with window grids per 200×110 tile, same repeat/position. Window rects at slightly higher opacity than building walls.
+- Legibility overlay is lighter for no-photo cards (`from-slate-900/55 via-slate-900/10`) than for photo cards (`from-slate-900/70 via-slate-900/20`) so the pale gradient + patterns breathe through. Only the overlay div is conditional; the text + badges remain `text-white` in both cases.
+
 ### Group Card Balance Badge
 `components/trip/group-balance-badge.tsx` — async RSC streamed into each active `TripCard` via `<Suspense>`. States: owe (amber) / owed (emerald) / settled (muted emerald) / no expenses (slate) / multi-currency (muted). Groups page batch-fetches all member IDs via `getUserMemberIds(groupIds, userId)` (one query). Archived cards get no badge. `TripCard` accepts `balanceBadge?: React.ReactNode`.
 
@@ -290,6 +295,11 @@ Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.i
 ### MemberListClient
 `app/(app)/groups/[id]/members/member-list-client.tsx` — replaces static member list. Each row is `<div role="button">` (not `<button>`) to avoid nested-button violation with `RemoveMemberButton` inside. `stopPropagation` on the actions wrapper prevents Remove button from opening the sheet.
 
+**Ghost member states** — rows where `guestName !== null && userId === null` (unclaimed invite) show:
+- `⏳ Not joined yet` amber label below the member name
+- A `📤` share icon (admin-only) — taps `navigator.share()` with a personalised message, falls back to opening `wa.me` with the invite URL pre-filled
+Props added: `inviteUrl: string`, `groupName: string`.
+
 ### TripTimeline — rich day-by-day summary timeline
 `components/trip/trip-timeline.tsx` — `"use client"` component used on the public summary page (`/summary/[token]`).
 
@@ -334,12 +344,23 @@ Sits `sticky top-14 z-40 -mx-6 px-6 backdrop-blur-sm`. Pill size: `px-4 py-2 tex
 ### GroupSearchInput
 `components/shared/group-search-input.tsx` — `"use client"` search input. Only renders when `totalCount > 5`. Filters by querying `[data-group-card]` DOM elements and hiding those where `data-group-name` doesn't match. Also hides `[data-group-section]` elements when all their cards are hidden.
 
-### ImportMembersSheet
-`app/(app)/groups/[id]/members/import-members-sheet.tsx` — `"use client"` two-step bottom sheet for bulk-copying members from another group.
+### AddMembersSheet
+`app/(app)/groups/[id]/members/add-members-sheet.tsx` — `"use client"` unified member-add sheet replacing the retired `AddGuestForm` + `ImportMembersSheet`. Triggered by the single violet **[+ Add members]** button on the members page.
 
-Step 1 **pick-group**: list of user's other groups (fetched server-side via `getGroupsForImport`, passed as `sourceGroups` prop). Step 2 **pick-members**: member pills, pre-selected (excluding already-present names), select-all toggle.
+**Modes (internal state machine):**
+- `main` — search bar + chip selection + bulk paste (inline textarea, always free) + escape hatches
+- `group-picker` — list of user's other groups → `group-members` (member pills, select-all toggle)
+- `group-members` — member pill grid with pre-selection and dupe detection
+- `share` — post-add success step: WhatsApp share button (`wa.me` URL) + copy link
 
-Trigger: inline "Import from group" link (shown prominently in a cyan banner when the group has only the admin; shown as a secondary header link otherwise). Uses `useSheetDismiss`. Calls `importMembersFromGroup` server action; respects free-plan 8-member limit. Duplicate detection: `existingNames: Set<string>` passed from page; dupes rendered with `line-through opacity-35`.
+**Plus gating:**
+- **Clear network** (past members from all other groups, deduplicated by `userId` for Clear users / by name for ghosts) — **Plus only**. Free users with a network see a personalised teaser: first 3 names dimmed at 50% opacity with a frosted lock card showing the count + "Upgrade to Plus" CTA. Free users with no prior groups see nothing. Gate uses `isPlusUser: boolean` prop fetched via `getGroupPlan()` on the page.
+- **Import from a group** — **Plus only**, hidden entirely for free users (teaser covers the upgrade pitch).
+- **Bulk paste** (comma/newline textarea) and **manual typing** → always free.
+
+**Submission:** all paths call `importMembersFromGroup(groupId, names[])` which handles deduplication + free-plan 8-member limit. On success, switches to `share` mode.
+
+**Props:** `groupId`, `groupName`, `inviteUrl`, `networkMembers` (from `getNetworkMembers()`), `sourceGroups` (from `getGroupsForImport()`), `existingNames: Set<string>`, `isPlusUser: boolean`. Uses `useSheetDismiss`.
 
 ### RepeatTripPrompt
 `components/trip/repeat-trip-prompt.tsx` — `"use client"`. Shown on a trip group page when trip is complete or archived (admin only). Renders a dismissable prompt card + bottom sheet to create a new trip with members pre-copied.

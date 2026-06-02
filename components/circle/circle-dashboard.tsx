@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Receipt, Pencil, Plus, Check } from "lucide-react";
+import { Users, Receipt, Pencil, Plus, Check, Clock } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getCircleDashboardData } from "@/lib/db/queries/circle";
@@ -469,6 +469,82 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           </div>
         )
       )}
+
+      {/* ── Members ──────────────────────────────────────────────────────────
+          Shows who's in the circle, flags unjoined ghosts, and gives admins
+          a direct path to add more people.
+      ──────────────────────────────────────────────────────────────────────── */}
+      <div className="glass rounded-2xl p-5 mt-6">
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+              <Users className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              {members.length} {members.length === 1 ? "member" : "members"}
+            </span>
+            <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
+          </div>
+          {isAdmin && (
+            <Link
+              href={`/groups/${group.id}/members`}
+              className="inline-flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Add / Manage
+            </Link>
+          )}
+        </div>
+
+        {/* Avatar row — up to 8 initials, then overflow count */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          {members.slice(0, 8).map((m) => {
+            const name    = m.displayName ?? m.guestName ?? "?";
+            const isGhost = !!m.guestName && !m.userId;
+            return (
+              <div
+                key={m.id}
+                title={name}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${
+                  isGhost
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-dashed ring-slate-300 dark:ring-slate-600"
+                    : "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
+                }`}
+              >
+                {name.charAt(0).toUpperCase()}
+              </div>
+            );
+          })}
+          {members.length > 8 && (
+            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              +{members.length - 8}
+            </div>
+          )}
+        </div>
+
+        {/* Ghost count notice — shown only when some members haven't joined */}
+        {(() => {
+          const ghostCount = members.filter((m) => !!m.guestName && !m.userId).length;
+          return ghostCount > 0 ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mb-3">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              {ghostCount === 1
+                ? "1 member hasn't joined Clear yet"
+                : `${ghostCount} members haven't joined Clear yet`}
+            </p>
+          ) : null;
+        })()}
+
+        {/* Full-width link button */}
+        <Link
+          href={`/groups/${group.id}/members`}
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-violet-200 dark:border-violet-800/60 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+        >
+          <Users className="w-4 h-4" />
+          Members
+        </Link>
+      </div>
     </div>
   );
 }

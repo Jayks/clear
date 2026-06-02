@@ -148,7 +148,7 @@ RSC. **No stream strip** — Streams has its own nav tab. Sections (top → bott
 6. **Send reminder** (`CircleReminderButton` + `CircleReminderSheet`) — admin only when pending members exist. WhatsApp group message with ASCII progress bar + pending names + UPI link.
 7. **One-time lifecycle status** (`CircleGoalStatus`) — one-time mode only. Stepper: Collecting → Purchased → Complete. Admin sees transition buttons. Surplus card when status=purchased and walletBalance > 0 ("Keep in wallet" / "Note as distributed → Complete").
 8. **Wallet expenses** section — last 3 expenses inline (category icon, description, date, amount, advance badge). "View all →" links to `/expenses`. Admin CTA: "Log wallet expense" → `/expenses/new`.
-9. **Members quick link** → `/members`.
+9. **Members card** — bottom of dashboard. Shows member count, up to 8 avatar initials (solid violet = joined Clear, dashed ring = ghost/unclaimed), amber `⏳ N members haven't joined Clear yet` notice when ghosts exist. Header right: `+ Add / Manage` link (admin only). Full-width `[Members]` button → `/members` for all roles (label identical regardless of role — permissions enforced on the members page).
 
 **Cycle navigation**: `router.push(\`/groups/${id}?period=${YYYY-MM}\`)` — RSC re-renders with new period.
 **Wallet balance** = SUM(contributions) − SUM(non-template expenses) — computed in `getCircleDashboardData` which now also returns `recentExpenses: RecentPoolExpense[]` (last 3, with payer name).

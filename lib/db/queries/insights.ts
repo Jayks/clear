@@ -220,14 +220,21 @@ export async function getPersonalInsightsData() {
       .where(and(inArray(expenses.paidByMemberId, myMemberIds), eq(expenses.isTemplate, false)))
       .groupBy(expenses.groupId),
 
-    // Settlements involving my member IDs
+    // Settlements involving my member IDs — confirmed only (I-1 fix).
+    // Unconfirmed self-reports must not shift the "You" tab net positions before
+    // the creditor confirms receipt. Consistent with the balances.ts sentCte/
+    // receivedCte fix (B-1) and the paymentMethodRows query below which already
+    // filtered isConfirmed=true.
     db
       .select()
       .from(settlements)
       .where(
-        or(
-          inArray(settlements.fromMemberId, myMemberIds),
-          inArray(settlements.toMemberId, myMemberIds),
+        and(
+          or(
+            inArray(settlements.fromMemberId, myMemberIds),
+            inArray(settlements.toMemberId, myMemberIds),
+          ),
+          eq(settlements.isConfirmed, true),
         )
       ),
 

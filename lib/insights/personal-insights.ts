@@ -201,7 +201,11 @@ export function computePersonalInsights(params: {
         .filter((r) => r.toMemberId === myMemberId)
         .reduce((s, r) => s + Number(r.amount), 0);
 
-      const net = Math.round((myPaidForGroup - myShareForGroup + settlReceived - settlSent) * 100) / 100;
+      // I-2 fix: sign was inverted — +received−sent is backwards.
+      // Correct formula matches balances.ts: net = paid − share + sent − received.
+      // "sent" (fromMemberId=me) = debtor payments I made → increase my net.
+      // "received" (toMemberId=me) = creditor receipts I received → reduce my net.
+      const net = Math.round((myPaidForGroup - myShareForGroup + settlSent - settlReceived) * 100) / 100;
       if (Math.abs(net) < 0.01) return null; // settled — skip
 
       return { groupId: gid, groupName: g.name, groupType: g.groupType, net };

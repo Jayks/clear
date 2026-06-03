@@ -171,11 +171,18 @@ export async function adminDeleteUser(userId: string) {
   if (error || !user) return { ok: false, error: "User not found" } as const;
   if (isPlatformAdmin(user.email)) return { ok: false, error: "Cannot delete platform admins" } as const;
 
+  // A-1 fix: delete from Auth FIRST, then clean up DB.
+  // Old order (DB then Auth): if Auth fails, groupMembers rows are permanently
+  // deleted but the user's account is still active — they can log in with no groups.
+  // New order (Auth then DB): if Auth succeeds but DB cleanup fails, the auth
+  // account is gone (user cannot log in) and the orphaned groupMembers rows are
+  // harmless since no auth session can ever be created for that userId again.
   try {
-    await db.delete(groupMembers).where(eq(groupMembers.userId, userId));
-
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteError) return { ok: false, error: "Failed to delete user from auth" } as const;
+
+    // Auth account is gone — now safe to clean up any remaining DB rows.
+    await db.delete(groupMembers).where(eq(groupMembers.userId, userId));
 
     revalidatePath("/admin/users");
     return { ok: true } as const;

@@ -11,12 +11,17 @@
  *   - `tez://` (G Pay) and `phonepe://` work on iOS if the app is installed.
  *   - QR scanning via camera always works on iOS → QR shown more prominently.
  *
- * Parent should listen for visibilitychange/focus after a button tap to detect
- * return from the UPI app — use PaymentConfirmPrompt for that flow.
+ * onTapped signature change (Phase 8+):
+ *   `onTapped(app: TappedApp)` — parent now knows which button was tapped so it
+ *   can show app-specific UTR instructions in PaymentConfirmPrompt.
+ *
+ * Parent should use useUpiReturn(upiTapped) to detect return from the UPI app
+ * and only start the PaymentConfirmPrompt countdown after the user returns.
  */
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import type { TappedApp } from "@/lib/payment/types";
 import {
   buildGPayLink,
   buildPhonePeLink,
@@ -37,17 +42,20 @@ interface Props {
   currency: string;
   /** Context name appended to "Clear · " for the transaction note */
   contextName: string;
-  /** Called after any app-picker button is tapped — use to start return-from-UPI detection */
-  onTapped?: () => void;
+  /**
+   * Called after any app-picker button is tapped.
+   * Receives the tapped app so parent can show app-specific UTR instructions.
+   */
+  onTapped?: (app: TappedApp) => void;
   /** "md" (default) = full-size for sheets; "sm" = compact for inline card surfaces */
   size?: "sm" | "md";
 }
 
-const APP_LINKS = [
-  { label: "G Pay",    buildLink: buildGPayLink    },
-  { label: "PhonePe", buildLink: buildPhonePeLink  },
-  { label: "Any UPI", buildLink: buildUpiDeepLink  },
-] as const;
+const APP_LINKS: { label: string; app: TappedApp; buildLink: typeof buildGPayLink }[] = [
+  { label: "G Pay",    app: "gpay",    buildLink: buildGPayLink    },
+  { label: "PhonePe", app: "phonepe", buildLink: buildPhonePeLink  },
+  { label: "Any UPI", app: "any_upi", buildLink: buildUpiDeepLink  },
+];
 
 export function UpiPayButton({
   vpa, amount, currency, contextName, onTapped, size = "md",
@@ -67,11 +75,11 @@ export function UpiPayButton({
 
       {/* ── App picker row ───────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-2">
-        {APP_LINKS.map(({ label, buildLink }) => (
+        {APP_LINKS.map(({ label, app, buildLink }) => (
           <a
-            key={label}
+            key={app}
             href={buildLink(vpa, amount, currency, note)}
-            onClick={() => onTapped?.()}
+            onClick={() => onTapped?.(app)}
             className={`flex items-center justify-center rounded-xl
                         bg-gradient-to-br from-cyan-500 to-teal-500 text-white
                         hover:from-cyan-600 hover:to-teal-600 transition-all

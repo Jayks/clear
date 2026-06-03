@@ -31,6 +31,8 @@ interface PaymentCallbackParams {
   paymentMethod: PaymentMethod;
   utrReference?: string;
   note?: string;
+  /** Actual amount being paid — may be less than suggestion for partial settlements */
+  amount?: number;
 }
 
 interface Props {
@@ -76,7 +78,8 @@ export function SuggestionCards({
       groupId,
       fromMemberId:  s.from,
       toMemberId:    s.to,
-      amount:        s.amount,
+      // Use edited amount if the debtor did a partial settlement
+      amount:        params.amount ?? s.amount,
       currency,
       paymentMethod: params.paymentMethod,
       utrReference:  params.utrReference,

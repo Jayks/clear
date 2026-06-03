@@ -168,7 +168,12 @@ export async function confirmSettlement(settlementId: string, groupId: string) {
 
 // ── disputeSettlement (admin OR creditor — removes the pending record) ─────────
 
-export async function disputeSettlement(settlementId: string, groupId: string) {
+export async function disputeSettlement(
+  settlementId: string,
+  groupId: string,
+  /** Human-readable reason from the 2-step inline picker in PaymentPendingBadge */
+  reason?: string,
+) {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
@@ -177,18 +182,25 @@ export async function disputeSettlement(settlementId: string, groupId: string) {
 
   const [settlement] = await db
     .select({
-      id:         settlements.id,
-      toMemberId: settlements.toMemberId,
+      id:           settlements.id,
+      toMemberId:   settlements.toMemberId,
+      fromMemberId: settlements.fromMemberId,
+      amount:       settlements.amount,
+      currency:     settlements.currency,
     })
     .from(settlements)
     .where(and(eq(settlements.id, settlementId), eq(settlements.groupId, groupId)));
 
   if (!settlement) return { ok: false, error: "Settlement not found" } as const;
 
-  const [toMember] = await db
-    .select({ userId: groupMembers.userId })
-    .from(groupMembers)
-    .where(eq(groupMembers.id, settlement.toMemberId));
+  const [[toMember], [fromMember]] = await Promise.all([
+    db.select({ userId: groupMembers.userId })
+      .from(groupMembers)
+      .where(eq(groupMembers.id, settlement.toMemberId)),
+    db.select({ userId: groupMembers.userId, displayName: groupMembers.displayName, guestName: groupMembers.guestName })
+      .from(groupMembers)
+      .where(eq(groupMembers.id, settlement.fromMemberId)),
+  ]);
 
   const isCreditor = !!toMember?.userId && toMember.userId === user.id;
   const isAdmin    = membership.role === "admin";
@@ -204,6 +216,21 @@ export async function disputeSettlement(settlementId: string, groupId: string) {
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
+
+    // Push-notify the payer about the dispute (fire-and-forget)
+    if (fromMember?.userId) {
+      const disputerName = membership.displayName ?? membership.guestName ?? "Someone";
+      const reasonSuffix = reason ? ` Reason: "${reason}".` : "";
+      const amountStr    = formatCurrency(Number(settlement.amount), settlement.currency);
+      sendPushToUser({
+        targetUserId: fromMember.userId,
+        groupId,
+        title: "⚠️ Payment disputed",
+        body:  `${disputerName} disputed your ${amountStr} payment.${reasonSuffix} Please re-check and report again.`,
+        url:   `/groups/${groupId}/settle`,
+      }).catch(() => {});
+    }
+
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to dispute settlement" } as const;

@@ -7,36 +7,47 @@
  *   debtor   — I owe money → pick payment method → self-report (is_confirmed=false)
  *   creditor — I'm owed money → request payment link → OR confirm receipt
  *
- * Method selector chips: [💸 UPI] [💵 Cash] [🏦 Bank] [💳 Other]
- * UPI pre-selected when payee has a UPI ID; Cash otherwise.
+ * Improvements in this version:
+ *   #1 — Timer bug: uses useUpiReturn so the 15s countdown only starts after
+ *        the user returns from the UPI app (not immediately on button tap).
+ *   #2 — Partial amount: debtor can edit the amount down to pay partially.
+ *        Included in onSelfReport / onMarkPaid PaymentCallbackParams.
+ *   #4 — tappedApp: passed to PaymentConfirmPrompt for app-specific UTR tips.
  *
  * Chrome: identical to StreamSettleSheet (spring, createPortal, useSheetDismiss).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2 } from "lucide-react";
-import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
-import { formatCurrency } from "@/lib/utils";
-import type { PaymentMethod, PaymentParty } from "@/lib/payment/types";
+import { X, Loader2, Pencil } from "lucide-react";
+import { useSheetDismiss }      from "@/hooks/use-sheet-dismiss";
+import { useUpiReturn }         from "@/hooks/use-upi-return";
+import { formatCurrency }       from "@/lib/utils";
+import type { PaymentMethod, PaymentParty, TappedApp } from "@/lib/payment/types";
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHOD_ICONS } from "@/lib/payment/types";
 import { UpiPayButton }          from "@/components/payment/upi-pay-button";
 import { UpiRequestButton }      from "@/components/payment/upi-request-button";
 import { PaymentConfirmPrompt }  from "@/components/payment/payment-confirm-prompt";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface PaymentContext {
   type: "trip" | "nest" | "stream" | "circle";
-  id:   string;   // groupId
-  name: string;   // group name (used as UPI transaction note)
+  id:   string;
+  name: string;
 }
 
-interface PaymentCallbackParams {
+export interface PaymentCallbackParams {
   paymentMethod:  PaymentMethod;
   utrReference?:  string;
   note?:          string;
+  /**
+   * Actual amount being paid/reported — may differ from the suggestion when
+   * the debtor edits the amount for a partial settlement.
+   * Parents should use this over the suggestion amount if provided.
+   */
+  amount?:        number;
 }
 
 interface Props {
@@ -46,33 +57,23 @@ interface Props {
   direction: "debtor" | "creditor";
   amount:    number;
   currency:  string;
-  /** The person paying (debtor) */
   payer:     PaymentParty;
-  /** The person receiving (creditor) */
   payee:     PaymentParty;
   context:   PaymentContext;
-  /**
-   * Called by the debtor after they've paid.
-   * The parent wraps `selfReportSettlement(groupId, fromMemberId, toMemberId, ...)`.
-   */
   onSelfReport: (params: PaymentCallbackParams) => Promise<void>;
-  /**
-   * Called by the creditor / admin to immediately mark as paid (is_confirmed=true).
-   * The parent wraps `recordSettlement(...)`.
-   */
-  onMarkPaid: (params: PaymentCallbackParams) => Promise<void>;
+  onMarkPaid:   (params: PaymentCallbackParams) => Promise<void>;
 }
 
-// ── Method chips config ───────────────────────────────────────────────────────
+// ── Method chips config ────────────────────────────────────────────────────────
 
 const METHODS: { value: PaymentMethod; label: string; icon: string }[] = [
-  { value: "upi",           label: "UPI",      icon: "💸" },
-  { value: "cash",          label: "Cash",      icon: "💵" },
-  { value: "bank_transfer", label: "Bank",      icon: "🏦" },
-  { value: "other",         label: "Other",     icon: "💳" },
+  { value: "upi",           label: "UPI",   icon: "💸" },
+  { value: "cash",          label: "Cash",  icon: "💵" },
+  { value: "bank_transfer", label: "Bank",  icon: "🏦" },
+  { value: "other",         label: "Other", icon: "💳" },
 ];
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Component ──────────────────────────────────────────────────────────────────
 
 export function PaymentSheet({
   isOpen, onClose, direction, amount, currency,
@@ -86,32 +87,50 @@ export function PaymentSheet({
   const [utrInput,   setUtrInput]   = useState("");
   const [noteInput,  setNoteInput]  = useState("");
   const [upiTapped,  setUpiTapped]  = useState(false);
+  const [tappedApp,  setTappedApp]  = useState<TappedApp | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Debtor name to show on the creditor side header
+  // ── #2 Partial amount (debtor only) ──────────────────────────────────────
+  const [payAmountStr, setPayAmountStr] = useState(String(amount));
+  const [editingAmount, setEditingAmount] = useState(false);
+
+  const parsedPayAmount = parseFloat(payAmountStr) || amount;
+  const isPartial       = direction === "debtor" && parsedPayAmount < amount - 0.01;
+
+  function handleAmountChange(v: string) {
+    const cleaned = v.replace(/[^0-9.]/g, "").replace(/^(\d*\.?\d*).*$/, "$1");
+    setPayAmountStr(cleaned);
+  }
+
+  // ── #1 Return-from-UPI timer (useUpiReturn) ───────────────────────────────
+  const { timerActive } = useUpiReturn(upiTapped);
+
   const payerFirst = payer.name.split(" ")[0];
   const payeeFirst = payee.name.split(" ")[0];
 
   useEffect(() => setMounted(true), []);
   useSheetDismiss(isOpen, onClose);
 
-  // Reset state on close (delayed so exit animation plays cleanly)
+  // Reset state on open/close
   useEffect(() => {
     if (isOpen) {
-      // Re-evaluate default method when sheet opens (payee may have changed)
       setMethod(payee.defaultUpiId ? "upi" : "cash");
+      setPayAmountStr(String(amount));
+      setEditingAmount(false);
     } else {
       const t = setTimeout(() => {
         setUtrInput("");
         setNoteInput("");
         setUpiTapped(false);
+        setTappedApp(undefined);
         setConfirming(false);
         setSubmitting(false);
+        setEditingAmount(false);
       }, 350);
       return () => clearTimeout(t);
     }
-  }, [isOpen, payee.defaultUpiId]);
+  }, [isOpen, payee.defaultUpiId, amount]);
 
   // iOS scroll lock
   useEffect(() => {
@@ -121,25 +140,27 @@ export function PaymentSheet({
     return () => document.removeEventListener("touchmove", prevent);
   }, [isOpen]);
 
-  // ── Return-from-UPI detection (for debtor path) ────────────────────────────
-  const timerRef    = useRef<ReturnType<typeof setTimeout>  | null>(null);
-  const tickRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const dismissPrompt = useCallback(() => {
     setUpiTapped(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (tickRef.current)  clearInterval(tickRef.current);
+    setTappedApp(undefined);
   }, []);
 
-  const handleUpiTapped = useCallback(() => {
+  // #4: called when any UPI button is tapped — records which app
+  const handleUpiTapped = useCallback((app: TappedApp) => {
+    setTappedApp(app);
     setUpiTapped(true);
   }, []);
 
-  // ── Self-report (debtor confirms they paid via UPI confirm prompt) ──────────
   async function handleSelfReportUpi(utr?: string) {
     setConfirming(true);
     try {
-      await onSelfReport({ paymentMethod: "upi", utrReference: utr || undefined });
+      await onSelfReport({
+        paymentMethod: "upi",
+        utrReference:  utr || undefined,
+        amount:        parsedPayAmount,
+      });
       dismissPrompt();
       onClose();
     } finally {
@@ -147,14 +168,14 @@ export function PaymentSheet({
     }
   }
 
-  // ── Submit for non-UPI debtor methods ─────────────────────────────────────
   async function handleDebtorSubmit() {
     setSubmitting(true);
     try {
       await onSelfReport({
         paymentMethod: method,
         utrReference:  method === "bank_transfer" ? utrInput.trim() || undefined : undefined,
-        note:          method !== "bank_transfer" ? noteInput.trim() || undefined : undefined,
+        note:          method !== "bank_transfer"  ? noteInput.trim() || undefined : undefined,
+        amount:        parsedPayAmount,
       });
       onClose();
     } finally {
@@ -162,13 +183,14 @@ export function PaymentSheet({
     }
   }
 
-  // ── Creditor confirms receipt ─────────────────────────────────────────────
   async function handleCreditorSubmit() {
     setSubmitting(true);
     try {
       await onMarkPaid({
         paymentMethod: method,
-        utrReference:  method === "upi" || method === "bank_transfer" ? utrInput.trim() || undefined : undefined,
+        utrReference:  method === "upi" || method === "bank_transfer"
+          ? utrInput.trim() || undefined
+          : undefined,
         note:          noteInput.trim() || undefined,
       });
       onClose();
@@ -243,21 +265,78 @@ export function PaymentSheet({
                     ? `You owe ${payeeFirst}`
                     : `${payerFirst} owes you`}
                 </p>
-                <p
-                  className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums"
-                  style={{ fontFamily: "var(--font-fraunces)" }}
-                >
-                  {formatCurrency(amount, currency)}
-                </p>
+
+                {/* ── #2 Debtor: tappable amount that becomes editable ── */}
+                {direction === "debtor" && !editingAmount && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingAmount(true)}
+                    className="group inline-flex items-center gap-1.5 mx-auto"
+                    title="Edit amount"
+                  >
+                    <span
+                      className="text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400"
+                      style={{ fontFamily: "var(--font-fraunces)" }}
+                    >
+                      {formatCurrency(parsedPayAmount, currency)}
+                    </span>
+                    <Pencil className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500
+                                       group-hover:text-cyan-500 dark:group-hover:text-cyan-400
+                                       transition-colors shrink-0" />
+                  </button>
+                )}
+
+                {direction === "debtor" && editingAmount && (
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <span className="text-slate-400 text-sm">₹</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      autoFocus
+                      value={payAmountStr}
+                      onChange={(e) => handleAmountChange(e.target.value)}
+                      onBlur={() => setEditingAmount(false)}
+                      className="w-32 text-center text-2xl font-bold tabular-nums
+                                 text-emerald-600 dark:text-emerald-400 bg-transparent
+                                 border-b-2 border-cyan-400 focus:outline-none"
+                      style={{ fontFamily: "var(--font-fraunces)" }}
+                    />
+                  </div>
+                )}
+
+                {/* Creditor: fixed amount, non-editable */}
+                {direction === "creditor" && (
+                  <p
+                    className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums"
+                    style={{ fontFamily: "var(--font-fraunces)" }}
+                  >
+                    {formatCurrency(amount, currency)}
+                  </p>
+                )}
+
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                   {context.name}
                 </p>
+
+                {/* Partial hint */}
+                {isPartial && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                    Partial — {formatCurrency(amount - parsedPayAmount, currency)} still remaining
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={() => setPayAmountStr(String(amount))}
+                      className="underline text-cyan-600 dark:text-cyan-400"
+                    >
+                      Pay full
+                    </button>
+                  </p>
+                )}
               </div>
 
-              {/* ── CREDITOR PATH ─────────────────────────────────────────── */}
+              {/* ── CREDITOR PATH ──────────────────────────────────────────── */}
               {direction === "creditor" && (
                 <>
-                  {/* Request payment via share */}
                   <UpiRequestButton
                     payeeUserId={payee.userId}
                     payeeName={payee.name}
@@ -268,7 +347,6 @@ export function PaymentSheet({
                     size="md"
                   />
 
-                  {/* "Already received?" divider */}
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                     <span className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
@@ -277,10 +355,7 @@ export function PaymentSheet({
                     <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                   </div>
 
-                  {/* Method chips */}
                   <MethodChips selected={method} onChange={setMethod} />
-
-                  {/* Creditor method body */}
                   <CreditorMethodBody
                     method={method}
                     payerName={payer.name}
@@ -290,7 +365,6 @@ export function PaymentSheet({
                     onNoteChange={setNoteInput}
                   />
 
-                  {/* Submit */}
                   <button
                     type="button"
                     onClick={handleCreditorSubmit}
@@ -302,27 +376,24 @@ export function PaymentSheet({
                                disabled:opacity-50 flex items-center justify-center gap-2
                                shadow-md shadow-emerald-500/20 mb-safe"
                   >
-                    {submitting ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Recording…</>
-                    ) : (
-                      "Confirm receipt ✓"
-                    )}
+                    {submitting
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Recording…</>
+                      : "Confirm receipt ✓"}
                   </button>
                 </>
               )}
 
-              {/* ── DEBTOR PATH ───────────────────────────────────────────── */}
+              {/* ── DEBTOR PATH ────────────────────────────────────────────── */}
               {direction === "debtor" && (
                 <>
-                  {/* Method chips */}
                   <MethodChips selected={method} onChange={setMethod} />
 
-                  {/* UPI path: app picker + return-from-UPI prompt */}
+                  {/* UPI + VPA available */}
                   {method === "upi" && payee.defaultUpiId && (
                     <div className="space-y-3">
                       <UpiPayButton
                         vpa={payee.defaultUpiId}
-                        amount={amount}
+                        amount={parsedPayAmount}
                         currency={currency}
                         contextName={context.name}
                         onTapped={handleUpiTapped}
@@ -330,8 +401,10 @@ export function PaymentSheet({
                       />
                       <PaymentConfirmPrompt
                         isVisible={upiTapped}
+                        timerActive={timerActive}
+                        tappedApp={tappedApp}
                         confirming={confirming}
-                        amount={amount}
+                        amount={parsedPayAmount}
                         currency={currency}
                         onConfirm={handleSelfReportUpi}
                         onDismiss={dismissPrompt}
@@ -352,7 +425,7 @@ export function PaymentSheet({
                     </div>
                   )}
 
-                  {/* Cash path */}
+                  {/* Cash */}
                   {method === "cash" && (
                     <div className="space-y-3">
                       <div className="glass rounded-xl px-4 py-3">
@@ -366,7 +439,7 @@ export function PaymentSheet({
                     </div>
                   )}
 
-                  {/* Bank transfer path */}
+                  {/* Bank transfer */}
                   {method === "bank_transfer" && (
                     <div className="space-y-3">
                       <div>
@@ -393,7 +466,7 @@ export function PaymentSheet({
                     </div>
                   )}
 
-                  {/* Other path */}
+                  {/* Other */}
                   {method === "other" && (
                     <div className="space-y-3">
                       <OptionalNoteInput
@@ -417,15 +490,11 @@ export function PaymentSheet({
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function MethodChips({
-  selected,
-  onChange,
-}: {
-  selected: PaymentMethod;
-  onChange: (m: PaymentMethod) => void;
-}) {
+  selected, onChange,
+}: { selected: PaymentMethod; onChange: (m: PaymentMethod) => void }) {
   return (
     <div className="flex gap-2">
       {METHODS.map(({ value, label, icon }) => {
@@ -452,16 +521,8 @@ function MethodChips({
 }
 
 function OptionalNoteInput({
-  value,
-  onChange,
-  label = "Note",
-  placeholder = 'e.g. "Paid via Google Pay"',
-}: {
-  value:       string;
-  onChange:    (v: string) => void;
-  label?:      string;
-  placeholder?: string;
-}) {
+  value, onChange, label = "Note", placeholder = 'e.g. "Paid via Google Pay"',
+}: { value: string; onChange: (v: string) => void; label?: string; placeholder?: string }) {
   return (
     <div>
       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
@@ -485,13 +546,7 @@ function OptionalNoteInput({
   );
 }
 
-function DebtorSubmitButton({
-  submitting,
-  onClick,
-}: {
-  submitting: boolean;
-  onClick:    () => void;
-}) {
+function DebtorSubmitButton({ submitting, onClick }: { submitting: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -504,29 +559,19 @@ function DebtorSubmitButton({
                  disabled:opacity-50 flex items-center justify-center gap-2
                  shadow-md shadow-cyan-500/20 mb-safe"
     >
-      {submitting ? (
-        <><Loader2 className="w-4 h-4 animate-spin" /> Reporting…</>
-      ) : (
-        "Report payment →"
-      )}
+      {submitting
+        ? <><Loader2 className="w-4 h-4 animate-spin" /> Reporting…</>
+        : "Report payment →"}
     </button>
   );
 }
 
 function CreditorMethodBody({
-  method,
-  payerName,
-  utrInput,
-  onUtrChange,
-  noteInput,
-  onNoteChange,
+  method, payerName, utrInput, onUtrChange, noteInput, onNoteChange,
 }: {
-  method:      PaymentMethod;
-  payerName:   string;
-  utrInput:    string;
-  onUtrChange: (v: string) => void;
-  noteInput:   string;
-  onNoteChange:(v: string) => void;
+  method: PaymentMethod; payerName: string;
+  utrInput: string; onUtrChange: (v: string) => void;
+  noteInput: string; onNoteChange: (v: string) => void;
 }) {
   const payerFirst = payerName.split(" ")[0];
 
@@ -592,13 +637,27 @@ function CreditorMethodBody({
     );
   }
 
-  // Cash / Other
   return (
-    <OptionalNoteInput
-      value={noteInput}
-      onChange={onNoteChange}
-      label={method === "cash" ? "Note" : "How was payment received?"}
-      placeholder={method === "cash" ? `e.g. "Received cash from ${payerFirst}"` : "Describe the payment"}
-    />
+    <div>
+      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
+        {method === "cash" ? "Note" : "How was payment received?"}{" "}
+        <span className="font-normal text-slate-400">(optional)</span>
+      </label>
+      <input
+        type="text"
+        value={noteInput}
+        onChange={(e) => onNoteChange(e.target.value)}
+        maxLength={200}
+        placeholder={method === "cash"
+          ? `e.g. "Received cash from ${payerFirst}"`
+          : "Describe the payment"}
+        className="w-full px-3 py-2.5 rounded-xl
+                   border border-slate-200 dark:border-slate-700
+                   bg-white/60 dark:bg-slate-800/60
+                   text-sm text-slate-800 dark:text-slate-100
+                   placeholder:text-slate-400 focus:outline-none
+                   focus:ring-2 focus:ring-cyan-400/50 transition"
+      />
+    </div>
   );
 }

@@ -24,6 +24,7 @@ import { PaymentConfirmPrompt } from "@/components/payment/payment-confirm-promp
 import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { formatCurrency } from "@/lib/utils";
+import type { TappedApp } from "@/lib/payment/types";
 
 interface Props {
   groupId:             string;
@@ -78,6 +79,7 @@ export function CircleContributeAction({
   // Return-from-UPI prompt
   const [showUpiPrompt,  setShowUpiPrompt]  = useState(false);
   const [reportingUpi,   setReportingUpi]   = useState(false);
+  const [tappedApp,      setTappedApp]      = useState<TappedApp | undefined>(undefined);
   // Goal: open amount input
   const [customAmount,   setCustomAmount]   = useState("");
   // Goal: contribute more after already paid
@@ -86,7 +88,8 @@ export function CircleContributeAction({
   const upiTappedRef = useRef(false);
 
   // Return-from-UPI: show prompt when app regains focus after UPI deep link tap.
-  // PaymentConfirmPrompt handles its own 15s timer — no timer needed here.
+  // #1: timerActive=true is passed once the page becomes visible again, so
+  // PaymentConfirmPrompt starts its 15s countdown on return (not on tap).
   useEffect(() => {
     function handleVisibility() {
       if (document.visibilityState === "visible" && upiTappedRef.current) {
@@ -327,7 +330,7 @@ export function CircleContributeAction({
                 amount={parsed}
                 currency={currency}
                 contextName={groupName}
-                onTapped={() => { upiTappedRef.current = true; }}
+                onTapped={(app) => { upiTappedRef.current = true; setTappedApp(app); }}
                 size="sm"
               />
             ) : (
@@ -349,8 +352,12 @@ export function CircleContributeAction({
         )}
 
         {/* Return-from-UPI prompt (Flexi path — uses customAmount) */}
+        {/* timerActive=true: prompt only shows after user returns (visibilitychange),
+            so countdown already starts at the right moment */}
         <PaymentConfirmPrompt
           isVisible={showUpiPrompt}
+          timerActive={true}
+          tappedApp={tappedApp}
           onConfirm={handleUpiReported}
           onDismiss={() => setShowUpiPrompt(false)}
           confirming={reportingUpi}
@@ -379,7 +386,7 @@ export function CircleContributeAction({
             amount={amount}
             currency={currency}
             contextName={groupName}
-            onTapped={() => { upiTappedRef.current = true; }}
+            onTapped={(app) => { upiTappedRef.current = true; setTappedApp(app); }}
             size="sm"
           />
           {/* Secondary: already paid off-channel */}
@@ -412,6 +419,8 @@ export function CircleContributeAction({
       {/* Return-from-UPI prompt (fixed-amount path) */}
       <PaymentConfirmPrompt
         isVisible={showUpiPrompt}
+        timerActive={true}
+        tappedApp={tappedApp}
         onConfirm={handleUpiReported}
         onDismiss={() => setShowUpiPrompt(false)}
         confirming={reportingUpi}

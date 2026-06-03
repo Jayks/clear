@@ -2,10 +2,10 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, ChevronDown, ChevronUp, ChevronRight, Ghost, Bell, Check } from "lucide-react";
+import { Search, X, ChevronDown, ChevronUp, ChevronRight, Ghost, Bell, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { RecordContributionSheet } from "./record-contribution-sheet";
-import { sendContributionReminder } from "@/app/actions/circle";
+import { sendContributionReminder, confirmContributions } from "@/app/actions/circle";
 import { formatCurrency } from "@/lib/utils";
 import type { MemberDashboardStatus, PendingMember } from "@/lib/db/queries/circle";
 import { PAYMENT_METHOD_ICONS } from "@/lib/payment/types";
@@ -61,6 +61,9 @@ export function CircleContributionRoster({
   const [isAdditional, setIsAdditional] = useState(false);
   const [pendingContrib, setPendingContrib] = useState<PendingContribution | null>(null);
   const [reminding,    setReminding]    = useState<string | null>(null); // memberId being reminded
+
+  // #5 Bulk confirm state: "idle" | "confirm-prompt" | "confirming"
+  const [confirmAllState, setConfirmAllState] = useState<"idle" | "confirm-prompt" | "confirming">("idle");
 
   const q = query.toLowerCase().trim();
 
@@ -127,6 +130,27 @@ export function CircleContributionRoster({
     router.refresh();
   }, [router]);
 
+  // #5 Bulk confirm all pending self-reports at once
+  const pendingContribIds = useMemo(
+    () => pendingMembers
+      .filter((m) => m.isPendingConfirm && !!m.unconfirmedContributionId)
+      .map((m) => m.unconfirmedContributionId!),
+    [pendingMembers],
+  );
+
+  async function handleConfirmAll() {
+    if (confirmAllState === "confirming" || pendingContribIds.length === 0) return;
+    setConfirmAllState("confirming");
+    const result = await confirmContributions({ groupId, contributionIds: pendingContribIds });
+    setConfirmAllState("idle");
+    if (result.ok) {
+      toast.success(`${pendingContribIds.length} payment${pendingContribIds.length !== 1 ? "s" : ""} confirmed ✓`);
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Failed to confirm payments");
+    }
+  }
+
   // ── Display name ────────────────────────────────────────────────────────────
   function displayName(m: MemberDashboardStatus) {
     return m.id === currentMemberId ? "You" : m.name;
@@ -136,15 +160,73 @@ export function CircleContributionRoster({
     <>
       {/* ── Awaiting confirmation banner (admin only) ─────────────────────── */}
       {isAdmin && pendingConfirmCount > 0 && (
-        <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-xl
-                        bg-cyan-50 dark:bg-cyan-900/20
-                        border border-cyan-200/60 dark:border-cyan-700/40">
-          <span className="text-base shrink-0">⏳</span>
-          <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">
-            {pendingConfirmCount === 1
-              ? "1 payment awaiting your confirmation"
-              : `${pendingConfirmCount} payments awaiting your confirmation`}
-          </p>
+        <div className="mb-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20
+                        border border-cyan-200/60 dark:border-cyan-700/40 overflow-hidden">
+
+          {/* Normal state */}
+          {confirmAllState === "idle" && (
+            <div className="flex items-center gap-2 px-3 py-2">
+              <span className="text-base shrink-0">⏳</span>
+              <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-300 flex-1">
+                {pendingConfirmCount === 1
+                  ? "1 payment awaiting your confirmation"
+                  : `${pendingConfirmCount} payments awaiting your confirmation`}
+              </p>
+              {/* Show "Confirm all" only when 2+ pending self-reports */}
+              {pendingContribIds.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmAllState("confirm-prompt")}
+                  className="shrink-0 text-[11px] font-semibold text-cyan-700 dark:text-cyan-300
+                             px-2 py-1 rounded-lg bg-cyan-100 dark:bg-cyan-800/40
+                             hover:bg-cyan-200 dark:hover:bg-cyan-700/40 transition-colors"
+                >
+                  Confirm all →
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Confirm-all prompt — inline 2-step */}
+          {(confirmAllState === "confirm-prompt" || confirmAllState === "confirming") && (
+            <div className="px-3 py-2.5 space-y-2">
+              <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+                Confirm {pendingContribIds.length} payment{pendingContribIds.length !== 1 ? "s" : ""}?
+              </p>
+              <p className="text-[11px] text-cyan-600/80 dark:text-cyan-400/70">
+                Each member will receive a confirmation notification.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmAllState("idle")}
+                  disabled={confirmAllState === "confirming"}
+                  className="flex-1 py-1.5 text-[11px] font-medium rounded-lg
+                             border border-cyan-200 dark:border-cyan-700/60
+                             text-cyan-600 dark:text-cyan-400
+                             hover:bg-cyan-100/60 dark:hover:bg-cyan-800/30
+                             transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmAll}
+                  disabled={confirmAllState === "confirming"}
+                  className="flex-1 py-1.5 text-[11px] font-semibold rounded-lg
+                             bg-gradient-to-br from-emerald-500 to-teal-500
+                             hover:from-emerald-600 hover:to-teal-600
+                             text-white transition-all disabled:opacity-60
+                             flex items-center justify-center gap-1.5"
+                >
+                  {confirmAllState === "confirming"
+                    ? <><Loader2 className="w-3 h-3 animate-spin" /> Confirming…</>
+                    : `Yes, confirm all ✓`}
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 

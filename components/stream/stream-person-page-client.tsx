@@ -198,8 +198,8 @@ export function StreamPersonPageClient({
     router.refresh();
   }
 
-  async function handleDisputeSettlement(settlementId: string) {
-    const r = await disputeStreamSettle(settlementId);
+  async function handleDisputeSettlement(settlementId: string, reason: string) {
+    const r = await disputeStreamSettle(settlementId, reason);
     if (!r.ok) {
       toast.error("error" in r ? r.error : "Failed to dispute");
       return;

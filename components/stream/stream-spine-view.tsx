@@ -126,7 +126,8 @@ interface SpineCardProps {
   currentUserName?:          string;
   side?:                     "left" | "right";
   onConfirmSettlement?:      (id: string) => Promise<void>;
-  onDisputeSettlement?:      (id: string) => Promise<void>;
+  /** Receives settlement ID + dispute reason from the inline picker */
+  onDisputeSettlement?:      (id: string, reason: string) => Promise<void>;
 }
 
 function SpineCard({
@@ -254,11 +255,11 @@ function SpineCard({
     } finally { setConfirming(false); }
   }
 
-  async function handleDispute() {
+  async function handleDispute(reason: string) {
     if (!pendingSettlement || !onDisputeSettlement) return;
     setDisputing(true);
     try {
-      await onDisputeSettlement(pendingSettlement.id);
+      await onDisputeSettlement(pendingSettlement.id, reason);
     } finally { setDisputing(false); }
   }
 
@@ -492,7 +493,7 @@ function MobileSpine({ records, runningNets, currentUserName, onConfirmSettlemen
   runningNets:            number[];
   currentUserName?:       string;
   onConfirmSettlement?:   (id: string) => Promise<void>;
-  onDisputeSettlement?:   (id: string) => Promise<void>;
+  onDisputeSettlement?:   (id: string, reason: string) => Promise<void>;
 }) {
   return (
     <div className="relative w-full overflow-hidden">
@@ -551,7 +552,7 @@ function DesktopSpine({ records, runningNets, currentUserName, onConfirmSettleme
   runningNets:          number[];
   currentUserName?:     string;
   onConfirmSettlement?: (id: string) => Promise<void>;
-  onDisputeSettlement?: (id: string) => Promise<void>;
+  onDisputeSettlement?: (id: string, reason: string) => Promise<void>;
 }) {
   return (
     <div className="relative w-full">
@@ -630,7 +631,7 @@ export function StreamSpineView({
   records:              EnrichedStreamRecord[];
   currentUserName?:     string;
   onConfirmSettlement?: (id: string) => Promise<void>;
-  onDisputeSettlement?: (id: string) => Promise<void>;
+  onDisputeSettlement?: (id: string, reason: string) => Promise<void>;
   /** Settlement ID from ?confirm= push-notification deep link — auto-scrolls to the pending badge */
   confirmId?:           string;
 }) {

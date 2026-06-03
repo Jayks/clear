@@ -837,7 +837,11 @@ export async function confirmStreamSettle(settlementId: string) {
  * Creditor disputes the debtor's self-reported payment (deletes the record).
  * Same permission check as confirmStreamSettle.
  */
-export async function disputeStreamSettle(settlementId: string) {
+export async function disputeStreamSettle(
+  settlementId: string,
+  /** Human-readable reason from the 2-step inline picker in PaymentPendingBadge */
+  reason?: string,
+) {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
 
@@ -875,12 +879,13 @@ export async function disputeStreamSettle(settlementId: string) {
       .delete(streamSettlements)
       .where(eq(streamSettlements.id, settlementId));
 
-    // Notify debtor: payment was disputed
-    const userName  = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
-    const amountStr = formatCurrency(Number(settlement.amount), settlement.currency);
+    // Notify debtor: payment was disputed (include reason if provided)
+    const userName     = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
+    const amountStr    = formatCurrency(Number(settlement.amount), settlement.currency);
+    const reasonSuffix = reason ? ` Reason: "${reason}".` : "";
     sendStreamPush(debtorId, {
       title: "⚠️ Payment disputed",
-      body:  `${userName} disputed the ${amountStr} payment. Please follow up.`,
+      body:  `${userName} disputed the ${amountStr} payment.${reasonSuffix} Please re-check and try again.`,
       url:   `/stream/${user.id}`,
     }).catch(() => {});
 

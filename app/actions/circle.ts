@@ -298,6 +298,8 @@ export async function disputeContribution(
   contributionId: string,
   groupId: string,
   memberUserId: string | null,
+  /** Human-readable reason from the 2-step inline picker in PaymentPendingBadge */
+  reason?: string,
 ) {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
@@ -341,13 +343,14 @@ export async function disputeContribution(
         ? new Date(contrib.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
         : null;
       const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+      const reasonSuffix = reason ? ` Reason: "${reason}".` : "";
       sendPushToUser({
         targetUserId: memberUserId,
         groupId,
         title:        `Payment not confirmed — ${groupRow?.name ?? "Circle"}`,
         body:         periodLabel
-          ? `Your ${periodLabel} payment wasn't confirmed. Please check your UPI app and try again.`
-          : "Your payment wasn't confirmed. Please check your UPI app and try again.",
+          ? `Your ${periodLabel} payment wasn't confirmed.${reasonSuffix} Please check and try again.`
+          : `Your payment wasn't confirmed.${reasonSuffix} Please check and try again.`,
         url: `/groups/${groupId}`,
       }).catch(() => {});
     }

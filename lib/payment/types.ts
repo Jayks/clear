@@ -7,6 +7,12 @@
 export type PaymentMethod = "upi" | "cash" | "bank_transfer" | "other";
 
 /**
+ * Which UPI app button was tapped — used to show app-specific UTR instructions
+ * in PaymentConfirmPrompt after the user returns from the UPI app.
+ */
+export type TappedApp = "gpay" | "phonepe" | "any_upi";
+
+/**
  * Direction from the VIEWER's perspective:
  *   debtor   = viewer owes money → sees Pay (UpiPayButton)
  *   creditor = viewer is owed money → sees Request (UpiRequestButton)

@@ -5,6 +5,8 @@ import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { settlements } from "@/lib/db/schema/settlements";
+import { streamSettlements } from "@/lib/db/schema/stream-settlements";
+import { circleContributions } from "@/lib/db/schema/circle-contributions";
 import { eq, sum, count, inArray, and, sql, ne, isNotNull, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { computeAllTripsInsights } from "@/lib/insights/all-trips-insights";
@@ -190,7 +192,7 @@ export async function getPersonalInsightsData() {
   const myMemberIds = myMemberRows.map((r) => r.memberId);
   const myGroupIds = myMemberRows.map((r) => r.groupId);
 
-  const [splitRows, paidRows, settRows, groupRows, companionRows] = await Promise.all([
+  const [splitRows, paidRows, settRows, groupRows, companionRows, paymentMethodRows] = await Promise.all([
     // My expense splits with full context
     db
       .select({
@@ -256,6 +258,79 @@ export async function getPersonalInsightsData() {
           ne(groupMembers.userId, user.id),
         )
       ),
+
+    // Payment method stats — union across trips/nests (fromMember), streams (recordedBy), circles (memberId)
+    // Aggregated in JS to avoid a complex SQL UNION — volumes are small enough.
+    (async (): Promise<{ paymentMethod: string; total: string | null; cnt: string | null }[]> => {
+      const [tripNestRows, streamRows, circleRows] = await Promise.all([
+        // Trip/nest settlements where I was the payer
+        db
+          .select({
+            paymentMethod: settlements.paymentMethod,
+            total: sum(settlements.amount).as("total"),
+            cnt:   count(settlements.id).as("cnt"),
+          })
+          .from(settlements)
+          .where(
+            and(
+              inArray(settlements.fromMemberId, myMemberIds),
+              sql`${settlements.isConfirmed} = true`,
+              isNotNull(settlements.paymentMethod),
+            )
+          )
+          .groupBy(settlements.paymentMethod),
+
+        // Stream settlements I recorded (I was the payer)
+        db
+          .select({
+            paymentMethod: streamSettlements.paymentMethod,
+            total: sum(streamSettlements.amount).as("total"),
+            cnt:   count(streamSettlements.id).as("cnt"),
+          })
+          .from(streamSettlements)
+          .where(
+            and(
+              eq(streamSettlements.recordedBy, user.id),
+              isNotNull(streamSettlements.paymentMethod),
+            )
+          )
+          .groupBy(streamSettlements.paymentMethod),
+
+        // Circle contributions I made (confirmed)
+        db
+          .select({
+            paymentMethod: circleContributions.paymentMethod,
+            total: sum(circleContributions.amount).as("total"),
+            cnt:   count(circleContributions.id).as("cnt"),
+          })
+          .from(circleContributions)
+          .where(
+            and(
+              inArray(circleContributions.memberId, myMemberIds),
+              sql`${circleContributions.isConfirmed} = true`,
+              isNotNull(circleContributions.paymentMethod),
+            )
+          )
+          .groupBy(circleContributions.paymentMethod),
+      ]);
+
+      // Aggregate by paymentMethod across all three contexts
+      const totals = new Map<string, { total: number; cnt: number }>();
+      for (const row of [...tripNestRows, ...streamRows, ...circleRows]) {
+        if (!row.paymentMethod) continue;
+        const existing = totals.get(row.paymentMethod) ?? { total: 0, cnt: 0 };
+        totals.set(row.paymentMethod, {
+          total: existing.total + Number(row.total ?? 0),
+          cnt:   existing.cnt   + Number(row.cnt   ?? 0),
+        });
+      }
+
+      return [...totals.entries()].map(([paymentMethod, { total, cnt }]) => ({
+        paymentMethod,
+        total: String(total),
+        cnt:   String(cnt),
+      }));
+    })(),
   ]);
 
   return computePersonalInsights({
@@ -279,5 +354,6 @@ export async function getPersonalInsightsData() {
       groupId: r.groupId,
     })),
     myMemberRows,
+    paymentMethodRows,
   });
 }

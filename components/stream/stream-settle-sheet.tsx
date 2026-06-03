@@ -15,8 +15,9 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useUpiReturn }    from "@/hooks/use-upi-return";
 import { formatCurrency } from "@/lib/utils";
-import type { PaymentMethod } from "@/lib/payment/types";
+import type { PaymentMethod, TappedApp } from "@/lib/payment/types";
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHOD_ICONS } from "@/lib/payment/types";
 import { UpiPayButton }         from "@/components/payment/upi-pay-button";
 import { UpiRequestButton }     from "@/components/payment/upi-request-button";
@@ -87,8 +88,12 @@ export function StreamSettleSheet({
   const [utrInput,   setUtrInput]   = useState("");
   const [noteInput,  setNoteInput]  = useState("");
   const [upiTapped,  setUpiTapped]  = useState(false);
+  const [tappedApp,  setTappedApp]  = useState<TappedApp | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // #1 Timer bug fix: start countdown only after user returns from UPI app
+  const { timerActive } = useUpiReturn(upiTapped);
 
   const absNet    = Math.abs(net);
   const isCreditor = net > 0;      // they owe me
@@ -108,6 +113,7 @@ export function StreamSettleSheet({
         setUtrInput("");
         setNoteInput("");
         setUpiTapped(false);
+        setTappedApp(undefined);
         setConfirming(false);
         setSubmitting(false);
       }, 350);
@@ -138,11 +144,16 @@ export function StreamSettleSheet({
 
   const dismissPrompt = useCallback(() => {
     setUpiTapped(false);
+    setTappedApp(undefined);
     if (timerRef.current) clearTimeout(timerRef.current);
     if (tickRef.current)  clearInterval(tickRef.current);
   }, []);
 
-  const handleUpiTapped = useCallback(() => setUpiTapped(true), []);
+  // #4: receive which app was tapped for app-specific UTR tips
+  const handleUpiTapped = useCallback((app: TappedApp) => {
+    setTappedApp(app);
+    setUpiTapped(true);
+  }, []);
 
   // Whether this is a guest counterpart (no Clear account — can't confirm payments)
   const isGuestCounterpart = !counterpartUserId;
@@ -385,6 +396,8 @@ export function StreamSettleSheet({
                       />
                       <PaymentConfirmPrompt
                         isVisible={upiTapped}
+                        timerActive={timerActive}
+                        tappedApp={tappedApp}
                         confirming={confirming}
                         amount={parsedAmount}
                         currency={currency}

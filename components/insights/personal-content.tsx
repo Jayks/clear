@@ -9,6 +9,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { CategoryDonut } from "@/components/insights/category-donut";
+import { PaymentMethodCard } from "@/components/insights/payment-method-card";
 import { FadeIn } from "@/components/shared/fade-in";
 import { AnimatedList } from "@/components/shared/animated-list";
 import type { PersonalInsights } from "@/lib/insights/personal-insights";
@@ -298,6 +299,17 @@ export function PersonalContent({ data, streamSummary }: Props) {
           <GroupShareBars data={data.byGroup} fmt={fmt} />
         </div>
       </FadeIn>
+
+      {/* ── Zone 5: How you settle up (payment method breakdown) ───────── */}
+      {data.paymentMethodStats.length > 0 && (
+        <FadeIn className="mb-8">
+          <SectionHeader icon={Wallet} label="How you settle up" />
+          <PaymentMethodCard
+            stats={data.paymentMethodStats}
+            currency={data.currency}
+          />
+        </FadeIn>
+      )}
     </div>
   );
 }

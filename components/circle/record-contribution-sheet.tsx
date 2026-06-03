@@ -91,13 +91,14 @@ export function RecordContributionSheet({
   }
 
   // ── Admin: dispute (delete) self-reported payment ─────────────────────────
-  async function handleDispute() {
+  async function handleDispute(reason: string) {
     if (!pendingContribution || disputing || confirming) return;
     setDisputing(true);
     const result = await disputeContribution(
       pendingContribution.contributionId,
       groupId,
       pendingContribution.memberUserId,
+      reason,
     );
     setDisputing(false);
     if (result.ok) {

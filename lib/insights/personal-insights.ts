@@ -56,6 +56,9 @@ export interface PersonalInsights {
 
   // ONE triggered insight (most interesting fact right now)
   triggeredInsight: { text: string; icon: string } | null;
+
+  // Payment method breakdown across confirmed trip/nest/stream/circle settlements
+  paymentMethodStats: { method: string; total: number; count: number }[];
 }
 
 // ── Raw data shape from DB query ──────────────────────────────────────────
@@ -98,6 +101,13 @@ export interface MyMemberRow {
 
 // ── Pure compute ──────────────────────────────────────────────────────────
 
+/** Raw payment method row from DB aggregation */
+export interface PaymentMethodRow {
+  paymentMethod: string;
+  total: string | null;
+  cnt: string | null;
+}
+
 export function computePersonalInsights(params: {
   splitRows: PersonalSplitRow[];
   paidRows: PersonalPaidRow[];
@@ -105,8 +115,9 @@ export function computePersonalInsights(params: {
   groupRows: PersonalGroupRow[];
   companionRows: PersonalCompanionRow[];
   myMemberRows: MyMemberRow[];
+  paymentMethodRows?: PaymentMethodRow[];
 }): PersonalInsights | null {
-  const { splitRows, paidRows, settRows, groupRows, companionRows, myMemberRows } = params;
+  const { splitRows, paidRows, settRows, groupRows, companionRows, myMemberRows, paymentMethodRows = [] } = params;
 
   if (splitRows.length === 0 && paidRows.length === 0) return null;
 
@@ -426,5 +437,14 @@ export function computePersonalInsights(params: {
     openingSentence,
     openingSub,
     triggeredInsight,
+    // Aggregate payment method stats from DB rows (may be empty for users with no UPI history)
+    paymentMethodStats: paymentMethodRows
+      .filter((r) => r.paymentMethod && Number(r.total) > 0)
+      .map((r) => ({
+        method: r.paymentMethod,
+        total:  Math.round(Number(r.total) * 100) / 100,
+        count:  Number(r.cnt ?? 0),
+      }))
+      .sort((a, b) => b.total - a.total),
   };
 }

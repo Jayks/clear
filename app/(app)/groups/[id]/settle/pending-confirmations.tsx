@@ -60,10 +60,10 @@ export function PendingConfirmations({ pending, groupId, currentUserId, isAdmin,
     }
   }
 
-  async function handleDispute(id: string, payerName: string) {
+  async function handleDispute(id: string, payerName: string, reason: string) {
     setDisputingId(id);
     try {
-      const result = await disputeSettlement(id, groupId);
+      const result = await disputeSettlement(id, groupId, reason);
       if (!result.ok) { toast.error(result.error); return; }
       toast.success(`Payment from ${payerName.split(" ")[0]} disputed — record removed.`);
       router.refresh();
@@ -124,7 +124,7 @@ export function PendingConfirmations({ pending, groupId, currentUserId, isAdmin,
                 confirming={confirmingId === p.id}
                 disputing={disputingId === p.id}
                 onConfirm={() => handleConfirm(p.id)}
-                onDispute={() => handleDispute(p.id, p.fromMemberName)}
+                onDispute={(reason) => handleDispute(p.id, p.fromMemberName, reason)}
               />
             </div>
           );

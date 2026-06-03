@@ -45,17 +45,22 @@ async function _computeBalances(groupId: string, defaultCurrency: string) {
       .groupBy(expenseSplits.memberId)
   );
 
+  // B-1 fix: only CONFIRMED settlements count toward balances.
+  // An unconfirmed self-report (isConfirmed=false) is not a payment until the
+  // creditor confirms receipt.  Including pending settlements here would
+  // prematurely reduce the debtor's net and create a jarring "snap-back" if
+  // the creditor disputes.
   const sentCte = db.$with('sent').as(
     db.select({ memberId: settlements.fromMemberId, sentTotal: sum(settlements.amount).as('sent_total') })
       .from(settlements)
-      .where(eq(settlements.groupId, groupId))
+      .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true)))
       .groupBy(settlements.fromMemberId)
   );
 
   const receivedCte = db.$with('received').as(
     db.select({ memberId: settlements.toMemberId, receivedTotal: sum(settlements.amount).as('received_total') })
       .from(settlements)
-      .where(eq(settlements.groupId, groupId))
+      .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true)))
       .groupBy(settlements.toMemberId)
   );
 

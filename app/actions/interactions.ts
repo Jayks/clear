@@ -155,8 +155,12 @@ export async function addReaction(
     if (existing.emoji === emoji) {
       // Toggle off — same emoji tapped again
       await db.delete(expenseReactions).where(eq(expenseReactions.id, existing.id));
+    } else if (existing.emoji === "question" || existing.emoji === "dispute") {
+      // B-2 fix: never silently replace a pending question/dispute reaction via the
+      // passive thumbs_up toggle.  The user must cancel via cancelMyDispute() first.
+      return { ok: false, error: "Cancel your pending dispute or question before reacting" } as const;
     } else {
-      // Switch to new emoji
+      // Replace passive "seen" with an active reaction
       await db.update(expenseReactions).set({ emoji }).where(eq(expenseReactions.id, existing.id));
     }
   } else {

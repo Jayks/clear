@@ -81,10 +81,16 @@ export async function logStream(input: LogStreamInput) {
     if (counterpartId) {
       const amountStr  = formatCurrency(amount, currency);
       const noteClause = note ? ` for ${note}` : "";
+      // B-5 fix: direction-aware body.
+      //   they_owe_me = creator paid; counterpart owes creator → "you owe"
+      //   i_owe_them  = counterpart paid; creator owes counterpart → "they owe you"
+      const body = direction === "they_owe_me"
+        ? `says you owe ${amountStr}${noteClause}`
+        : `says they owe you ${amountStr}${noteClause}`;
       // Fire-and-forget — don't let notification failure block the action
       sendStreamPush(counterpartId, {
         title: user.user_metadata?.full_name ?? "Someone",
-        body:  `says you owe ${amountStr}${noteClause}`,
+        body,
         url:   `/stream/confirm/${record.confirmToken}`,
       }).catch(() => {});
     }

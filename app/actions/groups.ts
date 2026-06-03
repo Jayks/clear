@@ -23,24 +23,30 @@ export async function createGroup(input: CreateGroupInput) {
     if (!(await canCreateGroup(user.id)))
       return { ok: false, error: "Free plan allows up to 4 active groups. Upgrade to Clear Plus for unlimited groups." } as const;
 
-    const [group] = await db.insert(groups).values({
-      name,
-      description: description || null,
-      coverPhotoUrl: coverPhotoUrl || null,
-      defaultCurrency,
-      groupType,
-      startDate: startDate || null,
-      endDate: endDate || null,
-      budget: budget != null ? String(budget) : null,
-      itinerary: itinerary || null,
-      createdBy: user.id,
-    }).returning();
+    // B-3 fix: wrap both inserts in a transaction so a failed groupMembers insert
+    // can't leave behind a group with no admin that is inaccessible and occupies a plan slot.
+    const group = await db.transaction(async (tx) => {
+      const [g] = await tx.insert(groups).values({
+        name,
+        description: description || null,
+        coverPhotoUrl: coverPhotoUrl || null,
+        defaultCurrency,
+        groupType,
+        startDate: startDate || null,
+        endDate: endDate || null,
+        budget: budget != null ? String(budget) : null,
+        itinerary: itinerary || null,
+        createdBy: user.id,
+      }).returning();
 
-    await db.insert(groupMembers).values({
-      groupId: group.id,
-      userId: user.id,
-      displayName: extractDisplayName(user),
-      role: "admin",
+      await tx.insert(groupMembers).values({
+        groupId: g.id,
+        userId: user.id,
+        displayName: extractDisplayName(user),
+        role: "admin",
+      });
+
+      return g;
     });
 
     revalidatePath("/groups");

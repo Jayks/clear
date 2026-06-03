@@ -350,20 +350,7 @@ Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.i
 Props added: `inviteUrl: string`, `groupName: string`.
 
 ### TripTimeline — rich day-by-day summary timeline
-`components/trip/trip-timeline.tsx` — `"use client"` component used on the public summary page (`/summary/[token]`).
-
-Data shape: `{ days: DayGroup[], startDate, endDate, currency }` where `DayGroup = { date, entries: { description, category, amount, payerName }[], dayTotal }`.
-
-Each `DayCard` (inner sub-component) renders on scroll via `useInView`:
-- Animated connector thread between cards
-- Card with dominant-category hex tint at 7% opacity
-- Header row: node dot · Day X/Y badge · formatted date · count-up day total
-- Payer chips row: unique payers √-scaled by spend share (area ∝ amount); colors from `PAYER_COLORS` by index; tooltip shows name + amount
-- Stacked category bar (center-expand, visual-only — no click handler on summary page)
-- 🔥 busiest day / "light day" intensity captions
-- Always-expanded expense rows (stagger-animate in after card enters view)
-
-No accordion — summary page is a showcase; all expense rows are always visible. `PAYER_COLORS` is a local constant (same palette as expense-filters' `MEMBER_AVATAR_COLORS`). `isBusiest` guard: only true when `spendPct === 100 && !isOff`.
+`components/trip/trip-timeline.tsx` — `"use client"`, used on `/summary/[token]`. Data: `{ days: DayGroup[], startDate, endDate, currency }`. Each `DayCard` renders on scroll (`useInView`): animated connector, dominant-category hex tint, Day X/Y badge, count-up total, payer chips (√-scaled by spend), stacked category bar, always-expanded expense rows. No accordion — summary is a showcase. `PAYER_COLORS` local constant; `isBusiest` only when `spendPct === 100 && !isOff`.
 
 ### SectionPillNav
 `components/shared/section-pill-nav.tsx` — `"use client"` sticky pill nav for the Home page. Accepts `sections: NavSection[]` (id, label, count, color) + optional `createPills: CreatePill[]` (dashed pills linking to create pages for missing group types).
@@ -423,40 +410,12 @@ Sheet: trip name (required), optional start/end dates, member pills (pre-selecte
 Gated by `sessionStorage.getItem(`clear_settled_confetti_${groupId}`)` — writes `"1"` immediately on mount to prevent re-fire. Auto-removes after 2.5 s. Pieces: mix of 6×14 rectangles and 10×10 squares in Clear's brand palette, burst from `mt-[38vh]` to roughly align with the checkmark icon. `pointer-events-none` so it never blocks interactions.
 
 ### DebtFlowGraph
-`components/settlement/debt-flow-graph.tsx` — `"use client"` pure-SVG debt-flow visualisation on the Settle Up page.
+`components/settlement/debt-flow-graph.tsx` — `"use client"` pure-SVG debt-flow on Settle Up page. Root: `glass rounded-2xl overflow-hidden mb-6`. Nodes draggable via pointer events; `hasDragged` ref suppresses particles while dragging. Node size ∝ `|net|` (r 22–32), `AVATAR_COLORS` palette. Arcs: quadratic bezier + `userSpaceOnUse` gradient + Framer Motion `pathLength 0→1`. SMIL particles via `React.createElement("animateMotion")` — see CLAUDE.md gotcha.
 
-**Card container**: root element is `<div className="glass rounded-2xl overflow-hidden mb-6 relative">` — matches the visual language of every other card on the settle page. The SVG sits flush (no horizontal padding); the info bar below has a `<div className="px-3 pb-3">` wrapper for internal spacing.
-
-**Layout**: nodes placed via force-relaxed positions, draggable via pointer events (`onPointerDown` + `onPointerMove`). `hasDragged` ref suppresses particles while dragging to keep rendering smooth.
-
-**Node gradients**: exact `AVATAR_COLORS` palette (8 radial gradients matching `MemberAvatar`). Creditor nodes get a soft halo ring. Node size scales with `Math.abs(net)` (clamped: min `r=22`, max `r=32`).
-
-**Arc rendering**: quadratic bezier `M x1 y1 Q cpx cpy x2 y2`. Control point: midpoint offset by `curvature * len` in the left-normal direction. `userSpaceOnUse` linear gradients from debtor → creditor colour. Framer Motion `pathLength 0→1` draw-in on mount.
-
-**Flow particles**: two SMIL `animateMotion` particles per arc (180° out of phase, `PARTICLE_DUR=1.8s`). Fill is a *lighter tint* of the arc colour so particles are visible on top of the stroke (`#FEF08A` amber-200 for outgoing, `#6EE7B7` emerald-200 for incoming, `#E2E8F0` slate-200 for third-party). Use `React.createElement("animateMotion", {...})` — see CLAUDE.md gotcha.
-
-**Mobile scroll — `touchAction: "pan-y"`**: The SVG uses `touchAction: "pan-y"` (not `"none"`) so vertical page scroll passes through on mobile. Node drag still works for horizontal and diagonal gestures. Do NOT revert to `"none"` — that blocks all touch scrolling within the graph area.
-
-**Selection**: `selectedArc: number | null` + `selectedId: string | null`. Mutually exclusive — selecting an arc clears `selectedId`, selecting a node clears `selectedArc`. SVG background click clears both.
-
-**Arc tap → payment scroll**: `handleArcClick(i)` calls `document.getElementById("suggestion-${i}")` → `scrollIntoView({ behavior:"smooth", block:"center" })` + 480ms-delayed cyan `box-shadow` flash (12s transition in, 0.55s out). `balances-section.tsx` must set `id={`suggestion-${i}`}` on each suggestion card div.
-
-**3-state info bar** (below graph, inside the `px-3 pb-3` wrapper): arc selected → payment summary + "Settle ↓" button; node selected → member net balance + "View" link; default → hint text.
-
-**Rules of Hooks**: the `if (members.length === 0) return null` early exit is placed BEFORE all hook calls — required because the component has many hooks.
+**Critical:** SVG uses `touchAction: "pan-y"` — do NOT revert to `"none"` (blocks mobile scroll). Arc tap → `document.getElementById("suggestion-${i}")` scroll + flash; `balances-section.tsx` must set `id="suggestion-${i}"` on each card. `selectedArc`/`selectedId` are mutually exclusive. `if (members.length === 0) return null` must come BEFORE all hook calls.
 
 ### SettleFlowDemo
-`components/marketing/settle-flow-demo.tsx` — `"use client"` static animated debt-flow showcase. No DB dependency — all data hardcoded (Goa 2025 trip, 5 members, 3 transfers).
-
-Shares the same `AVATAR_COLORS`, arc math (`quadPath`/`quadMid`), and SMIL particle pattern as `DebtFlowGraph`. Key difference: no drag, no selection — pure animation showcase.
-
-**Used in two places:**
-1. **`/about` page** — rendered standalone as a glass card (`max-w-[340px]`)
-2. **`CarouselLanding` Debt Flow slide (slide 3)** — rendered inside `PhoneFrame` beneath a dark `AppBar`. The `width="100%"` SVG scales to ~270px. The `drawn` state fires 420ms after mount; since all carousel slides mount simultaneously, the animation plays shortly after page load.
-
-**Node animation fix**: uses separate outer `<g transform="translate(x,y)">` for positioning + inner `motion.g style={{ transformOrigin:"0px 0px" }}` for scale/opacity spring. See CLAUDE.md SVG+Framer Motion gotcha.
-
-`gradientUnits="userSpaceOnUse"` on all arc linearGradients with explicit `x1/y1/x2/y2` coordinates.
+`components/marketing/settle-flow-demo.tsx` — static version of `DebtFlowGraph` (same arc math, SMIL particles, `AVATAR_COLORS`; no drag/selection; hardcoded data). Used on `/about` page and inside `CarouselLanding` slide 3 (`PhoneFrame` + dark `AppBar`). Same SVG+Framer Motion two-wrapper fix applies.
 
 ### QuickAddSheet — portal + `isOpen` prop pattern
 Manages its own `createPortal` and `AnimatePresence` internally. Always pass `isOpen` boolean — never conditionally render from parent, never wrap in external `AnimatePresence`. The backdrop and sheet are direct `AnimatePresence` children (not in a Fragment). Members lazy-fetched on first `isOpen=true` via `fetchedRef`.

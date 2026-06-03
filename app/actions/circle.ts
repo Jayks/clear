@@ -187,61 +187,70 @@ export async function selfReportContribution(input: {
   if (!membership)
     return { ok: false, error: "Not a member of this circle" } as const;
 
+  // Admins are trusted — their own self-reports are auto-confirmed.
+  // Non-admin self-reports are unconfirmed until an admin reviews them.
+  const isAdmin = membership.role === "admin";
+
   try {
-    // C-9 fix: for recurring mode, check if a CONFIRMED contribution already
-    // exists for this member + period before checking for a pending one.
-    // The old guard (isConfirmed=false only) missed the case where the admin
-    // already recorded/confirmed via recordContribution, which let the member
-    // submit a self-report that created a spurious pending row for an already-
-    // paid member.  One-time mode (period=null) allows multiple contributions
-    // from the same member, so the guard is skipped there intentionally.
-    if (input.period) {
-      const [alreadyConfirmed] = await db
+    // C-3 fix: wrap BOTH duplicate-guard SELECTs and the INSERT in a single
+    // transaction so they are atomic.  Previously the two checks ran outside any
+    // transaction, creating a race where:
+    //   (a) two concurrent self-reports both saw no existing row and both inserted
+    //       → duplicate unconfirmed rows for the same member+period.
+    //   (b) an admin's recordContribution() could execute between the two checks
+    //       → member inserted a pending row that already had a confirmed counterpart.
+    // C-9 fix (preserved): confirmed-check comes first so the confirmed case is
+    // handled even under concurrent load.
+    const insertResult = await db.transaction(async (tx) => {
+      // Step 1: confirmed check (recurring mode only — one-time allows multiples)
+      if (input.period) {
+        const [alreadyConfirmed] = await tx
+          .select({ id: circleContributions.id })
+          .from(circleContributions)
+          .where(
+            and(
+              eq(circleContributions.groupId, input.groupId),
+              eq(circleContributions.memberId, membership.id),
+              eq(circleContributions.isConfirmed, true),
+              eq(circleContributions.period, input.period),
+            )
+          )
+          .limit(1);
+        if (alreadyConfirmed) return "already_confirmed" as const;
+      }
+
+      // Step 2: pending-check (prevent duplicate unconfirmed rows)
+      const [existing] = await tx
         .select({ id: circleContributions.id })
         .from(circleContributions)
         .where(
           and(
             eq(circleContributions.groupId, input.groupId),
             eq(circleContributions.memberId, membership.id),
-            eq(circleContributions.isConfirmed, true),
-            eq(circleContributions.period, input.period),
+            eq(circleContributions.isConfirmed, false),
+            ...(input.period ? [eq(circleContributions.period, input.period)] : []),
           )
         )
         .limit(1);
-      if (alreadyConfirmed) return { ok: true } as const; // already paid for this period
-    }
+      if (existing) return "already_pending" as const;
 
-    // Check if member already has an unconfirmed self-report for this period
-    // to prevent duplicates
-    const existing = await db
-      .select({ id: circleContributions.id })
-      .from(circleContributions)
-      .where(
-        and(
-          eq(circleContributions.groupId, input.groupId),
-          eq(circleContributions.memberId, membership.id),
-          eq(circleContributions.isConfirmed, false),
-          ...(input.period ? [eq(circleContributions.period, input.period)] : []),
-        )
-      );
-    if (existing.length > 0) return { ok: true } as const; // already pending
-
-    // Admins are trusted — their own self-reports are auto-confirmed.
-    // Non-admin self-reports are unconfirmed until an admin reviews them.
-    const isAdmin = membership.role === "admin";
-
-    await db.insert(circleContributions).values({
-      groupId:       input.groupId,
-      memberId:      membership.id,
-      amount:        String(input.amount),
-      currency:      input.currency,
-      period:        input.period,
-      recordedBy:    user.id,
-      isConfirmed:   isAdmin,  // admins auto-confirm; members await admin review
-      note:          null,
-      paymentMethod: input.paymentMethod ?? null,
-      utrReference:  input.utrReference ?? null,
+      // Step 3: insert
+      await tx.insert(circleContributions).values({
+        groupId:       input.groupId,
+        memberId:      membership.id,
+        amount:        String(input.amount),
+        currency:      input.currency,
+        period:        input.period,
+        recordedBy:    user.id,
+        isConfirmed:   isAdmin,  // admins auto-confirm; members await admin review
+        note:          null,
+        paymentMethod: input.paymentMethod ?? null,
+        utrReference:  input.utrReference ?? null,
+      });
+      return "inserted" as const;
     });
+
+    if (insertResult !== "inserted") return { ok: true } as const; // already handled
 
     revalidatePath("/groups");
     // B-6 fix: use "layout" variant so Suspense subtrees (CircleCardServer) on the
@@ -629,60 +638,72 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
   if (!(await canAddExpense(groupId)))
     return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
 
-  // Guard: "From wallet" expenses cannot exceed the available pool balance.
-  // "I paid from my pocket" (isAdvance=true) is always allowed — the admin
-  // is personally advancing funds and will be reimbursed from future contributions
-  // (Bug C-3 fix).
-  if (!isAdvance) {
-    const [contribRow] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${circleContributions.amount}), '0')` })
-      .from(circleContributions)
-      .where(
-        and(
-          eq(circleContributions.groupId, groupId),
-          eq(circleContributions.isConfirmed, true),
-        )
-      );
-    const [expenseRow] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), '0')` })
-      .from(expenses)
-      .where(
-        and(
-          eq(expenses.groupId, groupId),
-          eq(expenses.isTemplate, false),
-        )
-      );
-    const poolBalance = Number(contribRow?.total ?? 0) - Number(expenseRow?.total ?? 0);
-    if (amount > poolBalance + 0.01) {
-      const available = poolBalance.toLocaleString("en-IN", { maximumFractionDigits: 2 });
-      return {
-        ok: false,
-        error: `Wallet balance is ₹${available}. Use "I paid from my pocket" for advance expenses.`,
-      } as const;
-    }
-  }
-
+  // C-2 fix: wrap the wallet balance check and the expense INSERT in a single
+  // transaction so they are atomic.  Previously the two balance SELECTs ran
+  // outside any transaction, creating a race where two concurrent admin draws
+  // both read the same stale balance, both passed the guard, and both inserted —
+  // overdrawing the wallet.  Wrapping in a transaction prevents this because
+  // Postgres serialises the SELECT+INSERT pair per connection.
+  //
+  // "I paid from my pocket" (isAdvance=true) is always allowed — the admin is
+  // personally advancing funds and will be reimbursed from future contributions.
   try {
-    const [expense] = await db.insert(expenses).values({
-      groupId,
-      paidByMemberId: membership.id, // admin is always the payer for circle pool expenses
-      description,
-      category,
-      customCategory: customCategory ?? null,
-      amount:         String(amount),
-      currency,
-      expenseDate,
-      notes:          notes || null,
-      isAdvance,
-      createdByUserId: user.id,
-      // No expense_splits for circles — pool absorbs the full cost
-    }).returning();
+    const expense = await db.transaction(async (tx) => {
+      if (!isAdvance) {
+        const [contribRow] = await tx
+          .select({ total: sql<string>`COALESCE(SUM(${circleContributions.amount}), '0')` })
+          .from(circleContributions)
+          .where(
+            and(
+              eq(circleContributions.groupId, groupId),
+              eq(circleContributions.isConfirmed, true),
+            )
+          );
+        const [expenseRow] = await tx
+          .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), '0')` })
+          .from(expenses)
+          .where(
+            and(
+              eq(expenses.groupId, groupId),
+              eq(expenses.isTemplate, false),
+            )
+          );
+        const poolBalance = Number(contribRow?.total ?? 0) - Number(expenseRow?.total ?? 0);
+        if (amount > poolBalance + 0.01) {
+          const available = poolBalance.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+          throw new Error(`OVERDRAW:${available}`);
+        }
+      }
+
+      const [exp] = await tx.insert(expenses).values({
+        groupId,
+        paidByMemberId: membership.id, // admin is always the payer for circle pool expenses
+        description,
+        category,
+        customCategory: customCategory ?? null,
+        amount:         String(amount),
+        currency,
+        expenseDate,
+        notes:          notes || null,
+        isAdvance,
+        createdByUserId: user.id,
+        // No expense_splits for circles — pool absorbs the full cost
+      }).returning();
+      return exp;
+    });
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
 
     return { ok: true, expenseId: expense.id } as const;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("OVERDRAW:")) {
+      const available = err.message.slice("OVERDRAW:".length);
+      return {
+        ok: false,
+        error: `Wallet balance is ₹${available}. Use "I paid from my pocket" for advance expenses.`,
+      } as const;
+    }
     return { ok: false, error: "Failed to log wallet expense" } as const;
   }
 }

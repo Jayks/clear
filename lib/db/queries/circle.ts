@@ -289,9 +289,19 @@ export async function getCircleDashboardData(
       .limit(3),
   ]);
 
-  // Split confirmed vs unconfirmed contributions
+  // Split confirmed vs unconfirmed contributions.
+  // C-6 fix: use an iterate-and-skip pattern instead of new Map() so that if a
+  // member has more than one unconfirmed row (possible via the selfReport race),
+  // the FIRST (oldest) entry is kept in the map rather than silently discarding
+  // all but the last.  Confirmed map is unaffected (one confirmed row per member
+  // per period is enforced by the confirmation flow).
   const confirmedMap   = new Map(cycleContribs.filter((c) => c.isConfirmed).map((c) => [c.memberId, c]));
-  const unconfirmedMap = new Map(cycleContribs.filter((c) => !c.isConfirmed).map((c) => [c.memberId, c]));
+  const unconfirmedMap = new Map<string, (typeof cycleContribs)[0]>();
+  for (const c of cycleContribs) {
+    if (!c.isConfirmed && !unconfirmedMap.has(c.memberId)) {
+      unconfirmedMap.set(c.memberId, c);
+    }
+  }
 
   // Only confirmed contributions count toward pool balance and cycle totals
   const allTimeCollected = Number(allTimeRows[0]?.total ?? 0);

@@ -239,11 +239,9 @@ Key functions:
 
 **Three-case counterpart query pattern**: any query matching by person must handle (1) user created + Clear counterpart_id, (2) Clear user created + viewer is counterpart, (3) user created + guest counterpart_guest_id. Missing case 3 was a bug — all settle/forgive actions use all three.
 
-### Supabase Storage — `cover-photos` bucket (run once)
+### Supabase Storage — `cover-photos` bucket (public, 5 MB; RLS: authenticated insert into own folder, public select, authenticated delete own). Files at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has Supabase hostname in `remotePatterns`.
 
-Dashboard → Storage → New bucket: name `cover-photos`, Public, 5 MB limit. Three RLS policies: authenticated insert (folder = `auth.uid()`), public select, authenticated delete own. Files at `{userId}/{timestamp}-{slug}.{ext}`. `next.config.ts` has Supabase project hostname in `remotePatterns`.
-
-### Realtime setup — add `expenses`, `expense_splits`, `settlements`, `group_members` to `supabase_realtime` publication (SQL Editor, run once).
+### Realtime — `expenses`, `expense_splits`, `settlements`, `group_members` added to `supabase_realtime` publication (applied via SQL Editor).
 
 ---
 
@@ -320,12 +318,6 @@ Passed to `computePersonalInsights()` in `lib/insights/personal-insights.ts` (pu
 `app/join/[token]/page.tsx`: (1) existing member → `getMembership()` → immediate `redirect(/groups/${group.id})`; (2) `getGroupByToken()` returns `unclaimedGuests` (null `user_id`) → cyan pill list → `claimGuestMember(token, guestMemberId)` atomically sets `user_id`, clears `guest_name`, sets `displayName` from Google.
 
 `claimGuestMember` in `app/actions/members.ts`. Call `revalidateTag(\`group-${group.id}\`, 'max')` after claim.
-
-### Misc constraints
-
-- `computeTripInsights`: always `{ trip: group, ... }` — do not rename `trip`.
-- `/summary/[token]` returns 404 for nests.
-- **Date-range props**: components use `groupStartDate`/`groupEndDate`; AI `DateContext` uses `groupStart`/`groupEnd`.
 
 ---
 

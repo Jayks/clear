@@ -15,8 +15,15 @@ export default async function AllInsightsPage() {
   ]);
 
   const streamData = user ? await getStreamSummary(user.id) : null;
+  // S-4 fix: derive currency from the top stream record instead of hardcoding
+  // "INR".  Hardcoding caused non-INR streams (USD, EUR, etc.) to show the
+  // wrong currency symbol next to their totals on the Insights page.
   const streamSummary = streamData && (streamData.totalOwedToMe > 0 || streamData.totalIOwe > 0)
-    ? { owedToMe: streamData.totalOwedToMe, iOwe: streamData.totalIOwe, currency: "INR" }
+    ? {
+        owedToMe: streamData.totalOwedToMe,
+        iOwe:     streamData.totalIOwe,
+        currency: streamData.topRecords[0]?.currency ?? "INR",
+      }
     : undefined;
 
   const isPlusUser = user ? (await getUserPlan(user.id)) === "plus" : false;

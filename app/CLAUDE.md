@@ -6,102 +6,16 @@
 
 ## Project Structure
 
-```
-clear/
-├── app/
-│   ├── icon.tsx, error.tsx, not-found.tsx, layout.tsx, page.tsx, globals.css
-│   ├── (auth)/login/page.tsx + login-form.tsx
-│   ├── @modal/(.)login/page.tsx          # intercepts client-side /login nav as modal overlay
-│   ├── auth/callback/route.ts
-│   ├── (app)/
-│   │   ├── layout.tsx, error.tsx, app-nav.tsx  # 3-tab nav: Home|Streams|Insights; transparent on app pages
-│   │   ├── insights/page.tsx + loading.tsx     # receives streamSummary → InsightsTabs → PersonalContent
-│   │   ├── upgrade/ + checkout/
-│   │   ├── settings/
-│   │   ├── groups/
-│   │   │   ├── page.tsx                  # Home page: Trips + Nests + Circles sections, HomeControlBar, StreamBadgeSync
-│   │   │   ├── loading.tsx
-│   │   │   ├── new/page.tsx              # reads ?type=trip|nest|circle → CreateTripForm or CreateCircleForm
-│   │   │   │   ├── create-trip-form.tsx  # accepts defaultGroupType?: "trip" | "nest"
-│   │   │   │   └── create-circle-form.tsx # 3-step wizard: mode select → details → invite (WhatsApp wa.me)
-│   │   │   └── [id]/
-│   │   │       ├── layout.tsx (RealtimeRefresh + GroupMobileNav hidden md:block)
-│   │   │       ├── page.tsx              # branches on config.isCircle → CircleDashboard OR trip/nest layout
-│   │   │       │                         # accepts searchParams.period ("YYYY-MM") for circle cycle nav
-│   │   │       ├── edit/, expenses/, members/, settle/, insights/
-│   │   └── stream/
-│   │       ├── page.tsx                  # RSC → StreamDashboardClient; clears nav badge on mount
-│   │       └── [personId]/page.tsx       # RSC → StreamPersonPageClient; passes currentUserName
-│   ├── stream/confirm/[token]/page.tsx   # PUBLIC — no auth; guest confirmation page
-│   ├── pricing/, changelog/, join/, summary/, api/
-│   └── actions/
-│       ├── stream.ts                     # 11+ server actions: logStream, confirmStream, disputeStream,
-│       │                                 # settleWithPerson (3-case query: Clear user / Clear user as counterpart / guest),
-│       │                                 # undoSettleWithPerson, forgiveStream, forgiveAllActiveStreams, deleteStream
-│       │                                 # selfReportStreamSettle (is_confirmed=false, push creditor), confirmStreamSettle (creditor/admin),
-│       │                                 # disputeStreamSettle (creditor/admin, deletes settlement)
-│       ├── circle.ts                    # createCircle, recordContribution, selfReportContribution (paymentMethod/utrReference; admin auto-confirms),
-│       │                                 # confirmContribution (admin, single confirm + push notify), disputeContribution (admin, delete + push notify),
-│       │                                 # addCircleExpense, updateCircleStatus
-│       ├── upi-ids.ts                   # saveUpiId, deleteUpiId, setDefaultUpiId
-│       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
-│       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
-│       ├── admin.ts, subscription.ts, interactions.ts, demo.ts
-├── components/
-│   ├── stream/                          # All stream UI
-│   │   ├── stream-summary-strip.tsx / -client.tsx / -skeleton.tsx  # (no longer on Home — strip removed)
-│   │   ├── stream-spine-view.tsx        # bilateral timeline: mobile 3-col grid + desktop 2-col
-│   │   │                                # SpineCard: swipe-left (mobile) / hover (desktop) → Forgive/MarkPaid/Share
-│   │   │                                # Disputed entries: amber tint + stronger border (NOT muted)
-│   │   ├── stream-log-sheet.tsx         # "Who paid?" Me/{Name} instead of direction toggle
-│   │   ├── stream-dashboard-client.tsx  # search (>6 people), activity feed, clears nav badge on mount
-│   │   ├── stream-person-page-client.tsx # hero: full net (consistent with dashboard) + confirmed/pending/disputed breakdown
-│   │   ├── stream-person-card.tsx       # attention dots: green=new, amber=disputed (localStorage)
-│   │   ├── stream-settle-sheet.tsx      # partial settle: editable amount, "oldest first" backend logic
-│   │   ├── stream-forgive-sheet.tsx, stream-settle-sheet.tsx
-│   │   ├── stream-entry-row.tsx, stream-settled-celebration.tsx
-│   │   ├── stream-badge-sync.tsx        # invisible RSC companion — writes clear_stream_has_badge to localStorage
-│   │   └── confirm-stream-client.tsx
-│   ├── circle/                          # All circle UI
-│   │   ├── circle-dashboard.tsx         # RSC: hero, cycle nav, progress (privacy-aware), contribution roster, one-time celebration, lifecycle status, wallet expenses
-│   │   ├── circle-card.tsx              # "use client": clickable header+progress (Link), interactive action area below (chips, Pay, I've paid)
-│   │   ├── circle-card-server.tsx       # RSC data loader + CircleCardSkeleton; Suspense-wrapped on home page
-│   │   ├── circle-contribution-roster.tsx # "use client": search + pending list (🔔 remind, admin tap→record) + collapsed paid section
-│   │   ├── circle-cycle-nav.tsx         # "use client": ← YYYY-MM → navigation via router.push(?period=)
-│   │   ├── circle-reminder-button.tsx   # "use client": wraps CircleReminderSheet state
-│   │   ├── circle-reminder-sheet.tsx    # "use client": WhatsApp group reminder message generator (ASCII progress bar)
-│   │   ├── record-contribution-sheet.tsx # "use client": admin one-tap confirm sheet; calls recordContribution action
-│   │   ├── add-circle-expense-form.tsx  # "use client": wallet expense form (From wallet / I paid from my pocket toggle)
-│   │   ├── circle-expense-list.tsx      # "use client": expense list with delete + amber advance badge
-│   │   ├── circle-one-time-celebration.tsx  # "use client": confetti burst + "Goal/Target reached!" banner (sessionStorage-gated); isFlexi prop switches copy
-│   │   └── circle-one-time-status.tsx       # "use client": lifecycle stepper (Collecting→Purchased→Complete) + surplus card; goalReached=true when no target (Flexi)
-│   ├── ui/, expense/, trip/, settlement/, marketing/, insights/, tour/
-│   └── shared/
-│       ├── section-pill-nav.tsx         # sticky section pills; scroll-position active detection (45% viewport threshold); px-4 py-2 text-sm
-│       ├── home-control-bar.tsx         # "use client": unified underline-tab toggle (Active/Archived) + inline search; collapses to filter chip on blur; replaces GroupSearchInput + HomeViewToggle
-│       ├── global-fab.tsx               # fan-out FAB (Home only): Log expense → GroupPickerSheet → QuickAddSheet; Log entry → StreamLogSheet; auto-hide on scroll
-│       ├── home-greeting.tsx            # "Good morning/afternoon/evening, {firstName} 👋" — client, user's local time
-│       ├── group-search-input.tsx       # DOM-based filter (data-group-card attrs) — standalone (no longer used on Home; logic inlined in HomeControlBar)
-│       ├── mobile-nav.tsx               # 3 tabs: Home|Streams|Insights; Streams badge from localStorage
-│       ├── group-mobile-nav.tsx, animated-list, count-up, ...
-├── lib/
-│   ├── db/
-│   │   ├── schema/stream-guests.ts, stream-records.ts, stream-settlements.ts
-│   │   └── queries/stream.ts            # getStreamSummary, getStreamDashboard, getStreamWithPerson,
-│   │                                    # getPersonDetails, getStreamBadgeData, getStreamActivity (in dashboard)
-│   ├── validations/stream.ts
-│   ├── notifications/send-stream-notification.ts
-│   ├── db/client.ts, schema/*.ts, queries/(groups, expenses, balances, insights, meta, admin, auth, activity, interactions).ts
-│   ├── supabase/, demo/, tour/, group-config.ts, categories.ts
-│   ├── insights/trip-insights.ts + all-trips-insights.ts + all-nests-insights.ts + group-roles.ts + personal-insights.ts
-│   ├── splits/, settle/, interactions/, validations/, analytics.ts, rate-limit.ts, utils.ts
-│   ├── subscription/gates.ts + founder.ts
-│   └── notifications/expense-email.ts + send-expense-notification.ts + send-push-notification.ts
-├── drizzle/policies.sql, indexes.sql, stream-tables.sql, circle-tables.sql, circle-phase4.sql  # applied via Supabase SQL Editor
-├── drizzle.config.ts, proxy.ts, vercel.json
-├── scripts/seed-streams.ts              # pnpm seed:streams — uses PLATFORM_ADMIN_EMAIL to find user
-├── scripts/seed-circles.ts              # pnpm seed:circles — 4 circles covering Phase 4+5 test scenarios
-```
+**Key app routes:**
+- `app/(app)/groups/page.tsx` — Home; `groups/new/page.tsx` — create (reads `?type=trip|nest|circle`); `groups/[id]/page.tsx` — overview (branches `config.isCircle` → CircleDashboard vs trip/nest; `searchParams.period` for circle cycle nav); `groups/[id]/edit|expenses|members|settle|insights/`
+- `app/(app)/stream/page.tsx` + `stream/[personId]/page.tsx` — protected; `app/stream/confirm/[token]/page.tsx` — **PUBLIC** guest confirmation
+- `app/(app)/insights/`, `upgrade/`, `settings/`, `app/pricing/`, `changelog/`, `join/`, `summary/`, `pay/`
+
+**Key actions** (`app/actions/`): `stream.ts` (11+ — logStream, confirmStream, settleWithPerson 3-case, forgiveStream, selfReportStreamSettle, confirmStreamSettle, disputeStreamSettle), `circle.ts` (createCircle, recordContribution, selfReportContribution, confirmContribution, disputeContribution, addCircleExpense, updateCircleStatus), `upi-ids.ts`, `groups.ts`, `expenses.ts`, `members.ts`, `settlements.ts`, `interactions.ts`, `subscription.ts`, `admin.ts`, AI actions (parse-expense, narrative, trip-adherence, parse-chat, parse-itinerary)
+
+**Key components** (`components/`): `stream/` (spine-view, log-sheet, dashboard-client, person-page-client, settle-sheet, badge-sync), `circle/` (dashboard, card, card-server, contribution-roster, cycle-nav, reminder-sheet, record-contribution-sheet, add-circle-expense-form, one-time-celebration, one-time-status), `shared/` (section-pill-nav, home-control-bar, global-fab, mobile-nav, group-mobile-nav, animated-list)
+
+**SQL migrations** applied via Supabase SQL Editor (`pnpm db:push` has drizzle-kit bug with group_members CHECK): `drizzle/stream-tables.sql`, `circle-tables.sql`, `circle-phase4.sql`, `policies.sql`, `indexes.sql`
 
 ---
 
@@ -226,34 +140,11 @@ RSC. Redirects authenticated users to `/groups`. Renders `<CarouselLanding />`.
 
 ### `CarouselLanding` (`components/marketing/carousel-landing.tsx`)
 
-`"use client"` fullscreen horizontal carousel. 9 slides (SLIDE_COUNT = 9):
+`"use client"` fullscreen horizontal carousel, 9 slides: Hero → Overview (2×2 context grid) → AI (Type/Speak) → Debt Flow (`SettleFlowDemo` in phone) → Settle Up → Insights → Nests → Streams → CTA.
 
-| # | Slide | Key visual |
-|---|---|---|
-| 0 | **Hero** | Animated gradient mesh blobs, ClearIcon 72px, 3 context pills, social proof ticker |
-| 1 | **Overview** | 2×2 context grid: Trips · Nests · Streams · Circle (coming soon, dashed border) |
-| 2 | **AI-powered** | Phone frame: Type/Speak toggle + waveform + parsed chips |
-| 3 | **Debt Flow** | Phone frame: `SettleFlowDemo` inside phone (AppBar + graph + summary bar) |
-| 4 | **Settle Up** | Phone frame: balance hero + net table + min-payment UPI cards |
-| 5 | **Insights** | Phone frame: KPI 2×2 + category bars + member contribution bars |
-| 6 | **Nests** | Phone frame: recurring templates list with 1-tap Log buttons |
-| 7 | **Streams** | Phone frame: bilateral spine view with confirmed/pending entries |
-| 8 | **CTA** | Glass gradient card: "You've seen it. Now clear yours." |
+Sub-components: `PhoneFrame` (290×628px Deep Purple iPhone frame, `tilt` prop for 3-D lean), `ResponsivePhone` (mobile clipped 78%, `accentGlow` per slide), `FeatureSlide` (standard shell, `labelHex`/`pills`/`bullets`/`callouts` props), `Callout` (glass pill overlaid inside phone clip area, `z-30`, no `hidden md:`).
 
-**`PhoneFrame`** — HD Deep Purple iPhone 15 Pro style (`290×628px`). `tilt` prop (`rotateY` degrees) for 3-D lean. Realistic dynamic island, chamfered edge gradient, side buttons, screen glare overlay, ambient shadow.
-
-**`ResponsivePhone`** — mobile: `310px` wide, `78%` height clipped (phone "rises" from bottom, bottom nav hidden). Desktop: full frame with optional tilt. `accentGlow` prop = per-slide radial glow behind phone.
-
-**`FeatureSlide`** — standard slide shell (phone top on mobile, side-by-side on desktop). Props: `labelHex` (renders a pill/badge label with tinted bg), `pills` (2 feature chips shown on mobile AND desktop), `bullets` (desktop sidebar only), `callouts` (overlay `<Callout>` badges).
-
-**`Callout`** — glass pill overlaid inside the phone's visible clip area (not outside/beside it). Positioned `absolute` within `div.relative` wrapping `ResponsivePhone`. Visible on all screen sizes (`z-30`, no `hidden md:`).
-
-**Behaviour:**
-- **Auto-advance**: slides 0→1→2, 8s each; cancels immediately on any touch/key/pointer
-- **Keyboard nav**: `←` / `→` arrow keys
-- **Right-edge peek**: subtle `backdrop-blur` gradient on the right edge signals more slides
-- **Bottom bar**: dots + slide label (left) · About · Pricing · Changelog links (right). No duplicate CTA.
-- **Hero blobs**: 3 animated radial gradient divs (`blob1/2/3` CSS keyframes), ~14–22s drift cycles
+**Behaviour:** auto-advance slides 0→2 at 8s; keyboard `←/→`; right-edge blur peek; bottom bar = dots + About/Pricing/Changelog links (no duplicate CTA). Hero uses `blob1/2/3` CSS keyframe blobs.
 
 ---
 
@@ -328,40 +219,20 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 ## Demo Data Seeding
 
-`ensureDemoGroup()` (`app/actions/demo.ts`) — called on groups page load:
-- Seeds **Goa 2025 · Sample** (trip, `is_demo=true`) — 8 expenses, all 4 split modes, 5 members
-- Seeds **Mumbai Flat · Sample** (nest, `is_demo=true`) — 7 recurring templates, 4 months of expenses (Feb–May 2026), partial settlements
-- Detects stale nest seed by description string and re-seeds automatically
-- Trip card: `data-tour="demo-trip"` | Nest card: `data-tour="demo-nest"`
-- Demo groups pinned first (`ORDER BY is_demo DESC`)
+`ensureDemoGroup()` (`app/actions/demo.ts`) — called on groups page load. Seeds Goa 2025 trip + Mumbai Flat nest (both `is_demo=true`); detects stale nest seed by description string and re-seeds. Demo groups sort last (`ORDER BY is_demo ASC`). `data-tour="demo-trip"` / `"demo-nest"` attrs on cards. **Seeding order matters**: `await ensureDemoGroup()` before `getAllGroups()` to avoid a race where SELECT returns before INSERT on first load.
 
 ---
 
 ## Onboarding Tour (9 steps — 4 default + 5 extended)
 
-`getTourSteps(demoTripId)` in `lib/tour/steps.ts`. `DEFAULT_STEP_COUNT = 4`.
-
-**Default tour (stays on /groups):** step 1 = welcome modal, 2 = `[data-tour='new-trip-btn']`, 3 = `[data-tour='trip-card-add-btn']` (quick-add, auto-advances when `[data-tour='quick-add-open']` appears), 4 = `[data-tour='demo-nav-sheet']` (opened via `window.dispatchEvent(new CustomEvent('open-demo-navsheet', { detail: demoTripId }))`), ends with "Done / Show me more →".
-
-**Extended tour (opt-in, 5 steps):** steps 5–9:
-- 5 (idx 4): `[data-tour='expense-list-header']` → expenses page — search/filter
-- 6 (idx 5): `[data-tour='expense-timeline-day1']` → expenses page — Day 1 card only; dispatches `tour-switch-timeline-view` event (400ms delay); `ExpenseFilters` listens and calls `setAndSaveViewMode("timeline")`; first `DaySection` (index 0) carries `data-tour="expense-timeline-day1"` via `dataTour` prop
-- 7 (idx 6): `[data-tour='debt-flow-graph']` → settle page — debt flow graph (wrapper div in `balances-section.tsx`)
-- 8 (idx 7): `[data-tour='insights-charts']` → per-group insights — category/spend charts
-- 9 (idx 8): `[data-tour='all-insights-trips']` → /insights — all-groups spending story
-
-Finishing → `/groups` + `CelebrationCard`.
+`getTourSteps(demoTripId)` in `lib/tour/steps.ts`. `DEFAULT_STEP_COUNT = 4`. Steps use `data-tour` attributes as anchors; default 4 stay on `/groups`, extended 5 navigate to expenses/settle/insights pages.
 
 **localStorage keys**: `clear_tour_done`, `clear_nest_hint_done`, `clear_longpress_hint_done`, `first_expense_added`, `first_group_created`.
 
-**Key constraints:**
-- Auto-launch polls for `[data-tour='new-trip-btn']` (300ms delay, 250ms interval) — do NOT change to immediate; prevents blank blur before `ensureDemoGroup()` seeding.
-- Avatar shows cyan dot at `-top-0.5 -right-0.5` until `clear_tour_done` is set.
-- `NestHint` — 2-step overlay on nest expenses page (`[data-tour='templates-section']` → `[data-tour='log-template-btn']`).
-- `TripCard` listens for `open-demo-navsheet` custom event via `useEffect`.
-- `ExpenseFilters` listens for two tour custom events: `tour-switch-full-view` (step 5) and `tour-switch-timeline-view` (step 6); both call `setAndSaveViewMode()` and persist to localStorage.
-- `showMore()` (in `tour-context.tsx`) pre-writes `"full"` to `clear_expense_view_mode` localStorage **before** navigating to `/expenses`, so the component mounts in list mode even if "timeline" was previously saved. The 400ms event is a backup for the already-mounted case.
-- `demoTripId` is read by iterating **all** `<a>` tags inside `[data-tour='demo-trip']` with a no-`$`-anchor regex — necessary because the member-count badge link (`/groups/{id}/members`) appears before the main group link in DOM order.
+**Critical constraints:**
+- Auto-launch polls for `[data-tour='new-trip-btn']` at 300ms delay — do NOT make immediate (blank blur before seeding).
+- `ExpenseFilters` listens for `tour-switch-timeline-view` event (step 6, 400ms delay) → calls `setAndSaveViewMode("timeline")`. `showMore()` pre-writes `"full"` to `clear_expense_view_mode` before navigating so the component mounts in list mode.
+- `demoTripId` found by iterating all `<a>` tags inside `[data-tour='demo-trip']` — member-count badge link appears before the main group link in DOM order.
 
 ---
 

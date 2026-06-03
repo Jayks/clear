@@ -216,60 +216,36 @@ const jsonText = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/,
 
 ### SVG + Framer Motion `transform` conflict
 
-`motion.g` with both an SVG `transform` attribute AND Framer Motion `scale`/`opacity` animation props causes Framer Motion to **override** the SVG transform, wiping the `translate(x,y)` and collapsing the element to `(0,0)`. The node becomes invisible (scale 0 at the SVG origin).
+Never put both an SVG `transform` attribute AND Framer Motion animation props on the same `motion.g` — Framer Motion overrides the SVG transform, collapsing the node to `(0,0)`. Use two wrappers:
 
-**Fix** — separate positioning from animation with two wrappers:
 ```tsx
 // ✅ correct — static <g> for position, motion.g for animation only
 <g transform={`translate(${node.x}, ${node.y})`}>
-  <motion.g
-    style={{ transformOrigin: "0px 0px" }}   // scale from local (0,0) = node centre
-    initial={{ scale: 0, opacity: 0 }}
-    animate={{ scale: 1, opacity: 1 }}
-    transition={{ type: "spring", stiffness: 380, damping: 22 }}
-  >
-    {/* circles, text, etc. at local (0,0) coords */}
+  <motion.g style={{ transformOrigin: "0px 0px" }} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+    {/* content at local (0,0) */}
   </motion.g>
 </g>
 
-// ❌ wrong — Framer Motion replaces "translate(x,y)" with "scale(0)" on the same element
-<motion.g
-  transform={`translate(${node.x}, ${node.y})`}
-  initial={{ scale: 0, opacity: 0 }}
-  animate={{ scale: 1, opacity: 1 }}
->
+// ❌ wrong — motion.g with both transform attr and animation props
+<motion.g transform={`translate(${node.x}, ${node.y})`} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
 ```
 
 ### SVG SMIL animation elements (`animateMotion`, `animate`) — use `React.createElement`
 
-React's JSX types don't expose the `path` attribute on `<animateMotion>` or all attributes on `<animate>`. Using them as JSX produces TypeScript errors. Bypass with `React.createElement` — identical DOM output, no type errors:
+JSX types don't expose `path` on `<animateMotion>`. Use `React.createElement` (requires default `import React from "react"`):
 
 ```tsx
-import React from "react";   // must be a default import, not just named hooks
-
-// ✅ correct — React.createElement for SMIL animation elements
+// ✅ correct
 <circle r={2.5} fill="#FDE68A">
-  {React.createElement("animateMotion", {
-    path: arc.d,
-    dur: "2s",
-    repeatCount: "indefinite",
-    begin: "0.5s",
-  })}
-  {React.createElement("animate", {
-    attributeName: "opacity",
-    values: "0;0.9;0.9;0",
-    keyTimes: "0;0.08;0.82;1",
-    dur: "2s",
-    repeatCount: "indefinite",
-    begin: "0.5s",
-  })}
+  {React.createElement("animateMotion", { path: arc.d, dur: "2s", repeatCount: "indefinite" })}
+  {React.createElement("animate", { attributeName: "opacity", values: "0;0.9;0.9;0", dur: "2s", repeatCount: "indefinite" })}
 </circle>
 
-// ❌ wrong — TS error: "path" is not a valid prop on animateMotion
+// ❌ wrong — TS error: "path" is not a valid prop
 <animateMotion path={arc.d} dur="2s" repeatCount="indefinite" />
 ```
 
-Use `gradientUnits="userSpaceOnUse"` with explicit `x1/y1/x2/y2` for directional SVG gradients along arc paths — `objectBoundingBox` (the default) scales incorrectly for non-rectangular path bounding boxes.
+Use `gradientUnits="userSpaceOnUse"` with explicit `x1/y1/x2/y2` for arc gradients — `objectBoundingBox` scales incorrectly for non-rectangular paths.
 
 ### Inline `<Script>` — use `dangerouslySetInnerHTML`, not children
 
@@ -316,8 +292,7 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **Category active chips**: active state = `bg-gradient-to-br ${catMeta.gradient} text-white shadow-sm`. Never hardcode `from-cyan-500 to-teal-500` for category chips.
 - **Expense amount color**: green (`text-emerald-600 dark:text-emerald-400`) when the current user is the payer; neutral (`text-slate-800 dark:text-slate-100`) otherwise.
 - **Section headers**: icon-badge + label + gradient rule line. Accent color by destination — amber=Insights, emerald=Settle, violet=Members, cyan=Expenses, slate=neutral. Pattern: `w-6 h-6 rounded-md bg-[color]-50 dark:bg-[color]-900/30` badge + `h-[1.5px] bg-gradient-to-r from-[color]-200/70 to-transparent dark:from-[color]-800/40 dark:to-transparent` rule. See `components/CLAUDE.md` for full table.
-- **AnimatedList**: wrap card/item lists for CSS `@keyframes list-enter` entrance stagger (`y 16→0, opacity 0→1, 300ms`). Default `staggerMs=80`. Delay via `--list-delay` CSS custom property (not inline `animationDelay`). Use `initialDelayMs` to continue stagger across split lists. Stagger cap `Math.min(i, 8)`. Falls back to plain div on `prefers-reduced-motion`.
-- **FadeIn**: wrap section-level blocks for scroll-triggered reveal (`useInView once`, `y 20→0`, 550ms). Applied to all below-fold sections in per-group and overall insights pages. Props: `delay` (ms), `direction` (`up`|`left`|`right`|`none`), `className`.
+- **AnimatedList / FadeIn**: wrap card/item lists (`AnimatedList`, `staggerMs=80`, stagger cap 8, `initialDelayMs` for split lists) and section-level blocks (`FadeIn`, scroll-triggered, 550ms) — see `components/CLAUDE.md` for full API.
 - **Shared constants in `lib/utils.ts`**: `DEFAULT_CURRENCY` (`"INR"`), `SUPPORTED_CURRENCIES`, `CHART_AXIS_TICK`.
 - **`CATEGORY_VALUES`** from `lib/categories.ts` — `[string, ...string[]]` for `z.enum()`. Use in AI action schemas.
 - **`?from=groups` on expense new page**: `searchParams.from === "groups"` → back button → `/groups`.
@@ -336,10 +311,10 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 - **Stream entry terminology**: individual debt records within a Stream are called **"entries"** in UI copy (not "streams"). "Log entry →", "3 entries", "New entry", etc. The Stream feature / relationship itself = "Stream".
 - **Stream nav badge localStorage keys**: `clear_stream_has_badge` ("disputed" | "new" | absent) — written by `StreamBadgeSync` on Home page, cleared by `StreamDashboardClient` on mount. `clear_stream_last_viewed` (ms timestamp) — set when /stream dashboard opens. `MobileNav` reads badge after hydration and on `stream-badge-update` custom event.
 - **Stream settled celebration**: `clear_stream_settled_${personId}` — `StreamSettledCelebration` fires confetti once per session when all-square with a person.
-- **`SectionPillNav`** (`components/shared/section-pill-nav.tsx`) — sticky pill row (`sticky top-14`) that tracks the active section via `IntersectionObserver`. Accepts `sections: NavSection[]` + optional `createPills: CreatePill[]` for dashed "create" prompts. Sections need `scroll-mt-28` to clear both AppNav + sticky pills. Color system: cyan=Trips, emerald=Nests, violet=Circle, **amber=Archived** (amber is unambiguous; slate looked disabled). Pill size: `px-4 py-2 text-sm`. Observer uses a `Set` of currently-intersecting sections and picks the **last one in page order** (handles tall sections whose bottom still overlaps the trigger band when a shorter section below scrolls in). Pills also call `setActiveId(id)` directly `onClick` for instant visual feedback without waiting for observer.
-- **`GlobalFab`** (`components/shared/global-fab.tsx`) — fixed `bottom-nav-safe right-4 z-50` fan-out FAB on the Home page. Warm sunset gradient (`from-orange-400 to-rose-500`). Main `+` rotates 45° to `×` on open. Two staggered mini FABs: cyan **Log expense** → `GroupPickerSheet` (group selector) → `QuickAddSheet`; indigo **Log entry** → `StreamLogSheet`. Auto-hides on scroll down (`y:96, opacity:0`), reappears on scroll up or when near top (`currentY < 80`). Always visible when fan is open (`fabVisible || fabOpen`). Only rendered when Home page has groups (`!isEmpty`). `GroupPickerSheet`: inline portal sheet with recent cover-photo tiles (top 2 non-demo groups) + full trips/nests list; uses `useSheetDismiss` for back-button + Escape. `QuickAddSheet` gets optional `onBack?` prop — shows `← Change group` button in header that re-opens the picker.
-- **`HomeGreeting`** (`components/shared/home-greeting.tsx`) — `"use client"` time-based greeting at top of Home page. Uses client's local time (not UTC) for correct timezone. Three states: Good morning (5–12), Good afternoon (12–17), Good evening (17+, incl. late night — "Good night" intentionally omitted as it implies signoff). Renders `{greeting}, {firstName} 👋` in Fraunces; falls back to no name if `user_metadata.full_name` absent.
-- **Trip alive badges** — `computeTripStatus(startDate, endDate)` in `components/trip/trip-card.tsx` — pure helper, no deps. Returns `{ type, label, color }` or null. Types: `active` ("Day X of Y", `text-cyan-300`, pulsing dot), `lastDay` ("Last day 🏁", `text-amber-300`), `justReturned` ("Just returned ✓", `text-emerald-300`, shown for 7 days after endDate). Badge replaces the date subtitle line on TripCard when a status exists; falls back to dates otherwise. Not shown for nests or archived groups.
+- **`SectionPillNav`** — sticky `top-14`; sections need `scroll-mt-28`. Colors: cyan=Trips, emerald=Nests, violet=Circles, **amber=Archived**. See `components/CLAUDE.md`.
+- **`GlobalFab`** — fan-out FAB, Home page only (`!isEmpty`), `bottom-nav-safe right-4 z-50`; Log expense → `GroupPickerSheet` → `QuickAddSheet`; Log entry → `StreamLogSheet`. See `components/CLAUDE.md`.
+- **`HomeGreeting`** — client, user's local time (not UTC); morning 5–12, afternoon 12–17, evening 17+.
+- **Trip alive badges** — `computeTripStatus(startDate, endDate)` in `trip-card.tsx`: `active`/"Day X of Y", `lastDay`/"Last day 🏁", `justReturned`/"Just returned ✓" (≤7 days). Not shown on nests or archived.
 - **`GroupSearchInput`** (`components/shared/group-search-input.tsx`) — only renders when `totalCount > 5`. Uses `data-group-card` + `data-group-name` attributes on TripCard wrappers and `data-group-section` on section elements for DOM-based filter.
 - **Home page Trips/Nests sections**: each `<section>` gets `id="trips"/"nests"/"archived"`, `data-group-section=""`, and `scroll-mt-28`. Each TripCard wrapper gets `data-group-card=""` + `data-group-name={group.name.toLowerCase()}`.
 - **New group URL pre-fill**: `/groups/new?type=trip` or `?type=nest` — `NewGroupPage` reads `searchParams.type` and passes `defaultGroupType` prop to `CreateTripForm`. Form `defaultValues` uses it.
@@ -399,3 +374,5 @@ pnpm seed:streams        # 3 stream counterparts, 30 entries (all statuses)
 - **Read existing code first** — check `lib/utils.ts`, components, queries before writing new ones.
 - **No silent failures** — every error path has a toast, boundary, or visible feedback.
 - **Keep this file and subdirectory CLAUDE.md files updated** when decisions change.
+- **Create test cases before starting implementing. Run test cases that can be tested automatcially(unit testing , some functional testing) and verify all pass,  before confirming for user validation.
+- **For user validation, always present the test cases that can only be manually tested. Present 1 test case at a time. Ask the user to confirm whether the testing is a Pass, Fail, Skip. 

@@ -343,26 +343,27 @@ export async function logFromTemplate(templateId: string) {
   const now = new Date();
   const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
-  // E-4 fix: prevent double-logging when the button is tapped twice rapidly
-  // or a stale client re-submits.  The client-side `loggedThisMonth` disable
-  // is UI-only; the server must guard too.
-  const [alreadyLogged] = await db
-    .select({ id: expenses.id })
-    .from(expenses)
-    .where(
-      and(
-        eq(expenses.sourceTemplateId, templateId),
-        eq(expenses.expenseDate, firstOfMonth),
-        eq(expenses.isTemplate, false),
-      )
-    )
-    .limit(1);
-  if (alreadyLogged)
-    return { ok: false, error: "This template has already been logged for this month" } as const;
-
-  // C-7 fix: wrap both INSERTs in a transaction.
+  // E-4 fix (updated): move the double-log guard INSIDE the transaction so it
+  // is atomic with the INSERT.  The original guard ran outside the transaction,
+  // creating a race window where two concurrent requests both passed the SELECT
+  // check before either INSERT committed — matching autoLogDueTemplates (line 496).
   try {
     const logged = await db.transaction(async (tx) => {
+      // Guard inside tx: concurrent invocation that already inserted will be
+      // visible here and cause this call to return null (no-op).
+      const [alreadyLogged] = await tx
+        .select({ id: expenses.id })
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.sourceTemplateId, templateId),
+            eq(expenses.expenseDate, firstOfMonth),
+            eq(expenses.isTemplate, false),
+          )
+        )
+        .limit(1);
+      if (alreadyLogged) return null; // concurrent request already logged this template
+
       const [exp] = await tx.insert(expenses).values({
         groupId: template.groupId,
         paidByMemberId: template.paidByMemberId,
@@ -392,6 +393,11 @@ export async function logFromTemplate(templateId: string) {
 
       return exp;
     });
+
+    if (!logged) {
+      // null = alreadyLogged guard fired inside the transaction
+      return { ok: false, error: "This template has already been logged for this month" } as const;
+    }
 
     revalidatePath(`/groups/${template.groupId}`, "layout");
     revalidateTag(`balances-${template.groupId}`, "max");

@@ -499,8 +499,17 @@ export async function settleWithPerson(
   //   2. Counterpart (Clear user) is creator → user is counterpart
   //   3. User is creator → counterpart is a guest         (counterpart_guest_id)
   // Note: guests can never be creators, so no 4th case is needed.
+  // S-3 fix: track whether any active record matched via the guest-counterpart
+  // clause (case 3) so we can skip sendStreamPush for guests (no auth account,
+  // no push subscriptions — passing a stream_guests.id would silently miss or,
+  // in an astronomically unlikely UUID collision, push to the wrong user).
   const active = await db
-    .select({ id: streamRecords.id, amount: streamRecords.amount, createdAt: streamRecords.createdAt })
+    .select({
+      id:                  streamRecords.id,
+      amount:              streamRecords.amount,
+      createdAt:           streamRecords.createdAt,
+      counterpartGuestId:  streamRecords.counterpartGuestId,
+    })
     .from(streamRecords)
     .where(
       and(
@@ -513,6 +522,9 @@ export async function settleWithPerson(
       ),
     )
     .orderBy(asc(streamRecords.createdAt));  // oldest first for partial allocation
+
+  // S-3: counterpart is a guest when any matched record has counterpartGuestId === counterpartId
+  const isGuestCounterpart = active.some((r) => r.counterpartGuestId === counterpartId);
 
   if (active.length === 0) {
     return { ok: false, error: "No active streams to settle" } as const;
@@ -545,17 +557,27 @@ export async function settleWithPerson(
 
   const now = new Date();
   try {
-    await db
-      .update(streamRecords)
-      .set({ status: "settled", settledAt: now, updatedAt: now })
-      .where(inArray(streamRecords.id, ids));
+    // S-2 fix: wrap the UPDATE in a transaction so that two concurrent settle calls
+    // (e.g. both parties tap "We're square" simultaneously) cannot both UPDATE the
+    // same rows outside of each other's view.  The SELECT above already ran; the
+    // transaction ensures the UPDATE is serialised at the DB level.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(streamRecords)
+        .set({ status: "settled", settledAt: now, updatedAt: now })
+        .where(inArray(streamRecords.id, ids));
+    });
 
-    // Push notification to counterpart — deep-link to their view of this relationship
-    sendStreamPush(counterpartId, {
-      title: "Settled ✓",
-      body:  note ? `Balance cleared — ${note}` : "Your balance has been marked as settled",
-      url:   `/stream/${user.id}`,
-    }).catch(() => {});
+    // S-3 fix: only push to Clear users — guests have no auth account and
+    // therefore no push subscriptions.  Passing a stream_guests.id to
+    // sendStreamPush would silently miss (no subscriptions found).
+    if (!isGuestCounterpart) {
+      sendStreamPush(counterpartId, {
+        title: "Settled ✓",
+        body:  note ? `Balance cleared — ${note}` : "Your balance has been marked as settled",
+        url:   `/stream/${user.id}`,
+      }).catch(() => {});
+    }
 
     revalidatePath("/stream", "layout");
     revalidatePath("/groups", "layout");

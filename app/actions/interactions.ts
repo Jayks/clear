@@ -233,43 +233,51 @@ export async function raiseQuestion(expenseId: string, groupId: string, message:
     return { ok: false, error: "You cannot raise a question about your own expense" } as const;
   }
 
-  // Cancel any existing pending dispute/question from this member on this expense
-  await db
-    .update(expenseDisputes)
-    .set({ status: "cancelled", resolvedAt: new Date() })
-    .where(
-      and(
-        eq(expenseDisputes.expenseId, expenseId),
-        eq(expenseDisputes.requesterMemberId, membership.id),
-        eq(expenseDisputes.status, "pending")
-      )
-    );
+  // I-4 fix: wrap all three mutation steps in a single transaction so they are
+  // atomic.  Previously the three independent DB calls (cancel old → upsert
+  // reaction → insert dispute record) had no transaction, so a failure on step
+  // 3 left partial state: the old dispute cancelled and the emoji upserted, but
+  // no new dispute record — making the expense card show ❓ with no pending
+  // dispute that the payer could action or the requester could cancel.
+  await db.transaction(async (tx) => {
+    // Step 1: cancel any existing pending question from this member on this expense
+    await tx
+      .update(expenseDisputes)
+      .set({ status: "cancelled", resolvedAt: new Date() })
+      .where(
+        and(
+          eq(expenseDisputes.expenseId, expenseId),
+          eq(expenseDisputes.requesterMemberId, membership.id),
+          eq(expenseDisputes.status, "pending")
+        )
+      );
 
-  // Upsert ❓ reaction
-  const [existing] = await db
-    .select({ id: expenseReactions.id })
-    .from(expenseReactions)
-    .where(
-      and(
-        eq(expenseReactions.expenseId, expenseId),
-        eq(expenseReactions.memberId, membership.id)
-      )
-    );
+    // Step 2: upsert ❓ reaction
+    const [existing] = await tx
+      .select({ id: expenseReactions.id })
+      .from(expenseReactions)
+      .where(
+        and(
+          eq(expenseReactions.expenseId, expenseId),
+          eq(expenseReactions.memberId, membership.id)
+        )
+      );
 
-  if (existing) {
-    await db.update(expenseReactions).set({ emoji: "question" }).where(eq(expenseReactions.id, existing.id));
-  } else {
-    await db.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "question" });
-  }
+    if (existing) {
+      await tx.update(expenseReactions).set({ emoji: "question" }).where(eq(expenseReactions.id, existing.id));
+    } else {
+      await tx.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "question" });
+    }
 
-  // Create dispute record
-  await db.insert(expenseDisputes).values({
-    expenseId,
-    groupId,
-    requesterMemberId: membership.id,
-    disputeType: "question",
-    message: parsed.data.message,
-    status: "pending",
+    // Step 3: create the dispute record
+    await tx.insert(expenseDisputes).values({
+      expenseId,
+      groupId,
+      requesterMemberId: membership.id,
+      disputeType: "question",
+      message: parsed.data.message,
+      status: "pending",
+    });
   });
 
   revalidateGroup(groupId);
@@ -331,44 +339,49 @@ export async function raiseDispute(
     }
   }
 
-  // Cancel any existing pending dispute from this member on this expense
-  await db
-    .update(expenseDisputes)
-    .set({ status: "cancelled", resolvedAt: new Date() })
-    .where(
-      and(
-        eq(expenseDisputes.expenseId, expenseId),
-        eq(expenseDisputes.requesterMemberId, membership.id),
-        eq(expenseDisputes.status, "pending")
-      )
-    );
+  // I-4 fix: wrap all three mutation steps in a single transaction (same as
+  // raiseQuestion above).  Partial state on INSERT failure would leave a stale
+  // ⚠️ emoji with no actionable dispute record.
+  await db.transaction(async (tx) => {
+    // Step 1: cancel any existing pending dispute from this member on this expense
+    await tx
+      .update(expenseDisputes)
+      .set({ status: "cancelled", resolvedAt: new Date() })
+      .where(
+        and(
+          eq(expenseDisputes.expenseId, expenseId),
+          eq(expenseDisputes.requesterMemberId, membership.id),
+          eq(expenseDisputes.status, "pending")
+        )
+      );
 
-  // Upsert ⚠️ reaction
-  const [existing] = await db
-    .select({ id: expenseReactions.id })
-    .from(expenseReactions)
-    .where(
-      and(
-        eq(expenseReactions.expenseId, expenseId),
-        eq(expenseReactions.memberId, membership.id)
-      )
-    );
+    // Step 2: upsert ⚠️ reaction
+    const [existing] = await tx
+      .select({ id: expenseReactions.id })
+      .from(expenseReactions)
+      .where(
+        and(
+          eq(expenseReactions.expenseId, expenseId),
+          eq(expenseReactions.memberId, membership.id)
+        )
+      );
 
-  if (existing) {
-    await db.update(expenseReactions).set({ emoji: "dispute" }).where(eq(expenseReactions.id, existing.id));
-  } else {
-    await db.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "dispute" });
-  }
+    if (existing) {
+      await tx.update(expenseReactions).set({ emoji: "dispute" }).where(eq(expenseReactions.id, existing.id));
+    } else {
+      await tx.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "dispute" });
+    }
 
-  // Create dispute record
-  await db.insert(expenseDisputes).values({
-    expenseId,
-    groupId,
-    requesterMemberId: membership.id,
-    disputeType,
-    suggestedAmount: suggestedAmount !== undefined ? String(suggestedAmount) : null,
-    message: message?.trim() ?? null,
-    status: "pending",
+    // Step 3: create the dispute record
+    await tx.insert(expenseDisputes).values({
+      expenseId,
+      groupId,
+      requesterMemberId: membership.id,
+      disputeType,
+      suggestedAmount: suggestedAmount !== undefined ? String(suggestedAmount) : null,
+      message: message?.trim() ?? null,
+      status: "pending",
+    });
   });
 
   revalidateGroup(groupId);
@@ -585,10 +598,25 @@ export async function declineDispute(disputeId: string) {
     return { ok: false, error: "Only the expense payer or a group admin can decline disputes" } as const;
   }
 
-  await db
-    .update(expenseDisputes)
-    .set({ status: "declined", resolvedAt: new Date() })
-    .where(eq(expenseDisputes.id, disputeId));
+  // I-3 fix: also remove the ⚠️/❓ reaction when declining, mirroring
+  // acceptDispute which already does this inside its transaction.  Previously
+  // declineDispute left the reaction in place — the expense card kept showing
+  // the dispute emoji until the requester manually cancelled.
+  await db.transaction(async (tx) => {
+    await tx
+      .update(expenseDisputes)
+      .set({ status: "declined", resolvedAt: new Date() })
+      .where(eq(expenseDisputes.id, disputeId));
+
+    await tx
+      .delete(expenseReactions)
+      .where(
+        and(
+          eq(expenseReactions.expenseId, expenseId),
+          eq(expenseReactions.memberId, requesterMemberId),
+        )
+      );
+  });
 
   revalidateGroup(groupId);
   revalidatePath(`/groups/${groupId}`, "layout");

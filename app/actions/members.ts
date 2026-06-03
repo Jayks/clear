@@ -301,12 +301,26 @@ export async function updateDisplayName(name: string) {
   if (!trimmed) return { ok: false, error: "Display name cannot be empty" } as const;
   if (trimmed.length > 50) return { ok: false, error: "Name too long (max 50 characters)" } as const;
 
+  // M-2 fix: also fetch the user's group IDs so we can call revalidateTag for
+  // each one.  revalidatePath('/groups', 'layout') only invalidates the Next.js
+  // route cache; it does NOT invalidate unstable_cache entries tagged
+  // `group-${id}`.  Without the per-group revalidateTag, getGroupWithMembers
+  // returns the old display name from the unstable_cache until a different
+  // mutation (addExpense, settle, etc.) happens to touch that group's tag.
+  const memberRows = await db
+    .select({ groupId: groupMembers.groupId })
+    .from(groupMembers)
+    .where(eq(groupMembers.userId, user.id));
+
   await db
     .update(groupMembers)
     .set({ displayName: trimmed })
     .where(eq(groupMembers.userId, user.id));
 
-  // Invalidate all group pages so updated names appear immediately
+  // Invalidate per-group unstable_cache and the route cache
+  for (const { groupId } of memberRows) {
+    revalidateTag(`group-${groupId}`, "max");
+  }
   revalidatePath("/groups", "layout");
   return { ok: true } as const;
 }

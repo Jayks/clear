@@ -93,6 +93,7 @@ async function _fetchActivity(groupId: string, limit: number): Promise<ActivityE
     JOIN group_members m_from ON m_from.id = s.from_member_id
     JOIN group_members m_to   ON m_to.id   = s.to_member_id
     WHERE s.group_id = ${groupId}
+      AND s.is_confirmed = true
 
     UNION ALL
 

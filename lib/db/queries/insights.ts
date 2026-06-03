@@ -287,7 +287,11 @@ export async function getPersonalInsightsData() {
           )
           .groupBy(settlements.paymentMethod),
 
-        // Stream settlements I recorded (I was the payer)
+        // Stream settlements I recorded (I was the payer) — confirmed only.
+        // R7-2 fix: mirror the isConfirmed=true filter already applied to
+        // trip/nest settlements and circle contributions above. An unconfirmed
+        // self-report (creditor hasn't confirmed yet) should not be counted in
+        // payment-method analytics — it may still be disputed and deleted.
         db
           .select({
             paymentMethod: streamSettlements.paymentMethod,
@@ -298,6 +302,7 @@ export async function getPersonalInsightsData() {
           .where(
             and(
               eq(streamSettlements.recordedBy, user.id),
+              eq(streamSettlements.isConfirmed, true),
               isNotNull(streamSettlements.paymentMethod),
             )
           )

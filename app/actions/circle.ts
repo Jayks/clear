@@ -101,6 +101,48 @@ export async function recordContribution(input: {
   if (!membership || membership.role !== "admin")
     return { ok: false, error: "Only admins can record contributions" } as const;
 
+  // Server-side amount validation — client guards exist but the server is the
+  // trust boundary (Bug C-1a fix).
+  if (!input.amount || input.amount <= 0 || !isFinite(input.amount)) {
+    return { ok: false, error: "Amount must be a positive number" } as const;
+  }
+
+  // Verify the memberId actually belongs to this circle (Bug C-1b fix — prevents
+  // cross-circle contribution recording by a multi-circle admin).
+  const [targetMember] = await db
+    .select({ id: groupMembers.id })
+    .from(groupMembers)
+    .where(
+      and(
+        eq(groupMembers.id, input.memberId),
+        eq(groupMembers.groupId, input.groupId),
+      )
+    )
+    .limit(1);
+  if (!targetMember) {
+    return { ok: false, error: "Member not found in this circle" } as const;
+  }
+
+  // Dedup guard for recurring mode: prevent double-recording a confirmed
+  // contribution for the same member × period (Bug C-1c fix).
+  if (input.period) {
+    const [existing] = await db
+      .select({ id: circleContributions.id })
+      .from(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.groupId, input.groupId),
+          eq(circleContributions.memberId, input.memberId),
+          eq(circleContributions.isConfirmed, true),
+          eq(circleContributions.period, input.period),
+        )
+      )
+      .limit(1);
+    if (existing) {
+      return { ok: false, error: "A confirmed contribution already exists for this member and period" } as const;
+    }
+  }
+
   try {
     await db.insert(circleContributions).values({
       groupId:    input.groupId,
@@ -113,7 +155,8 @@ export async function recordContribution(input: {
     });
 
     revalidatePath("/groups");
-    revalidatePath(`/groups/${input.groupId}`);
+    revalidatePath(`/groups/${input.groupId}`, "layout");
+    revalidateTag(`balances-${input.groupId}`, "max");   // Bug C-5 fix: was missing
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to record contribution" } as const;
@@ -321,12 +364,16 @@ export async function disputeContribution(
       );
     if (!contrib) return { ok: false, error: "Contribution not found" } as const;
 
+    // Re-assert isConfirmed = false in the DELETE so that a concurrent
+    // confirmContribution call cannot delete an already-confirmed row
+    // (Bug C-2 fix — closes the SELECT-then-act race condition).
     await db
       .delete(circleContributions)
       .where(
         and(
           eq(circleContributions.id, contributionId),
           eq(circleContributions.groupId, groupId),
+          eq(circleContributions.isConfirmed, false),
         )
       );
 
@@ -475,12 +522,15 @@ export async function rejectContribution(input: {
       );
     if (!contrib) return { ok: false, error: "Contribution not found" } as const;
 
+    // Re-assert isConfirmed = false in the DELETE (Bug C-2 fix — same race
+    // condition guard as disputeContribution above).
     await db
       .delete(circleContributions)
       .where(
         and(
           eq(circleContributions.id, input.contributionId),
           eq(circleContributions.groupId, input.groupId),
+          eq(circleContributions.isConfirmed, false),
         )
       );
 
@@ -537,6 +587,39 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
   if (!(await canAddExpense(groupId)))
     return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
 
+  // Guard: "From wallet" expenses cannot exceed the available pool balance.
+  // "I paid from my pocket" (isAdvance=true) is always allowed — the admin
+  // is personally advancing funds and will be reimbursed from future contributions
+  // (Bug C-3 fix).
+  if (!isAdvance) {
+    const [contribRow] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${circleContributions.amount}), '0')` })
+      .from(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.groupId, groupId),
+          eq(circleContributions.isConfirmed, true),
+        )
+      );
+    const [expenseRow] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), '0')` })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.groupId, groupId),
+          eq(expenses.isTemplate, false),
+        )
+      );
+    const poolBalance = Number(contribRow?.total ?? 0) - Number(expenseRow?.total ?? 0);
+    if (amount > poolBalance + 0.01) {
+      const available = poolBalance.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+      return {
+        ok: false,
+        error: `Wallet balance is ₹${available}. Use "I paid from my pocket" for advance expenses.`,
+      } as const;
+    }
+  }
+
   try {
     const [expense] = await db.insert(expenses).values({
       groupId,
@@ -576,17 +659,32 @@ export async function updateCircleStatus(
     return { ok: false, error: "Only circle admins can update the status" } as const;
 
   try {
-    // Fetch target amount and confirmed contributions total for server-side guard
+    // Fetch target amount, current status, and mode for server-side guards
     const [group] = await db
       .select({
-        targetAmount:    groups.targetAmount,
-        circleMode:      groups.circleMode,
+        targetAmount:  groups.targetAmount,
+        circleMode:    groups.circleMode,
+        circleStatus:  groups.circleStatus,
       })
       .from(groups)
       .where(eq(groups.id, groupId));
 
     if (!group || group.circleMode !== "one_time")
       return { ok: false, error: "Not a one-time circle" } as const;
+
+    // State-machine guard: only allow forward transitions (Bug C-4 fix).
+    // active → purchased → complete.  No backward transitions permitted.
+    const currentStatus = group.circleStatus ?? "active";
+    const validNext: Record<string, string> = {
+      "active":    "purchased",
+      "purchased": "complete",
+    };
+    if (validNext[currentStatus] !== newStatus) {
+      return {
+        ok: false,
+        error: `Cannot transition from '${currentStatus}' to '${newStatus}'`,
+      } as const;
+    }
 
     // Gate: cannot transition to purchased/complete unless goal is fully funded
     if (group.targetAmount) {

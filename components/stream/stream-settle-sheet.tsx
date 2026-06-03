@@ -135,8 +135,18 @@ export function StreamSettleSheet({
     setAmountStr(cleaned);
   }
 
-  const parsedAmount = parseFloat(amountStr) || absNet;
-  const isPartial    = parsedAmount < absNet - 0.01;
+  // S-6: `parseFloat(amountStr) || absNet` silently fell back to the full
+  // balance when the user typed "0" or cleared the field (both are falsy),
+  // bypassing the guard below and accidentally submitting the full net.
+  // Treat 0/NaN/empty as "no valid amount" (undefined) → submit disabled.
+  const parsedAmountRaw = parseFloat(amountStr);
+  const parsedAmount    = !isNaN(parsedAmountRaw) && parsedAmountRaw > 0
+    ? parsedAmountRaw
+    : undefined;
+  // For UPI deep-link and display components that require a number, fall back
+  // to the full net so the UPI button stays usable while the field is empty.
+  const effectiveAmount = parsedAmount ?? absNet;
+  const isPartial       = parsedAmount !== undefined && parsedAmount < absNet - 0.01;
 
   // ── Return-from-UPI detection ──────────────────────────────────────────────
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -162,7 +172,7 @@ export function StreamSettleSheet({
   async function handleSelfReportUpi(utr?: string) {
     setConfirming(true);
     try {
-      const ok = await onSelfReport({ paymentMethod: "upi", utrReference: utr, amount: parsedAmount });
+      const ok = await onSelfReport({ paymentMethod: "upi", utrReference: utr, amount: effectiveAmount });
       if (ok) { dismissPrompt(); onClose(); }
     } finally {
       setConfirming(false);
@@ -327,7 +337,7 @@ export function StreamSettleSheet({
                     <UpiRequestButton
                       payeeUserId={currentUserId}
                       payeeName={personName}
-                      amount={parsedAmount}
+                      amount={effectiveAmount}
                       currency={currency}
                       contextName={firstName}
                       size="md"
@@ -360,7 +370,7 @@ export function StreamSettleSheet({
                   <button
                     type="button"
                     onClick={handleCreditorSubmit}
-                    disabled={submitting}
+                    disabled={submitting || !parsedAmount}
                     className="w-full py-3.5 rounded-xl
                                bg-gradient-to-br from-emerald-500 to-teal-500
                                hover:from-emerald-600 hover:to-teal-600
@@ -388,7 +398,7 @@ export function StreamSettleSheet({
                     <div className="space-y-3">
                       <UpiPayButton
                         vpa={counterpartDefaultVpa}
-                        amount={parsedAmount}
+                        amount={effectiveAmount}
                         currency={currency}
                         contextName={firstName}
                         onTapped={handleUpiTapped}
@@ -399,7 +409,7 @@ export function StreamSettleSheet({
                         timerActive={timerActive}
                         tappedApp={tappedApp}
                         confirming={confirming}
-                        amount={parsedAmount}
+                        amount={effectiveAmount}
                         currency={currency}
                         onConfirm={handleSelfReportUpi}
                         onDismiss={dismissPrompt}
@@ -433,6 +443,7 @@ export function StreamSettleSheet({
                       <NoteInput value={noteInput} onChange={setNoteInput} />
                       <DebtorSubmitButton
                         submitting={submitting}
+                        disabled={!parsedAmount}
                         onClick={handleDebtorSubmit}
                         label={isGuestCounterpart ? "Mark as paid →" : "Report payment →"}
                       />
@@ -464,6 +475,7 @@ export function StreamSettleSheet({
                       <NoteInput value={noteInput} onChange={setNoteInput} />
                       <DebtorSubmitButton
                         submitting={submitting}
+                        disabled={!parsedAmount}
                         onClick={handleDebtorSubmit}
                         label={isGuestCounterpart ? "Mark as paid →" : "Report payment →"}
                       />
@@ -481,6 +493,7 @@ export function StreamSettleSheet({
                       />
                       <DebtorSubmitButton
                         submitting={submitting}
+                        disabled={!parsedAmount}
                         onClick={handleDebtorSubmit}
                         label={isGuestCounterpart ? "Mark as paid →" : "Report payment →"}
                       />
@@ -568,10 +581,12 @@ function NoteInput({
 
 function DebtorSubmitButton({
   submitting,
+  disabled,
   onClick,
   label = "Report payment →",
 }: {
   submitting: boolean;
+  disabled?:  boolean;
   onClick:    () => void;
   label?:     string;
 }) {
@@ -579,7 +594,7 @@ function DebtorSubmitButton({
     <button
       type="button"
       onClick={onClick}
-      disabled={submitting}
+      disabled={submitting || disabled}
       className="w-full py-3.5 rounded-xl
                  bg-gradient-to-br from-cyan-500 to-teal-500
                  hover:from-cyan-600 hover:to-teal-600

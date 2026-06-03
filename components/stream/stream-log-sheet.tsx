@@ -95,6 +95,7 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
   // Reset everything when sheet closes
   useEffect(() => {
     if (!isOpen) {
+      clearTimeout(debounceRef.current); // M-6: cancel any in-flight search debounce
       const timer = setTimeout(() => {
         setStep(preselectedPerson ? "enter-amount" : "pick-person");
         setSelected(preselectedPerson ?? null);

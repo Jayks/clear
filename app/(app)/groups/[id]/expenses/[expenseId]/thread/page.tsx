@@ -92,8 +92,8 @@ export default async function ThreadPage({
       {/* Expense summary card */}
       <div className="glass rounded-2xl px-5 py-4 mb-5">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${catMeta.color}`}>
-            <catMeta.icon className={`w-5 h-5 ${catMeta.textColor}`} />
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${catMeta.gradient} flex items-center justify-center shrink-0`}>
+            <catMeta.icon className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <h1

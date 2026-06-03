@@ -36,21 +36,30 @@ export function MemberProfileSheet({
 }: Props) {
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState<MemberStats | null>(null);
+  const [statsFailed, setStatsFailed] = useState(false);
   const [, startFetch] = useTransition();
 
   useEffect(() => { setMounted(true); }, []);
 
   // Lazy-load stats when first opened
   useEffect(() => {
-    if (!isOpen || stats !== null) return;
+    if (!isOpen || stats !== null || statsFailed) return;
     startFetch(async () => {
-      const result = await fetchMemberStatsAction(member.id, groupId);
-      setStats(result);
+      try {
+        const result = await fetchMemberStatsAction(member.id, groupId);
+        setStats(result);
+      } catch {
+        // Stop the spinner; user can retry by closing and switching to another member
+        setStatsFailed(true);
+      }
     });
-  }, [isOpen, member.id, groupId, stats]);
+  }, [isOpen, member.id, groupId, stats, statsFailed]);
 
   // Reset when member changes
-  useEffect(() => { setStats(null); }, [member.id]);
+  useEffect(() => {
+    setStats(null);
+    setStatsFailed(false);
+  }, [member.id]);
 
   // Escape key + Android back-button dismissal
   useSheetDismiss(isOpen, onClose);
@@ -143,10 +152,16 @@ export function MemberProfileSheet({
 
               {/* Stats */}
               {stats === null ? (
-                <div className="flex items-center justify-center py-6 gap-2 text-slate-400">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Loading…</span>
-                </div>
+                statsFailed ? (
+                  <div className="flex items-center justify-center py-6 text-slate-400 text-sm">
+                    Could not load stats.
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-6 gap-2 text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Loading…</span>
+                  </div>
+                )
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-3">

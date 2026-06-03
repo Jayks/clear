@@ -93,7 +93,7 @@ export async function addExpense(input: AddExpenseInput) {
       actorName: membership.displayName ?? "A member",
       actorUserId: user.id,
     };
-    Promise.all([
+    await Promise.all([
       sendExpenseNotification(notifyParams).catch(() => {}),
       sendPushToMembers(notifyParams).catch(() => {}),
     ]);

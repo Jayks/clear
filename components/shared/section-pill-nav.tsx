@@ -79,6 +79,10 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
   // Default to first section so something is highlighted on initial render
   const [activeId, setActiveId] = useState<string>(sections[0]?.id ?? "");
 
+  // Stable key derived from section IDs — prevents scroll listener from being
+  // re-registered on every parent render when sections is an inline array literal.
+  const sectionsKey = sections.map((s) => s.id).join(",");
+
   useEffect(() => {
     if (sections.length === 0) return;
 
@@ -109,7 +113,8 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
     updateActive(); // set correct pill on mount / after navigation
 
     return () => window.removeEventListener("scroll", updateActive);
-  }, [sections]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectionsKey]);
 
   if (sections.length === 0) return null;
 

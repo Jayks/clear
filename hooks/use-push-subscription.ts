@@ -62,9 +62,15 @@ export function usePushSubscription() {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),
+        }).catch((e) => {
+          // Log but don't block — browser is already unsubscribed locally;
+          // ghost subscription in DB will fail-deliver and auto-prune on next push
+          console.error("[push] Failed to remove server subscription:", e);
         });
       }
       setIsSubscribed(false);
+    } catch (e) {
+      console.error("[push] Unsubscribe error:", e);
     } finally {
       setIsLoading(false);
     }

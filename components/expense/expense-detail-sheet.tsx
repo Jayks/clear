@@ -121,8 +121,13 @@ export function ExpenseDetailSheet({
   useEffect(() => {
     if (!isOpen || splits !== null) return;
     startFetch(async () => {
-      const result = await fetchExpenseSplitsAction(expense.id);
-      setSplits(result ?? []);
+      try {
+        const result = await fetchExpenseSplitsAction(expense.id);
+        setSplits(result ?? []);
+      } catch {
+        // Silently clears the spinner; user can retry by closing and reopening
+        setSplits([]);
+      }
     });
   }, [isOpen, expense.id, splits]);
 
@@ -187,13 +192,7 @@ export function ExpenseDetailSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Keyboard close
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
+  // Note: Escape key + Android back handled by useSheetDismiss above — no inline listener needed.
 
   if (!mounted) return null;
 
@@ -265,8 +264,8 @@ export function ExpenseDetailSheet({
   }
 
   async function handleAcceptDispute(disputeId: string) {
-    setIsAccepting(true);
     startAction(async () => {
+      setIsAccepting(true);
       const result = await acceptDispute(disputeId);
       setIsAccepting(false);
       if (result.ok) {
@@ -281,8 +280,8 @@ export function ExpenseDetailSheet({
   }
 
   async function handleDeclineDispute(disputeId: string) {
-    setIsDeclining(true);
     startAction(async () => {
+      setIsDeclining(true);
       const result = await declineDispute(disputeId);
       setIsDeclining(false);
       if (result.ok) {

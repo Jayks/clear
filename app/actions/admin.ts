@@ -100,8 +100,7 @@ export async function toggleVisitorNotifications(enabled: boolean) {
 }
 
 async function requirePlatformAdminAction() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!isPlatformAdmin(user?.email)) throw new Error("Forbidden");
 }
 

@@ -3,7 +3,7 @@
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { db } from "@/lib/db/client";
 import { userUpiIds } from "@/lib/db/schema/upi-ids";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { saveUpiIdSchema } from "@/lib/validations/upi";
 import { sql } from "drizzle-orm";
 
@@ -30,7 +30,6 @@ export async function saveUpiId(input: {
     .from(userUpiIds)
     .where(eq(userUpiIds.userId, user.id));
 
-  const alreadyExists = existing.find((r) => r.id); // will refetch with upiId match below
   const exactMatch = await db
     .select({ id: userUpiIds.id })
     .from(userUpiIds)
@@ -108,7 +107,7 @@ export async function deleteUpiId(
         .select({ id: userUpiIds.id })
         .from(userUpiIds)
         .where(eq(userUpiIds.userId, user.id))
-        .orderBy(userUpiIds.createdAt)
+        .orderBy(desc(userUpiIds.createdAt))
         .limit(1);
       if (next) {
         await tx.update(userUpiIds).set({ isDefault: true }).where(eq(userUpiIds.id, next.id));

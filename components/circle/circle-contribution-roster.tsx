@@ -238,12 +238,12 @@ export function CircleContributionRoster({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search members…"
-          className="w-full pl-9 pr-8 py-2 text-sm rounded-xl
+          className={`w-full pl-9 pr-8 py-2 text-sm rounded-xl
                      border border-slate-200 dark:border-slate-700
                      bg-slate-50 dark:bg-slate-800/60
                      text-slate-800 dark:text-slate-100
                      placeholder:text-slate-400 dark:placeholder:text-slate-500
-                     focus:outline-none focus:ring-2 ${inputFocusCls} transition-colors"
+                     focus:outline-none focus:ring-2 ${inputFocusCls} transition-colors`}
         />
         {query && (
           <button

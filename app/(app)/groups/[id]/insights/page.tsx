@@ -159,9 +159,11 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
     : !group.endDate || group.endDate >= todayStr ? "active"
     : "completed";
 
+  // Append T00:00:00 so both dates parse as local midnight — prevents UTC vs local
+  // timezone off-by-one (e.g. IST users east of UTC seeing wrong countdown)
   const daysUntilStart = tripState === "future" && group.startDate
     ? Math.max(0, Math.ceil(
-        (new Date(group.startDate).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24)
+        (new Date(group.startDate + "T00:00:00").getTime() - new Date(todayStr + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)
       ))
     : 0;
 

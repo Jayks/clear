@@ -44,6 +44,13 @@ export function SwipeableExpenseCard(props: Props) {
     setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
   }, []);
 
+  // Cancel any pending 5s delete timer if the card unmounts mid-countdown
+  useEffect(() => {
+    return () => {
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+    };
+  }, []);
+
   // Dismiss when the user taps/clicks anywhere outside this card while actions are open.
   // pointerdown (not click) fires before any tap delay — feels instant.
   useEffect(() => {

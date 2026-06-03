@@ -15,7 +15,7 @@
  *  - Goal mode: "Contribute more" after paid; open amount when no fixed amount.
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { selfReportContribution } from "@/app/actions/circle";
@@ -156,7 +156,9 @@ export function CircleContributeAction({
   }
 
   // Called by PaymentConfirmPrompt after user confirms return from UPI app.
-  async function handleUpiReported(utr?: string) {
+  // useCallback captures current customAmount so stale closure doesn't use old amount
+  // if the user edits the input after tapping UPI and before confirming return.
+  const handleUpiReported = useCallback(async (utr?: string) => {
     const reportAmount = amount ?? parseFloat(customAmount);
     if (!reportAmount || reportAmount <= 0) return;
     setReportingUpi(true);
@@ -178,7 +180,7 @@ export function CircleContributeAction({
         toast.success("Reported — pending admin confirmation");
       }
     }
-  }
+  }, [customAmount, amount, period, currency, groupId, isAdmin]);
 
   // ── Size tokens ───────────────────────────────────────────────────────────
   const label    = isDash ? "text-sm"     : "text-[11px]";

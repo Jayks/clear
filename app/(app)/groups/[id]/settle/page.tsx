@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
@@ -42,6 +42,8 @@ export default async function SettlePage({
     getMemberDefaultUpiIds(memberUserIds),
     getPendingSettlements(id),
   ]);
+
+  if (!user) redirect("/login");
 
   // Flatten UserUpiId → VPA string so we don't pass non-serialisable objects to the client
   const upiIdMap: Record<string, string | null> = Object.fromEntries(

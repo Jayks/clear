@@ -327,19 +327,28 @@ export async function undoSettleStream(settlementId: string) {
 
   if (!record) return { ok: false, error: "Stream not found" } as const;
 
+  // S-7 + S-8 fix: wrap DELETE + UPDATE in one transaction AND use disputedAt as the
+  // authoritative signal for status restoration (same fix as S-5 for undoSettleWithPerson
+  // but was missed here).  Without the transaction, a failed UPDATE after a committed
+  // DELETE leaves the settlement gone but the stream permanently locked as "settled".
   try {
-    await db
-      .delete(streamSettlements)
-      .where(eq(streamSettlements.id, settlementId));
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(streamSettlements)
+        .where(eq(streamSettlements.id, settlementId));
 
-    // Revert status if stream was marked as fully settled
-    if (record.status === "settled") {
-      const previousStatus = record.confirmedAt ? "confirmed" : "pending";
-      await db
-        .update(streamRecords)
-        .set({ status: previousStatus, settledAt: null, updatedAt: new Date() })
-        .where(eq(streamRecords.id, record.id));
-    }
+      // Revert status if stream was marked as fully settled
+      if (record.status === "settled") {
+        const previousStatus =
+          record.disputedAt  ? "disputed"  :
+          record.confirmedAt ? "confirmed" :
+          "pending";
+        await tx
+          .update(streamRecords)
+          .set({ status: previousStatus, settledAt: null, updatedAt: new Date() })
+          .where(eq(streamRecords.id, record.id));
+      }
+    });
 
     revalidatePath("/stream", "layout");
     revalidatePath("/groups", "layout");
@@ -544,11 +553,9 @@ export async function undoSettleWithPerson(streamIds: string[]) {
   if (!streamIds.length) return { ok: true } as const;
 
   try {
-    // Revert to 'confirmed' if they had been confirmed, else back to 'pending'.
-    // We use the confirmedAt column as a proxy — confirmed if non-null.
     const rows = await db
       .select({
-        id:         streamRecords.id,
+        id:          streamRecords.id,
         confirmedAt: streamRecords.confirmedAt,
         disputedAt:  streamRecords.disputedAt,
       })
@@ -563,25 +570,30 @@ export async function undoSettleWithPerson(streamIds: string[]) {
         ),
       );
 
-    for (const row of rows) {
-      // Restore the pre-settle status correctly.  Use disputedAt as the
-      // authoritative signal for "disputed" — previously only confirmedAt was
-      // checked, so a formerly-disputed entry was silently restored to
-      // "confirmed" instead of "disputed" (Bug S-5 fix).
-      const previousStatus =
-        row.disputedAt  ? "disputed"  :
-        row.confirmedAt ? "confirmed" :
-        "pending";
+    // S-9 fix: group rows by their pre-settle status and run 3 batch inArray UPDATEs
+    // inside a single transaction.  The previous N-individual-UPDATEs loop was not
+    // atomic — if update K failed, rows 0..K-1 were committed while K..N-1 were not,
+    // leaving a partially-reverted balance.  Grouping also reduces DB round-trips
+    // from N to at most 3 regardless of how many streams are being undone.
+    const now = new Date();
+    const disputedIds  = rows.filter((r) =>  r.disputedAt                      ).map((r) => r.id);
+    const confirmedIds = rows.filter((r) => !r.disputedAt &&  r.confirmedAt    ).map((r) => r.id);
+    const pendingIds   = rows.filter((r) => !r.disputedAt && !r.confirmedAt    ).map((r) => r.id);
 
-      await db
-        .update(streamRecords)
-        .set({
-          status:    previousStatus,
-          settledAt: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(streamRecords.id, row.id));
-    }
+    await db.transaction(async (tx) => {
+      if (disputedIds.length > 0)
+        await tx.update(streamRecords)
+          .set({ status: "disputed",  settledAt: null, updatedAt: now })
+          .where(inArray(streamRecords.id, disputedIds));
+      if (confirmedIds.length > 0)
+        await tx.update(streamRecords)
+          .set({ status: "confirmed", settledAt: null, updatedAt: now })
+          .where(inArray(streamRecords.id, confirmedIds));
+      if (pendingIds.length > 0)
+        await tx.update(streamRecords)
+          .set({ status: "pending",   settledAt: null, updatedAt: now })
+          .where(inArray(streamRecords.id, pendingIds));
+    });
 
     revalidatePath("/stream", "layout");
     revalidatePath("/groups", "layout");
@@ -815,71 +827,74 @@ export async function confirmStreamSettle(settlementId: string) {
     return { ok: false, error: "Not authorised to confirm this settlement" } as const;
   }
 
+  // S-10 fix: wrap the settlement confirm + stream-record settle in one transaction.
+  // Previously, if the streamRecords UPDATE failed after streamSettlements was confirmed,
+  // the settlement appeared confirmed but the balance showed as still outstanding —
+  // unrecoverable without direct DB access.
   try {
-    // Mark settlement confirmed
-    await db
-      .update(streamSettlements)
-      .set({ isConfirmed: true })
-      .where(eq(streamSettlements.id, settlementId));
+    await db.transaction(async (tx) => {
+      // Step 1: mark the settlement row as confirmed
+      await tx
+        .update(streamSettlements)
+        .set({ isConfirmed: true })
+        .where(eq(streamSettlements.id, settlementId));
 
-    // Settle active records between the two parties, capped to the confirmed
-    // settlement amount.  Oldest entries first — only mark entries as settled
-    // whose full amount fits within the paid amount.  This prevents a ₹1
-    // self-report from wiping a ₹1000 balance on confirm (Bug S-2 fix).
-    const ACTIVE = ["pending", "confirmed", "disputed"] as const;
-    const activeRecords = await db
-      .select({ id: streamRecords.id, amount: streamRecords.amount })
-      .from(streamRecords)
-      .where(
-        and(
-          inArray(streamRecords.status, [...ACTIVE]),
-          or(
-            and(eq(streamRecords.creatorId, user.id),  eq(streamRecords.counterpartId, debtorId)),
-            and(eq(streamRecords.creatorId, debtorId), eq(streamRecords.counterpartId, user.id)),
+      // Step 2: settle stream records up to the confirmed amount.
+      // Oldest entries first — only entries whose full amount fits within the
+      // paid amount are settled (Bug S-2 fix retained inside the transaction).
+      const ACTIVE = ["pending", "confirmed", "disputed"] as const;
+      const activeRecords = await tx
+        .select({ id: streamRecords.id, amount: streamRecords.amount })
+        .from(streamRecords)
+        .where(
+          and(
+            inArray(streamRecords.status, [...ACTIVE]),
+            or(
+              and(eq(streamRecords.creatorId, user.id),  eq(streamRecords.counterpartId, debtorId)),
+              and(eq(streamRecords.creatorId, debtorId), eq(streamRecords.counterpartId, user.id)),
+            ),
           ),
-        ),
-      )
-      .orderBy(asc(streamRecords.createdAt));   // oldest first for fair allocation
+        )
+        .orderBy(asc(streamRecords.createdAt));
 
-    if (activeRecords.length > 0) {
-      const paidAmount     = Number(settlement.amount);
-      const totalOutstanding = activeRecords.reduce((s, r) => s + Number(r.amount), 0);
+      if (activeRecords.length > 0) {
+        const paidAmount       = Number(settlement.amount);
+        const totalOutstanding = activeRecords.reduce((s, r) => s + Number(r.amount), 0);
 
-      let toSettleIds: string[];
-      if (paidAmount >= totalOutstanding - 0.01) {
-        // Full payment — settle everything
-        toSettleIds = activeRecords.map((r) => r.id);
-      } else {
-        // Partial payment — settle oldest entries first up to paid amount
-        let remaining = paidAmount;
-        toSettleIds = [];
-        for (const r of activeRecords) {
-          const amt = Number(r.amount);
-          if (remaining <= 0) break;
-          if (amt <= remaining + 0.01) {
-            toSettleIds.push(r.id);
-            remaining -= amt;
-          } else {
-            break;
+        let toSettleIds: string[];
+        if (paidAmount >= totalOutstanding - 0.01) {
+          toSettleIds = activeRecords.map((r) => r.id);
+        } else {
+          let remaining = paidAmount;
+          toSettleIds = [];
+          for (const r of activeRecords) {
+            const amt = Number(r.amount);
+            if (remaining <= 0) break;
+            if (amt <= remaining + 0.01) {
+              toSettleIds.push(r.id);
+              remaining -= amt;
+            } else {
+              break;
+            }
           }
         }
-      }
 
-      if (toSettleIds.length > 0) {
-        const now = new Date();
-        await db
-          .update(streamRecords)
-          .set({ status: "settled", settledAt: now, updatedAt: now })
-          .where(inArray(streamRecords.id, toSettleIds));
+        if (toSettleIds.length > 0) {
+          const now = new Date();
+          await tx
+            .update(streamRecords)
+            .set({ status: "settled", settledAt: now, updatedAt: now })
+            .where(inArray(streamRecords.id, toSettleIds));
+        }
       }
-    }
+    });
 
-    // Notify debtor: their payment was confirmed
+    // Notify debtor: their payment was confirmed (outside transaction — fire-and-forget)
     const amountStr = formatCurrency(Number(settlement.amount), settlement.currency);
     sendStreamPush(debtorId, {
       title: "✓ Payment confirmed",
       body:  `${amountStr} settlement confirmed. Balance cleared!`,
-      url:   `/stream/${user.id}`,   // debtor views creditor's timeline
+      url:   `/stream/${user.id}`,
     }).catch(() => {});
 
     revalidatePath("/stream", "layout");

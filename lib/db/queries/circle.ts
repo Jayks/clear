@@ -149,16 +149,19 @@ export async function getCircleCardData(
 // ── Dashboard data ────────────────────────────────────────────────────────────
 
 export interface MemberDashboardStatus {
-  id:                       string;
-  name:                     string;
-  isGuest:                  boolean;
-  role:                     "admin" | "member";
-  userId:                   string | null;
-  isPaid:                   boolean;
-  isPendingConfirm:         boolean;    // self-reported, awaiting admin confirmation
+  id:                        string;
+  name:                      string;
+  isGuest:                   boolean;
+  role:                      "admin" | "member";
+  userId:                    string | null;
+  isPaid:                    boolean;
+  isPendingConfirm:          boolean;    // self-reported, awaiting admin confirmation
   unconfirmedContributionId: string | null; // used by admin to confirm/reject
-  contributionDate:         string | null;
-  contributionAmount:       number | null;
+  pendingAmount:             number | null; // amount of the pending self-report
+  pendingPaymentMethod:      string | null; // payment method of the self-report ('upi'|'cash'|etc)
+  pendingUtrReference:       string | null; // UTR from the self-report
+  contributionDate:          string | null;
+  contributionAmount:        number | null;
 }
 
 export interface RecentPoolExpense {
@@ -243,11 +246,13 @@ export async function getCircleDashboardData(
 
     // Contributions for the selected period (recurring) or all (goal)
     db.select({
-      id:          circleContributions.id,
-      memberId:    circleContributions.memberId,
-      amount:      circleContributions.amount,
-      createdAt:   circleContributions.createdAt,
-      isConfirmed: circleContributions.isConfirmed,
+      id:            circleContributions.id,
+      memberId:      circleContributions.memberId,
+      amount:        circleContributions.amount,
+      createdAt:     circleContributions.createdAt,
+      isConfirmed:   circleContributions.isConfirmed,
+      paymentMethod: circleContributions.paymentMethod,
+      utrReference:  circleContributions.utrReference,
     }).from(circleContributions).where(
       isRecurring
         ? and(eq(circleContributions.groupId, groupId), eq(circleContributions.period, period))
@@ -309,6 +314,9 @@ export async function getCircleDashboardData(
       isPaid:                    confirmedMap.has(m.id),
       isPendingConfirm:          unconfirmedMap.has(m.id),
       unconfirmedContributionId: unconfirmed?.id ?? null,
+      pendingAmount:             unconfirmed ? Number(unconfirmed.amount) : null,
+      pendingPaymentMethod:      unconfirmed?.paymentMethod ?? null,
+      pendingUtrReference:       unconfirmed?.utrReference ?? null,
       contributionDate:          confirmed?.createdAt
         ? new Date(confirmed.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
         : null,

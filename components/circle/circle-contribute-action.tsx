@@ -8,10 +8,10 @@
  *   - `circle-card.tsx` home-page card         (size="card")
  *
  * UX decisions locked in the Circle simplification plan:
- *  - ONE primary pay button: "Pay ₹X ↗" (UPI) when upiId set; "I've paid"
+ *  - ONE primary pay button: UpiPayButton (app picker) when upiId set; "I've paid"
  *    when no UPI. Secondary "Already paid elsewhere?" appears as a small
  *    text link below — not a co-equal button.
- *  - Three member states: paid ✓ | pending-confirm 🟡 | unpaid ⏳
+ *  - Three member states: paid ✓ | pending-confirm ⏳ | unpaid
  *  - Goal mode: "Contribute more" after paid; open amount when no fixed amount.
  */
 
@@ -19,6 +19,9 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { selfReportContribution } from "@/app/actions/circle";
+import { UpiPayButton } from "@/components/payment/upi-pay-button";
+import { PaymentConfirmPrompt } from "@/components/payment/payment-confirm-prompt";
+import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { formatCurrency } from "@/lib/utils";
 
@@ -42,26 +45,23 @@ interface Props {
   circleMode?:         "recurring" | "one_time";
   contributionDate?:   string | null;
   contributionAmount?: number | null;
+  /** Admin self-reports are auto-confirmed — no pending state */
+  isAdmin?:            boolean;
 }
 
 export function CircleContributeAction({
   groupId, groupName, isPaid, isPendingConfirm,
   amount, currency, period, periodLabel, isRecurring, upiId,
-  size, circleMode = "recurring", contributionDate, contributionAmount,
+  size, circleMode = "recurring", contributionDate, contributionAmount, isAdmin = false,
 }: Props) {
   const isDash = size === "dashboard";
 
   // ── Mode-aware colour tokens ──────────────────────────────────────────────
-  // Recurring = indigo/violet; One-time = amber/orange
   const isOneTimeMode   = circleMode === "one_time";
   const btnGradient     = isOneTimeMode ? "from-amber-500 to-orange-500"    : "from-indigo-500 to-violet-600";
   const btnShadowCls    = isOneTimeMode ? "shadow-amber-500/20"              : "shadow-indigo-500/20";
   const inputFocusCls   = isOneTimeMode ? "focus:ring-amber-500/20 focus:border-amber-400"
                                         : "focus:ring-indigo-500/20 focus:border-indigo-400";
-  const promptBgCls     = isOneTimeMode
-    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200/60 dark:border-amber-700/40"
-    : "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200/60 dark:border-indigo-700/40";
-  const promptTextCls   = isOneTimeMode ? "text-amber-700 dark:text-amber-300" : "text-indigo-700 dark:text-indigo-300";
   const moreTextCls     = isOneTimeMode ? "text-amber-600 dark:text-amber-400" : "text-indigo-600 dark:text-indigo-400";
   const hoverTextCls    = isOneTimeMode
     ? "hover:text-amber-600 dark:hover:text-amber-400"
@@ -71,24 +71,27 @@ export function CircleContributeAction({
   const [localPaid,           setLocalPaid]           = useState(isPaid);
   const [localPendingConfirm, setLocalPendingConfirm] = useState(isPendingConfirm);
   const [selfReporting,       setSelfReporting]       = useState(false);
+  // Tracks the amount the member self-reported (used in PaymentPendingBadge)
+  const [reportedAmount,      setReportedAmount]      = useState(() =>
+    isPendingConfirm ? (amount ?? 0) : 0,
+  );
   // Return-from-UPI prompt
-  const [showUpiPrompt,       setShowUpiPrompt]       = useState(false);
-  const [reportingUpi,        setReportingUpi]        = useState(false);
+  const [showUpiPrompt,  setShowUpiPrompt]  = useState(false);
+  const [reportingUpi,   setReportingUpi]   = useState(false);
   // Goal: open amount input
-  const [customAmount,        setCustomAmount]        = useState("");
+  const [customAmount,   setCustomAmount]   = useState("");
   // Goal: contribute more after already paid
-  const [showAdditional,      setShowAdditional]      = useState(false);
+  const [showAdditional, setShowAdditional] = useState(false);
 
-  const upiTappedRef   = useRef(false);
-  const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const upiTappedRef = useRef(false);
 
-  // Return-from-UPI: show prompt when app regains focus after UPI deep link
+  // Return-from-UPI: show prompt when app regains focus after UPI deep link tap.
+  // PaymentConfirmPrompt handles its own 15s timer — no timer needed here.
   useEffect(() => {
     function handleVisibility() {
       if (document.visibilityState === "visible" && upiTappedRef.current) {
         upiTappedRef.current = false;
         setShowUpiPrompt(true);
-        promptTimerRef.current = setTimeout(() => setShowUpiPrompt(false), 8000);
       }
     }
     document.addEventListener("visibilitychange", handleVisibility);
@@ -96,15 +99,10 @@ export function CircleContributeAction({
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("focus", handleVisibility);
-      if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
     };
   }, []);
 
   const monthShort = new Date().toLocaleString("en-IN", { month: "short" });
-
-  const upiLink = upiId && amount
-    ? `upi://pay?pa=${encodeURIComponent(upiId)}&am=${amount}&cu=${currency}&tn=${encodeURIComponent(`${groupName} ${periodLabel ?? monthShort}`)}`
-    : null;
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -116,8 +114,15 @@ export function CircleContributeAction({
     setSelfReporting(false);
     if (result.ok) {
       hapticSuccess();
-      setLocalPendingConfirm(true);
-      toast.success("Reported — pending admin confirmation");
+      if (isAdmin) {
+        // Admin self-reports are auto-confirmed — go straight to paid state
+        setLocalPaid(true);
+        toast.success("Contribution recorded ✓");
+      } else {
+        setLocalPendingConfirm(true);
+        setReportedAmount(reportAmount);
+        toast.success("Reported — pending admin confirmation");
+      }
     } else {
       toast.error(result.error ?? "Failed to report");
     }
@@ -132,28 +137,43 @@ export function CircleContributeAction({
     setSelfReporting(false);
     if (result.ok) {
       hapticSuccess();
-      setLocalPendingConfirm(true);
       setCustomAmount("");
       setShowAdditional(false);
-      toast.success("Reported — pending admin confirmation");
+      if (isAdmin) {
+        setLocalPaid(true);
+        toast.success("Contribution recorded ✓");
+      } else {
+        setLocalPendingConfirm(true);
+        setReportedAmount(parsed);
+        toast.success("Reported — pending admin confirmation");
+      }
     } else {
       toast.error(result.error ?? "Failed to report");
     }
   }
 
-  async function handleUpiReported() {
-    // Fixed: use the set amount; Flexi: use whatever the user typed before tapping UPI
+  // Called by PaymentConfirmPrompt after user confirms return from UPI app.
+  async function handleUpiReported(utr?: string) {
     const reportAmount = amount ?? parseFloat(customAmount);
     if (!reportAmount || reportAmount <= 0) return;
     setReportingUpi(true);
-    const result = await selfReportContribution({ groupId, amount: reportAmount, period, currency });
+    const result = await selfReportContribution({
+      groupId, amount: reportAmount, period, currency,
+      paymentMethod: "upi",
+      utrReference:  utr ?? null,
+    });
     setReportingUpi(false);
     setShowUpiPrompt(false);
-    if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
     if (result.ok) {
       hapticSuccess();
-      setLocalPendingConfirm(true);
-      toast.success("Reported — pending admin confirmation");
+      if (isAdmin) {
+        setLocalPaid(true);
+        toast.success("Contribution recorded ✓");
+      } else {
+        setLocalPendingConfirm(true);
+        setReportedAmount(reportAmount);
+        toast.success("Reported — pending admin confirmation");
+      }
     }
   }
 
@@ -172,7 +192,7 @@ export function CircleContributeAction({
       const canSubmit = !selfReporting && !!parsed && parsed > 0;
       return (
         <div className="space-y-2">
-          <p className={`${label} font-semibold ${promptTextCls}`}>
+          <p className={`${label} font-semibold ${moreTextCls}`}>
             Additional contribution
           </p>
           <div className="flex gap-2">
@@ -246,26 +266,19 @@ export function CircleContributeAction({
   // ── Pending admin confirmation ─────────────────────────────────────────────
   if (localPendingConfirm) {
     return (
-      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-        <span className="text-base">🟡</span>
-        <div>
-          <p className={`${label} font-semibold`}>Pending admin confirmation</p>
-          <p className={`${sub} text-slate-400 dark:text-slate-500`}>
-            Admin will verify and confirm your payment
-          </p>
-        </div>
-      </div>
+      <PaymentPendingBadge
+        payerName="You"
+        amount={reportedAmount}
+        currency={currency}
+        canConfirm={false}
+      />
     );
   }
 
   // ── Unpaid, Flexi (no fixed amount) ───────────────────────────────────────
   if (!amount) {
-    const parsed       = parseFloat(customAmount);
-    const canSubmit    = !selfReporting && !!parsed && parsed > 0;
-    // Dynamic UPI link — only active once an amount is entered
-    const flexiUpiLink = upiId && parsed > 0
-      ? `upi://pay?pa=${encodeURIComponent(upiId)}&am=${parsed}&cu=${currency}&tn=${encodeURIComponent(groupName)}`
-      : null;
+    const parsed    = parseFloat(customAmount);
+    const canSubmit = !selfReporting && !!parsed && parsed > 0;
 
     return (
       <div className="space-y-2">
@@ -305,22 +318,23 @@ export function CircleContributeAction({
           )}
         </div>
 
-        {/* UPI available — dynamic Pay button + secondary report link */}
+        {/* UPI available — dynamic Pay button (shown only once amount is entered) */}
         {upiId && (
           <div className="space-y-1.5">
-            <a
-              href={flexiUpiLink ?? "#"}
-              onClick={(e) => {
-                if (!flexiUpiLink) { e.preventDefault(); return; }
-                upiTappedRef.current = true;
-              }}
-              className={`block w-full text-center ${btnPy} ${label} font-semibold rounded-xl
-                bg-gradient-to-br ${btnGradient} text-white
-                shadow-sm ${btnShadowCls} transition-opacity
-                ${flexiUpiLink ? "hover:opacity-90" : "opacity-40 cursor-not-allowed pointer-events-none"}`}
-            >
-              Pay via UPI ↗
-            </a>
+            {parsed > 0 ? (
+              <UpiPayButton
+                vpa={upiId}
+                amount={parsed}
+                currency={currency}
+                contextName={groupName}
+                onTapped={() => { upiTappedRef.current = true; }}
+                size="sm"
+              />
+            ) : (
+              <p className={`text-center py-2 ${sub} text-slate-400 dark:text-slate-500`}>
+                Enter an amount above to pay via UPI ↑
+              </p>
+            )}
             <button
               type="button"
               onClick={handleCustomReport}
@@ -334,39 +348,15 @@ export function CircleContributeAction({
           </div>
         )}
 
-        {/* Return-from-UPI prompt (uses customAmount for Flexi) */}
-        {showUpiPrompt && (
-          <div className={`p-2.5 rounded-xl ${promptBgCls} space-y-2`}>
-            <p className={`${sub} font-semibold ${promptTextCls}`}>
-              💸 Payment sent?
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUpiPrompt(false);
-                  if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
-                }}
-                className={`flex-1 py-1 ${sub} font-medium rounded-lg border
-                  border-slate-200 dark:border-slate-700
-                  text-slate-500 dark:text-slate-400
-                  hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors`}
-              >
-                Not yet
-              </button>
-              <button
-                type="button"
-                onClick={handleUpiReported}
-                disabled={reportingUpi}
-                className={`flex-1 py-1 ${sub} font-semibold rounded-lg
-                  bg-gradient-to-br ${btnGradient} text-white
-                  hover:opacity-90 transition-opacity disabled:opacity-60`}
-              >
-                {reportingUpi ? "…" : "Yes, report it ✓"}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Return-from-UPI prompt (Flexi path — uses customAmount) */}
+        <PaymentConfirmPrompt
+          isVisible={showUpiPrompt}
+          onConfirm={handleUpiReported}
+          onDismiss={() => setShowUpiPrompt(false)}
+          confirming={reportingUpi}
+          amount={parsed || 0}
+          currency={currency}
+        />
       </div>
     );
   }
@@ -382,17 +372,16 @@ export function CircleContributeAction({
       </p>
 
       {/* Primary action */}
-      {upiLink ? (
+      {upiId ? (
         <div className="space-y-1.5">
-          <a
-            href={upiLink}
-            onClick={() => { upiTappedRef.current = true; }}
-            className={`block w-full text-center ${btnPy} ${label} font-semibold rounded-xl
-              bg-gradient-to-br ${btnGradient} text-white
-              shadow-sm ${btnShadowCls} hover:opacity-90 transition-opacity`}
-          >
-            Pay {formatCurrency(amount, currency)} ↗
-          </a>
+          <UpiPayButton
+            vpa={upiId}
+            amount={amount}
+            currency={currency}
+            contextName={groupName}
+            onTapped={() => { upiTappedRef.current = true; }}
+            size="sm"
+          />
           {/* Secondary: already paid off-channel */}
           <button
             type="button"
@@ -420,39 +409,15 @@ export function CircleContributeAction({
         </button>
       )}
 
-      {/* Return-from-UPI prompt */}
-      {showUpiPrompt && (
-        <div className={`p-2.5 rounded-xl ${promptBgCls} space-y-2`}>
-          <p className={`${sub} font-semibold ${promptTextCls}`}>
-            💸 Payment sent?
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setShowUpiPrompt(false);
-                if (promptTimerRef.current) clearTimeout(promptTimerRef.current);
-              }}
-              className={`flex-1 py-1 ${sub} font-medium rounded-lg border
-                border-slate-200 dark:border-slate-700
-                text-slate-500 dark:text-slate-400
-                hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors`}
-            >
-              Not yet
-            </button>
-            <button
-              type="button"
-              onClick={handleUpiReported}
-              disabled={reportingUpi}
-              className={`flex-1 py-1 ${sub} font-semibold rounded-lg
-                bg-gradient-to-br ${btnGradient} text-white
-                hover:opacity-90 transition-opacity disabled:opacity-60`}
-            >
-              {reportingUpi ? "…" : "Yes, report it ✓"}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Return-from-UPI prompt (fixed-amount path) */}
+      <PaymentConfirmPrompt
+        isVisible={showUpiPrompt}
+        onConfirm={handleUpiReported}
+        onDismiss={() => setShowUpiPrompt(false)}
+        confirming={reportingUpi}
+        amount={amount}
+        currency={currency}
+      />
     </div>
   );
 }

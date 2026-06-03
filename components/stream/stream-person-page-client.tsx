@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Plus, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { FadeIn } from "@/components/shared/fade-in";
 import { CountUp } from "@/components/shared/count-up";
 import { StreamLogSheet } from "./stream-log-sheet";
@@ -13,20 +15,40 @@ import { StreamSpineView } from "./stream-spine-view";
 import { StreamSettledCelebration } from "./stream-settled-celebration";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
+import { hapticSuccess } from "@/lib/haptics";
+import {
+  settleWithPerson,
+  selfReportStreamSettle,
+  confirmStreamSettle,
+  disputeStreamSettle,
+} from "@/app/actions/stream";
 import type { EnrichedStreamRecord, PersonDetails } from "@/lib/db/queries/stream";
+import type { PaymentMethod } from "@/lib/payment/types";
 
 interface Props {
-  records:          EnrichedStreamRecord[];
-  person:           PersonDetails;
+  records:              EnrichedStreamRecord[];
+  person:               PersonDetails;
   /** Full active net (pending + confirmed + disputed). Same value shown on dashboard. */
-  net:              number;
-  currency:         string;
-  currentUserName?: string;
+  net:                  number;
+  currency:             string;
+  currentUserId:        string;
+  currentUserName?:     string;
+  /** Current user's default UPI VPA — for sharing payment link */
+  myDefaultVpa?:        string | null;
+  /** Counterpart's default UPI VPA — for debtor pay flow */
+  counterpartDefaultVpa?: string | null;
+  /** All counterpart VPAs */
+  counterpartAllVpas?:  string[];
 }
 
 const LAST_VISIT_KEY = (id: string) => `clear_stream_last_visit_${id}`;
 
-export function StreamPersonPageClient({ records, person, net, currency, currentUserName }: Props) {
+export function StreamPersonPageClient({
+  records, person, net, currency,
+  currentUserId, currentUserName,
+  myDefaultVpa, counterpartDefaultVpa, counterpartAllVpas = [],
+}: Props) {
+  const router = useRouter();
   const [logOpen,     setLogOpen]     = useState(false);
   const [settleOpen,  setSettleOpen]  = useState(false);
   const [forgiveOpen, setForgiveOpen] = useState(false);
@@ -75,7 +97,7 @@ export function StreamPersonPageClient({ records, person, net, currency, current
     breakdownParts.push(`⚠ ${formatCurrency(disputedAmount, currency)} disputed`);
   }
 
-  // Only show breakdown when it's informative (i.e. the full net differs from confirmed-only)
+  // Only show breakdown when it's informative
   const showBreakdown = breakdownParts.length > 1 || disputedAmount >= 0.01;
 
   function openForgiveEntry(record: EnrichedStreamRecord) {
@@ -93,6 +115,94 @@ export function StreamPersonPageClient({ records, person, net, currency, current
     setForgiveAll(true);
     setForgiveOpen(true);
     setMenuOpen(false);
+  }
+
+  // ── Settlement callbacks for the settle sheet ─────────────────────────────
+  async function handleSelfReport(params: {
+    paymentMethod: PaymentMethod;
+    utrReference?: string;
+    amount: number;
+  }): Promise<boolean> {
+    const r = await selfReportStreamSettle({
+      counterpartId:  person.personId,
+      amount:         params.amount,
+      currency,
+      paymentMethod:  params.paymentMethod,
+      utrReference:   params.utrReference,
+    });
+    if (!r.ok) {
+      toast.error("error" in r ? r.error : "Failed to report payment");
+      return false;
+    }
+    hapticSuccess();
+    setSettleOpen(false);
+    toast.success(`Payment reported — ${firstName} will confirm receipt`);
+    router.refresh();
+    return true;
+  }
+
+  async function handleMarkPaid(params: {
+    paymentMethod: PaymentMethod;
+    utrReference?: string;
+    note?: string;
+    amount: number;
+  }): Promise<boolean> {
+    const isPartial = params.amount < Math.abs(net) - 0.01;
+    const r = await settleWithPerson(
+      person.personId,
+      params.note?.trim() || undefined,
+      isPartial ? params.amount : undefined,
+    );
+    if (!r.ok) {
+      toast.error("error" in r ? r.error : "Failed to settle");
+      return false;
+    }
+    hapticSuccess();
+    setSettleOpen(false);
+    const amountDisplay = formatCurrency(params.amount, currency);
+    toast.success(
+      isPartial ? `Settled ${amountDisplay} with ${firstName}` : `🎉 All square with ${firstName}!`,
+      {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const { undoSettleWithPerson } = await import("@/app/actions/stream");
+            const undo = await undoSettleWithPerson(r.settledIds);
+            if (undo.ok) {
+              toast.success("Settlement reversed");
+              router.refresh();
+            } else {
+              toast.error("Couldn't undo");
+            }
+          },
+        },
+      },
+    );
+    router.refresh();
+    return true;
+  }
+
+  // ── Spine callbacks for PaymentPendingBadge ───────────────────────────────
+  async function handleConfirmSettlement(settlementId: string) {
+    const r = await confirmStreamSettle(settlementId);
+    if (!r.ok) {
+      toast.error("error" in r ? r.error : "Failed to confirm");
+      return;
+    }
+    hapticSuccess();
+    toast.success("Payment confirmed ✓");
+    router.refresh();
+  }
+
+  async function handleDisputeSettlement(settlementId: string) {
+    const r = await disputeStreamSettle(settlementId);
+    if (!r.ok) {
+      toast.error("error" in r ? r.error : "Failed to dispute");
+      return;
+    }
+    toast.success("Payment disputed — balance remains open");
+    router.refresh();
   }
 
   return (
@@ -219,13 +329,15 @@ export function StreamPersonPageClient({ records, person, net, currency, current
 
             <button
               onClick={() => setSettleOpen(true)}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl
-                         bg-gradient-to-br from-emerald-500 to-teal-500
-                         hover:from-emerald-600 hover:to-teal-600
-                         text-white text-sm font-semibold transition-all
-                         shadow-md shadow-emerald-500/20"
+              className={cn(
+                "inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-white",
+                "text-sm font-semibold transition-all shadow-md",
+                theyOweMe
+                  ? "bg-gradient-to-br from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/20"
+                  : "bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 shadow-cyan-500/20",
+              )}
             >
-              Settle Up →
+              {theyOweMe ? "Collect →" : "Pay →"}
             </button>
           </>
         ) : (
@@ -253,7 +365,12 @@ export function StreamPersonPageClient({ records, person, net, currency, current
               Building your history with {firstName} — swipe any entry for quick actions
             </p>
           )}
-          <StreamSpineView records={records} currentUserName={currentUserName} />
+          <StreamSpineView
+            records={records}
+            currentUserName={currentUserName}
+            onConfirmSettlement={handleConfirmSettlement}
+            onDisputeSettlement={handleDisputeSettlement}
+          />
         </FadeIn>
       ) : (
         <div className="flex flex-col items-center py-16 text-center">
@@ -308,8 +425,13 @@ export function StreamPersonPageClient({ records, person, net, currency, current
         onClose={() => setSettleOpen(false)}
         personName={person.name}
         counterpartId={person.personId}
+        counterpartUserId={person.type === "user" ? person.personId : undefined}
         net={net}
         currency={currency}
+        currentUserId={currentUserId}
+        counterpartDefaultVpa={counterpartDefaultVpa ?? null}
+        onSelfReport={handleSelfReport}
+        onMarkPaid={handleMarkPaid}
       />
 
       <StreamForgiveSheet

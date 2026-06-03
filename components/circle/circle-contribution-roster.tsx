@@ -9,6 +9,14 @@ import { sendContributionReminder } from "@/app/actions/circle";
 import { formatCurrency } from "@/lib/utils";
 import type { MemberDashboardStatus, PendingMember } from "@/lib/db/queries/circle";
 
+interface PendingContribution {
+  contributionId: string;
+  paymentMethod:  string | null;
+  utrReference:   string | null;
+  amount:         number;
+  memberUserId:   string | null;
+}
+
 interface Props {
   members:         MemberDashboardStatus[];
   isAdmin:         boolean;
@@ -49,6 +57,7 @@ export function CircleContributionRoster({
   const [paidExpanded, setPaidExpanded] = useState(false);
   const [recordMember, setRecordMember] = useState<PendingMember | null>(null);
   const [isAdditional, setIsAdditional] = useState(false);
+  const [pendingContrib, setPendingContrib] = useState<PendingContribution | null>(null);
   const [reminding,    setReminding]    = useState<string | null>(null); // memberId being reminded
 
   const q = query.toLowerCase().trim();
@@ -61,6 +70,9 @@ export function CircleContributionRoster({
 
   const pendingMembers = filtered.filter((m) => !m.isPaid);
   const paidMembers    = filtered.filter((m) => m.isPaid);
+
+  // Count of pending self-reports awaiting admin confirmation
+  const pendingConfirmCount = pendingMembers.filter((m) => m.isPendingConfirm).length;
 
   // Auto-expand paid section when searching — user expects to find everyone
   const showPaidRows = paidExpanded || q.length > 0;
@@ -79,6 +91,18 @@ export function CircleContributionRoster({
   function handleRecord(m: MemberDashboardStatus, additional = false) {
     setIsAdditional(additional);
     setRecordMember({ id: m.id, name: m.name, isGuest: m.isGuest });
+    // When member has a pending self-report, pass it to show PaymentPendingBadge
+    if (m.isPendingConfirm && m.unconfirmedContributionId) {
+      setPendingContrib({
+        contributionId: m.unconfirmedContributionId,
+        paymentMethod:  m.pendingPaymentMethod ?? null,
+        utrReference:   m.pendingUtrReference ?? null,
+        amount:         m.pendingAmount ?? 0,
+        memberUserId:   m.userId,
+      });
+    } else {
+      setPendingContrib(null);
+    }
   }
 
   async function handleRemind(e: React.MouseEvent, m: MemberDashboardStatus) {
@@ -97,6 +121,7 @@ export function CircleContributionRoster({
   const handleSuccess = useCallback(() => {
     setRecordMember(null);
     setIsAdditional(false);
+    setPendingContrib(null);
     router.refresh();
   }, [router]);
 
@@ -107,6 +132,20 @@ export function CircleContributionRoster({
 
   return (
     <>
+      {/* ── Awaiting confirmation banner (admin only) ─────────────────────── */}
+      {isAdmin && pendingConfirmCount > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-xl
+                        bg-cyan-50 dark:bg-cyan-900/20
+                        border border-cyan-200/60 dark:border-cyan-700/40">
+          <span className="text-base shrink-0">⏳</span>
+          <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+            {pendingConfirmCount === 1
+              ? "1 payment awaiting your confirmation"
+              : `${pendingConfirmCount} payments awaiting your confirmation`}
+          </p>
+        </div>
+      )}
+
       {/* ── Search ────────────────────────────────────────────────────────── */}
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
@@ -151,8 +190,10 @@ export function CircleContributionRoster({
 
           <div className="space-y-1">
             {pendingMembers.map((m) => {
-              // isPendingConfirm = self-reported, awaiting admin confirm via batch banner
-              const canRecord  = isAdmin && !m.isPendingConfirm;
+              // Admin can tap ANY pending member:
+              //  - Normal pending → opens "Record contribution" form
+              //  - isPendingConfirm → opens PaymentPendingBadge (confirm/dispute) mode
+              const canRecord  = isAdmin;
               const canRemind  = isAdmin && !m.isGuest && !m.isPendingConfirm && !!m.userId;
 
               return (
@@ -167,7 +208,7 @@ export function CircleContributionRoster({
                       ? `cursor-pointer ${rowHoverCls} active:scale-[0.99]`
                       : ""}
                     ${m.isPendingConfirm
-                      ? "bg-amber-50/60 dark:bg-amber-900/10"
+                      ? "bg-cyan-50/60 dark:bg-cyan-900/10 border border-cyan-200/40 dark:border-cyan-700/30"
                       : "bg-slate-50 dark:bg-slate-800/40"}
                   `}
                 >
@@ -192,15 +233,15 @@ export function CircleContributionRoster({
                     {displayName(m)}
                   </span>
 
-                  {/* "says paid" amber tag for self-reported members */}
+                  {/* "says paid" cyan tag for self-reported members */}
                   {m.isPendingConfirm && (
-                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400
-                                     bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full shrink-0">
+                    <span className="text-[10px] font-semibold text-cyan-700 dark:text-cyan-300
+                                     bg-cyan-100 dark:bg-cyan-800/40 px-1.5 py-0.5 rounded-full shrink-0">
                       says paid
                     </span>
                   )}
 
-                  {/* Remind bell */}
+                  {/* Remind bell (only for not-yet-reported pending members) */}
                   {canRemind && (
                     <button
                       type="button"
@@ -332,8 +373,9 @@ export function CircleContributionRoster({
           isAdditional={isAdditional}
           isOneTime={isOneTime}
           isOpen={!!recordMember}
-          onClose={() => { setRecordMember(null); setIsAdditional(false); }}
+          onClose={() => { setRecordMember(null); setIsAdditional(false); setPendingContrib(null); }}
           onSuccess={handleSuccess}
+          pendingContribution={pendingContrib ?? undefined}
         />
       )}
     </>

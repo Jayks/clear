@@ -36,10 +36,14 @@ clear/
 │   ├── pricing/, changelog/, join/, summary/, api/
 │   └── actions/
 │       ├── stream.ts                     # 11+ server actions: logStream, confirmStream, disputeStream,
-│       │                                 # settleStream, undoSettleStream, forgiveStream, settleWithPerson
-│       │                                 # (accepts partialAmount?), undoSettleWithPerson, forgiveAllActiveStreams,
-│       │                                 # deleteStream + thin wrappers
-│       ├── circle.ts                    # createCircle, recordContribution, selfReportContribution, addCircleExpense, updateCircleStatus
+│       │                                 # settleWithPerson (3-case query: Clear user / Clear user as counterpart / guest),
+│       │                                 # undoSettleWithPerson, forgiveStream, forgiveAllActiveStreams, deleteStream
+│       │                                 # selfReportStreamSettle (is_confirmed=false, push creditor), confirmStreamSettle (creditor/admin),
+│       │                                 # disputeStreamSettle (creditor/admin, deletes settlement)
+│       ├── circle.ts                    # createCircle, recordContribution, selfReportContribution (paymentMethod/utrReference; admin auto-confirms),
+│       │                                 # confirmContribution (admin, single confirm + push notify), disputeContribution (admin, delete + push notify),
+│       │                                 # addCircleExpense, updateCircleStatus
+│       ├── upi-ids.ts                   # saveUpiId, deleteUpiId, setDefaultUpiId
 │       ├── groups.ts, expenses.ts, members.ts, settlements.ts, unsplash.ts, upload.ts
 │       ├── parse-expense.ts, narrative.ts, trip-adherence.ts, parse-chat.ts, parse-itinerary.ts
 │       ├── admin.ts, subscription.ts, interactions.ts, demo.ts
@@ -144,7 +148,7 @@ RSC. **No stream strip** — Streams has its own nav tab. Sections (top → bott
    - **Wallet balance** + runway health (🟢 >2mo / 🟡 1-2mo / 🔴 <1mo). Recurring only.
 3. **One-time celebration** (`CircleGoalCelebration`) — one-time mode; fires 🎯 confetti + "Goal reached!" banner when `allTimeCollected ≥ targetAmount`. SessionStorage-gated (`clear_circle_goal_${groupId}`). CSS `@keyframes confettiFall`.
 4. **Personal status card** — Recurring: member view, current period only. One-time: member view, any time. Shows ✓ contributed or ⏳ pending with amount.
-5. **Contribution roster** (`CircleContributionRoster`) — search bar + pending section (🔔 remind bell for admin, tap → `RecordContributionSheet`) + collapsed paid section (shows individual amounts). One-time mode: admin can tap paid member to record additional contributions.
+5. **Contribution roster** (`CircleContributionRoster`) — search bar; cyan "⏳ N payments awaiting confirmation" banner (admin only, when unconfirmed self-reports exist); pending section (🔔 remind bell for not-yet-reported members; tapping any pending row opens `RecordContributionSheet` — normal record form for unpaid members, confirm/dispute `PaymentPendingBadge` for `isPendingConfirm` members); collapsed paid section with dates + amounts. One-time mode: admin can tap paid member to record additional contributions.
 6. **Send reminder** (`CircleReminderButton` + `CircleReminderSheet`) — admin only when pending members exist. WhatsApp group message with ASCII progress bar + pending names + UPI link.
 7. **One-time lifecycle status** (`CircleGoalStatus`) — one-time mode only. Stepper: Collecting → Purchased → Complete. Admin sees transition buttons. Surplus card when status=purchased and walletBalance > 0 ("Keep in wallet" / "Note as distributed → Complete").
 8. **Wallet expenses** section — last 3 expenses inline (category icon, description, date, amount, advance badge). "View all →" links to `/expenses`. Admin CTA: "Log wallet expense" → `/expenses/new`.
@@ -173,10 +177,13 @@ Branches on `config.isCircle`. Non-admins → redirected to `/groups/[id]`. Admi
 ### Circle server actions (`app/actions/circle.ts`)
 
 - `createCircle` — creates group + admin member + ghost members.
-- `recordContribution` — admin records for any member.
-- `selfReportContribution` — member self-reports.
+- `recordContribution` — admin records for any member; `isConfirmed: true` immediately.
+- `selfReportContribution` — member self-reports with optional `paymentMethod` + `utrReference`; **admin self-reports auto-confirm** (`isConfirmed: isAdmin`); non-admin inserts with `isConfirmed: false` and push-notifies the admin. Push notification: title `💸 Contribution pending`, body `[Name] reported paying their [month] contribution.`
+- `confirmContribution(contributionId, groupId)` — **admin only**; sets `isConfirmed: true`; revalidates balances; push-notifies the member.
+- `disputeContribution(contributionId, groupId, memberUserId)` — **admin only**; deletes the unconfirmed contribution; push-notifies the member.
 - `addCircleExpense` — admin only; no splits; sets `isAdvance`; revalidates wallet balance tags.
 - `updateCircleStatus` — admin only; one-time mode; transitions `active → purchased → complete`; revalidates group cache.
+- `sendContributionReminder` — admin only; push-notifies a single member.
 
 ### `/groups/new?type=circle` — Circle creation (`create-circle-form.tsx`)
 

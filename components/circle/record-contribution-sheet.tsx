@@ -7,26 +7,44 @@ import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { hapticSuccess } from "@/lib/haptics";
-import { recordContribution } from "@/app/actions/circle";
+import { recordContribution, confirmContribution, disputeContribution } from "@/app/actions/circle";
+import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
 import { formatCurrency } from "@/lib/utils";
 import type { PendingMember } from "@/lib/db/queries/circle";
+import type { PaymentMethod } from "@/lib/payment/types";
+
+interface PendingContribution {
+  contributionId: string;
+  paymentMethod:  string | null;
+  utrReference:   string | null;
+  amount:         number;
+  memberUserId:   string | null;
+}
 
 interface Props {
-  member:        PendingMember;
-  amount:        number;
-  currency:      string;
-  period:        string | null;
-  periodLabel:   string | null;
-  groupId:       string;
-  isAdditional?: boolean;   // true when recording on top of an existing confirmed contribution
-  isOneTime?:    boolean;   // controls button/accent colour
-  isOpen:        boolean;
-  onClose:       () => void;
-  onSuccess:     () => void;
+  member:                PendingMember;
+  amount:                number;
+  currency:              string;
+  period:                string | null;
+  periodLabel:           string | null;
+  groupId:               string;
+  isAdditional?:         boolean;  // true when recording on top of an existing confirmed contribution
+  isOneTime?:            boolean;  // controls button/accent colour
+  isOpen:                boolean;
+  onClose:               () => void;
+  onSuccess:             () => void;
+  /**
+   * When present: member has already self-reported a UPI payment awaiting admin
+   * confirmation. Sheet shows PaymentPendingBadge (confirm/dispute) instead of
+   * the normal "record contribution" form.
+   */
+  pendingContribution?:  PendingContribution;
 }
 
 export function RecordContributionSheet({
-  member, amount, currency, period, periodLabel, groupId, isAdditional, isOneTime, isOpen, onClose, onSuccess,
+  member, amount, currency, period, periodLabel, groupId,
+  isAdditional, isOneTime, isOpen, onClose, onSuccess,
+  pendingContribution,
 }: Props) {
   // Mode-aware colour tokens
   const amountTextCls = isOneTime
@@ -38,8 +56,11 @@ export function RecordContributionSheet({
   const btnGradient = isOneTime
     ? "from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20"
     : "from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20";
+
   const [mounted,      setMounted]      = useState(false);
   const [submitting,   setSubmitting]   = useState(false);
+  const [confirming,   setConfirming]   = useState(false);
+  const [disputing,    setDisputing]    = useState(false);
   // Used when no fixed amount is set (amount === 0) — admin enters custom amount
   const [customAmount, setCustomAmount] = useState("");
 
@@ -51,10 +72,49 @@ export function RecordContributionSheet({
   const finalAmount    = hasFixedAmount ? amount : parseFloat(customAmount) || 0;
   const canSubmit      = finalAmount > 0 && !submitting;
 
+  // ── Admin: confirm self-reported payment ──────────────────────────────────
   async function handleConfirm() {
+    if (!pendingContribution || confirming || disputing) return;
+    setConfirming(true);
+    const result = await confirmContribution(
+      pendingContribution.contributionId,
+      groupId,
+    );
+    setConfirming(false);
+    if (result.ok) {
+      hapticSuccess();
+      toast.success(`Confirmed for ${member.name}`);
+      onSuccess();
+    } else {
+      toast.error(result.error ?? "Failed to confirm");
+    }
+  }
+
+  // ── Admin: dispute (delete) self-reported payment ─────────────────────────
+  async function handleDispute() {
+    if (!pendingContribution || disputing || confirming) return;
+    setDisputing(true);
+    const result = await disputeContribution(
+      pendingContribution.contributionId,
+      groupId,
+      pendingContribution.memberUserId,
+    );
+    setDisputing(false);
+    if (result.ok) {
+      toast.success(`Payment disputed — ${member.name} has been notified`);
+      onSuccess();
+    } else {
+      toast.error(result.error ?? "Failed to dispute");
+    }
+  }
+
+  // ── Admin: record a new confirmed contribution ────────────────────────────
+  async function handleConfirmRecord() {
     if (!canSubmit) return;
     setSubmitting(true);
-    const result = await recordContribution({ groupId, memberId: member.id, amount: finalAmount, period, currency });
+    const result = await recordContribution({
+      groupId, memberId: member.id, amount: finalAmount, period, currency,
+    });
     setSubmitting(false);
 
     if (result.ok) {
@@ -68,6 +128,13 @@ export function RecordContributionSheet({
   }
 
   if (!mounted) return null;
+
+  // Title changes depending on mode
+  const sheetTitle = pendingContribution
+    ? "Confirm payment"
+    : isAdditional
+    ? "Additional contribution"
+    : "Record contribution";
 
   return createPortal(
     <AnimatePresence>
@@ -107,7 +174,7 @@ export function RecordContributionSheet({
                 className="text-base text-slate-800 dark:text-slate-100"
                 style={{ fontFamily: "var(--font-fraunces)" }}
               >
-                {isAdditional ? "Additional contribution" : "Record contribution"}
+                {sheetTitle}
               </h3>
               <button
                 type="button"
@@ -121,79 +188,120 @@ export function RecordContributionSheet({
 
             {/* Body */}
             <div className="px-5 py-6 space-y-4">
-              {/* Summary card — fixed amount display OR custom amount input */}
-              <div className="glass rounded-xl p-4 space-y-3">
-                {hasFixedAmount ? (
-                  <div className="text-center space-y-1">
-                    <p className={`text-2xl font-bold tabular-nums ${amountTextCls}`}>
-                      {formatCurrency(amount, currency)}
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      for <span className="font-semibold">{member.name}</span>
-                    </p>
-                    {periodLabel && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{periodLabel}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-sm text-slate-600 dark:text-slate-300 text-center">
-                      Recording contribution for <span className="font-semibold">{member.name}</span>
-                    </p>
-                    {periodLabel && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 text-center">{periodLabel}</p>
-                    )}
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 dark:text-slate-500 pointer-events-none select-none">
-                        {currency === "INR" ? "₹" : currency}
-                      </span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="any"
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value)}
-                        placeholder="Enter amount"
-                        autoFocus
-                        className="w-full pl-7 pr-3 py-2.5 text-sm rounded-xl border
-                                   border-slate-200 dark:border-slate-700
-                                   bg-white/60 dark:bg-slate-800/60
-                                   text-slate-800 dark:text-slate-100
-                                   placeholder:text-slate-400 dark:placeholder:text-slate-500
-                                   focus:outline-none focus:ring-2 ${inputFocusCls} transition-colors"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700
-                             text-slate-600 dark:text-slate-300 text-sm font-medium
-                             hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  disabled={!canSubmit}
-                  className={`flex-1 py-3 rounded-xl
-                             bg-gradient-to-br ${btnGradient}
-                             text-white text-sm font-medium
-                             shadow-md transition-all
-                             disabled:opacity-40 disabled:cursor-not-allowed
-                             flex items-center justify-center gap-2`}
-                >
-                  {submitting
-                    ? "Recording…"
-                    : <><Check className="w-4 h-4" />Confirm</>}
-                </button>
-              </div>
+              {/* ── Pending self-report mode ──────────────────────────────── */}
+              {pendingContribution ? (
+                <>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      {member.name}
+                    </span>{" "}
+                    reported paying their contribution.
+                  </p>
+                  <PaymentPendingBadge
+                    payerName={member.name}
+                    amount={pendingContribution.amount}
+                    currency={currency}
+                    paymentMethod={
+                      pendingContribution.paymentMethod as PaymentMethod | undefined
+                    }
+                    utrReference={pendingContribution.utrReference ?? undefined}
+                    canConfirm={true}
+                    onConfirm={handleConfirm}
+                    onDispute={handleDispute}
+                    confirming={confirming}
+                    disputing={disputing}
+                  />
+                  {/* Cancel link */}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={confirming || disputing}
+                    className="w-full text-center text-sm text-slate-400 dark:text-slate-500
+                               hover:text-slate-600 dark:hover:text-slate-300
+                               transition-colors disabled:opacity-40"
+                  >
+                    Close
+                  </button>
+                </>
+              ) : (
+                /* ── Normal record-contribution mode ────────────────────── */
+                <>
+                  {/* Summary card — fixed amount display OR custom amount input */}
+                  <div className="glass rounded-xl p-4 space-y-3">
+                    {hasFixedAmount ? (
+                      <div className="text-center space-y-1">
+                        <p className={`text-2xl font-bold tabular-nums ${amountTextCls}`}>
+                          {formatCurrency(amount, currency)}
+                        </p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                          for <span className="font-semibold">{member.name}</span>
+                        </p>
+                        {periodLabel && (
+                          <p className="text-xs text-slate-400 dark:text-slate-500">{periodLabel}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 text-center">
+                          Recording contribution for <span className="font-semibold">{member.name}</span>
+                        </p>
+                        {periodLabel && (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 text-center">{periodLabel}</p>
+                        )}
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 dark:text-slate-500 pointer-events-none select-none">
+                            {currency === "INR" ? "₹" : currency}
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            step="any"
+                            value={customAmount}
+                            onChange={(e) => setCustomAmount(e.target.value)}
+                            placeholder="Enter amount"
+                            autoFocus
+                            className={`w-full pl-7 pr-3 py-2.5 text-sm rounded-xl border
+                                       border-slate-200 dark:border-slate-700
+                                       bg-white/60 dark:bg-slate-800/60
+                                       text-slate-800 dark:text-slate-100
+                                       placeholder:text-slate-400 dark:placeholder:text-slate-500
+                                       focus:outline-none focus:ring-2 ${inputFocusCls} transition-colors`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700
+                                 text-slate-600 dark:text-slate-300 text-sm font-medium
+                                 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmRecord}
+                      disabled={!canSubmit}
+                      className={`flex-1 py-3 rounded-xl
+                                 bg-gradient-to-br ${btnGradient}
+                                 text-white text-sm font-medium
+                                 shadow-md transition-all
+                                 disabled:opacity-40 disabled:cursor-not-allowed
+                                 flex items-center justify-center gap-2`}
+                    >
+                      {submitting
+                        ? "Recording…"
+                        : <><Check className="w-4 h-4" />Confirm</>}
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* Safe-area spacer */}
               <div className="h-4" />

@@ -3,6 +3,7 @@ import { streamRecords } from "@/lib/db/schema/stream-records";
 import { streamGuests } from "@/lib/db/schema/stream-guests";
 import { streamSettlements } from "@/lib/db/schema/stream-settlements";
 import { groupMembers } from "@/lib/db/schema/group-members";
+import { userUpiIds } from "@/lib/db/schema/upi-ids";
 import { eq, or, and, inArray, desc, asc, ne, isNotNull, sql, gte } from "drizzle-orm";
 import type { StreamRecord } from "@/lib/db/schema/stream-records";
 import type { StreamSettlement } from "@/lib/db/schema/stream-settlements";
@@ -492,47 +493,88 @@ export async function getStreamDashboard(userId: string): Promise<StreamDashboar
 /**
  * All stream records between the current user and one specific person,
  * sorted newest-first. Includes settlement sub-records per stream.
+ * Also returns UPI IDs for both parties for the UPI payment flow.
  * Used on the per-person timeline page.
  */
 export async function getStreamWithPerson(
   userId: string,
   personId: string,
 ): Promise<{
-  records: EnrichedStreamRecord[];
-  person: PersonDetails | null;
-  net: number;
-  currency: string;
+  records:                 EnrichedStreamRecord[];
+  person:                  PersonDetails | null;
+  net:                     number;
+  currency:                string;
+  /** Current user's default UPI VPA — used by UpiRequestButton on creditor path */
+  myDefaultVpa:            string | null;
+  /** Counterpart's default UPI VPA — used by UpiPayButton on debtor path */
+  counterpartDefaultVpa:   string | null;
+  /** All of counterpart's VPAs (for app picker label) */
+  counterpartAllVpas:      string[];
 }> {
+  const emptyResult = {
+    records: [] as EnrichedStreamRecord[],
+    person: null,
+    net: 0,
+    currency: "INR",
+    myDefaultVpa: null,
+    counterpartDefaultVpa: null,
+    counterpartAllVpas: [] as string[],
+  };
+
   const person = await getPersonDetails(personId, userId);
-  if (!person) return { records: [], person: null, net: 0, currency: "INR" };
+  if (!person) return emptyResult;
 
   const isGuest = person.type === "guest";
 
-  const rawRecords = await db
-    .select()
-    .from(streamRecords)
-    .where(
-      or(
-        // Current user is creator, person is counterpart
-        and(
-          eq(streamRecords.creatorId, userId),
-          isGuest
-            ? eq(streamRecords.counterpartGuestId, personId)
-            : eq(streamRecords.counterpartId, personId),
+  // Parallel-fetch records and UPI IDs
+  const [rawRecords, myUpiRows, counterpartUpiRows] = await Promise.all([
+    db
+      .select()
+      .from(streamRecords)
+      .where(
+        or(
+          // Current user is creator, person is counterpart
+          and(
+            eq(streamRecords.creatorId, userId),
+            isGuest
+              ? eq(streamRecords.counterpartGuestId, personId)
+              : eq(streamRecords.counterpartId, personId),
+          ),
+          // Current user is counterpart, person is creator (Clear user only)
+          ...(!isGuest
+            ? [and(
+                eq(streamRecords.creatorId, personId),
+                eq(streamRecords.counterpartId, userId),
+              )]
+            : []),
         ),
-        // Current user is counterpart, person is creator (Clear user only)
-        ...(!isGuest
-          ? [and(
-              eq(streamRecords.creatorId, personId),
-              eq(streamRecords.counterpartId, userId),
-            )]
-          : []),
-      ),
-    )
-    .orderBy(desc(streamRecords.createdAt));
+      )
+      .orderBy(desc(streamRecords.createdAt)),
+
+    // Current user's UPI IDs (always fetch — shown in request link)
+    db
+      .select({ upiId: userUpiIds.upiId, isDefault: userUpiIds.isDefault })
+      .from(userUpiIds)
+      .where(eq(userUpiIds.userId, userId))
+      .orderBy(desc(userUpiIds.isDefault), desc(userUpiIds.createdAt)),
+
+    // Counterpart UPI IDs (only for Clear users)
+    isGuest
+      ? Promise.resolve([] as { upiId: string; isDefault: boolean }[])
+      : db
+          .select({ upiId: userUpiIds.upiId, isDefault: userUpiIds.isDefault })
+          .from(userUpiIds)
+          .where(eq(userUpiIds.userId, personId))
+          .orderBy(desc(userUpiIds.isDefault), desc(userUpiIds.createdAt)),
+  ]);
+
+  // Resolve UPI VPAs
+  const myDefaultVpa          = myUpiRows.find((r) => r.isDefault)?.upiId ?? myUpiRows[0]?.upiId ?? null;
+  const counterpartDefaultVpa = counterpartUpiRows.find((r) => r.isDefault)?.upiId ?? counterpartUpiRows[0]?.upiId ?? null;
+  const counterpartAllVpas    = counterpartUpiRows.map((r) => r.upiId);
 
   if (rawRecords.length === 0) {
-    return { records: [], person, net: 0, currency: "INR" };
+    return { ...emptyResult, person, myDefaultVpa, counterpartDefaultVpa, counterpartAllVpas };
   }
 
   // Fetch all settlements for these stream IDs
@@ -572,6 +614,9 @@ export async function getStreamWithPerson(
     person,
     net: totalNet,
     currency: rawRecords[0].currency,
+    myDefaultVpa,
+    counterpartDefaultVpa,
+    counterpartAllVpas,
   };
 }
 

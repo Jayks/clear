@@ -52,6 +52,19 @@ export const disputeStreamSchema = z.object({
 export type DisputeStreamInput = z.infer<typeof disputeStreamSchema>;
 
 
+// ── Self-report a stream settlement (debtor pays, creditor confirms) ──────────
+
+export const selfReportStreamSettleSchema = z.object({
+  counterpartId: z.string().min(1),          // userId or guestId of the creditor
+  amount:        z.number().positive().max(9_999_999),
+  currency:      z.string().min(1).max(10).default("INR"),
+  paymentMethod: z.enum(["upi", "cash", "bank_transfer", "other"]).optional(),
+  utrReference:  z.string().max(30).optional(),
+});
+
+export type SelfReportStreamSettleInput = z.infer<typeof selfReportStreamSettleSchema>;
+
+
 // ── Shared types used across actions + components ─────────────────────────────
 
 export type StreamDirection = "they_owe_me" | "i_owe_them";

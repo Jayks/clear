@@ -4,6 +4,52 @@
 
 ---
 
+## Payment Components (`components/payment/`)
+
+Shared atomic UPI payment components used across Trips/Nests/Streams/Circles.
+
+### `UpiPayButton` — Atom 1 (debtor side)
+3-button app picker row (G Pay `tez://` | PhonePe `phonepe://` | Any UPI `upi://`) + QR code fallback. Props: `vpa`, `amount`, `currency`, `contextName`, `onTapped?`, `size?: "sm"|"md"`. QR is always shown (more prominent on iOS). `onTapped` fires when any button is tapped — parent uses this to start return-from-UPI detection. Uses `next/dynamic` for QR to avoid SSR.
+
+### `UpiRequestButton` — Atom 2 (creditor side)
+Web Share API primary → clipboard copy fallback → WhatsApp `wa.me` secondary. Builds a `/pay?to=userId&am=...` shareable link. Props: `payeeUserId`, `payeeName`, `amount`, `currency`, `contextName`, `size?: "sm"|"md"`. Emerald gradient.
+
+### `PaymentConfirmPrompt` — Atom 3 (return-from-UPI)
+Shown after debtor returns from UPI app (parent detects via `visibilitychange`/`focus`). Cyan glass card, 15s auto-dismiss with countdown bar, optional UTR input (max 30 chars). Props: `isVisible`, `onConfirm(utr?)`, `onDismiss`, `confirming?`, `amount`, `currency`. Manages its own timer — parent just toggles `isVisible`.
+
+### `PaymentPendingBadge` — Atom 4 (creditor/admin confirmation surface)
+Two states via `canConfirm: boolean`:
+- `true` (creditor or admin) — actionable: payer name + amount + method badge + UTR + **[✗ Dispute] [✓ Confirm receipt]** buttons
+- `false` (uninvolved member) — read-only: ⏳ "Awaiting confirmation" + amount
+
+Props: `payerName`, `amount`, `currency`, `paymentMethod?`, `utrReference?`, `canConfirm`, `onConfirm?`, `onDispute?`, `confirming?`, `disputing?`.
+
+### `PaymentSheet` — Composite (Trips/Nests settle page)
+Direction-aware bottom sheet. Debtor: `UpiPayButton` + `PaymentConfirmPrompt` + method chips. Creditor: `UpiRequestButton` + "already received?" + method chips. Same spring chrome as `StreamSettleSheet`. Props include `direction`, `payer/payee` party objects, `context`, `onSelfReport`, `onMarkPaid`.
+
+### Payment utilities (`lib/payment/`)
+- `lib/payment/types.ts` — `PaymentMethod`, `PaymentDirection`, `PAYMENT_METHOD_LABELS/ICONS`
+- `lib/payment/utils.ts` — `buildGPayLink`, `buildPhonePeLink`, `buildUpiDeepLink`, `buildUpiQrContent`, `buildPaymentPageUrl`, `buildWhatsAppRequestUrl`, `buildTransactionNote`
+
+**Transaction note standard**: always `"Clear · ${contextName}"` (max 50 chars). QR always uses generic `upi://` URI (camera scan works on iOS even when `upi://` URI scheme doesn't).
+
+### UPI ID management (`lib/db/queries/upi.ts`, `app/actions/upi-ids.ts`)
+`getUserUpiIds`, `getDefaultUpiId`, `getMemberDefaultUpiIds` (batch). Actions: `saveUpiId` (upsert, max 5, auto-default), `deleteUpiId` (auto-promotes next default), `setDefaultUpiId`. Schema: `lib/db/schema/upi-ids.ts` (`user_upi_ids` table).
+
+### /pay public page (`app/pay/`)
+No-auth shareable payment link. Reads `?to=userId&am=...`. Server-fetches payee name + UPI ID. `UpiPayButton` + return-from-UPI prompt on client. `app/pay/opengraph-image.tsx` for WhatsApp OG preview (ASCII-safe only — no `₹` in OG image).
+
+### Self-report / confirm / dispute pattern
+All four financial contexts use the same pattern:
+- **Debtor self-reports** with `paymentMethod` + `utrReference` → `is_confirmed=false` → push-notifies creditor/admin
+- **Creditor/admin confirms** → `is_confirmed=true` → push-notifies debtor/member
+- **Creditor/admin disputes** → deletes the unconfirmed record → push-notifies debtor/member
+- **`canConfirm`** is always pre-computed by the parent (never inside atoms): Trips/Nests = `isAdmin || toMember.userId === currentUser.id`; Streams = creditor OR admin; Circles = admin only
+
+**Circle-specific**: admin self-reports auto-confirm (`isConfirmed: isAdmin`); non-admin self-reports await admin review.
+
+---
+
 ## Design System
 
 ### Palette

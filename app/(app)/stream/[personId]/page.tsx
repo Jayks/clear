@@ -12,7 +12,15 @@ export default async function StreamPersonPage({ params }: Props) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { records, person, net, currency } = await getStreamWithPerson(user.id, personId);
+  const {
+    records,
+    person,
+    net,
+    currency,
+    myDefaultVpa,
+    counterpartDefaultVpa,
+    counterpartAllVpas,
+  } = await getStreamWithPerson(user.id, personId);
 
   // Unknown person — 404
   if (!person) notFound();
@@ -23,7 +31,11 @@ export default async function StreamPersonPage({ params }: Props) {
       person={person}
       net={net}
       currency={currency}
+      currentUserId={user.id}
       currentUserName={user.user_metadata?.full_name ?? undefined}
+      myDefaultVpa={myDefaultVpa}
+      counterpartDefaultVpa={counterpartDefaultVpa}
+      counterpartAllVpas={counterpartAllVpas}
     />
   );
 }

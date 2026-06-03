@@ -9,7 +9,10 @@ import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { hapticSuccess, hapticLight } from "@/lib/haptics";
 import { forgiveStream, settleStream } from "@/app/actions/stream";
+import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
 import type { EnrichedStreamRecord } from "@/lib/db/queries/stream";
+import type { PaymentMethod } from "@/lib/payment/types";
+import { PAYMENT_METHOD_ICONS, PAYMENT_METHOD_LABELS } from "@/lib/payment/types";
 
 // ── Emoji inference ───────────────────────────────────────────────────────────
 
@@ -47,6 +50,18 @@ function StatusBadge({ status }: { status: string }) {
   if (status === "settled")  return <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">✓ Settled</span>;
   if (status === "forgiven") return <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">💚 Forgiven</span>;
   return <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">⏳ Pending</span>;
+}
+
+// ── Payment method badge ──────────────────────────────────────────────────────
+
+function PaymentMethodBadge({ method }: { method: PaymentMethod }) {
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-medium
+                     text-slate-500 dark:text-slate-400">
+      {PAYMENT_METHOD_ICONS[method]}{" "}
+      {PAYMENT_METHOD_LABELS[method]}
+    </span>
+  );
 }
 
 // ── Net formatter ─────────────────────────────────────────────────────────────
@@ -107,12 +122,17 @@ function ActionBtn({
 // ── SpineCard — mobile swipe + desktop hover-reveal ───────────────────────────
 
 interface SpineCardProps {
-  record:           EnrichedStreamRecord;
-  currentUserName?: string;
-  side?:            "left" | "right";
+  record:                    EnrichedStreamRecord;
+  currentUserName?:          string;
+  side?:                     "left" | "right";
+  onConfirmSettlement?:      (id: string) => Promise<void>;
+  onDisputeSettlement?:      (id: string) => Promise<void>;
 }
 
-function SpineCard({ record, currentUserName, side }: SpineCardProps) {
+function SpineCard({
+  record, currentUserName, side,
+  onConfirmSettlement, onDisputeSettlement,
+}: SpineCardProps) {
   const router     = useRouter();
   const cardRef    = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -121,6 +141,8 @@ function SpineCard({ record, currentUserName, side }: SpineCardProps) {
   const [actionsOpen,     setActionsOpen]     = useState(false);
   const [forgiveLoading,  setForgiveLoading]  = useState(false);
   const [settleLoading,   setSettleLoading]   = useState(false);
+  const [confirming,      setConfirming]      = useState(false);
+  const [disputing,       setDisputing]       = useState(false);
   const [copied,          setCopied]          = useState(false);
 
   const x = useMotionValue(0);
@@ -140,6 +162,17 @@ function SpineCard({ record, currentUserName, side }: SpineCardProps) {
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
   }, [actionsOpen]);
+
+  // ── Pending settlement (unconfirmed self-report) ─────────────────────────
+  const pendingSettlement = record.settlements.find((s) => !s.isConfirmed);
+  // Creditor can confirm: if viewer is owed (netAmount > 0)
+  const canConfirm        = record.netAmount > 0 && !!pendingSettlement;
+
+  // Latest CONFIRMED settlement's payment method (for the badge)
+  const confirmedMethod = record.settlements
+    .filter((s) => s.isConfirmed && s.paymentMethod)
+    .sort((a, b) => new Date(b.settledAt).getTime() - new Date(a.settledAt).getTime())[0]
+    ?.paymentMethod as PaymentMethod | undefined;
 
   // ── Status flags ────────────────────────────────────────────────────────────
   const isMuted     = record.status === "settled" || record.status === "forgiven";
@@ -213,6 +246,22 @@ function SpineCard({ record, currentUserName, side }: SpineCardProps) {
     });
   }
 
+  async function handleConfirm() {
+    if (!pendingSettlement || !onConfirmSettlement) return;
+    setConfirming(true);
+    try {
+      await onConfirmSettlement(pendingSettlement.id);
+    } finally { setConfirming(false); }
+  }
+
+  async function handleDispute() {
+    if (!pendingSettlement || !onDisputeSettlement) return;
+    setDisputing(true);
+    try {
+      await onDisputeSettlement(pendingSettlement.id);
+    } finally { setDisputing(false); }
+  }
+
   // ── Swipe handlers (mobile only) ─────────────────────────────────────────────
   function onDragStart() { isDragging.current = true; }
 
@@ -260,9 +309,13 @@ function SpineCard({ record, currentUserName, side }: SpineCardProps) {
         </p>
       </div>
 
-      {/* Row 2: status + share pills */}
-      <div className={cn("flex items-center gap-2 mt-1.5 min-w-0", side === "left" ? "flex-row-reverse" : "")}>
+      {/* Row 2: status + payment method + share pills */}
+      <div className={cn("flex items-center gap-2 mt-1.5 min-w-0 flex-wrap", side === "left" ? "flex-row-reverse" : "")}>
         <StatusBadge status={record.status} />
+        {/* Payment method badge (settled entries with a known method) */}
+        {confirmedMethod && (
+          <PaymentMethodBadge method={confirmedMethod} />
+        )}
         {showShare && (
           <div className={cn("flex items-center gap-1.5", side === "left" ? "mr-auto" : "ml-auto")}>
             <button type="button" onClick={handleShare}
@@ -282,6 +335,24 @@ function SpineCard({ record, currentUserName, side }: SpineCardProps) {
           </div>
         )}
       </div>
+
+      {/* Row 3: Payment pending badge (unconfirmed self-report) */}
+      {pendingSettlement && (
+        <div className="mt-2.5">
+          <PaymentPendingBadge
+            payerName={record.counterpartName}
+            amount={Number(pendingSettlement.amount)}
+            currency={pendingSettlement.currency}
+            paymentMethod={pendingSettlement.paymentMethod as PaymentMethod | undefined}
+            utrReference={pendingSettlement.utrReference ?? undefined}
+            canConfirm={canConfirm}
+            onConfirm={canConfirm ? handleConfirm : undefined}
+            onDispute={canConfirm ? handleDispute : undefined}
+            confirming={confirming}
+            disputing={disputing}
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -416,10 +487,12 @@ function AnimatedRow({ children, index, className, style }: {
 
 // ── Mobile spine ──────────────────────────────────────────────────────────────
 
-function MobileSpine({ records, runningNets, currentUserName }: {
-  records:          EnrichedStreamRecord[];
-  runningNets:      number[];
-  currentUserName?: string;
+function MobileSpine({ records, runningNets, currentUserName, onConfirmSettlement, onDisputeSettlement }: {
+  records:                EnrichedStreamRecord[];
+  runningNets:            number[];
+  currentUserName?:       string;
+  onConfirmSettlement?:   (id: string) => Promise<void>;
+  onDisputeSettlement?:   (id: string) => Promise<void>;
 }) {
   return (
     <div className="relative w-full overflow-hidden">
@@ -457,7 +530,12 @@ function MobileSpine({ records, runningNets, currentUserName }: {
             </div>
             {/* Col 3 */}
             <div className={cn("pb-1 min-w-0", isIOweThem ? "pl-5 pr-0" : "pl-2.5 pr-0")}>
-              <SpineCard record={record} currentUserName={currentUserName} />
+              <SpineCard
+                record={record}
+                currentUserName={currentUserName}
+                onConfirmSettlement={onConfirmSettlement}
+                onDisputeSettlement={onDisputeSettlement}
+              />
             </div>
           </AnimatedRow>
         );
@@ -468,10 +546,12 @@ function MobileSpine({ records, runningNets, currentUserName }: {
 
 // ── Desktop spine ─────────────────────────────────────────────────────────────
 
-function DesktopSpine({ records, runningNets, currentUserName }: {
-  records:          EnrichedStreamRecord[];
-  runningNets:      number[];
-  currentUserName?: string;
+function DesktopSpine({ records, runningNets, currentUserName, onConfirmSettlement, onDisputeSettlement }: {
+  records:              EnrichedStreamRecord[];
+  runningNets:          number[];
+  currentUserName?:     string;
+  onConfirmSettlement?: (id: string) => Promise<void>;
+  onDisputeSettlement?: (id: string) => Promise<void>;
 }) {
   return (
     <div className="relative w-full">
@@ -495,7 +575,13 @@ function DesktopSpine({ records, runningNets, currentUserName }: {
             <div className="w-[45%] min-w-0 pr-5 flex justify-end">
               {isOwed && (
                 <div className="w-full max-w-[280px] min-w-0">
-                  <SpineCard record={record} currentUserName={currentUserName} side="left" />
+                  <SpineCard
+                    record={record}
+                    currentUserName={currentUserName}
+                    side="left"
+                    onConfirmSettlement={onConfirmSettlement}
+                    onDisputeSettlement={onDisputeSettlement}
+                  />
                 </div>
               )}
             </div>
@@ -515,7 +601,13 @@ function DesktopSpine({ records, runningNets, currentUserName }: {
             <div className="w-[45%] min-w-0 pl-5">
               {!isOwed && (
                 <div className="w-full max-w-[280px] min-w-0">
-                  <SpineCard record={record} currentUserName={currentUserName} side="right" />
+                  <SpineCard
+                    record={record}
+                    currentUserName={currentUserName}
+                    side="right"
+                    onConfirmSettlement={onConfirmSettlement}
+                    onDisputeSettlement={onDisputeSettlement}
+                  />
                 </div>
               )}
             </div>
@@ -528,9 +620,16 @@ function DesktopSpine({ records, runningNets, currentUserName }: {
 
 // ── Public export ─────────────────────────────────────────────────────────────
 
-export function StreamSpineView({ records, currentUserName }: {
-  records:          EnrichedStreamRecord[];
-  currentUserName?: string;
+export function StreamSpineView({
+  records,
+  currentUserName,
+  onConfirmSettlement,
+  onDisputeSettlement,
+}: {
+  records:              EnrichedStreamRecord[];
+  currentUserName?:     string;
+  onConfirmSettlement?: (id: string) => Promise<void>;
+  onDisputeSettlement?: (id: string) => Promise<void>;
 }) {
   if (records.length === 0) return null;
 
@@ -545,7 +644,13 @@ export function StreamSpineView({ records, currentUserName }: {
   return (
     <>
       <div className="md:hidden">
-        <MobileSpine records={displayRecords} runningNets={displayNets} currentUserName={currentUserName} />
+        <MobileSpine
+          records={displayRecords}
+          runningNets={displayNets}
+          currentUserName={currentUserName}
+          onConfirmSettlement={onConfirmSettlement}
+          onDisputeSettlement={onDisputeSettlement}
+        />
       </div>
       <div className="hidden md:block">
         <div className="flex mb-3 text-xs font-semibold text-slate-400 dark:text-slate-500">
@@ -559,7 +664,13 @@ export function StreamSpineView({ records, currentUserName }: {
             I owe them
           </div>
         </div>
-        <DesktopSpine records={displayRecords} runningNets={displayNets} currentUserName={currentUserName} />
+        <DesktopSpine
+          records={displayRecords}
+          runningNets={displayNets}
+          currentUserName={currentUserName}
+          onConfirmSettlement={onConfirmSettlement}
+          onDisputeSettlement={onDisputeSettlement}
+        />
       </div>
     </>
   );

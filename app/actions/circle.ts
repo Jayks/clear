@@ -123,10 +123,12 @@ export async function recordContribution(input: {
 // ── Self-report contribution (member) ─────────────────────────────────────────
 
 export async function selfReportContribution(input: {
-  groupId:  string;
-  amount:   number;
-  period:   string | null;
-  currency: string;
+  groupId:       string;
+  amount:        number;
+  period:        string | null;
+  currency:      string;
+  paymentMethod?: string | null;
+  utrReference?:  string | null;
 }) {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
@@ -151,22 +153,208 @@ export async function selfReportContribution(input: {
       );
     if (existing.length > 0) return { ok: true } as const; // already pending
 
+    // Admins are trusted — their own self-reports are auto-confirmed.
+    // Non-admin self-reports are unconfirmed until an admin reviews them.
+    const isAdmin = membership.role === "admin";
+
     await db.insert(circleContributions).values({
-      groupId:     input.groupId,
-      memberId:    membership.id,
-      amount:      String(input.amount),
-      currency:    input.currency,
-      period:      input.period,
-      recordedBy:  user.id,
-      isConfirmed: false,  // ← awaits admin confirmation
-      note:        null,
+      groupId:       input.groupId,
+      memberId:      membership.id,
+      amount:        String(input.amount),
+      currency:      input.currency,
+      period:        input.period,
+      recordedBy:    user.id,
+      isConfirmed:   isAdmin,  // admins auto-confirm; members await admin review
+      note:          null,
+      paymentMethod: input.paymentMethod ?? null,
+      utrReference:  input.utrReference ?? null,
     });
 
     revalidatePath("/groups");
     revalidatePath(`/groups/${input.groupId}`);
+
+    // Push-notify admin about the pending contribution (only for non-admin reporters)
+    if (!isAdmin) {
+      const [[adminMember], [groupRow]] = await Promise.all([
+        db
+          .select({ userId: groupMembers.userId })
+          .from(groupMembers)
+          .where(
+            and(
+              eq(groupMembers.groupId, input.groupId),
+              eq(groupMembers.role, "admin"),
+            )
+          )
+          .limit(1),
+        db
+          .select({ name: groups.name })
+          .from(groups)
+          .where(eq(groups.id, input.groupId)),
+      ]);
+
+      if (adminMember?.userId) {
+        const reporterName = membership.displayName ?? membership.guestName ?? "A member";
+        const periodLabel = input.period
+          ? new Date(input.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
+          : null;
+        const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+        sendPushToUser({
+          targetUserId: adminMember.userId,
+          groupId:      input.groupId,
+          title:        `💸 Contribution pending — ${groupRow?.name ?? "Circle"}`,
+          body:         periodLabel
+            ? `${reporterName} reported paying their ${periodLabel} contribution.`
+            : `${reporterName} reported paying their contribution.`,
+          url: `/groups/${input.groupId}`,
+        }).catch(() => {});
+      }
+    }
+
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to record contribution" } as const;
+  }
+}
+
+// ── Confirm a single self-reported contribution (admin) ───────────────────────
+
+export async function confirmContribution(contributionId: string, groupId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can confirm contributions" } as const;
+
+  try {
+    const [contrib] = await db
+      .select({
+        memberId: circleContributions.memberId,
+        amount:   circleContributions.amount,
+        currency: circleContributions.currency,
+        period:   circleContributions.period,
+      })
+      .from(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.id, contributionId),
+          eq(circleContributions.groupId, groupId),
+          eq(circleContributions.isConfirmed, false),
+        )
+      );
+    if (!contrib) return { ok: false, error: "Contribution not found" } as const;
+
+    await db
+      .update(circleContributions)
+      .set({ isConfirmed: true })
+      .where(
+        and(
+          eq(circleContributions.id, contributionId),
+          eq(circleContributions.groupId, groupId),
+        )
+      );
+
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
+
+    // Notify member (fire-and-forget)
+    const [[member], [groupRow]] = await Promise.all([
+      db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(eq(groupMembers.id, contrib.memberId)),
+      db
+        .select({ name: groups.name })
+        .from(groups)
+        .where(eq(groups.id, groupId)),
+    ]);
+
+    if (member?.userId) {
+      const periodLabel = contrib.period
+        ? new Date(contrib.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
+        : null;
+      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+      sendPushToUser({
+        targetUserId: member.userId,
+        groupId,
+        title:        `✓ Payment confirmed — ${groupRow?.name ?? "Circle"}`,
+        body:         periodLabel
+          ? `Your ${periodLabel} contribution has been confirmed.`
+          : "Your contribution has been confirmed.",
+        url: `/groups/${groupId}`,
+      }).catch(() => {});
+    }
+
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to confirm contribution" } as const;
+  }
+}
+
+// ── Dispute (delete) a single self-reported contribution (admin) ──────────────
+
+export async function disputeContribution(
+  contributionId: string,
+  groupId: string,
+  memberUserId: string | null,
+) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can dispute contributions" } as const;
+
+  try {
+    const [contrib] = await db
+      .select({ period: circleContributions.period, amount: circleContributions.amount })
+      .from(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.id, contributionId),
+          eq(circleContributions.groupId, groupId),
+          eq(circleContributions.isConfirmed, false),
+        )
+      );
+    if (!contrib) return { ok: false, error: "Contribution not found" } as const;
+
+    await db
+      .delete(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.id, contributionId),
+          eq(circleContributions.groupId, groupId),
+        )
+      );
+
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${groupId}`, "layout");
+
+    // Notify member (fire-and-forget)
+    if (memberUserId) {
+      const [groupRow] = await db
+        .select({ name: groups.name })
+        .from(groups)
+        .where(eq(groups.id, groupId));
+      const periodLabel = contrib.period
+        ? new Date(contrib.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
+        : null;
+      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+      sendPushToUser({
+        targetUserId: memberUserId,
+        groupId,
+        title:        `Payment not confirmed — ${groupRow?.name ?? "Circle"}`,
+        body:         periodLabel
+          ? `Your ${periodLabel} payment wasn't confirmed. Please check your UPI app and try again.`
+          : "Your payment wasn't confirmed. Please check your UPI app and try again.",
+        url: `/groups/${groupId}`,
+      }).catch(() => {});
+    }
+
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to dispute contribution" } as const;
   }
 }
 

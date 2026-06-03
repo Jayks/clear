@@ -14,9 +14,11 @@ import {
   logStreamSchema,
   settleStreamSchema,
   disputeStreamSchema,
+  selfReportStreamSettleSchema,
   type LogStreamInput,
   type SettleStreamInput,
   type DisputeStreamInput,
+  type SelfReportStreamSettleInput,
 } from "@/lib/validations/stream";
 import { sendStreamPush } from "@/lib/notifications/send-stream-notification";
 import { revalidatePath } from "next/cache";
@@ -629,6 +631,265 @@ export async function forgiveAllActiveStreams(
   } catch (err) {
     console.error("forgiveAllActiveStreams error:", err);
     return { ok: false, error: "Failed to forgive" } as const;
+  }
+}
+
+
+// ── Self-report a stream settlement (debtor side) ────────────────────────────
+
+/**
+ * Debtor reports they've paid. Creates a streamSettlement with is_confirmed=false
+ * and pushes a notification to the creditor to confirm.
+ *
+ * Permission: current user must be the net debtor (net < 0) for this counterpart.
+ */
+export async function selfReportStreamSettle(input: SelfReportStreamSettleInput) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const parsed = selfReportStreamSettleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input" } as const;
+  }
+
+  const { counterpartId, amount, currency, paymentMethod, utrReference } = parsed.data;
+
+  const ACTIVE = ["pending", "confirmed", "disputed"] as const;
+
+  // Find all active records between the two parties (both directions)
+  const active = await db
+    .select({
+      id:            streamRecords.id,
+      amount:        streamRecords.amount,
+      direction:     streamRecords.direction,
+      creatorId:     streamRecords.creatorId,
+      counterpartId: streamRecords.counterpartId,
+    })
+    .from(streamRecords)
+    .where(
+      and(
+        inArray(streamRecords.status, [...ACTIVE]),
+        or(
+          and(eq(streamRecords.creatorId, user.id),       eq(streamRecords.counterpartId, counterpartId)),
+          and(eq(streamRecords.creatorId, counterpartId), eq(streamRecords.counterpartId, user.id)),
+        ),
+      ),
+    )
+    .orderBy(asc(streamRecords.createdAt));
+
+  if (active.length === 0) {
+    return { ok: false, error: "No active balance to settle" } as const;
+  }
+
+  // Compute net from current user's perspective (positive = owed to user, negative = user owes)
+  let net = 0;
+  for (const r of active) {
+    const isCreator = r.creatorId === user.id;
+    const amt = Number(r.amount);
+    if (isCreator) {
+      net += r.direction === "they_owe_me" ? amt : -amt;
+    } else {
+      net += r.direction === "they_owe_me" ? -amt : amt;
+    }
+  }
+
+  if (net >= 0) {
+    return { ok: false, error: "You don't owe anything to this person" } as const;
+  }
+
+  // Attach the settlement to the oldest active record (primary record)
+  const primaryRecord = active[0];
+
+  try {
+    const [settlement] = await db
+      .insert(streamSettlements)
+      .values({
+        streamId:      primaryRecord.id,
+        amount:        String(amount),
+        currency,
+        note:          null,
+        recordedBy:    user.id,
+        isConfirmed:   false,
+        paymentMethod: paymentMethod ?? null,
+        utrReference:  utrReference ?? null,
+      })
+      .returning({ id: streamSettlements.id });
+
+    // Push-notify the creditor (counterpart)
+    const userName  = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
+    const amountStr = formatCurrency(amount, currency);
+    sendStreamPush(counterpartId, {
+      title: "💸 Payment reported",
+      body:  `${userName} says they settled ${amountStr} with you. Confirm →`,
+      url:   `/stream/${user.id}`,   // creditor views the debtor's timeline
+    }).catch(() => {});
+
+    revalidatePath("/stream", "layout");
+    revalidatePath("/groups", "layout");
+
+    return { ok: true, settlementId: settlement.id } as const;
+  } catch (err) {
+    console.error("selfReportStreamSettle error:", err);
+    return { ok: false, error: "Failed to report settlement" } as const;
+  }
+}
+
+
+// ── Confirm a self-reported stream settlement (creditor side) ─────────────────
+
+/**
+ * Creditor confirms the debtor's self-reported payment.
+ * Marks the settlement as confirmed, then settles all active records
+ * between the two parties (same logic as settleWithPerson).
+ *
+ * Permission: current user must be the creditor for the associated stream record
+ * (i.e. the party who is NOT settlement.recordedBy).
+ */
+export async function confirmStreamSettle(settlementId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  // Fetch settlement
+  const [settlement] = await db
+    .select()
+    .from(streamSettlements)
+    .where(eq(streamSettlements.id, settlementId))
+    .limit(1);
+
+  if (!settlement)               return { ok: false, error: "Settlement not found" } as const;
+  if (settlement.isConfirmed)    return { ok: false, error: "Already confirmed" } as const;
+
+  // Fetch the associated stream record
+  const [record] = await db
+    .select()
+    .from(streamRecords)
+    .where(eq(streamRecords.id, settlement.streamId))
+    .limit(1);
+
+  if (!record) return { ok: false, error: "Stream not found" } as const;
+
+  // Determine creditor = the party who did NOT self-report
+  const debtorId = settlement.recordedBy;
+  const creditorId =
+    record.creatorId === debtorId
+      ? record.counterpartId
+      : record.counterpartId === debtorId
+        ? record.creatorId
+        : null;
+
+  if (!creditorId || creditorId !== user.id) {
+    return { ok: false, error: "Not authorised to confirm this settlement" } as const;
+  }
+
+  try {
+    // Mark settlement confirmed
+    await db
+      .update(streamSettlements)
+      .set({ isConfirmed: true })
+      .where(eq(streamSettlements.id, settlementId));
+
+    // Settle all active records between the two parties
+    const ACTIVE = ["pending", "confirmed", "disputed"] as const;
+    const activeRecords = await db
+      .select({ id: streamRecords.id })
+      .from(streamRecords)
+      .where(
+        and(
+          inArray(streamRecords.status, [...ACTIVE]),
+          or(
+            and(eq(streamRecords.creatorId, user.id),       eq(streamRecords.counterpartId, debtorId)),
+            and(eq(streamRecords.creatorId, debtorId),      eq(streamRecords.counterpartId, user.id)),
+          ),
+        ),
+      );
+
+    if (activeRecords.length > 0) {
+      const now = new Date();
+      await db
+        .update(streamRecords)
+        .set({ status: "settled", settledAt: now, updatedAt: now })
+        .where(inArray(streamRecords.id, activeRecords.map((r) => r.id)));
+    }
+
+    // Notify debtor: their payment was confirmed
+    const amountStr = formatCurrency(Number(settlement.amount), settlement.currency);
+    sendStreamPush(debtorId, {
+      title: "✓ Payment confirmed",
+      body:  `${amountStr} settlement confirmed. Balance cleared!`,
+      url:   `/stream/${user.id}`,   // debtor views creditor's timeline
+    }).catch(() => {});
+
+    revalidatePath("/stream", "layout");
+    revalidatePath("/groups", "layout");
+
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("confirmStreamSettle error:", err);
+    return { ok: false, error: "Failed to confirm settlement" } as const;
+  }
+}
+
+
+// ── Dispute a self-reported stream settlement (creditor side) ─────────────────
+
+/**
+ * Creditor disputes the debtor's self-reported payment (deletes the record).
+ * Same permission check as confirmStreamSettle.
+ */
+export async function disputeStreamSettle(settlementId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const [settlement] = await db
+    .select()
+    .from(streamSettlements)
+    .where(eq(streamSettlements.id, settlementId))
+    .limit(1);
+
+  if (!settlement)             return { ok: false, error: "Settlement not found" } as const;
+  if (settlement.isConfirmed)  return { ok: false, error: "Cannot dispute a confirmed settlement" } as const;
+
+  const [record] = await db
+    .select()
+    .from(streamRecords)
+    .where(eq(streamRecords.id, settlement.streamId))
+    .limit(1);
+
+  if (!record) return { ok: false, error: "Stream not found" } as const;
+
+  const debtorId = settlement.recordedBy;
+  const creditorId =
+    record.creatorId === debtorId
+      ? record.counterpartId
+      : record.counterpartId === debtorId
+        ? record.creatorId
+        : null;
+
+  if (!creditorId || creditorId !== user.id) {
+    return { ok: false, error: "Not authorised to dispute this settlement" } as const;
+  }
+
+  try {
+    await db
+      .delete(streamSettlements)
+      .where(eq(streamSettlements.id, settlementId));
+
+    // Notify debtor: payment was disputed
+    const userName  = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
+    const amountStr = formatCurrency(Number(settlement.amount), settlement.currency);
+    sendStreamPush(debtorId, {
+      title: "⚠️ Payment disputed",
+      body:  `${userName} disputed the ${amountStr} payment. Please follow up.`,
+      url:   `/stream/${user.id}`,
+    }).catch(() => {});
+
+    revalidatePath("/stream", "layout");
+    revalidatePath("/groups", "layout");
+
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("disputeStreamSettle error:", err);
+    return { ok: false, error: "Failed to dispute settlement" } as const;
   }
 }
 

@@ -124,8 +124,15 @@ export function CircleCard({ group, cardData }: Props) {
     setSelfReporting(false);
     if (result.ok) {
       hapticSuccess();
-      setLocalPendingConfirm(true);
-      toast.success("Reported — pending admin confirmation");
+      if (isAdmin) {
+        // Admin self-reports are auto-confirmed — go straight to paid state
+        setLocalUserPaid(true);
+        setLocalPaidCount((n) => n + 1);
+        toast.success("Contribution recorded ✓");
+      } else {
+        setLocalPendingConfirm(true);
+        toast.success("Reported — pending admin confirmation");
+      }
     } else {
       toast.error(result.error ?? "Failed to report");
     }
@@ -270,8 +277,10 @@ export function CircleCard({ group, cardData }: Props) {
               You&apos;re clear
             </span>
           ) : localPendingConfirm ? (
-            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium shrink-0">
-              ⏳ Pending
+            <span className="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium shrink-0
+                             bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200/60 dark:border-cyan-700/40
+                             px-2 py-0.5 rounded-full">
+              ⏳ Awaiting confirmation
             </span>
           ) : upiLink ? (
             <a

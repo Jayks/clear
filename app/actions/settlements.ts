@@ -215,8 +215,17 @@ export async function disputeSettlement(
   }
 
   try {
+    // R6-1 fix: re-assert isConfirmed=false in the DELETE WHERE clause so that a
+    // concurrent confirmSettlement call that snuck in between the SELECT check
+    // above and this DELETE cannot cause a confirmed settlement (permanent balance
+    // history) to be silently deleted.  Mirrors the C-2 fix applied to
+    // circle.ts disputeContribution / rejectContribution.
     await db.delete(settlements).where(
-      and(eq(settlements.id, settlementId), eq(settlements.groupId, groupId))
+      and(
+        eq(settlements.id, settlementId),
+        eq(settlements.groupId, groupId),
+        eq(settlements.isConfirmed, false),
+      )
     );
 
     revalidatePath(`/groups/${groupId}`, "layout");

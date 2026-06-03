@@ -952,9 +952,13 @@ export async function disputeStreamSettle(
   }
 
   try {
+    // R6-2 fix: re-assert isConfirmed=false in the DELETE WHERE clause.
+    // A concurrent confirmStreamSettle that executed between the SELECT guard
+    // (line above) and this DELETE would otherwise delete an already-confirmed
+    // stream settlement — the exact same race as C-2 / R6-1.
     await db
       .delete(streamSettlements)
-      .where(eq(streamSettlements.id, settlementId));
+      .where(and(eq(streamSettlements.id, settlementId), eq(streamSettlements.isConfirmed, false)));
 
     // Notify debtor: payment was disputed (include reason if provided)
     const userName     = (user.user_metadata?.full_name as string | undefined) ?? "Someone";

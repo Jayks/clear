@@ -486,8 +486,26 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
   for (const { template, splits } of due) {
     // C-7 fix: each template iteration is its own transaction so a failed splits
     // INSERT for one template rolls back only that expense — others are unaffected.
+    // C-7a fix: also guard against concurrent auto-log calls (two serverless
+    // instances loading the same nest page simultaneously both see
+    // loggedThisMonth=false from getGroupTemplates, then both try to insert for
+    // the same template+month).  The SELECT runs inside the transaction so it is
+    // atomic with the INSERT — a concurrent commit is visible to this read.
     try {
       await db.transaction(async (tx) => {
+        const [alreadyLogged] = await tx
+          .select({ id: expenses.id })
+          .from(expenses)
+          .where(
+            and(
+              eq(expenses.sourceTemplateId, template.id),
+              eq(expenses.expenseDate, firstOfMonth),
+              eq(expenses.isTemplate, false),
+            )
+          )
+          .limit(1);
+        if (alreadyLogged) return; // concurrent request already logged this template
+
         const [logged] = await tx.insert(expenses).values({
           groupId: template.groupId,
           paidByMemberId: template.paidByMemberId,
@@ -551,8 +569,25 @@ export async function batchLogTemplates(groupId: string) {
   let count = 0;
   for (const { template, splits } of due) {
     // C-7 fix: each template is its own transaction — same reasoning as autoLogDueTemplates.
+    // C-7a fix: same concurrent double-log guard as autoLogDueTemplates — the
+    // batch-log button can also be tapped twice rapidly or by two admins at once.
+    // Hoist `didLog` so count++ only fires when we actually inserted.
     try {
+      let didLog = false;
       await db.transaction(async (tx) => {
+        const [alreadyLogged] = await tx
+          .select({ id: expenses.id })
+          .from(expenses)
+          .where(
+            and(
+              eq(expenses.sourceTemplateId, template.id),
+              eq(expenses.expenseDate, firstOfMonth),
+              eq(expenses.isTemplate, false),
+            )
+          )
+          .limit(1);
+        if (alreadyLogged) return; // already logged — skip without counting
+
         const [logged] = await tx.insert(expenses).values({
           groupId: template.groupId,
           paidByMemberId: template.paidByMemberId,
@@ -579,8 +614,9 @@ export async function batchLogTemplates(groupId: string) {
             }))
           );
         }
+        didLog = true;
       });
-      count++;
+      if (didLog) count++;
     } catch {
       // Skip failed templates, don't abort the batch
     }

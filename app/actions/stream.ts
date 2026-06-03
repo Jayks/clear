@@ -193,9 +193,12 @@ export async function disputeStream(input: DisputeStreamInput) {
 
     const amountStr = formatCurrency(Number(record.amount), record.currency);
     const noteClause = record.note ? ` for ${record.note}` : "";
+    // B-6a fix: old body used `${creatorName}` (the RECIPIENT's own name) as the
+    // subject, making it read as "you disputed your own entry."  The disputer is
+    // the anonymous guest so we can't name them — use neutral copy instead.
     sendStreamPush(record.creatorId, {
       title: "⚠ Disputed",
-      body:  `${creatorName} disputed ${amountStr}${noteClause}`,
+      body:  `Your entry for ${amountStr}${noteClause} was disputed`,
       // Deep-link to the creator's view of this relationship
       url:   `/stream/${record.counterpartGuestId ?? record.counterpartId ?? ""}`,
     }).catch(() => {});
@@ -241,42 +244,64 @@ export async function settleStream(input: SettleStreamInput) {
     return { ok: false, error: "Stream is already closed" } as const;
   }
 
-  // Guard: settlement cannot exceed the outstanding debt amount
+  // Fast-path guard: single settlement can never exceed the full record amount,
+  // regardless of prior partials (remaining ≤ record.amount always).
   if (amount > Number(record.amount) + 0.01) {
-    return { ok: false, error: "Settlement amount exceeds the outstanding debt" } as const;
+    return { ok: false, error: "Settlement amount exceeds the remaining balance" } as const;
   }
 
+  // S-11 fix: wrap the remaining-balance check, INSERT, and status UPDATE in one
+  // transaction so a concurrent partial settlement can't slip in between the
+  // SELECT and the INSERT and cause overpayment.  The old code only checked
+  // `amount > record.amount`, not `amount > (record.amount − alreadySettled)`,
+  // so e.g. ₹80 + ₹60 could over-settle a ₹100 entry.
   try {
-    const [settlement] = await db
-      .insert(streamSettlements)
-      .values({
-        streamId,
-        amount:     String(amount),
-        currency:   record.currency,
-        note:       note || null,
-        recordedBy: user.id,
-      })
-      .returning({ id: streamSettlements.id });
+    let settlementId: string | undefined;
+    let remainingExceeded = false;
 
-    // Check if total settlements now cover the full amount
-    const [totalRow] = await db
-      .select({ total: sum(streamSettlements.amount) })
-      .from(streamSettlements)
-      .where(eq(streamSettlements.streamId, streamId));
+    await db.transaction(async (tx) => {
+      // Compute already-settled amount inside the transaction
+      const [existingRow] = await tx
+        .select({ total: sum(streamSettlements.amount) })
+        .from(streamSettlements)
+        .where(eq(streamSettlements.streamId, streamId));
+      const alreadySettled = Number(existingRow?.total ?? 0);
+      const remaining      = Number(record.amount) - alreadySettled;
 
-    const totalSettled = Number(totalRow?.total ?? 0);
+      if (amount > remaining + 0.01) {
+        remainingExceeded = true;
+        return; // no writes — transaction commits empty
+      }
 
-    if (totalSettled >= Number(record.amount) - 0.01) {
-      await db
-        .update(streamRecords)
-        .set({ status: "settled", settledAt: new Date(), updatedAt: new Date() })
-        .where(eq(streamRecords.id, streamId));
-    } else {
-      // Partial — just update updatedAt
-      await db
-        .update(streamRecords)
-        .set({ updatedAt: new Date() })
-        .where(eq(streamRecords.id, streamId));
+      const [smt] = await tx
+        .insert(streamSettlements)
+        .values({
+          streamId,
+          amount:     String(amount),
+          currency:   record.currency,
+          note:       note || null,
+          recordedBy: user.id,
+        })
+        .returning({ id: streamSettlements.id });
+      settlementId = smt.id;
+
+      const totalSettled = alreadySettled + amount;
+      if (totalSettled >= Number(record.amount) - 0.01) {
+        await tx
+          .update(streamRecords)
+          .set({ status: "settled", settledAt: new Date(), updatedAt: new Date() })
+          .where(eq(streamRecords.id, streamId));
+      } else {
+        // Partial — just update updatedAt
+        await tx
+          .update(streamRecords)
+          .set({ updatedAt: new Date() })
+          .where(eq(streamRecords.id, streamId));
+      }
+    });
+
+    if (remainingExceeded) {
+      return { ok: false, error: "Settlement amount exceeds the remaining balance" } as const;
     }
 
     // Notify the other party
@@ -295,7 +320,7 @@ export async function settleStream(input: SettleStreamInput) {
     revalidatePath("/stream", "layout");
     revalidatePath("/groups", "layout");
 
-    return { ok: true, settlementId: settlement.id } as const;
+    return { ok: true, settlementId: settlementId! } as const;
   } catch (err) {
     console.error("settleStream error:", err);
     return { ok: false, error: "Failed to record settlement" } as const;
@@ -814,7 +839,10 @@ export async function confirmStreamSettle(settlementId: string) {
 
   if (!record) return { ok: false, error: "Stream not found" } as const;
 
-  // Determine creditor = the party who did NOT self-report
+  // Determine creditor = the party who did NOT self-report.
+  // Note: selfReportStreamSettle only matches Clear-user counterparts (its query
+  // excludes counterpartGuestId), so record.counterpartId is always non-null here
+  // and the guest case (counterpartGuestId) is intentionally never reached.
   const debtorId = settlement.recordedBy;
   const creditorId =
     record.creatorId === debtorId

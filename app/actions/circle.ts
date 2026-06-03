@@ -188,6 +188,29 @@ export async function selfReportContribution(input: {
     return { ok: false, error: "Not a member of this circle" } as const;
 
   try {
+    // C-9 fix: for recurring mode, check if a CONFIRMED contribution already
+    // exists for this member + period before checking for a pending one.
+    // The old guard (isConfirmed=false only) missed the case where the admin
+    // already recorded/confirmed via recordContribution, which let the member
+    // submit a self-report that created a spurious pending row for an already-
+    // paid member.  One-time mode (period=null) allows multiple contributions
+    // from the same member, so the guard is skipped there intentionally.
+    if (input.period) {
+      const [alreadyConfirmed] = await db
+        .select({ id: circleContributions.id })
+        .from(circleContributions)
+        .where(
+          and(
+            eq(circleContributions.groupId, input.groupId),
+            eq(circleContributions.memberId, membership.id),
+            eq(circleContributions.isConfirmed, true),
+            eq(circleContributions.period, input.period),
+          )
+        )
+        .limit(1);
+      if (alreadyConfirmed) return { ok: true } as const; // already paid for this period
+    }
+
     // Check if member already has an unconfirmed self-report for this period
     // to prevent duplicates
     const existing = await db

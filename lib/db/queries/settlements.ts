@@ -16,6 +16,8 @@ export interface PendingSettlement {
   settledAt:       Date;
   /** Display name of the person who self-reported paying */
   fromMemberName:  string;
+  /** userId of the person who self-reported (the debtor) — used to prevent self-confirm */
+  fromMemberUserId: string | null;
   /** userId of the creditor (person who should confirm receipt) */
   toMemberUserId:  string | null;
 }
@@ -39,9 +41,10 @@ export async function getPendingSettlements(groupId: string): Promise<PendingSet
       paymentMethod:   settlements.paymentMethod,
       utrReference:    settlements.utrReference,
       settledAt:       settlements.settledAt,
-      fromDisplayName: fromMember.displayName,
-      fromGuestName:   fromMember.guestName,
-      toMemberUserId:  toMember.userId,
+      fromDisplayName:  fromMember.displayName,
+      fromGuestName:    fromMember.guestName,
+      fromMemberUserId: fromMember.userId,
+      toMemberUserId:   toMember.userId,
     })
     .from(settlements)
     .innerJoin(fromMember, eq(fromMember.id, settlements.fromMemberId))
@@ -64,7 +67,8 @@ export async function getPendingSettlements(groupId: string): Promise<PendingSet
     paymentMethod:  r.paymentMethod,
     utrReference:   r.utrReference,
     settledAt:      r.settledAt,
-    fromMemberName: r.fromDisplayName ?? r.fromGuestName ?? "Member",
-    toMemberUserId: r.toMemberUserId,
+    fromMemberName:   r.fromDisplayName ?? r.fromGuestName ?? "Member",
+    fromMemberUserId: r.fromMemberUserId,
+    toMemberUserId:   r.toMemberUserId,
   }));
 }

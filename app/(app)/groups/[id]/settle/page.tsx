@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
+import { getMemberDefaultUpiIds } from "@/lib/db/queries/upi";
+import { getPendingSettlements } from "@/lib/db/queries/settlements";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 import { Skeleton } from "@/components/shared/skeleton";
 import { BalancesSection } from "./balances-section";
 import { Wallet } from "lucide-react";
@@ -15,12 +18,36 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: name ? `Settle up — ${name} | Clear` : "Clear" };
 }
 
-export default async function SettlePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function SettlePage({
+  params,
+  searchParams,
+}: {
+  params:       Promise<{ id: string }>;
+  searchParams: Promise<{ confirm?: string }>;
+}) {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
+  const confirmId = sp.confirm;
+
   const data = await getGroupWithMembers(id);
   if (!data) notFound();
 
   const { group, members, currentMember } = data;
+
+  // Collect Clear-account userIds so we can batch-fetch their default UPI IDs
+  const memberUserIds = members.map((m) => m.userId).filter((uid): uid is string => !!uid);
+
+  // Parallel: current user identity + UPI map + pending settlements
+  const [user, rawUpiMap, pendingSettlements] = await Promise.all([
+    getCurrentUser(),
+    getMemberDefaultUpiIds(memberUserIds),
+    getPendingSettlements(id),
+  ]);
+
+  // Flatten UserUpiId → VPA string so we don't pass non-serialisable objects to the client
+  const upiIdMap: Record<string, string | null> = Object.fromEntries(
+    Object.entries(rawUpiMap).map(([uid, row]) => [uid, row?.upiId ?? null])
+  );
+
   const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const settleUrl = `${appUrl}/groups/${id}/settle`;
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
@@ -43,7 +70,6 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
 
       <Suspense fallback={
         <>
-          {/* Balances section header skeleton */}
           <div className="flex items-center gap-2.5 mb-4">
             <Skeleton className="w-6 h-6 rounded-md shrink-0" />
             <Skeleton className="h-3.5 w-20" />
@@ -61,7 +87,6 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
               </div>
             ))}
           </div>
-          {/* Suggested payments section header skeleton */}
           <div className="flex items-center gap-2.5 mb-4">
             <Skeleton className="w-6 h-6 rounded-md shrink-0" />
             <Skeleton className="h-3.5 w-36" />
@@ -78,11 +103,16 @@ export default async function SettlePage({ params }: { params: Promise<{ id: str
           groupId={id}
           members={members}
           currentMemberId={currentMember?.id}
+          currentUserId={user?.id}
+          isAdmin={currentMember?.role === "admin"}
           currency={group.defaultCurrency}
           groupName={group.name}
           settleUrl={settleUrl}
           inviteUrl={inviteUrl}
           isNest={group.groupType === "nest"}
+          upiIdMap={upiIdMap}
+          pendingSettlements={pendingSettlements}
+          confirmId={confirmId}
         />
       </Suspense>
     </div>

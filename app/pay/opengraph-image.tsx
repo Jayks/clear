@@ -74,7 +74,7 @@ export default async function OgImage({
         {/* Amount */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 36 }}>
           <div style={{ color: "white", fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: "-3px" }}>
-            {sym} {formattedAmount}
+            {`${sym} ${formattedAmount}`}
           </div>
           <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 30, fontWeight: 500 }}>
             payment request
@@ -93,7 +93,7 @@ export default async function OgImage({
           </div>
           {context ? (
             <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 22, paddingLeft: 52 }}>
-              for {context}
+              {`for ${context}`}
             </div>
           ) : null}
         </div>

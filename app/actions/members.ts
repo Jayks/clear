@@ -117,8 +117,18 @@ export async function removeMember(groupId: string, memberId: string) {
     revalidateTag(`group-${groupId}`, "max");
     revalidatePath(`/groups/${groupId}/members`);
     return { ok: true } as const;
-  } catch {
-    return { ok: false, error: "Failed to remove member" } as const;
+  } catch (e: unknown) {
+    // E-5 fix: Postgres raises a FK violation when the member has recorded
+    // expenses or settlements.  Surface a clear reason instead of a generic
+    // error so the admin knows what to do next.
+    const msg = String(e).toLowerCase();
+    const isFkViolation = msg.includes("foreign key") || msg.includes("violates");
+    return {
+      ok: false,
+      error: isFkViolation
+        ? "Cannot remove this member — they have expenses or settlements recorded. Reassign or delete those first."
+        : "Failed to remove member",
+    } as const;
   }
 }
 

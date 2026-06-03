@@ -126,28 +126,32 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
   const result = computeSplits(splitMode, amount, splits);
   if (!result.ok) return { ok: false, error: result.error } as const;
 
+  // E-1 fix: wrap all three DB writes in a transaction so a failed split
+  // INSERT cannot leave the expense with no splits (corrupting balances).
   try {
-    await db.update(expenses).set({
-      paidByMemberId, description, category,
-      customCategory: customCategory ?? null,
-      amount: String(amount), currency, expenseDate,
-      endDate: endDate || null,
-      notes: notes || null,
-      updatedByUserId: user.id,
-      updatedAt: new Date(),
-    }).where(eq(expenses.id, expenseId));
+    await db.transaction(async (tx) => {
+      await tx.update(expenses).set({
+        paidByMemberId, description, category,
+        customCategory: customCategory ?? null,
+        amount: String(amount), currency, expenseDate,
+        endDate: endDate || null,
+        notes: notes || null,
+        updatedByUserId: user.id,
+        updatedAt: new Date(),
+      }).where(eq(expenses.id, expenseId));
 
-    await db.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
-    await db.insert(expenseSplits).values(
-      result.splits.map((s) => ({
-        groupId,
-        expenseId,
-        memberId: s.memberId,
-        shareAmount: String(s.shareAmount),
-        splitType: splitMode,
-        splitValue: s.splitValue != null ? String(s.splitValue) : null,
-      }))
-    );
+      await tx.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
+      await tx.insert(expenseSplits).values(
+        result.splits.map((s) => ({
+          groupId,
+          expenseId,
+          memberId: s.memberId,
+          shareAmount: String(s.shareAmount),
+          splitType: splitMode,
+          splitValue: s.splitValue != null ? String(s.splitValue) : null,
+        }))
+      );
+    });
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
@@ -167,6 +171,11 @@ export async function duplicateExpense(expenseId: string) {
   const membership = await getMembership(expense.groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member" } as const;
   if (membership.role !== "admin") return { ok: false, error: "Not authorized" } as const;
+
+  // E-3a fix: duplicating creates a real (non-template) expense that counts
+  // toward the free-plan 50-expense limit, but the check was missing here.
+  if (!(await canAddExpense(expense.groupId)))
+    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
 
   const originalSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, expenseId));
@@ -307,12 +316,33 @@ export async function logFromTemplate(templateId: string) {
   if (!(await canUseTemplates(template.groupId)))
     return { ok: false, error: "Recurring templates require Clear Plus." } as const;
 
+  // E-3b fix: logged instances count toward the free-plan expense limit.
+  if (!(await canAddExpense(template.groupId)))
+    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
+
   const templateSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, templateId));
 
   // Date to the 1st of the current month — keeps recurring expenses cleanly bucketed by month
   const now = new Date();
   const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+  // E-4 fix: prevent double-logging when the button is tapped twice rapidly
+  // or a stale client re-submits.  The client-side `loggedThisMonth` disable
+  // is UI-only; the server must guard too.
+  const [alreadyLogged] = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(
+      and(
+        eq(expenses.sourceTemplateId, templateId),
+        eq(expenses.expenseDate, firstOfMonth),
+        eq(expenses.isTemplate, false),
+      )
+    )
+    .limit(1);
+  if (alreadyLogged)
+    return { ok: false, error: "This template has already been logged for this month" } as const;
 
   try {
     const [logged] = await db.insert(expenses).values({
@@ -383,24 +413,28 @@ export async function updateTemplate(templateId: string, input: AddTemplateInput
   const result = computeSplits(splitMode, amount, splits);
   if (!result.ok) return { ok: false, error: result.error } as const;
 
+  // E-2 fix: same atomicity issue as updateExpense — wrap in a transaction so
+  // a failed split INSERT can't leave the template with no splits.
   try {
-    await db.update(expenses).set({
-      paidByMemberId, description, category,
-      amount: String(amount), recurrence,
-      updatedAt: new Date(),
-    }).where(eq(expenses.id, templateId));
+    await db.transaction(async (tx) => {
+      await tx.update(expenses).set({
+        paidByMemberId, description, category,
+        amount: String(amount), recurrence,
+        updatedAt: new Date(),
+      }).where(eq(expenses.id, templateId));
 
-    await db.delete(expenseSplits).where(eq(expenseSplits.expenseId, templateId));
-    await db.insert(expenseSplits).values(
-      result.splits.map((s) => ({
-        groupId: template.groupId,
-        expenseId: templateId,
-        memberId: s.memberId,
-        shareAmount: String(s.shareAmount),
-        splitType: splitMode,
-        splitValue: s.splitValue != null ? String(s.splitValue) : null,
-      }))
-    );
+      await tx.delete(expenseSplits).where(eq(expenseSplits.expenseId, templateId));
+      await tx.insert(expenseSplits).values(
+        result.splits.map((s) => ({
+          groupId: template.groupId,
+          expenseId: templateId,
+          memberId: s.memberId,
+          shareAmount: String(s.shareAmount),
+          splitType: splitMode,
+          splitValue: s.splitValue != null ? String(s.splitValue) : null,
+        }))
+      );
+    });
 
     revalidatePath(`/groups/${template.groupId}/expenses`, "layout");
     return { ok: true } as const;
@@ -417,6 +451,9 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
   if (!membership) return;
 
   if (!(await canUseTemplates(groupId))) return;
+  // E-3c fix: auto-log silently skips when the free-plan limit is reached
+  // rather than pushing past it on every page load.
+  if (!(await canAddExpense(groupId))) return;
 
   const templates = await getGroupTemplates(groupId);
   const due = templates.filter((t) => !t.loggedThisMonth);
@@ -473,6 +510,10 @@ export async function batchLogTemplates(groupId: string) {
 
   if (!(await canUseTemplates(groupId)))
     return { ok: false, error: "Recurring templates require Clear Plus." } as const;
+
+  // E-3d fix: batch log was the last path that could push past the 50-expense limit.
+  if (!(await canAddExpense(groupId)))
+    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
 
   const templates = await getGroupTemplates(groupId);
   const due = templates.filter((t) => !t.loggedThisMonth);

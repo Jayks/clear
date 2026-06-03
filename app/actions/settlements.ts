@@ -183,6 +183,7 @@ export async function disputeSettlement(
   const [settlement] = await db
     .select({
       id:           settlements.id,
+      isConfirmed:  settlements.isConfirmed,   // S-1b fix: must check before DELETE
       toMemberId:   settlements.toMemberId,
       fromMemberId: settlements.fromMemberId,
       amount:       settlements.amount,
@@ -192,6 +193,10 @@ export async function disputeSettlement(
     .where(and(eq(settlements.id, settlementId), eq(settlements.groupId, groupId)));
 
   if (!settlement) return { ok: false, error: "Settlement not found" } as const;
+  // S-1b fix: confirmed settlements are permanent balance history — only
+  // unconfirmed (self-reported, pending creditor review) can be disputed.
+  if (settlement.isConfirmed)
+    return { ok: false, error: "Cannot dispute a confirmed settlement" } as const;
 
   const [[toMember], [fromMember]] = await Promise.all([
     db.select({ userId: groupMembers.userId })

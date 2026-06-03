@@ -39,6 +39,8 @@ interface Props {
   counterpartDefaultVpa?: string | null;
   /** All counterpart VPAs */
   counterpartAllVpas?:  string[];
+  /** Settlement ID from ?confirm= push-notification deep link — auto-scrolls to its pending badge */
+  confirmId?:           string;
 }
 
 const LAST_VISIT_KEY = (id: string) => `clear_stream_last_visit_${id}`;
@@ -47,6 +49,7 @@ export function StreamPersonPageClient({
   records, person, net, currency,
   currentUserId, currentUserName,
   myDefaultVpa, counterpartDefaultVpa, counterpartAllVpas = [],
+  confirmId,
 }: Props) {
   const router = useRouter();
   const [logOpen,     setLogOpen]     = useState(false);
@@ -370,6 +373,7 @@ export function StreamPersonPageClient({
             currentUserName={currentUserName}
             onConfirmSettlement={handleConfirmSettlement}
             onDisputeSettlement={handleDisputeSettlement}
+            confirmId={confirmId}
           />
         </FadeIn>
       ) : (

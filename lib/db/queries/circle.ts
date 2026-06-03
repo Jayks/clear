@@ -162,6 +162,8 @@ export interface MemberDashboardStatus {
   pendingUtrReference:       string | null; // UTR from the self-report
   contributionDate:          string | null;
   contributionAmount:        number | null;
+  /** Payment method of the confirmed contribution — e.g. 'upi' | 'cash' | null */
+  paidPaymentMethod:         string | null;
 }
 
 export interface RecentPoolExpense {
@@ -321,6 +323,7 @@ export async function getCircleDashboardData(
         ? new Date(confirmed.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
         : null,
       contributionAmount:        confirmed ? Number(confirmed.amount) : null,
+      paidPaymentMethod:         confirmed?.paymentMethod ?? null,
     };
   });
 

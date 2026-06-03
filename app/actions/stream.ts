@@ -721,7 +721,8 @@ export async function selfReportStreamSettle(input: SelfReportStreamSettleInput)
     sendStreamPush(counterpartId, {
       title: "💸 Payment reported",
       body:  `${userName} says they settled ${amountStr} with you. Confirm →`,
-      url:   `/stream/${user.id}`,   // creditor views the debtor's timeline
+      // ?confirm= auto-scrolls to the pending settlement badge on the creditor's timeline
+      url:   `/stream/${user.id}?confirm=${settlement.id}`,
     }).catch(() => {});
 
     revalidatePath("/stream", "layout");

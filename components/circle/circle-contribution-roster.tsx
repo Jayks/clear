@@ -8,6 +8,8 @@ import { RecordContributionSheet } from "./record-contribution-sheet";
 import { sendContributionReminder } from "@/app/actions/circle";
 import { formatCurrency } from "@/lib/utils";
 import type { MemberDashboardStatus, PendingMember } from "@/lib/db/queries/circle";
+import { PAYMENT_METHOD_ICONS } from "@/lib/payment/types";
+import type { PaymentMethod } from "@/lib/payment/types";
 
 interface PendingContribution {
   contributionId: string;
@@ -328,11 +330,13 @@ export function CircleContributionRoster({
                       {displayName(m)}
                     </span>
 
-                    {/* Date + amount */}
+                    {/* Date + payment method + amount */}
                     <div className="flex items-center gap-2 shrink-0">
                       {m.contributionDate && (
                         <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
-                          {m.contributionDate}
+                          {m.paidPaymentMethod
+                            ? `${PAYMENT_METHOD_ICONS[m.paidPaymentMethod as PaymentMethod]} `
+                            : ""}{m.contributionDate}
                         </span>
                       )}
                       {!hideAmounts && m.contributionAmount && (

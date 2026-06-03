@@ -14,6 +14,8 @@ import {
 import { cn, formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { PendingSettlement } from "@/lib/db/queries/settlements";
+import { PAYMENT_METHOD_ICONS } from "@/lib/payment/types";
+import type { PaymentMethod } from "@/lib/payment/types";
 
 interface Props {
   groupId:             string;
@@ -263,7 +265,11 @@ export async function BalancesSection({
                   <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular">
                     {formatCurrency(Number(s.amount), s.currency)}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">{formatDate(s.settledAt)}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    {s.paymentMethod
+                      ? `${PAYMENT_METHOD_ICONS[s.paymentMethod as PaymentMethod]} `
+                      : ""}{formatDate(s.settledAt)}
+                  </p>
                 </div>
               </div>
             ))}

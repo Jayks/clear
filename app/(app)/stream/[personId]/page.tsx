@@ -4,11 +4,13 @@ import { getStreamWithPerson } from "@/lib/db/queries/stream";
 import { StreamPersonPageClient } from "@/components/stream/stream-person-page-client";
 
 interface Props {
-  params: Promise<{ personId: string }>;
+  params:      Promise<{ personId: string }>;
+  searchParams: Promise<{ confirm?: string }>;
 }
 
-export default async function StreamPersonPage({ params }: Props) {
+export default async function StreamPersonPage({ params, searchParams }: Props) {
   const { personId } = await params;
+  const { confirm: confirmId } = await searchParams;
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -36,6 +38,7 @@ export default async function StreamPersonPage({ params }: Props) {
       myDefaultVpa={myDefaultVpa}
       counterpartDefaultVpa={counterpartDefaultVpa}
       counterpartAllVpas={counterpartAllVpas}
+      confirmId={confirmId}
     />
   );
 }

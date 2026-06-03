@@ -338,7 +338,7 @@ function SpineCard({
 
       {/* Row 3: Payment pending badge (unconfirmed self-report) */}
       {pendingSettlement && (
-        <div className="mt-2.5">
+        <div id={`stream-settle-${pendingSettlement.id}`} className="mt-2.5">
           <PaymentPendingBadge
             payerName={record.counterpartName}
             amount={Number(pendingSettlement.amount)}
@@ -625,12 +625,26 @@ export function StreamSpineView({
   currentUserName,
   onConfirmSettlement,
   onDisputeSettlement,
+  confirmId,
 }: {
   records:              EnrichedStreamRecord[];
   currentUserName?:     string;
   onConfirmSettlement?: (id: string) => Promise<void>;
   onDisputeSettlement?: (id: string) => Promise<void>;
+  /** Settlement ID from ?confirm= push-notification deep link — auto-scrolls to the pending badge */
+  confirmId?:           string;
 }) {
+  // Auto-scroll to the pending settlement badge when arriving via push notification deep link
+  useEffect(() => {
+    if (!confirmId) return;
+    const t = setTimeout(() => {
+      document
+        .getElementById(`stream-settle-${confirmId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [confirmId]);
+
   if (records.length === 0) return null;
 
   const chronological = [...records].sort(

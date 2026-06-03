@@ -105,11 +105,6 @@ export function CircleCard({ group, cardData }: Props) {
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
 
-  // UPI deep-link for strip pay button
-  const upiLink = group.upiId && amount
-    ? `upi://pay?pa=${encodeURIComponent(group.upiId)}&am=${amount}&cu=${group.defaultCurrency}&tn=${encodeURIComponent(`${group.name} ${currentPeriodLabel ?? monthShort}`)}`
-    : null;
-
   // ── Actions ───────────────────────────────────────────────────────────────
   async function handleSelfReport() {
     if (selfReporting || localUserPaid || !amount) return;
@@ -282,14 +277,16 @@ export function CircleCard({ group, cardData }: Props) {
                              px-2 py-0.5 rounded-full">
               ⏳ Awaiting confirmation
             </span>
-          ) : upiLink ? (
-            <a
-              href={upiLink}
+          ) : group.upiId && amount ? (
+            /* Navigate to the circle dashboard where the full UpiPayButton picker is available.
+               Raw upi:// URIs silently fail on iOS; the dashboard uses the shared UpiPayButton atom. */
+            <Link
+              href={`/groups/${group.id}`}
               className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg
                 bg-gradient-to-br ${ctaBtnCls} text-white shadow-sm hover:opacity-90 transition-opacity shrink-0`}
             >
-              Pay {amount ? formatCurrency(amount, group.defaultCurrency) : ""} ↗
-            </a>
+              Pay via UPI →
+            </Link>
           ) : amount ? (
             <button
               type="button"

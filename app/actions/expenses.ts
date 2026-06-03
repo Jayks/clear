@@ -51,30 +51,36 @@ export async function addExpense(input: AddExpenseInput) {
     if (splitMode !== "equal" && !(await canUseNonEqualSplit(groupId)))
       return { ok: false, error: "Advanced splits require Clear Plus. Upgrade to use exact, percentage, or share splits." } as const;
 
-    const [expense] = await db.insert(expenses).values({
-      groupId,
-      paidByMemberId,
-      description,
-      category,
-      customCategory: customCategory ?? null,
-      amount: String(amount),
-      currency,
-      expenseDate,
-      endDate: endDate || null,
-      notes: notes || null,
-      createdByUserId: user.id,
-    }).returning();
-
-    await db.insert(expenseSplits).values(
-      result.splits.map((s) => ({
+    // C-7 fix: wrap expense + splits in a transaction so a failed splits INSERT
+    // cannot leave an orphaned expense row with no splits (corrupted balances).
+    const expense = await db.transaction(async (tx) => {
+      const [exp] = await tx.insert(expenses).values({
         groupId,
-        expenseId: expense.id,
-        memberId: s.memberId,
-        shareAmount: String(s.shareAmount),
-        splitType: splitMode,
-        splitValue: s.splitValue != null ? String(s.splitValue) : null,
-      }))
-    );
+        paidByMemberId,
+        description,
+        category,
+        customCategory: customCategory ?? null,
+        amount: String(amount),
+        currency,
+        expenseDate,
+        endDate: endDate || null,
+        notes: notes || null,
+        createdByUserId: user.id,
+      }).returning();
+
+      await tx.insert(expenseSplits).values(
+        result.splits.map((s) => ({
+          groupId,
+          expenseId: exp.id,
+          memberId: s.memberId,
+          shareAmount: String(s.shareAmount),
+          splitType: splitMode,
+          splitValue: s.splitValue != null ? String(s.splitValue) : null,
+        }))
+      );
+
+      return exp;
+    });
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
@@ -182,32 +188,37 @@ export async function duplicateExpense(expenseId: string) {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // C-7 fix: wrap both INSERTs in a transaction.
   try {
-    const [newExpense] = await db.insert(expenses).values({
-      groupId: expense.groupId,
-      paidByMemberId: expense.paidByMemberId,
-      description: `${expense.description} (copy)`,
-      category: expense.category,
-      amount: expense.amount,
-      currency: expense.currency,
-      expenseDate: today,
-      endDate: expense.endDate,
-      notes: expense.notes,
-      createdByUserId: user.id,
-    }).returning();
+    const newExpense = await db.transaction(async (tx) => {
+      const [exp] = await tx.insert(expenses).values({
+        groupId: expense.groupId,
+        paidByMemberId: expense.paidByMemberId,
+        description: `${expense.description} (copy)`,
+        category: expense.category,
+        amount: expense.amount,
+        currency: expense.currency,
+        expenseDate: today,
+        endDate: expense.endDate,
+        notes: expense.notes,
+        createdByUserId: user.id,
+      }).returning();
 
-    if (originalSplits.length > 0) {
-      await db.insert(expenseSplits).values(
-        originalSplits.map((s) => ({
-          groupId: expense.groupId,
-          expenseId: newExpense.id,
-          memberId: s.memberId,
-          shareAmount: s.shareAmount,
-          splitType: s.splitType,
-          splitValue: s.splitValue,
-        }))
-      );
-    }
+      if (originalSplits.length > 0) {
+        await tx.insert(expenseSplits).values(
+          originalSplits.map((s) => ({
+            groupId: expense.groupId,
+            expenseId: exp.id,
+            memberId: s.memberId,
+            shareAmount: s.shareAmount,
+            splitType: s.splitType,
+            splitValue: s.splitValue,
+          }))
+        );
+      }
+
+      return exp;
+    });
 
     revalidatePath(`/groups/${expense.groupId}`, "layout");
     revalidateTag(`balances-${expense.groupId}`, "max");
@@ -269,30 +280,35 @@ export async function createExpenseTemplate(input: AddTemplateInput) {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // C-7 fix: wrap both INSERTs in a transaction.
   try {
-    const [template] = await db.insert(expenses).values({
-      groupId,
-      paidByMemberId,
-      description,
-      category,
-      amount: String(amount),
-      currency,
-      expenseDate: today,
-      isTemplate: true,
-      recurrence,
-      createdByUserId: user.id,
-    }).returning();
-
-    await db.insert(expenseSplits).values(
-      result.splits.map((s) => ({
+    const template = await db.transaction(async (tx) => {
+      const [t] = await tx.insert(expenses).values({
         groupId,
-        expenseId: template.id,
-        memberId: s.memberId,
-        shareAmount: String(s.shareAmount),
-        splitType: splitMode,
-        splitValue: s.splitValue != null ? String(s.splitValue) : null,
-      }))
-    );
+        paidByMemberId,
+        description,
+        category,
+        amount: String(amount),
+        currency,
+        expenseDate: today,
+        isTemplate: true,
+        recurrence,
+        createdByUserId: user.id,
+      }).returning();
+
+      await tx.insert(expenseSplits).values(
+        result.splits.map((s) => ({
+          groupId,
+          expenseId: t.id,
+          memberId: s.memberId,
+          shareAmount: String(s.shareAmount),
+          splitType: splitMode,
+          splitValue: s.splitValue != null ? String(s.splitValue) : null,
+        }))
+      );
+
+      return t;
+    });
 
     revalidatePath(`/groups/${groupId}/expenses`, "layout");
     return { ok: true, templateId: template.id } as const;
@@ -344,33 +360,38 @@ export async function logFromTemplate(templateId: string) {
   if (alreadyLogged)
     return { ok: false, error: "This template has already been logged for this month" } as const;
 
+  // C-7 fix: wrap both INSERTs in a transaction.
   try {
-    const [logged] = await db.insert(expenses).values({
-      groupId: template.groupId,
-      paidByMemberId: template.paidByMemberId,
-      description: template.description,
-      category: template.category,
-      amount: template.amount,
-      currency: template.currency,
-      expenseDate: firstOfMonth,
-      notes: template.notes,
-      isTemplate: false,
-      sourceTemplateId: templateId,
-      createdByUserId: user.id,
-    }).returning();
+    const logged = await db.transaction(async (tx) => {
+      const [exp] = await tx.insert(expenses).values({
+        groupId: template.groupId,
+        paidByMemberId: template.paidByMemberId,
+        description: template.description,
+        category: template.category,
+        amount: template.amount,
+        currency: template.currency,
+        expenseDate: firstOfMonth,
+        notes: template.notes,
+        isTemplate: false,
+        sourceTemplateId: templateId,
+        createdByUserId: user.id,
+      }).returning();
 
-    if (templateSplits.length > 0) {
-      await db.insert(expenseSplits).values(
-        templateSplits.map((s) => ({
-          groupId: template.groupId,
-          expenseId: logged.id,
-          memberId: s.memberId,
-          shareAmount: s.shareAmount,
-          splitType: s.splitType,
-          splitValue: s.splitValue,
-        }))
-      );
-    }
+      if (templateSplits.length > 0) {
+        await tx.insert(expenseSplits).values(
+          templateSplits.map((s) => ({
+            groupId: template.groupId,
+            expenseId: exp.id,
+            memberId: s.memberId,
+            shareAmount: s.shareAmount,
+            splitType: s.splitType,
+            splitValue: s.splitValue,
+          }))
+        );
+      }
+
+      return exp;
+    });
 
     revalidatePath(`/groups/${template.groupId}`, "layout");
     revalidateTag(`balances-${template.groupId}`, "max");
@@ -463,33 +484,37 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
   const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
   for (const { template, splits } of due) {
+    // C-7 fix: each template iteration is its own transaction so a failed splits
+    // INSERT for one template rolls back only that expense — others are unaffected.
     try {
-      const [logged] = await db.insert(expenses).values({
-        groupId: template.groupId,
-        paidByMemberId: template.paidByMemberId,
-        description: template.description,
-        category: template.category,
-        amount: template.amount,
-        currency: template.currency,
-        expenseDate: firstOfMonth,
-        notes: template.notes,
-        isTemplate: false,
-        sourceTemplateId: template.id,
-        createdByUserId: user.id,
-      }).returning();
+      await db.transaction(async (tx) => {
+        const [logged] = await tx.insert(expenses).values({
+          groupId: template.groupId,
+          paidByMemberId: template.paidByMemberId,
+          description: template.description,
+          category: template.category,
+          amount: template.amount,
+          currency: template.currency,
+          expenseDate: firstOfMonth,
+          notes: template.notes,
+          isTemplate: false,
+          sourceTemplateId: template.id,
+          createdByUserId: user.id,
+        }).returning();
 
-      if (splits.length > 0) {
-        await db.insert(expenseSplits).values(
-          splits.map((s) => ({
-            groupId: template.groupId,
-            expenseId: logged.id,
-            memberId: s.memberId,
-            shareAmount: s.shareAmount,
-            splitType: s.splitType,
-            splitValue: s.splitValue,
-          }))
-        );
-      }
+        if (splits.length > 0) {
+          await tx.insert(expenseSplits).values(
+            splits.map((s) => ({
+              groupId: template.groupId,
+              expenseId: logged.id,
+              memberId: s.memberId,
+              shareAmount: s.shareAmount,
+              splitType: s.splitType,
+              splitValue: s.splitValue,
+            }))
+          );
+        }
+      });
     } catch {
       // Skip this template — don't block page load on a single failure
     }
@@ -525,33 +550,36 @@ export async function batchLogTemplates(groupId: string) {
 
   let count = 0;
   for (const { template, splits } of due) {
+    // C-7 fix: each template is its own transaction — same reasoning as autoLogDueTemplates.
     try {
-      const [logged] = await db.insert(expenses).values({
-        groupId: template.groupId,
-        paidByMemberId: template.paidByMemberId,
-        description: template.description,
-        category: template.category,
-        amount: template.amount,
-        currency: template.currency,
-        expenseDate: firstOfMonth,
-        notes: template.notes,
-        isTemplate: false,
-        sourceTemplateId: template.id,
-        createdByUserId: user.id,
-      }).returning();
+      await db.transaction(async (tx) => {
+        const [logged] = await tx.insert(expenses).values({
+          groupId: template.groupId,
+          paidByMemberId: template.paidByMemberId,
+          description: template.description,
+          category: template.category,
+          amount: template.amount,
+          currency: template.currency,
+          expenseDate: firstOfMonth,
+          notes: template.notes,
+          isTemplate: false,
+          sourceTemplateId: template.id,
+          createdByUserId: user.id,
+        }).returning();
 
-      if (splits.length > 0) {
-        await db.insert(expenseSplits).values(
-          splits.map((s) => ({
-            groupId: template.groupId,
-            expenseId: logged.id,
-            memberId: s.memberId,
-            shareAmount: s.shareAmount,
-            splitType: s.splitType,
-            splitValue: s.splitValue,
-          }))
-        );
-      }
+        if (splits.length > 0) {
+          await tx.insert(expenseSplits).values(
+            splits.map((s) => ({
+              groupId: template.groupId,
+              expenseId: logged.id,
+              memberId: s.memberId,
+              shareAmount: s.shareAmount,
+              splitType: s.splitType,
+              splitValue: s.splitValue,
+            }))
+          );
+        }
+      });
       count++;
     } catch {
       // Skip failed templates, don't abort the batch

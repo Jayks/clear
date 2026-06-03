@@ -435,7 +435,11 @@ export async function confirmContributions(input: {
   if (input.contributionIds.length === 0) return { ok: true } as const;
 
   try {
-    // Get the contributions to know who to notify
+    // C-8 fix: add isConfirmed=false to both the SELECT and UPDATE.
+    //   SELECT guard: prevents already-confirmed rows from appearing in the
+    //     notification list (avoids duplicate push when a single-confirm raced ahead).
+    //   UPDATE guard: makes the write safe/idempotent for any already-confirmed rows
+    //     that slipped through the SELECT before a concurrent confirm completed.
     const contribs = await db
       .select({
         id:       circleContributions.id,
@@ -449,17 +453,21 @@ export async function confirmContributions(input: {
         and(
           eq(circleContributions.groupId, input.groupId),
           inArray(circleContributions.id, input.contributionIds),
+          eq(circleContributions.isConfirmed, false),
         )
       );
 
-    // Confirm them all
+    if (contribs.length === 0) return { ok: true } as const;
+
+    // Confirm only the unconfirmed subset
     await db
       .update(circleContributions)
       .set({ isConfirmed: true })
       .where(
         and(
           eq(circleContributions.groupId, input.groupId),
-          inArray(circleContributions.id, input.contributionIds),
+          inArray(circleContributions.id, contribs.map((c) => c.id)),
+          eq(circleContributions.isConfirmed, false),
         )
       );
 

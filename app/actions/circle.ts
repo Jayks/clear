@@ -250,7 +250,10 @@ export async function selfReportContribution(input: {
       return "inserted" as const;
     });
 
-    if (insertResult !== "inserted") return { ok: true } as const; // already handled
+    if (insertResult === "already_confirmed")
+      return { ok: false, error: "A contribution is already confirmed for this period" } as const;
+    if (insertResult === "already_pending")
+      return { ok: false, error: "You already have a contribution pending confirmation for this period" } as const;
 
     revalidatePath("/groups");
     // B-6 fix: use "layout" variant so Suspense subtrees (CircleCardServer) on the
@@ -422,6 +425,7 @@ export async function disputeContribution(
 
     revalidatePath("/groups");
     revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
 
     // Notify member (fire-and-forget)
     if (memberUserId) {
@@ -537,7 +541,7 @@ export async function confirmContributions(input: {
         url: `/groups/${input.groupId}`,
       }).catch(() => {});
     });
-    Promise.all(notifyPromises).catch(() => {});
+    await Promise.all(notifyPromises).catch(() => {});
 
     return { ok: true } as const;
   } catch {
@@ -587,6 +591,7 @@ export async function rejectContribution(input: {
 
     revalidatePath("/groups");
     revalidatePath(`/groups/${input.groupId}`, "layout");
+    revalidateTag(`balances-${input.groupId}`, "max");
 
     // Notify the member if they have a Clear account
     if (input.memberUserId) {
@@ -659,6 +664,11 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
               eq(circleContributions.isConfirmed, true),
             )
           );
+        // Exclude advances (is_advance=true) from the pool draw total.
+        // Advances are personal funds the admin fronts; they are reimbursed
+        // from future contributions and do NOT deplete the spendable wallet.
+        // Including them would make the pool look smaller than it really is
+        // and incorrectly block legitimate wallet draws.
         const [expenseRow] = await tx
           .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), '0')` })
           .from(expenses)
@@ -666,6 +676,7 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
             and(
               eq(expenses.groupId, groupId),
               eq(expenses.isTemplate, false),
+              eq(expenses.isAdvance, false),
             )
           );
         const poolBalance = Number(contribRow?.total ?? 0) - Number(expenseRow?.total ?? 0);

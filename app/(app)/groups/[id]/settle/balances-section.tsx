@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getBalances, getSettlements } from "@/lib/db/queries/balances";
+import { getBalances, getSettlements, getSettlementsTotal } from "@/lib/db/queries/balances";
 import { getMonthlyExpenseSummary } from "@/lib/db/queries/expenses";
 import { Skeleton } from "@/components/shared/skeleton";
 import { SettleHeroCard } from "@/components/settlement/settle-hero-card";
@@ -58,15 +58,15 @@ export async function BalancesSection({
   currency, groupName, settleUrl, inviteUrl, isNest,
   upiIdMap, pendingSettlements, confirmId,
 }: Props) {
-  const [{ balances, suggestions, hasMixedCurrencies }, allSettlements, monthlySummary] = await Promise.all([
+  const [{ balances, suggestions, hasMixedCurrencies }, allSettlements, pastSettlementsTotal, monthlySummary] = await Promise.all([
     getBalances(groupId, currency),
     getSettlements(groupId),
+    getSettlementsTotal(groupId),  // aggregate query — not affected by the 100-row display limit
     getMonthlyExpenseSummary(groupId),
   ]);
 
   // History = confirmed settlements only (pending ones shown in PendingConfirmations above)
-  const settlementHistory  = allSettlements.filter((s) => s.isConfirmed);
-  const pastSettlementsTotal = settlementHistory.reduce((sum, s) => sum + Number(s.amount), 0);
+  const settlementHistory = allSettlements.filter((s) => s.isConfirmed);
 
   const memberName = (memberId: string) => {
     const m = members.find((m) => m.id === memberId);

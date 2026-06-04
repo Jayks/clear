@@ -119,3 +119,13 @@ export async function getSettlements(groupId: string) {
     .orderBy(desc(settlements.settledAt))
     .limit(100);
 }
+
+/** Full aggregate total for all confirmed settlements in a group — not affected by the
+ *  100-row display limit in getSettlements. Use this for any financial summary display. */
+export async function getSettlementsTotal(groupId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: sum(settlements.amount) })
+    .from(settlements)
+    .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true)));
+  return Number(row?.total ?? 0);
+}

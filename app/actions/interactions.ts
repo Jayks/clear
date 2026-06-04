@@ -421,27 +421,28 @@ export async function cancelMyDispute(expenseId: string, groupId: string) {
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" } as const;
 
-  // Cancel pending dispute
-  await db
-    .update(expenseDisputes)
-    .set({ status: "cancelled", resolvedAt: new Date() })
-    .where(
-      and(
-        eq(expenseDisputes.expenseId, expenseId),
-        eq(expenseDisputes.requesterMemberId, membership.id),
-        eq(expenseDisputes.status, "pending")
-      )
-    );
+  // Cancel pending dispute + remove ❓/⚠️ reaction atomically
+  await db.transaction(async (tx) => {
+    await tx
+      .update(expenseDisputes)
+      .set({ status: "cancelled", resolvedAt: new Date() })
+      .where(
+        and(
+          eq(expenseDisputes.expenseId, expenseId),
+          eq(expenseDisputes.requesterMemberId, membership.id),
+          eq(expenseDisputes.status, "pending")
+        )
+      );
 
-  // Remove ❓/⚠️ reaction
-  await db
-    .delete(expenseReactions)
-    .where(
-      and(
-        eq(expenseReactions.expenseId, expenseId),
-        eq(expenseReactions.memberId, membership.id)
-      )
-    );
+    await tx
+      .delete(expenseReactions)
+      .where(
+        and(
+          eq(expenseReactions.expenseId, expenseId),
+          eq(expenseReactions.memberId, membership.id)
+        )
+      );
+  });
 
   revalidateGroup(groupId);
   return { ok: true } as const;

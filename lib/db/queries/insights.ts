@@ -93,9 +93,25 @@ export async function getAllNestsInsightsData() {
   ]);
 
   if (nestGroups.length === 0) return null;
-  const nestIds = nestGroups.map((g) => g.id);
 
-  const nestWhere = and(inArray(expenses.groupId, nestIds), eq(expenses.isTemplate, false));
+  // Determine the primary currency: the defaultCurrency used by the most nests.
+  // Nests with other currencies are excluded from aggregated totals so we never
+  // sum INR + USD amounts and label them with the first nest's currency.
+  const currencyCount = new Map<string, number>();
+  for (const g of nestGroups) {
+    currencyCount.set(g.defaultCurrency, (currencyCount.get(g.defaultCurrency) ?? 0) + 1);
+  }
+  const primaryCurrency =
+    [...currencyCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+    nestGroups[0]?.defaultCurrency ??
+    "INR";
+
+  // Scope expense queries to nests that share the primary currency only
+  const primaryNestIds = nestGroups
+    .filter((g) => g.defaultCurrency === primaryCurrency)
+    .map((g) => g.id);
+
+  const nestWhere = and(inArray(expenses.groupId, primaryNestIds), eq(expenses.isTemplate, false));
 
   // Fetch only the columns computeAllNestsInsights actually reads; aggregate categories in DB
   const [allExpenses, catRows] = await Promise.all([
@@ -118,7 +134,7 @@ export async function getAllNestsInsightsData() {
     categoryTotals,
     allMembers: nestMembers,
     currentUserId: user.id,
-    currency: nestGroups[0]?.defaultCurrency ?? "INR",
+    currency: primaryCurrency,
   });
 }
 

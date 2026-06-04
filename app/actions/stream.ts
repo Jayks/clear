@@ -48,20 +48,22 @@ export async function logStream(input: LogStreamInput) {
     note,
   } = parsed.data;
 
-  // If new guest info provided, create the guest record first
-  let resolvedGuestId = existingGuestId;
-  if (guestName && !counterpartId && !existingGuestId) {
-    const [newGuest] = await db
-      .insert(streamGuests)
-      .values({ createdBy: user.id, name: guestName, email: guestEmail, phone: guestPhone })
-      .returning({ id: streamGuests.id });
-    resolvedGuestId = newGuest.id;
-  }
-
   // 48-hour token expiry — set here since DB can't do interval arithmetic as a default
   const confirmTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
   try {
+    // If new guest info provided, create the guest record first.
+    // Kept inside try so constraint violations / network errors return
+    // { ok: false, error } instead of an unhandled 500.
+    let resolvedGuestId = existingGuestId;
+    if (guestName && !counterpartId && !existingGuestId) {
+      const [newGuest] = await db
+        .insert(streamGuests)
+        .values({ createdBy: user.id, name: guestName, email: guestEmail, phone: guestPhone })
+        .returning({ id: streamGuests.id });
+      resolvedGuestId = newGuest.id;
+    }
+
     const [record] = await db
       .insert(streamRecords)
       .values({

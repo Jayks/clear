@@ -414,6 +414,12 @@ export async function forgiveStream(streamId: string, privateNote?: string) {
   if (record.status === "forgiven") {
     return { ok: false, error: "Already forgiven" } as const;
   }
+  // R12-5 fix: also block forgiving a settled entry. "settled" means the debtor
+  // actually paid; overwriting it as "forgiven" changes payment history to a
+  // write-off with the wrong forgivenAt timestamp and wrong semantics.
+  if (record.status === "settled") {
+    return { ok: false, error: "This entry is already closed" } as const;
+  }
 
   try {
     await db

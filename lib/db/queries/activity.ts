@@ -111,11 +111,10 @@ async function _fetchActivity(groupId: string, limit: number): Promise<ActivityE
       NULL::text                                                      AS other_name
     FROM group_members gm
     WHERE gm.group_id = ${groupId}
-      AND (
-        SELECT COUNT(*)
-        FROM expenses e2
-        WHERE e2.group_id = ${groupId} AND e2.is_template = false
-      ) < 10
+    -- R12-4 fix: removed "AND COUNT(*) < 10" guard that was here.
+    -- That correlated subquery evaluated to false for every group with 10+
+    -- non-template expenses, silently suppressing ALL member-join events
+    -- (both historical and new) for every real-world active group.
 
     UNION ALL
 

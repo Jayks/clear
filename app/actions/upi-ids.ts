@@ -126,6 +126,17 @@ export async function setDefaultUpiId(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
+  // R12-3 fix: verify the ID belongs to this user BEFORE the transaction.
+  // Without this check the transaction would still run: step 1 clears all
+  // defaults, step 2 finds no matching row and silently sets nothing — leaving
+  // the user with zero default UPI IDs, breaking all "Pay Now" deep-links.
+  const [exists] = await db
+    .select({ id: userUpiIds.id })
+    .from(userUpiIds)
+    .where(and(eq(userUpiIds.id, id), eq(userUpiIds.userId, user.id)))
+    .limit(1);
+  if (!exists) return { ok: false, error: "UPI ID not found" };
+
   await db.transaction(async (tx) => {
     // Unset all defaults for this user
     await tx

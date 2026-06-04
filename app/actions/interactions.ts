@@ -674,6 +674,16 @@ export async function addComment(
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" } as const;
 
+  // R12-2 fix: verify the expense belongs to this group before inserting.
+  // Without this a member of group A can attach a comment referencing an
+  // expense from group B, leaving a row where group_id ≠ expense's real group.
+  const [expenseExists] = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.groupId, groupId)))
+    .limit(1);
+  if (!expenseExists) return { ok: false, error: "Expense not found in this group" } as const;
+
   await db.insert(expenseComments).values({
     expenseId,
     groupId,
@@ -781,9 +791,12 @@ export async function deleteComment(commentId: string, groupId: string) {
   if (!membership) return { ok: false, error: "Not a member of this group" } as const;
 
   const [comment] = await db
-    .select({ memberId: expenseComments.memberId, expenseId: expenseComments.expenseId })
+    .select({ memberId: expenseComments.memberId, expenseId: expenseComments.expenseId, groupId: expenseComments.groupId })
     .from(expenseComments)
-    .where(eq(expenseComments.id, commentId));
+    // R12-1 fix: include groupId in the WHERE so a cross-group fetch returns
+    // nothing. Without this an admin of group A could delete any comment from
+    // group B just by knowing the commentId (admin check passed against A).
+    .where(and(eq(expenseComments.id, commentId), eq(expenseComments.groupId, groupId)));
 
   if (!comment) return { ok: false, error: "Comment not found" } as const;
 

@@ -192,6 +192,19 @@ export async function selfReportContribution(input: {
   if (!input.amount || input.amount <= 0 || !isFinite(input.amount))
     return { ok: false, error: "Amount must be a positive number" } as const;
 
+  // R12-6 fix: validate that the reported currency matches the group's
+  // defaultCurrency.  Pool balance queries do SUM(amount) with no currency
+  // filter, so a USD contribution in an INR circle silently corrupts the total.
+  const [groupRow] = await db
+    .select({ defaultCurrency: groups.defaultCurrency })
+    .from(groups)
+    .where(eq(groups.id, input.groupId))
+    .limit(1);
+  if (!groupRow)
+    return { ok: false, error: "Circle not found" } as const;
+  if (input.currency !== groupRow.defaultCurrency)
+    return { ok: false, error: `Currency must be ${groupRow.defaultCurrency}` } as const;
+
   // Admins are trusted — their own self-reports are auto-confirmed.
   // Non-admin self-reports are unconfirmed until an admin reviews them.
   const isAdmin = membership.role === "admin";

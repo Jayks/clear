@@ -2,17 +2,19 @@
 
 import { db } from "@/lib/db/client";
 import { subscriptions } from "@/lib/db/schema/subscriptions";
-import { eq } from "drizzle-orm";
+
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { revalidatePath } from "next/cache";
 
 // Called fire-and-forget from app/(app)/layout.tsx on every authenticated page load.
 // Creates the subscription row (trialing) on first visit, regardless of entry point.
 export async function ensureTrialStarted(userId: string): Promise<void> {
+  // R12-8 fix: replaced SELECT-then-INSERT with a single atomic INSERT …
+  // ON CONFLICT DO NOTHING. The old pattern had a race window where two
+  // concurrent first-page-loads both saw no row and both attempted INSERT;
+  // one silently failed with a unique-constraint violation.  onConflictDoNothing
+  // is a single round-trip and is inherently safe under any concurrency.
   try {
-    const [existing] = await db.select({ id: subscriptions.id })
-      .from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
-    if (existing) return;
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 30);
     await db.insert(subscriptions).values({
@@ -20,7 +22,7 @@ export async function ensureTrialStarted(userId: string): Promise<void> {
       plan: "free",
       status: "trialing",
       trialEndsAt,
-    });
+    }).onConflictDoNothing();
     // trial_started GA4 event is client-side — fired by TrialBanner in Phase 3
   } catch {
     // Table may not exist yet — fail silently, will retry on next page load

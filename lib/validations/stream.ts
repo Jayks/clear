@@ -55,7 +55,10 @@ export type DisputeStreamInput = z.infer<typeof disputeStreamSchema>;
 // ── Self-report a stream settlement (debtor pays, creditor confirms) ──────────
 
 export const selfReportStreamSettleSchema = z.object({
-  counterpartId: z.string().min(1),          // userId or guestId of the creditor
+  // R12-7 fix: was z.string().min(1) — inconsistent with every other counterpart
+  // field in this file which uses .uuid(). Non-UUID inputs now fail validation
+  // cleanly instead of reaching the DB query and returning a misleading error.
+  counterpartId: z.string().uuid(),          // userId or guestId of the creditor
   amount:        z.number().positive().max(9_999_999),
   currency:      z.string().min(1).max(10).default("INR"),
   paymentMethod: z.enum(["upi", "cash", "bank_transfer", "other"]).optional(),

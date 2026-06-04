@@ -303,7 +303,10 @@ export async function raiseQuestion(expenseId: string, groupId: string, message:
 
 const disputeSchema = z.discriminatedUnion("disputeType", [
   z.object({ disputeType: z.literal("remove_me") }),
-  z.object({ disputeType: z.literal("change_share"), suggestedAmount: z.number().nonnegative() }),
+  // BUG-05 fix: .positive() (not .nonnegative()) so suggestedAmount=0 is
+  // rejected — a ₹0 share change is semantically "remove_me" and should use
+  // that dispute type instead, which applies the correct split transform.
+  z.object({ disputeType: z.literal("change_share"), suggestedAmount: z.number().positive() }),
   z.object({ disputeType: z.literal("split_equal") }),
   z.object({ disputeType: z.literal("other"), message: z.string().min(1).max(500) }),
 ]).and(z.object({ expenseId: z.string().uuid(), groupId: z.string().uuid() }));

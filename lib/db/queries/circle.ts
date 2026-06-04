@@ -187,7 +187,8 @@ export interface CircleDashboardData {
   // Members and their status for the selected period
   memberStatuses: MemberDashboardStatus[];
   paidCount:      number;
-  pendingCount:   number;
+  pendingCount:   number;   // all unconfirmed (paid + self-reported awaiting admin)
+  unpaidCount:    number;   // BUG-08 fix: truly haven't paid (no confirmed OR self-report)
 
   // This cycle's collection
   cycleCollected: number;             // SUM of contributions this period
@@ -338,7 +339,13 @@ export async function getCircleDashboardData(
   });
 
   const paidCount    = confirmedMap.size;
+  // BUG-08 fix: separate the two distinct "not yet confirmed" states so the
+  // dashboard can avoid sending payment reminders to members who already
+  // self-reported (they've paid, they're just awaiting admin confirmation).
+  // • pendingCount  — total unconfirmed (backward compat; includes self-reports)
+  // • unpaidCount   — truly haven't paid yet (no confirmed OR self-reported row)
   const pendingCount = allMembers.length - paidCount;
+  const unpaidCount  = allMembers.length - paidCount - unconfirmedMap.size;
   // Cycle collected = confirmed only (unconfirmed don't count until admin confirms)
   const cycleCollected = [...confirmedMap.values()].reduce((s, c) => s + Number(c.amount), 0);
 
@@ -382,6 +389,7 @@ export async function getCircleDashboardData(
     memberStatuses,
     paidCount,
     pendingCount,
+    unpaidCount,
     cycleCollected,
     allTimeCollected,
     allTimeExpenses,

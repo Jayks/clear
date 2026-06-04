@@ -11,7 +11,15 @@ export const createGroupSchema = z.object({
   budget: z.preprocess((v) => (typeof v === "number" && isNaN(v)) ? undefined : v, z.number().positive().optional()),
   itinerary: z.string().max(10000).optional(),
 }).refine(
-  (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,
+  // BUG-10 fix: use proper Date parsing instead of lexicographic string
+  // comparison so non-ISO date strings are caught (NaN.getTime() returns false).
+  (data) => {
+    if (!data.startDate || !data.endDate) return true;
+    const start = new Date(data.startDate);
+    const end   = new Date(data.endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+    return end >= start;
+  },
   { message: "End date must be on or after start date", path: ["endDate"] }
 );
 

@@ -9,18 +9,25 @@ import { formatDate } from "@/lib/utils";
 import type { Subscription } from "@/lib/db/schema/subscriptions";
 import { ArrowRight, Loader2 } from "lucide-react";
 
-const CYCLE_LABELS: Record<string, { label: string; price: string }> = {
-  monthly: { label: "Monthly", price: "₹49/month" },
-  annual:  { label: "Annual",  price: "₹499/year · ₹41/month" },
-};
+// BUG-11 fix: price labels are no longer hardcoded here. They are computed
+// server-side in settings/page.tsx from lib/subscription/prices.ts (the single
+// source of truth) and passed as a prop so client components never duplicate them.
 
-export function BillingSection({ sub }: { sub: Subscription | null }) {
+interface BillingSectionProps {
+  sub: Subscription | null;
+  /** Price labels computed server-side: { monthly: "₹79/month", annual: "₹699/year · ₹58/month" } */
+  priceLabels: { monthly: string; annual: string };
+}
+
+export function BillingSection({ sub, priceLabels }: BillingSectionProps) {
   const [loading, setLoading] = useState(false);
   const [cancelled, setCancelled] = useState(false);
 
   const isPlus = !cancelled && sub?.plan === "plus" && sub?.status === "active";
   const cycle = sub?.billingCycle as "monthly" | "annual" | null;
-  const cycleInfo = cycle ? CYCLE_LABELS[cycle] : null;
+  const cycleInfo = cycle
+    ? { label: cycle === "monthly" ? "Monthly" : "Annual", price: priceLabels[cycle] }
+    : null;
 
   async function handleCancel() {
     setLoading(true);

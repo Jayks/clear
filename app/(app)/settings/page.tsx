@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getUserSubscription } from "@/lib/subscription/gates";
+import { getFounderSlotsClaimed, isFounderActive } from "@/lib/subscription/founder";
+import { FOUNDER_PRICE, REGULAR_PRICE, FOUNDER_ANNUAL_MONTHLY_EQUIV, REGULAR_ANNUAL_MONTHLY_EQUIV } from "@/lib/subscription/prices";
 import { redirect } from "next/navigation";
 import { SettingsLayout } from "./settings-layout";
 import { db } from "@/lib/db/client";
@@ -26,10 +28,21 @@ export default async function SettingsPage() {
 
   const currentDisplayName = memberRow?.displayName ?? extractDisplayName(user) ?? "";
 
-  const [sub, upiIds] = await Promise.all([
+  const [sub, upiIds, founderClaimed] = await Promise.all([
     getUserSubscription(user.id),
     getUserUpiIds(user.id),
+    // BUG-11 fix: compute correct price labels server-side so the client billing
+    // section doesn't hardcode stale prices.
+    getFounderSlotsClaimed(),
   ]);
+
+  const founderActive = isFounderActive(founderClaimed);
+  const price = founderActive ? FOUNDER_PRICE : REGULAR_PRICE;
+  const annualEquiv = founderActive ? FOUNDER_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
+  const billingPriceLabels = {
+    monthly: `₹${price.monthly}/month`,
+    annual:  `₹${price.annual}/year · ₹${annualEquiv}/month`,
+  };
 
   return (
     <div>
@@ -51,6 +64,7 @@ export default async function SettingsPage() {
         userEmail={user.email ?? ""}
         userAvatarUrl={user.user_metadata?.avatar_url as string | null ?? null}
         upiIds={upiIds}
+        billingPriceLabels={billingPriceLabels}
       />
     </div>
   );

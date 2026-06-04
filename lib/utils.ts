@@ -9,11 +9,26 @@ export const DEFAULT_CURRENCY = "INR";
 export const SUPPORTED_CURRENCIES = ["INR", "USD", "EUR", "GBP", "SGD", "AED", "JPY", "CAD", "AUD"] as const;
 export const CHART_AXIS_TICK = { fontSize: 10, fill: "#94A3B8" } as const;
 
+// BUG-03 fix: map each supported currency to the correct display locale so
+// number grouping matches the currency (e.g. USD → en-US "1,000,000" not
+// en-IN "10,00,000").  Falls back to "en-US" for any unsupported currency.
+const CURRENCY_LOCALE: Record<string, string> = {
+  INR: "en-IN",
+  USD: "en-US",
+  EUR: "de-DE",
+  GBP: "en-GB",
+  SGD: "en-SG",
+  AED: "ar-AE",
+  JPY: "ja-JP",
+  CAD: "en-CA",
+  AUD: "en-AU",
+};
+
 export function formatCurrency(
   amount: number,
   currency = DEFAULT_CURRENCY,
-  locale = "en-IN"
 ): string {
+  const locale = CURRENCY_LOCALE[currency] ?? "en-US";
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,

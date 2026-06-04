@@ -3,38 +3,22 @@ import { db } from "@/lib/db/client";
 import { subscriptions } from "@/lib/db/schema/subscriptions";
 import { count, eq } from "drizzle-orm";
 
+// ── Pricing — imported from client-safe prices.ts (single source of truth) ───
+// BUG-11 fix: constants previously duplicated here; now re-exported from
+// prices.ts so client components (billing-section.tsx) can import them too.
+export {
+  FOUNDER_PRICE,
+  REGULAR_PRICE,
+  FOUNDER_ANNUAL_MONTHLY_EQUIV,
+  REGULAR_ANNUAL_MONTHLY_EQUIV,
+  FOUNDER_ANNUAL_SAVINGS,
+  REGULAR_ANNUAL_SAVINGS,
+} from "./prices";
+
 // ── Founder slot configuration ─────────────────────────────────────────────────
 
 /** Maximum number of subscribers who lock in founder pricing. */
 export const FOUNDER_SLOTS_TOTAL = 500;
-
-// ── Pricing ────────────────────────────────────────────────────────────────────
-
-/** Founder pricing — locked in forever for the first FOUNDER_SLOTS_TOTAL subscribers. */
-export const FOUNDER_PRICE = { monthly: 79, annual: 699 } as const;
-
-/** Regular pricing after founder slots are filled. */
-export const REGULAR_PRICE = { monthly: 99, annual: 799 } as const;
-
-// ── Pre-computed savings (derived from prices above) ──────────────────────────
-
-/**
- * Effective per-month cost when billed annually.
- * Floored so we never over-promise (₹58.25 → ₹58).
- */
-export const FOUNDER_ANNUAL_MONTHLY_EQUIV = Math.floor(FOUNDER_PRICE.annual / 12); // 58
-export const REGULAR_ANNUAL_MONTHLY_EQUIV = Math.floor(REGULAR_PRICE.annual / 12); // 66
-
-/**
- * Rupee savings when paying annually vs paying the *regular* monthly rate for 12 months.
- * This is the most compelling comparison — it captures both the annual discount *and*
- * the founder discount in a single number.
- *
- * Founder annual:  ₹99 × 12 − ₹699 = ₹489
- * Regular annual:  ₹99 × 12 − ₹799 = ₹389
- */
-export const FOUNDER_ANNUAL_SAVINGS = REGULAR_PRICE.monthly * 12 - FOUNDER_PRICE.annual; // 489
-export const REGULAR_ANNUAL_SAVINGS = REGULAR_PRICE.monthly * 12 - REGULAR_PRICE.annual; // 389
 
 // ── DB query ───────────────────────────────────────────────────────────────────
 

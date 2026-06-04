@@ -82,8 +82,12 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   // Goal-hit detection
   const goalHit = isOneTime && targetNum !== null && dash.allTimeCollected >= targetNum;
 
-  // Pending member names for the reminder
-  const pendingNames = dash.memberStatuses.filter((m) => !m.isPaid).map((m) => m.name);
+  // BUG-08 fix: pendingNames for the WhatsApp reminder should only include
+  // members who genuinely haven't paid yet — exclude those who self-reported
+  // (isPendingConfirm=true) since they've already indicated payment.
+  const pendingNames = dash.memberStatuses
+    .filter((m) => !m.isPaid && !m.isPendingConfirm)
+    .map((m) => m.name);
 
   // Current member's pending-confirm status (shown in hero action zone)
   const myMemberStatus = dash.currentMemberId
@@ -354,8 +358,10 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         />
       </div>
 
-      {/* ── Send reminder (admin, when pending members exist) ────────────── */}
-      {isAdmin && dash.pendingCount > 0 && (
+      {/* ── Send reminder (admin, when truly-unpaid members exist) ─────── */}
+      {/* BUG-08 fix: use unpaidCount (not pendingCount) so the reminder button
+          is hidden when every unconfirmed member has already self-reported. */}
+      {isAdmin && dash.unpaidCount > 0 && (
         <CircleReminderButton
           circleName={group.name}
           periodLabel={isRecurring ? dash.selectedPeriodLabel : null}

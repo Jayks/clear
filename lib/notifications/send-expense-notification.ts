@@ -22,7 +22,9 @@ function buildUnsubscribeToken(memberId: string): string {
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  await fetch("https://api.resend.com/emails", {
+  // BUG-06 fix: check response.ok so Resend 4xx/5xx errors are logged rather
+  // than silently swallowed.
+  const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
@@ -30,6 +32,9 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
     },
     body: JSON.stringify({ from: process.env.RESEND_FROM, to, subject, html }),
   });
+  if (!res.ok) {
+    console.error(`[send-expense-notification] Resend error ${res.status} for ${to}`);
+  }
 }
 
 export async function sendExpenseNotification(params: NotificationParams): Promise<void> {
@@ -59,7 +64,9 @@ export async function sendExpenseNotification(params: NotificationParams): Promi
 
   const supabase = createAdminClient();
 
-  await Promise.all(
+  // BUG-02 fix: use Promise.allSettled so a failure for one recipient (e.g.
+  // Supabase Admin API hiccup) doesn't abort the remaining notifications.
+  await Promise.allSettled(
     toNotify.map(async (member) => {
       const { data } = await supabase.auth.admin.getUserById(member.userId!);
       const email = data.user?.email;

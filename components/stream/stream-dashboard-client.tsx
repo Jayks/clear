@@ -430,7 +430,9 @@ function SectionHeader({ icon, label }: { icon: "emerald" | "amber" | "slate"; l
 // ── Closed person row ─────────────────────────────────────────────────────────
 
 function ClosedPersonRow({ person }: { person: ClosedPersonSummary }) {
-  const dateStr = person.closedAt.toLocaleDateString("en-IN", {
+  // BUG-01 fix: RSC serialises Date → string before the client receives it;
+  // wrap in new Date() so .toLocaleDateString() is always called on a real Date.
+  const dateStr = new Date(person.closedAt).toLocaleDateString("en-IN", {
     month: "short", day: "numeric",
   });
 

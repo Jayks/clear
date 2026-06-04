@@ -8,7 +8,7 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { createCircleActionSchema, type CreateCircleActionInput } from "@/lib/validations/circle";
 import { addCircleExpenseSchema, type AddCircleExpenseInput } from "@/lib/validations/circle-expense";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
-import { extractDisplayName } from "@/lib/utils";
+import { extractDisplayName, formatCurrency } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { canCreateGroup, canAddExpense } from "@/lib/subscription/gates";
 import { eq, and, inArray, sql } from "drizzle-orm";
@@ -186,6 +186,11 @@ export async function selfReportContribution(input: {
   const membership = await getMembership(input.groupId, user.id);
   if (!membership)
     return { ok: false, error: "Not a member of this circle" } as const;
+
+  // Server-side amount guard — mirrors the check in recordContribution().
+  // The UI prevents 0/negative values, but a direct API call bypasses the form.
+  if (!input.amount || input.amount <= 0 || !isFinite(input.amount))
+    return { ok: false, error: "Amount must be a positive number" } as const;
 
   // Admins are trusted — their own self-reports are auto-confirmed.
   // Non-admin self-reports are unconfirmed until an admin reviews them.
@@ -681,8 +686,9 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
           );
         const poolBalance = Number(contribRow?.total ?? 0) - Number(expenseRow?.total ?? 0);
         if (amount > poolBalance + 0.01) {
-          const available = poolBalance.toLocaleString("en-IN", { maximumFractionDigits: 2 });
-          throw new Error(`OVERDRAW:${available}`);
+          // Encode currency + raw balance so the catch block can format with
+          // formatCurrency() rather than a hardcoded ₹ symbol.
+          throw new Error(`OVERDRAW:${currency}:${poolBalance}`);
         }
       }
 
@@ -709,10 +715,12 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
     return { ok: true, expenseId: expense.id } as const;
   } catch (err) {
     if (err instanceof Error && err.message.startsWith("OVERDRAW:")) {
-      const available = err.message.slice("OVERDRAW:".length);
+      // Format: "OVERDRAW:{currency}:{balance}"
+      const [, errCurrency, errBalance] = err.message.split(":");
+      const formatted = formatCurrency(Number(errBalance), errCurrency ?? "INR");
       return {
         ok: false,
-        error: `Wallet balance is ₹${available}. Use "I paid from my pocket" for advance expenses.`,
+        error: `Wallet balance is ${formatted}. Use "I paid from my pocket" for advance expenses.`,
       } as const;
     }
     return { ok: false, error: "Failed to log wallet expense" } as const;
@@ -736,9 +744,10 @@ export async function updateCircleStatus(
     // Fetch target amount, current status, and mode for server-side guards
     const [group] = await db
       .select({
-        targetAmount:  groups.targetAmount,
-        circleMode:    groups.circleMode,
-        circleStatus:  groups.circleStatus,
+        targetAmount:    groups.targetAmount,
+        circleMode:      groups.circleMode,
+        circleStatus:    groups.circleStatus,
+        defaultCurrency: groups.defaultCurrency,
       })
       .from(groups)
       .where(eq(groups.id, groupId));
@@ -775,9 +784,10 @@ export async function updateCircleStatus(
 
       if (Number(collected) < target) {
         const stillNeeded = target - Number(collected);
+        const currency = group.defaultCurrency ?? "INR";
         return {
           ok: false,
-          error: `Goal not yet reached — ₹${stillNeeded.toLocaleString("en-IN")} still needed`,
+          error: `Goal not yet reached — ${formatCurrency(stillNeeded, currency)} still needed`,
         } as const;
       }
     }
@@ -812,7 +822,7 @@ export async function sendContributionReminder(groupId: string, memberId: string
         .from(groupMembers)
         .where(and(eq(groupMembers.id, memberId), eq(groupMembers.groupId, groupId))),
       db
-        .select({ name: groups.name, contributionAmount: groups.contributionAmount, circleMode: groups.circleMode })
+        .select({ name: groups.name, contributionAmount: groups.contributionAmount, circleMode: groups.circleMode, defaultCurrency: groups.defaultCurrency })
         .from(groups)
         .where(eq(groups.id, groupId)),
     ]);
@@ -828,10 +838,11 @@ export async function sendContributionReminder(groupId: string, memberId: string
       ? new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })
       : null;
 
+    const currency = groupRow.defaultCurrency ?? "INR";
     const body = fixedAmount && periodLabel
-      ? `Your ₹${fixedAmount.toLocaleString("en-IN")} contribution for ${periodLabel} is still pending.`
+      ? `Your ${formatCurrency(fixedAmount, currency)} contribution for ${periodLabel} is still pending.`
       : fixedAmount
-      ? `Your ₹${fixedAmount.toLocaleString("en-IN")} contribution to ${groupRow.name} is still pending.`
+      ? `Your ${formatCurrency(fixedAmount, currency)} contribution to ${groupRow.name} is still pending.`
       : `Your contribution to ${groupRow.name} is still pending.`;
 
     const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");

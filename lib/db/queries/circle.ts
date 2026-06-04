@@ -87,11 +87,13 @@ export async function getCircleCardData(
           : eq(circleContributions.groupId, groupId),
       ),
 
-    // Pool draws: all non-template expenses against this group
+    // Pool draws: all non-template, non-advance expenses against this group.
+    // Advances (is_advance=true) are admin personal funds — they do NOT deplete
+    // the spendable wallet; only proper pool draws (is_advance=false) do.
     db
       .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
       .from(expenses)
-      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false))),
+      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false), eq(expenses.isAdvance, false))),
   ]);
 
   // Separate confirmed from unconfirmed self-reports
@@ -267,10 +269,12 @@ export async function getCircleDashboardData(
       .from(circleContributions)
       .where(and(eq(circleContributions.groupId, groupId), eq(circleContributions.isConfirmed, true))),
 
-    // All-time expense total (pool draws)
+    // All-time expense total (pool draws only — advances excluded).
+    // Advances do NOT deplete the spendable wallet; only proper pool draws
+    // (is_advance=false) count against the balance.
     db.select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
       .from(expenses)
-      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false))),
+      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false), eq(expenses.isAdvance, false))),
 
     // Recent pool expenses (last 3) with payer info
     db.select({

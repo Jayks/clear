@@ -509,6 +509,8 @@ export async function settleWithPerson(
     .select({
       id:                  streamRecords.id,
       amount:              streamRecords.amount,
+      direction:           streamRecords.direction,
+      creatorId:           streamRecords.creatorId,
       createdAt:           streamRecords.createdAt,
       counterpartGuestId:  streamRecords.counterpartGuestId,
     })
@@ -530,6 +532,30 @@ export async function settleWithPerson(
 
   if (active.length === 0) {
     return { ok: false, error: "No active streams to settle" } as const;
+  }
+
+  // Guard: only the net debtor can call settleWithPerson. Creditors should use
+  // forgiveStream (write-off) instead — silently wiping the other party's debt
+  // without their knowledge has wrong semantics. Guest-counterpart streams skip
+  // this check because the guest can never confirm, so the creator is the only
+  // party who can clear it regardless of net direction.
+  if (!isGuestCounterpart) {
+    let net = 0;
+    for (const r of active) {
+      const isCreator = r.creatorId === user.id;
+      const amt = Number(r.amount);
+      if (isCreator) {
+        net += r.direction === "they_owe_me" ? amt : -amt;
+      } else {
+        net += r.direction === "they_owe_me" ? -amt : amt;
+      }
+    }
+    if (net > 0.01) {
+      return {
+        ok: false,
+        error: "Only the person who owes can mark as settled. Use Forgive to write off the debt.",
+      } as const;
+    }
   }
 
   // Determine which streams to settle
@@ -789,6 +815,19 @@ export async function selfReportStreamSettle(input: SelfReportStreamSettleInput)
 
   if (net >= 0) {
     return { ok: false, error: "You don't owe anything to this person" } as const;
+  }
+
+  // Guard: amount must equal the exact outstanding balance (|net|). Allowing
+  // partial self-reports creates a scenario where the creditor's confirmStreamSettle
+  // can only settle whole entries, so any overpayment remainder (e.g. ₹800 paid of
+  // a ₹1,000 debt → ₹500 cleared, ₹300 credit lost) is silently discarded.
+  // The UPI self-report flow always defaults to the full net amount, so requiring
+  // exact match is safe and avoids the partial-remainder bug.
+  if (Math.abs(amount - Math.abs(net)) > 0.01) {
+    return {
+      ok: false,
+      error: "Settlement amount must equal your exact outstanding balance",
+    } as const;
   }
 
   // Attach the settlement to the oldest active record (primary record)

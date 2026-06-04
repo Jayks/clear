@@ -118,6 +118,7 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
       setSearching(true);
       getRecentStreamCounterpartsAction()
         .then(setPeople)
+        .catch(() => {}) // silent — offline or error just leaves the list empty
         .finally(() => setSearching(false));
     }
   }, [isOpen, step]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -130,6 +131,7 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
     debounceRef.current = setTimeout(() => {
       searchStreamableUsersAction(value)
         .then(setPeople)
+        .catch(() => {}) // silent — offline or error just leaves results empty
         .finally(() => setSearching(false));
     }, 300);
   }
@@ -141,6 +143,7 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
     setContextLoading(true);
     fetchLastStreamContextAction(person.personId)
       .then(setLastContext)
+      .catch(() => {}) // non-critical — context hint is best-effort
       .finally(() => setContextLoading(false));
   }
 

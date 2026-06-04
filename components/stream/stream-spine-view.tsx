@@ -214,6 +214,9 @@ function SpineCard({
       toast.success("Entry forgiven 💚");
       router.refresh();
       setActionsOpen(false);
+    } catch (err) {
+      console.error("forgiveStream error:", err);
+      toast.error("Couldn't forgive — check your connection and try again.");
     } finally { setForgiveLoading(false); }
   }
 
@@ -226,6 +229,9 @@ function SpineCard({
       toast.success("Marked as paid ✓");
       router.refresh();
       setActionsOpen(false);
+    } catch (err) {
+      console.error("settleStream error:", err);
+      toast.error("Couldn't mark as paid — check your connection and try again.");
     } finally { setSettleLoading(false); }
   }
 
@@ -252,6 +258,9 @@ function SpineCard({
     setConfirming(true);
     try {
       await onConfirmSettlement(pendingSettlement.id);
+    } catch (err) {
+      console.error("confirmSettlement error:", err);
+      toast.error("Couldn't confirm — check your connection and try again.");
     } finally { setConfirming(false); }
   }
 
@@ -260,6 +269,9 @@ function SpineCard({
     setDisputing(true);
     try {
       await onDisputeSettlement(pendingSettlement.id, reason);
+    } catch (err) {
+      console.error("disputeSettlement error:", err);
+      toast.error("Couldn't dispute — check your connection and try again.");
     } finally { setDisputing(false); }
   }
 

@@ -17,6 +17,7 @@ import { X, Loader2 } from "lucide-react";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { useUpiReturn }    from "@/hooks/use-upi-return";
 import { formatCurrency } from "@/lib/utils";
+import { toast }          from "sonner";
 import type { PaymentMethod, TappedApp } from "@/lib/payment/types";
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHOD_ICONS } from "@/lib/payment/types";
 import { UpiPayButton }         from "@/components/payment/upi-pay-button";
@@ -174,6 +175,9 @@ export function StreamSettleSheet({
     try {
       const ok = await onSelfReport({ paymentMethod: "upi", utrReference: utr, amount: effectiveAmount });
       if (ok) { dismissPrompt(); onClose(); }
+    } catch (err) {
+      console.error("selfReport (UPI) error:", err);
+      toast.error("Couldn't report payment — check your connection and try again.");
     } finally {
       setConfirming(false);
     }
@@ -196,6 +200,9 @@ export function StreamSettleSheet({
         ? await onMarkPaid(params)   // guests: settle directly
         : await onSelfReport(params); // Clear users: self-report, awaits confirmation
       if (ok) onClose();
+    } catch (err) {
+      console.error("debtorSubmit error:", err);
+      toast.error("Couldn't record payment — check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -215,6 +222,9 @@ export function StreamSettleSheet({
         amount:        parsedAmount,
       });
       if (ok) onClose();
+    } catch (err) {
+      console.error("creditorSubmit error:", err);
+      toast.error("Couldn't mark as received — check your connection and try again.");
     } finally {
       setSubmitting(false);
     }

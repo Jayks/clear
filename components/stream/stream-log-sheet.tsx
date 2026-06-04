@@ -209,6 +209,9 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
       });
 
       router.refresh();
+    } catch (err) {
+      console.error("logStream error:", err);
+      toast.error("Couldn't save entry — check your connection and try again.");
     } finally {
       setSubmitting(false);
     }

@@ -93,6 +93,9 @@ export function StreamForgiveSheet({
       );
 
       router.refresh();
+    } catch (err) {
+      console.error("forgiveStream error:", err);
+      toast.error("Couldn't forgive — check your connection and try again.");
     } finally {
       setSubmitting(false);
     }

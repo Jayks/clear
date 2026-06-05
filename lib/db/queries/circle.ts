@@ -33,7 +33,10 @@ export interface CircleCardData {
   totalMembers:              number;
   paidThisCycle:             number;
   totalContributed:          number;
-  poolBalance:               number;
+  /** R13-3 fix: all-time confirmed contributions minus all-time expenses.
+   *  Replaces the old poolBalance which was wrong for recurring circles
+   *  (used current-period-only contributions instead of all-time). */
+  walletBalance:             number;
   currentMemberId:           string | null;
   isAdmin:                   boolean;
   currentUserPaid:           boolean;
@@ -60,7 +63,7 @@ export async function getCircleCardData(
   const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const currentPeriodLabel = now.toLocaleString("en-IN", { month: "long", year: "numeric" });
 
-  const [allMembers, cycleContribs, expenseRows] = await Promise.all([
+  const [allMembers, cycleContribs, expenseRows, allTimeContribRows] = await Promise.all([
     // All group members
     db
       .select({
@@ -75,6 +78,8 @@ export async function getCircleCardData(
 
     // Only confirmed contributions count toward totals and "paid" state.
     // Unconfirmed self-reports are tracked separately for the pending-confirm state.
+    // For recurring mode: filter by current period for "paid this month" tracking.
+    // For one-time mode: fetch all contributions.
     db
       .select({ memberId: circleContributions.memberId, amount: circleContributions.amount, isConfirmed: circleContributions.isConfirmed })
       .from(circleContributions)
@@ -94,6 +99,15 @@ export async function getCircleCardData(
       .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
       .from(expenses)
       .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false), eq(expenses.isAdvance, false))),
+
+    // R13-3 fix: all-time confirmed contributions — needed for the correct wallet
+    // balance on the home card.  For recurring circles, cycleContribs only covers
+    // the current period (correct for "paid this month" tracking), but the "Wallet"
+    // label must show the true running balance (all months minus expenses).
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${circleContributions.amount}), 0)` })
+      .from(circleContributions)
+      .where(and(eq(circleContributions.groupId, groupId), eq(circleContributions.isConfirmed, true))),
   ]);
 
   // Separate confirmed from unconfirmed self-reports
@@ -104,8 +118,13 @@ export async function getCircleCardData(
   const pendingConfirmMemberIds = new Set(unconfirmedContribs.map((c) => c.memberId));
 
   // Only confirmed contributions count toward pool balance
+  // totalContributed = current period (recurring) or all-time (one-time) — for progress bar
   const totalContributed = confirmedContribs.reduce((sum, c) => sum + Number(c.amount), 0);
   const totalExpenses    = Number(expenseRows[0]?.total ?? 0);
+  // R13-3: walletBalance uses the all-time confirmed contributions regardless of mode,
+  // so recurring circles show the correct cumulative balance (not just this month's).
+  const allTimeContributed = Number(allTimeContribRows[0]?.total ?? 0);
+  const walletBalance      = allTimeContributed - totalExpenses;
 
   const currentMember   = allMembers.find((m) => m.userId === user.id);
   const currentMemberId = currentMember?.id ?? null;
@@ -135,7 +154,7 @@ export async function getCircleCardData(
     totalMembers:              allMembers.length,
     paidThisCycle:             paidMemberIds.size,
     totalContributed,
-    poolBalance:               totalContributed - totalExpenses,
+    walletBalance,
     currentMemberId,
     isAdmin,
     currentUserPaid,

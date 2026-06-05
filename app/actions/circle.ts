@@ -130,6 +130,20 @@ export async function recordContribution(input: {
     return { ok: false, error: "Member not found in this circle" } as const;
   }
 
+  // R13-1 fix: validate currency matches the circle's defaultCurrency.
+  // Pool balance queries use SUM(amount) with no currency filter, so a
+  // contribution in a different currency silently corrupts the total.
+  // Same class as R12-6 (selfReportContribution currency check).
+  const [groupForCurrency] = await db
+    .select({ defaultCurrency: groups.defaultCurrency })
+    .from(groups)
+    .where(eq(groups.id, input.groupId))
+    .limit(1);
+  if (!groupForCurrency)
+    return { ok: false, error: "Circle not found" } as const;
+  if (input.currency !== groupForCurrency.defaultCurrency)
+    return { ok: false, error: `Currency must be ${groupForCurrency.defaultCurrency}` } as const;
+
   // Dedup guard for recurring mode: prevent double-recording a confirmed
   // contribution for the same member × period (Bug C-1c fix).
   if (input.period) {
@@ -351,15 +365,27 @@ export async function confirmContribution(contributionId: string, groupId: strin
       );
     if (!contrib) return { ok: false, error: "Contribution not found" } as const;
 
-    await db
+    // R13-5 fix: re-assert isConfirmed=false in the UPDATE and check whether
+    // any row was actually updated.  Without this, a concurrent disputeContribution
+    // that DELETEs the row between our SELECT and this UPDATE causes the UPDATE
+    // to affect 0 rows silently — confirmContribution returns { ok: true } and
+    // fires a spurious "Payment confirmed ✓" push to the member whose contribution
+    // was actually disputed/deleted (analogous to the C-2 fix applied to DELETE).
+    const [confirmed] = await db
       .update(circleContributions)
       .set({ isConfirmed: true })
       .where(
         and(
           eq(circleContributions.id, contributionId),
           eq(circleContributions.groupId, groupId),
+          eq(circleContributions.isConfirmed, false), // guard: only update if still unconfirmed
         )
-      );
+      )
+      .returning({ id: circleContributions.id });
+
+    // If no rows were updated the contribution was deleted by a concurrent dispute
+    if (!confirmed)
+      return { ok: false, error: "Contribution already processed" } as const;
 
     revalidatePath("/groups");
     revalidatePath(`/groups/${groupId}`, "layout");
@@ -656,6 +682,20 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
   const membership = await getMembership(groupId, user.id);
   if (!membership || membership.role !== "admin")
     return { ok: false, error: "Only circle admins can log wallet expenses" } as const;
+
+  // R13-2 fix: validate currency matches the circle's defaultCurrency.
+  // The overdraw check and the pool balance queries both use SUM(amount) with
+  // no currency filter — a USD expense in an INR circle would corrupt the
+  // balance and bypass the overdraw guard using cross-currency arithmetic.
+  const [groupCurrencyRow] = await db
+    .select({ defaultCurrency: groups.defaultCurrency })
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .limit(1);
+  if (!groupCurrencyRow)
+    return { ok: false, error: "Circle not found" } as const;
+  if (currency !== groupCurrencyRow.defaultCurrency)
+    return { ok: false, error: `Currency must be ${groupCurrencyRow.defaultCurrency}` } as const;
 
   // Check expense limit (pool expenses count toward the group's expense limit)
   if (!(await canAddExpense(groupId)))

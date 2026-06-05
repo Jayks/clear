@@ -467,6 +467,19 @@ export async function deleteStream(streamId: string) {
     return { ok: false, error: "Only pending Streams can be deleted" } as const;
   }
 
+  // R13-4 fix: settleStream allows partial settlements on pending streams (the
+  // stream status stays "pending" until fully paid).  Without this guard,
+  // deleteStream would cascade-delete those settlement records with no warning,
+  // silently erasing payment history.
+  const [existingSettlement] = await db
+    .select({ id: streamSettlements.id })
+    .from(streamSettlements)
+    .where(eq(streamSettlements.streamId, streamId))
+    .limit(1);
+  if (existingSettlement) {
+    return { ok: false, error: "Cannot delete a Stream with recorded payments" } as const;
+  }
+
   try {
     await db.delete(streamRecords).where(eq(streamRecords.id, streamId));
 

@@ -20,6 +20,7 @@ interface Props {
 export function CircleCard({ group, cardData }: Props) {
   const {
     totalMembers, paidThisCycle, totalContributed,
+    walletBalance,
     isAdmin, currentUserPaid, pendingMembers,
     currentUserPendingConfirm: serverPendingConfirm,
     currentPeriod, currentPeriodLabel,
@@ -207,7 +208,7 @@ export function CircleCard({ group, cardData }: Props) {
               <div className="flex items-center justify-between gap-2 mt-0.5">
                 {/* Left — truncated so it never wraps */}
                 <p className="text-slate-600 dark:text-white/75 text-xs tabular-nums truncate min-w-0">
-                  Wallet · {formatCurrency(totalContributed, group.defaultCurrency)}
+                  Wallet · {formatCurrency(walletBalance, group.defaultCurrency)}
                 </p>
                 {/* Right — one secondary hint, shrink-0 so it never wraps */}
                 {targetNum ? (

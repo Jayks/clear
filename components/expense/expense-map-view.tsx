@@ -256,11 +256,11 @@ export function ExpenseMapView({
     if (!mapReady || !mapInstance.current) return;
     const map = mapInstance.current;
 
-    // Remove old layers/sources
-    (["trip-path", "trip-path-bg"] as const).forEach((id) => {
-      if (map.getLayer(id)) map.removeLayer(id);
-      if (map.getSource(id)) map.removeSource(id);
-    });
+    // Remove old layers first (both reference the same source), then the source.
+    // Order matters: Mapbox rejects removeSource() while any layer still uses it.
+    if (map.getLayer("trip-path"))    map.removeLayer("trip-path");
+    if (map.getLayer("trip-path-bg")) map.removeLayer("trip-path-bg");
+    if (map.getSource("trip-path"))   map.removeSource("trip-path");
 
     if (filteredLocated.length < 2) return; // LineString requires ≥2 coords
 
@@ -272,7 +272,8 @@ export function ExpenseMapView({
       });
 
     map.addSource("trip-path", {
-      type: "geojson",
+      type:        "geojson",
+      lineMetrics: true, // required for line-trim-offset to work
       data: { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: {} },
     });
     map.addLayer({

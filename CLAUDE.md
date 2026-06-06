@@ -40,6 +40,8 @@
 | Icons | lucide-react | |
 | QR | qrcode.react | |
 | AI | @anthropic-ai/sdk 0.94 | claude-haiku-4-5-20251001 |
+| Geocoding | Mapbox API | `NEXT_PUBLIC_MAPBOX_TOKEN`; `lib/geocoding.ts` (`reverseGeocode` + `forwardGeocode`) |
+| Image utils | `exifr` + Canvas API | `lib/image-utils.ts` — `compressImage`, `extractGpsFromImage`, `fileToBase64` |
 | Database | Supabase Postgres | Free tier |
 | Auth | Supabase Auth (Google OAuth) | @supabase/ssr v0.6 |
 | Realtime | Supabase Realtime | postgres_changes → router.refresh() |
@@ -123,7 +125,58 @@ Use `scripts/find-bad-imports.mjs` (`node scripts/find-bad-imports.mjs`) to scan
 
 ### AI action rate limiting
 
-`lib/rate-limit.ts` exports `checkAiRateLimit(userId): boolean` — 20 AI calls/hour per user, shared across all AI features. All four AI actions (`parse-expense.ts`, `narrative.ts`, `parse-chat.ts`, `trip-adherence.ts`) call `getCurrentUser()` then `checkAiRateLimit(user.id)` before invoking Anthropic. In-memory store (best-effort on serverless). `parseExpenseWithAI` returns `null` on rate limit; others return `{ ok: false, error: "Rate limit exceeded..." }`.
+`lib/rate-limit.ts` exports `checkAiRateLimit(userId): boolean` — 20 AI calls/hour per user, shared across all AI features. All five AI actions (`parse-expense.ts`, `narrative.ts`, `parse-chat.ts`, `trip-adherence.ts`, `parse-receipt.ts`) call `getCurrentUser()` then `checkAiRateLimit(user.id)` before invoking Anthropic. In-memory store (best-effort on serverless). `parseExpenseWithAI` returns `null` on rate limit; others return `{ ok: false, error: "Rate limit exceeded..." }`.
+
+### `useSheetDismiss` — do NOT use inside portal sheets hosted on form pages
+
+`useSheetDismiss` pushes `{ bottomSheet: true }` to `window.history` on open and calls `window.history.go(-1)` on programmatic close. In Next.js 16, `go(-1)` triggers a `popstate` event — for the **same URL** (e.g. `/groups/[id]/expenses/new`) the App Router interprets this as a navigation and triggers a full RSC refresh of the current page, wiping form state and leaving the history stack confused (back button appears stuck).
+
+**Rule**: Use `useSheetDismiss` only in sheets that sit at the *root nav level* (QuickAddSheet, TripCardNavSheet, MemberProfileSheet, etc.). Do **not** use it in sheets rendered inside a `<form>` page (e.g. `ReceiptScannerSheet`). Instead, add Escape key handling directly:
+
+```typescript
+// ✅ correct — inline Escape only, no history manipulation
+useEffect(() => {
+  if (!isOpen) return;
+  const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+  document.addEventListener("keydown", onKey);
+  return () => document.removeEventListener("keydown", onKey);
+}, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+// ❌ wrong — causes Next.js 16 RSC refresh via go(-1) popstate on a form page
+useSheetDismiss(isOpen, onClose);
+```
+
+### Receipt Scanner — `ReceiptScannerSheet` patterns
+
+`components/expense/receipt-scanner-sheet.tsx` — full-screen portal scanner used in `AddExpenseForm`, `AddCircleExpenseForm`, and `QuickAddSheet`.
+
+**State machine**: `idle → viewfinder → processing → results`
+
+**Critical**: `transitionState(next)` revokes `prev.previewUrl` **only when `next.previewUrl !== prev.previewUrl`**. The `processing → results` transition reuses the same `previewUrl` — revoking it before results renders causes `ERR_FILE_NOT_FOUND` on the results `<img>`.
+
+**Instant scan line**: `handleFileInput` creates a blob URL from the *original* file immediately and transitions to `processing` (showing the scan line at once), then compresses + extracts GPS in parallel. After compression, `setState` swaps `file: compressed, gps` without changing `previewUrl` — so display stays smooth and the AI gets the smaller file.
+
+**`onExtracted(result, keepProof)`** — called when user taps "Fill form →". Passes both the parsed data and whether the proof toggle was on, so the parent form can set `proofPending` state and show the "📎 Receipt proof will attach on save" indicator.
+
+**Background proof upload pattern**:
+```typescript
+// After addExpense returns expenseId — navigate immediately, upload in background:
+const proofFile = pendingProofFileRef.current;
+if (proofFile && result.expenseId) {
+  pendingProofFileRef.current = null;
+  setProofPending(false);
+  uploadReceiptProofInBackground(result.expenseId, group.id, proofFile);
+}
+router.push(`/groups/${group.id}/expenses`);
+```
+
+**`mapToGroupCategory(aiCategory, groupType)`** — `lib/receipt/map-category.ts`. Maps an AI-returned category string to the nearest valid category for the target group type. Fast path: if the category already exists in the target group's category list, return as-is. Fallback: `CROSS_TYPE_MAP` lookup; if no mapping, returns `"other"` (always valid in every group type).
+
+**`isPlusUser` prop chain**: `canUseAI(user.id)` is called in the RSC page (`expenses/new/page.tsx`, `expenses/page.tsx`, `groups/page.tsx`), passed as `isPlusUser` prop through form components down to `ReceiptScannerSheet`. Plus gate shown in scanner's idle state.
+
+**`aiFilledFields: Set<string>` + emerald ring**: after `handleReceiptExtracted`, form fields filled by AI show `ring-1 ring-emerald-400/50`. Ring clears when the user manually edits the field via `clearAiFill(field)` registered in `register("field", { onChange: () => clearAiFill("field") })`. Category grid wrapped in ring when `aiFilledFields.has("category")`.
+
+**Expense `receiptUrl` + detail sheet**: `expenses.receiptUrl` (DB: `receipt_url text`) stores the Supabase Storage public URL. `ExpenseDetailSheet` renders a "Receipt" section (cyan Paperclip header) with thumbnail + "Tap to open full size" link when `expense.receiptUrl` is non-null. `updateExpenseMedia` server action (`app/actions/update-expense-media.ts`) writes the URL after background upload.
 
 ### Login — modal vs standalone
 
@@ -335,6 +388,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=Clear
 ANTHROPIC_API_KEY
 PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
+
+# Geocoding (receipt scanner location + LocationInput dropdown)
+NEXT_PUBLIC_MAPBOX_TOKEN             # pk.eyJ1... — Mapbox public token; omit to disable geocoding
 
 # Email notifications (Resend)
 RESEND_API_KEY

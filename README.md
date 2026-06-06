@@ -35,6 +35,7 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 - **Home greeting** — time-aware personal greeting at the top of the Home page ("Good morning/afternoon/evening, [Name] 👋") using the user's local timezone.
 - **Trip alive badges** — active trip cards show a live status badge replacing the date range: "Day 3 of 8" (cyan, pulsing dot), "Last day 🏁" (amber), or "Just returned ✓" (emerald, shown for 7 days after the trip ends).
 - **Group card identity patterns** — Trip and Nest cards without a cover photo use a vivid identity gradient + white SVG silhouette pattern: **Trip** = `cyan-500 → teal-500` with rounded-canopy tree silhouettes (4 trees, 220×110 tile — each has a branch-spread shoulder ellipse that distinguishes it from a balloon); **Nest** = `emerald-500 → teal-500` with a 14-building city skyline (400×110 tile, antennae + window grids on prominent buildings); **Circle** = pale indigo (recurring) or amber (one-time) with sine-wave or lollipop SVG patterns. All patterns are `repeat-x` anchored at the bottom. Pattern constants in `lib/group-patterns.ts` are shared between the home-page card thumbnail and the group dashboard hero so both surfaces are visually identical when no cover photo is set.
+- **AI receipt scanning** — tap the camera icon on any Add Expense form (Plus feature) to scan a receipt photo. Haiku vision reads the amount, merchant name, date, category, and GPS-tagged location in one shot. Detected fields fill the form automatically with an emerald ring highlight so you can see exactly what AI touched; editing any field clears its ring. Enable "Keep as proof" to attach the receipt photo to the expense — it uploads in the background after save and appears as a thumbnail in the expense detail sheet. Available in full Add Expense forms (Trips/Nests/Circles) and the compact QuickAdd sheet. Category cross-mapping ensures AI-detected categories are always valid for the target group type. Location field shows a Mapbox geocoding dropdown on trips; stays hidden on nests unless AI detected a location.
 - **Quick-add expenses** — type a natural description from any group card; placeholder shows a live example like `"Coffee ₹120 paid by Priya"` so AI parsing is immediately obvious; AI fills amount, payer, and split automatically; a live `÷ N members = ₹X each` pill appears as you type so you always know each person's share before confirming
 - **Quick-nav from card** — tap `⋯` (always visible) or long-press any group card to jump directly to Members, Expenses, Settle Up, or Insights; the balance badge links directly to Settle Up; the member count badge links directly to Members
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
@@ -97,6 +98,8 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 | Auth | Supabase Auth (Google OAuth) |
 | Realtime | Supabase Realtime |
 | AI | Anthropic claude-haiku-4-5-20251001 |
+| Geocoding | Mapbox API (receipt location + LocationInput dropdown) |
+| Image utils | exifr (EXIF GPS) + Canvas API (compression) |
 | PDF parsing | pdf-parse 1.1.1 (server-side, no AI) |
 | Deployment | Vercel |
 
@@ -122,6 +125,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=Clear
 ANTHROPIC_API_KEY=
 PLATFORM_ADMIN_EMAIL=                 # comma-separated, guards /admin
+
+# Geocoding (receipt scanner + LocationInput)
+NEXT_PUBLIC_MAPBOX_TOKEN=             # pk.eyJ1... — omit to disable location features
 
 # Email notifications
 RESEND_API_KEY=
@@ -153,6 +159,7 @@ pnpm dev
 5b. Run `drizzle/circle-phase4.sql` to add `is_advance` column to `expenses` (required for wallet expense logging)
 6. Enable Realtime for tables: `expenses`, `expense_splits`, `settlements`, `group_members`
 6. Create a Storage bucket named `cover-photos` (public, 5 MB limit) and run the Storage RLS policies from CLAUDE.md
+7. Create a Storage bucket named `receipt-photos` (private, 10 MB limit) — run `drizzle/policies.sql` (includes receipt-photos RLS: members can upload to their group's path, authenticated users can read)
 7. Generate VAPID keys: `node -e "const wp=require('web-push');console.log(wp.generateVAPIDKeys())"` and add to `.env.local`
 
 ### Windows note

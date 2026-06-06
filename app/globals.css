@@ -281,3 +281,62 @@ html { scroll-behavior: smooth; }
 .animate-hero-5 { animation: heroFadeUp 0.6s ease-out both; animation-delay: 0.54s; }
 .animate-hero-right { animation: heroFadeRight 0.7s ease-out both; animation-delay: 0.22s; }
 .animate-float-bob { animation: floatBob 4s ease-in-out infinite; animation-delay: 1.2s; }
+
+/* ── Expense Map View — HTML marker styles ──────────────────────────────────── */
+/* These classes are applied to Mapbox HTML markers (not Tailwind — markers are
+   appended to the DOM by Mapbox, outside React's render tree). */
+
+.expense-pin {
+  background: #06B6D4; /* cyan-500 */
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,0.7);
+  box-shadow: 0 2px 8px rgba(6,182,212,0.4);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+.expense-pin:hover, .expense-pin.selected {
+  transform: scale(1.12);
+  box-shadow: 0 4px 16px rgba(6,182,212,0.55);
+}
+.expense-pin.selected {
+  background: #0891B2; /* cyan-600 */
+  border-color: #fff;
+}
+
+.cluster-pin {
+  background: rgba(6,182,212,0.35);
+  color: #0891B2;
+  font-size: 11px;
+  font-weight: 700;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #06B6D4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(6,182,212,0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.cluster-pin:hover { transform: scale(1.1); }
+
+/* Dark mode overrides */
+.dark .expense-pin {
+  background: #0891B2;
+  border-color: rgba(255,255,255,0.5);
+}
+.dark .expense-pin.selected {
+  background: #0E7490; /* cyan-700 */
+}
+.dark .cluster-pin {
+  background: rgba(8,145,178,0.4);
+  color: #67E8F9; /* cyan-300 */
+  border-color: #22D3EE; /* cyan-400 */
+}

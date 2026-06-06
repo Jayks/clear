@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, ChevronLeft, ChevronRight, CalendarDays, LayoutList, List } from "lucide-react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
+import { Search, X, ChevronDown, ChevronLeft, ChevronRight, CalendarDays, LayoutList, List, Map as MapIcon, SlidersHorizontal } from "lucide-react";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
-import { motion, useInView, useMotionValue, useMotionValueEvent, animate } from "framer-motion";
+import { motion, useInView, useMotionValue, useMotionValueEvent, animate, AnimatePresence } from "framer-motion";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
@@ -13,6 +13,7 @@ import { formatCurrency, getMemberName } from "@/lib/utils";
 import { CategoryIcon } from "./category-icon";
 import { SwipeHint } from "@/components/shared/swipe-hint";
 import { AnimatedList } from "@/components/shared/animated-list";
+import { ExpenseMapView, MapErrorBoundary } from "./expense-map-view";
 
 type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
@@ -27,13 +28,15 @@ interface Props {
   groupEndDate?: string | null;
   groupByMonth?: boolean;
   interactionCounts?: Record<string, ExpenseInteractionCount>;
+  /** When true, shows the "Map" view mode tab (trips only, when located expenses exist). */
+  showMapView?: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
 // Groups with ≤ this many total expenses skip pagination and show everything.
 const PAGE_ALL_THRESHOLD = 20;
 
-export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts }: Props) {
+export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts, showMapView }: Props) {
   const [search, setSearch]        = useState("");
   const [category, setCategory]    = useState<string | null>(null);
   const [payerId, setPayerId]       = useState<string | null>(null);
@@ -42,13 +45,15 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
   const [sort, setSort]             = useState<SortOption>("date-desc");
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode]     = useState<"full" | "compact" | "timeline">("full");
+  const [viewMode, setViewMode]     = useState<"full" | "compact" | "timeline" | "map">("full");
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
   // Restore view mode from localStorage after hydration
   useEffect(() => {
-    const saved = localStorage.getItem("clear_expense_view_mode") as "full" | "compact" | "timeline" | null;
-    if (saved) setViewMode(saved);
-  }, []);
+    const saved = localStorage.getItem("clear_expense_view_mode") as "full" | "compact" | "timeline" | "map" | null;
+    // Only restore "map" if map view is actually available for this group
+    if (saved && (saved !== "map" || showMapView)) setViewMode(saved);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tour: auto-switch view mode when requested
   useEffect(() => {
@@ -62,7 +67,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function setAndSaveViewMode(mode: "full" | "compact" | "timeline") {
+  function setAndSaveViewMode(mode: "full" | "compact" | "timeline" | "map") {
     setViewMode(mode);
     localStorage.setItem("clear_expense_view_mode", mode);
   }
@@ -176,7 +181,8 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               { mode: "full",     Icon: LayoutList,  label: "Full"     },
               { mode: "compact",  Icon: List,         label: "Compact"  },
               ...(!groupByMonth ? [{ mode: "timeline" as const, Icon: CalendarDays, label: "Timeline" }] : []),
-            ] as { mode: "full" | "compact" | "timeline"; Icon: React.ElementType; label: string }[]).map(({ mode, Icon, label }, idx) => (
+              ...(showMapView ? [{ mode: "map" as const, Icon: MapIcon, label: "Map" }] : []),
+            ] as { mode: "full" | "compact" | "timeline" | "map"; Icon: React.ElementType; label: string }[]).map(({ mode, Icon, label }, idx) => (
               <div key={mode} className="flex">
                 {idx > 0 && <div className="w-px bg-slate-200 dark:bg-slate-700" />}
                 <button
@@ -195,6 +201,9 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             ))}
           </div>
         </div>
+
+        {/* ── Filter chrome — hidden on mobile when map is active ─────────── */}
+        <div className={viewMode === "map" ? "hidden md:block" : ""}>
 
         {/* ── Search (always) + Sort (hidden in timeline — order is fixed) ─ */}
         <div className="flex gap-2 mb-3">
@@ -215,7 +224,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               </button>
             )}
           </div>
-          {viewMode !== "timeline" && (
+          {viewMode !== "timeline" && viewMode !== "map" && (
             <div className="relative">
               <select
                 value={sort}
@@ -364,8 +373,120 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           )}
         </div>
 
+        </div>{/* end filter chrome wrapper */}
+
+        {/* ── Map view ────────────────────────────────────────────────────── */}
+        {viewMode === "map" && (
+          <div className="relative mt-1">
+            {/* Mobile floating Filter chip — absolute over map container */}
+            <div className="md:hidden flex gap-2 mb-2 justify-end">
+              {isFiltered && (
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-sm"
+                >
+                  <X className="w-3 h-3" /> Clear
+                </button>
+              )}
+              <button
+                onClick={() => setShowFilterDrawer(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-sm"
+              >
+                <SlidersHorizontal className="w-3 h-3" />
+                {isFiltered ? "Filtered" : "Filter"}
+              </button>
+            </div>
+
+            <MapErrorBoundary>
+              <Suspense fallback={
+                <div className="h-[calc(100dvh-220px)] md:h-[480px] rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-slate-500">Loading map…</p>
+                  </div>
+                </div>
+              }>
+                <ExpenseMapView
+                  expenses={expenses}
+                  members={members}
+                  currentUserId={currentUserId}
+                  currentMemberId={currentMemberId}
+                  isAdmin={isAdmin}
+                  currency={currency}
+                  groupStartDate={groupStartDate}
+                  groupEndDate={groupEndDate}
+                  filteredExpenses={filtered}
+                  interactionCounts={interactionCounts}
+                />
+              </Suspense>
+            </MapErrorBoundary>
+          </div>
+        )}
+
+        {/* ── Mobile filter drawer — shown when floating Filter chip tapped ─ */}
+        <AnimatePresence>
+          {showFilterDrawer && viewMode === "map" && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/40 z-40 md:hidden"
+                onClick={() => setShowFilterDrawer(false)}
+              />
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 26, stiffness: 280 }}
+                className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-t-2xl p-5 shadow-xl"
+              >
+                <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-5" />
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Filter expenses</p>
+
+                {/* Category */}
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  <button onClick={() => setCategory(null)} className={`px-3 py-1 rounded-full text-xs font-medium ${!category ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>All</button>
+                  {usedCategories.map((cat) => {
+                    const cm = getCategory(cat);
+                    const active = category === cat;
+                    return (
+                      <button key={cat} onClick={() => setCategory(active ? null : cat)}
+                        className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${active ? `bg-gradient-to-br ${cm.gradient} text-white` : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>
+                        <cm.icon className="w-3 h-3" />{cm.shortLabel ?? cm.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Date range */}
+                <div className="flex gap-2 items-center mb-4 flex-wrap">
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                  <span className="text-slate-400 text-xs">to</span>
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                </div>
+
+                <div className="flex gap-2">
+                  {isFiltered && (
+                    <button onClick={() => { clearAll(); setShowFilterDrawer(false); }}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      Clear all
+                    </button>
+                  )}
+                  <button onClick={() => setShowFilterDrawer(false)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-br from-cyan-500 to-teal-500 text-white">
+                    Done
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
         {/* ── Timeline: header + results + day cards — all in one spotlightable block ── */}
-        {viewMode === "timeline" && !groupByMonth ? (
+        {viewMode !== "map" && viewMode === "timeline" && !groupByMonth ? (
           <div>
             {/* Day by day section header */}
             <div className="flex items-center gap-2.5 mb-4 mt-1">
@@ -430,7 +551,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               />
             )}
           </div>
-        ) : (
+        ) : viewMode !== "map" ? (
           <>
             {/* ── Results bar (non-timeline modes) ──────────────────────── */}
             <div className="flex items-center justify-between mb-3 px-0.5">
@@ -492,12 +613,12 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               </>
             )}
           </>
-        )}
+        ) : null}
 
       </div>{/* end data-tour="expense-list-header" */}
 
-      {/* ── Cards 3+ outside spotlight (dimmed during tour) ─────────── */}
-      {filtered.length > 0 && !groupByMonth && viewMode !== "timeline" && displayItems.length > 2 && (
+      {/* ── Cards 3+ outside spotlight — hidden in map mode ──────────── */}
+      {filtered.length > 0 && !groupByMonth && viewMode !== "timeline" && viewMode !== "map" && displayItems.length > 2 && (
         <AnimatedList
           className="space-y-2 mt-2"
           staggerMs={35}
@@ -507,8 +628,8 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
         </AnimatedList>
       )}
 
-      {/* ── Pagination — hidden while searching and in timeline mode ─── */}
-      {!isSearching && usePagination && totalPages > 1 && viewMode !== "timeline" && (
+      {/* ── Pagination — hidden while searching, in timeline mode, or map mode ─── */}
+      {!isSearching && usePagination && totalPages > 1 && viewMode !== "timeline" && viewMode !== "map" && (
         <div className="flex items-center justify-between mt-4 px-0.5">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

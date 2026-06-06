@@ -5,6 +5,9 @@ import { getGroupName } from "@/lib/db/queries/meta";
 import { getExpenseInteractionCounts } from "@/lib/db/queries/interactions";
 import { getGroupConfig } from "@/lib/group-config";
 import { formatCurrency } from "@/lib/utils";
+import { db } from "@/lib/db/client";
+import { expenses as expensesTable } from "@/lib/db/schema/expenses";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { Plus, Receipt, Coins } from "lucide-react";
 import Link from "next/link";
 import { BackButton } from "@/components/shared/back-button";
@@ -39,8 +42,28 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   const aiAllowed = user ? await canUseAI(user.id) : false;
   if (!data) notFound();
 
+  // ── hasLocatedExpenses — lean query against ALL group expenses (not the paginated list)
+  // ⚠️  NOT expenses.some() — that only checks the current page (pagination bug).
+  const config   = getGroupConfig(data.group.groupType);
+  const hasLocatedExpenses = config.isCircle
+    ? false
+    : data.group.groupType === "trip"
+      ? await db
+          .select({ id: expensesTable.id })
+          .from(expensesTable)
+          .where(
+            and(
+              eq(expensesTable.groupId, id),
+              isNotNull(expensesTable.location),
+              eq(expensesTable.isTemplate, false),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows.length > 0)
+      : false;
+
   const { group, members, currentMember, currentUser } = data;
-  const config   = getGroupConfig(group.groupType);
+  // config already declared above (used for hasLocatedExpenses)
   const isAdmin  = currentMember?.role === "admin";
   const isNest   = group.groupType === "nest";
   const isCircle = config.isCircle;
@@ -246,6 +269,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             groupEndDate={group.endDate}
             groupByMonth={isNest}
             interactionCounts={interactionCounts}
+            showMapView={hasLocatedExpenses}
           />
         </>
       )}

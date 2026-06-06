@@ -677,7 +677,7 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
   if (!parsed.success)
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input" } as const;
 
-  const { groupId, description, category, customCategory, amount, currency, expenseDate, notes, isAdvance } = parsed.data;
+  const { groupId, description, category, customCategory, amount, currency, expenseDate, notes, isAdvance, receiptUrl, wasAiScanned } = parsed.data;
 
   const membership = await getMembership(groupId, user.id);
   if (!membership || membership.role !== "admin")
@@ -747,16 +747,19 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
 
       const [exp] = await tx.insert(expenses).values({
         groupId,
-        paidByMemberId: membership.id, // admin is always the payer for circle pool expenses
+        paidByMemberId:  membership.id, // admin is always the payer for circle pool expenses
         description,
         category,
-        customCategory: customCategory ?? null,
-        amount:         String(amount),
+        customCategory:   customCategory ?? null,
+        amount:           String(amount),
         currency,
         expenseDate,
-        notes:          notes || null,
+        notes:            notes || null,
         isAdvance,
-        createdByUserId: user.id,
+        createdByUserId:  user.id,
+        // Receipt scanning fields (no location/receiptItems — pool draws are single-line)
+        receiptUrl:       receiptUrl ?? null,
+        receiptScannedAt: wasAiScanned ? new Date() : null,
         // No expense_splits for circles — pool absorbs the full cost
       }).returning();
       return exp;

@@ -292,6 +292,30 @@ CREATE POLICY "expense_reads: member access" ON expense_reads
   );
 
 
+-- ── storage: receipt-photos bucket ───────────────────────────────────────────
+-- Run once after applying drizzle/receipt-map-schema.sql (which creates the bucket).
+-- Bucket settings: Name = receipt-photos | Public = Yes | File size limit = 5 MB
+-- Path pattern: {userId}/{groupId}/{timestamp}-receipt.jpg
+
+create policy "Authenticated users can upload receipt photos"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'receipt-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "Public can read receipt photos"
+  on storage.objects for select to public
+  using (bucket_id = 'receipt-photos');
+
+create policy "Users can delete their own receipt photos"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'receipt-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+
 -- ── display_name backfill ─────────────────────────────────────────────────────
 -- Run once after first users join
 

@@ -20,6 +20,21 @@ export const addExpenseSchema = z.object({
   notes: z.string().max(500).optional(),
   splitMode: z.enum(["equal", "exact", "percentage", "shares"]),
   splits: z.array(splitInputSchema).min(1),
+  // Receipt scanning fields (not on addTemplateSchema)
+  location: z.object({
+    lat:     z.number(),
+    lng:     z.number(),
+    name:    z.string().max(200),
+    address: z.string().max(500).optional(),
+  }).nullable().optional(),
+  receiptUrl:   z.string().url().nullable().optional(),
+  receiptItems: z.array(z.object({
+    description: z.string().max(200),
+    amount:      z.number().positive(),
+    quantity:    z.number().positive().optional(),
+  })).max(50).nullable().optional(),
+  wasAiScanned: z.boolean().optional(),
+  clearReceipt: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.category === "other" && (!data.customCategory || data.customCategory.trim() === "")) {
     ctx.addIssue({

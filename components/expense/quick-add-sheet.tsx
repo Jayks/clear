@@ -3,21 +3,24 @@
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check, RotateCcw, ChevronLeft } from "lucide-react";
+import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check, RotateCcw, ChevronLeft, Camera, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { hapticLight } from "@/lib/haptics";
 import type { GroupMember } from "@/lib/db/schema/group-members";
-import type { ParsedExpense } from "@/lib/parser/parse-expense";
+import type { ParsedExpense, CategoryValue } from "@/lib/parser/parse-expense";
+import type { ParsedReceipt } from "@/lib/receipt/types";
 import { QuickAddBar } from "./quick-add-bar";
+import { ReceiptScannerSheet } from "./receipt-scanner-sheet";
 import { addExpense } from "@/app/actions/expenses";
 import { trackEvent } from "@/lib/analytics";
 import { getGroupMembersForQuickAdd } from "@/app/actions/quick-add";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { AddExpenseInput } from "@/lib/validations/expense";
 import { useRecentCategories } from "@/hooks/use-recent-categories";
-import { getMemberName, formatDate } from "@/lib/utils";
+import { getMemberName, formatDate, formatCurrency } from "@/lib/utils";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { mapToGroupCategory } from "@/lib/receipt/map-category";
 
 interface Props {
   groupId: string;
@@ -32,6 +35,8 @@ interface Props {
   onClose: () => void;
   /** When provided (global FAB flow), shows a ← back button to re-pick the group. */
   onBack?: () => void;
+  /** Whether the current user has Plus (enables receipt scanner). */
+  isPlusUser?: boolean;
 }
 
 type StickyContext = { paidByMemberId: string; expenseDate: string };
@@ -86,6 +91,7 @@ export function QuickAddSheet({
   members: initialMembers,
   onClose,
   onBack,
+  isPlusUser = false,
 }: Props) {
   const [members, setMembers] = useState<GroupMember[] | null>(initialMembers ?? null);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -95,6 +101,10 @@ export function QuickAddSheet({
   const [lastContext, setLastContext] = useState<StickyContext | null>(null);
   const [, addRecentCategory] = useRecentCategories(groupType);
   const [mounted, setMounted] = useState(false);
+
+  // ── Scanner state ──────────────────────────────────────────────────────────
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanFilled, setScanFilled]   = useState(false);
 
   // Escape key + Android back-button dismissal
   useSheetDismiss(isOpen, onClose);
@@ -145,6 +155,7 @@ export function QuickAddSheet({
       if (isListening) stop();
       setVoiceTrigger(null);
       setSaved(false);
+      setScanFilled(false);
       setLastContext(null);
       if (autoCloseTimerRef.current) {
         clearTimeout(autoCloseTimerRef.current);
@@ -163,6 +174,23 @@ export function QuickAddSheet({
     document.addEventListener("touchmove", preventBodyScroll, { passive: false });
     return () => document.removeEventListener("touchmove", preventBodyScroll);
   }, [isOpen, preventBodyScroll]);
+
+  // ── Receipt scanner callback ────────────────────────────────────────────
+  function handleReceiptExtracted(result: ParsedReceipt) {
+    const groupTypeStr = groupType as "trip" | "nest" | "circle";
+    const mappedCat = mapToGroupCategory(result.category, groupTypeStr);
+    setParsed({
+      description:    result.description ?? "",
+      amount:         result.amount ?? null,
+      // CategoryValue is the union of all valid category strings — mapped result is always valid
+      category:       mappedCat as CategoryValue,
+      paidByMemberId: null,
+      expenseDate:    result.expenseDate ?? null,
+      splitMemberIds: null,
+      splitCount:     null,
+    });
+    setScanFilled(true);
+  }
 
   function handleSave() {
     if (!parsed || !members) return;
@@ -207,6 +235,7 @@ export function QuickAddSheet({
       autoCloseTimerRef.current = null;
     }
     setSaved(false);
+    setScanFilled(false);
     setOpenCount((c) => c + 1);
   }
 
@@ -218,7 +247,7 @@ export function QuickAddSheet({
 
   if (!mounted) return null;
 
-  return createPortal(
+  const portal = createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -290,6 +319,17 @@ export function QuickAddSheet({
               </div>
             )}
             <div className="flex items-center gap-2">
+              {isPlusUser && (
+                <button
+                  type="button"
+                  onClick={() => setScannerOpen(true)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400
+                             hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 transition-colors"
+                  title="Scan receipt"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+              )}
               <Link
                 href={`/groups/${groupId}/expenses/new?from=groups`}
                 onClick={onClose}
@@ -349,7 +389,7 @@ export function QuickAddSheet({
                   currency={currency}
                   groupStartDate={groupStartDate}
                   groupEndDate={groupEndDate}
-                  onParsed={setParsed}
+                  onParsed={(p) => { setParsed(p); setScanFilled(false); }}
                   voiceTrigger={voiceTrigger}
                   isListening={isListening}
                   interimTranscript={interimTranscript}
@@ -386,6 +426,27 @@ export function QuickAddSheet({
                     <p className="text-xs text-slate-400 dark:text-slate-500">
                       {isListening ? "Tap to stop" : "Tap to speak"}
                     </p>
+                  </div>
+                )}
+
+                {/* Scan fill chip — shown when receipt was scanned */}
+                {scanFilled && parsed && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3
+                                  bg-emerald-50 dark:bg-emerald-950/30
+                                  border border-emerald-200/60 dark:border-emerald-800/50">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="text-xs text-emerald-700 dark:text-emerald-300 flex-1 min-w-0 truncate">
+                      {parsed.description && `${parsed.description} · `}
+                      {parsed.amount ? formatCurrency(parsed.amount, currency) : "amount not found"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { setParsed(null); setScanFilled(false); }}
+                      className="shrink-0 text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-200 transition-colors"
+                      aria-label="Clear scan"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 )}
 
@@ -441,5 +502,20 @@ export function QuickAddSheet({
       )}
     </AnimatePresence>,
     document.body,
+  );
+
+  return (
+    <>
+      {portal}
+      {/* Scanner sheet — separate portal so it layers above the quick-add sheet */}
+      <ReceiptScannerSheet
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onExtracted={handleReceiptExtracted}
+        mode="expense"
+        groupType={groupType}
+        isPlusUser={isPlusUser}
+      />
+    </>
   );
 }

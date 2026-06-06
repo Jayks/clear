@@ -29,7 +29,7 @@ export async function addExpense(input: AddExpenseInput) {
   const parsed = addExpenseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" } as const;
 
-  const { groupId, paidByMemberId, description, category, customCategory, amount, currency, expenseDate, endDate, notes, splitMode, splits } = parsed.data;
+  const { groupId, paidByMemberId, description, category, customCategory, amount, currency, expenseDate, endDate, notes, splitMode, splits, location, receiptUrl, receiptItems, wasAiScanned } = parsed.data;
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member" } as const;
@@ -59,13 +59,18 @@ export async function addExpense(input: AddExpenseInput) {
         paidByMemberId,
         description,
         category,
-        customCategory: customCategory ?? null,
-        amount: String(amount),
+        customCategory:   customCategory ?? null,
+        amount:           String(amount),
         currency,
         expenseDate,
-        endDate: endDate || null,
-        notes: notes || null,
-        createdByUserId: user.id,
+        endDate:          endDate || null,
+        notes:            notes || null,
+        createdByUserId:  user.id,
+        // Receipt scanning + map view fields
+        location:         location ?? null,
+        receiptUrl:       receiptUrl ?? null,
+        receiptItems:     receiptItems ?? null,
+        receiptScannedAt: wasAiScanned ? new Date() : null,
       }).returning();
 
       await tx.insert(expenseSplits).values(
@@ -111,7 +116,7 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
   const parsed = addExpenseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" } as const;
 
-  const { groupId, paidByMemberId, description, category, customCategory, amount, currency, expenseDate, endDate, notes, splitMode, splits } = parsed.data;
+  const { groupId, paidByMemberId, description, category, customCategory, amount, currency, expenseDate, endDate, notes, splitMode, splits, location, receiptUrl, receiptItems, wasAiScanned, clearReceipt } = parsed.data;
 
   const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
   if (!expense) return { ok: false, error: "Not found" } as const;
@@ -136,14 +141,31 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
   // INSERT cannot leave the expense with no splits (corrupting balances).
   try {
     await db.transaction(async (tx) => {
+      // clearReceipt: wipe the proof photo (AI badge stays via receiptScannedAt)
+      // TODO post-launch: delete file from receipt-photos bucket to avoid orphaned storage
+      const resolvedReceiptUrl =
+        clearReceipt === true ? null
+        : receiptUrl !== undefined ? (receiptUrl ?? null)
+        : undefined; // undefined = don't touch the column
+
       await tx.update(expenses).set({
-        paidByMemberId, description, category,
-        customCategory: customCategory ?? null,
-        amount: String(amount), currency, expenseDate,
-        endDate: endDate || null,
-        notes: notes || null,
-        updatedByUserId: user.id,
-        updatedAt: new Date(),
+        paidByMemberId,
+        description,
+        category,
+        customCategory:   customCategory ?? null,
+        amount:           String(amount),
+        currency,
+        expenseDate,
+        endDate:          endDate || null,
+        notes:            notes || null,
+        updatedByUserId:  user.id,
+        updatedAt:        new Date(),
+        // Receipt scanning + map view fields (only set when provided)
+        ...(location     !== undefined ? { location:     location ?? null }     : {}),
+        ...(clearReceipt === true      ? { receiptItems: null }                 :
+            receiptItems !== undefined ? { receiptItems: receiptItems ?? null } : {}),
+        ...(resolvedReceiptUrl !== undefined ? { receiptUrl: resolvedReceiptUrl } : {}),
+        ...(wasAiScanned ? { receiptScannedAt: new Date() } : {}),
       }).where(eq(expenses.id, expenseId));
 
       await tx.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
@@ -192,16 +214,22 @@ export async function duplicateExpense(expenseId: string) {
   try {
     const newExpense = await db.transaction(async (tx) => {
       const [exp] = await tx.insert(expenses).values({
-        groupId: expense.groupId,
-        paidByMemberId: expense.paidByMemberId,
-        description: `${expense.description} (copy)`,
-        category: expense.category,
-        amount: expense.amount,
-        currency: expense.currency,
-        expenseDate: today,
-        endDate: expense.endDate,
-        notes: expense.notes,
+        groupId:         expense.groupId,
+        paidByMemberId:  expense.paidByMemberId,
+        description:     `${expense.description} (copy)`,
+        category:        expense.category,
+        amount:          expense.amount,
+        currency:        expense.currency,
+        expenseDate:     today,
+        endDate:         expense.endDate,
+        notes:           expense.notes,
         createdByUserId: user.id,
+        // Location carries over — it's the same physical place
+        location:        expense.location ?? null,
+        // Receipt proof + scan metadata are NOT copied — the copy is a new expense
+        receiptUrl:       null,
+        receiptItems:     null,
+        receiptScannedAt: null,
       }).returning();
 
       if (originalSplits.length > 0) {

@@ -13,6 +13,7 @@ interface Props {
   members: GroupMember[];
   groupStartDate?: string | null;
   groupEndDate?: string | null;
+  isPlusUser?: boolean;
 }
 
 export function ExpenseQuickAddFab({
@@ -23,6 +24,7 @@ export function ExpenseQuickAddFab({
   members,
   groupStartDate,
   groupEndDate,
+  isPlusUser = false,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -46,6 +48,7 @@ export function ExpenseQuickAddFab({
         groupStartDate={groupStartDate}
         groupEndDate={groupEndDate}
         onClose={() => setOpen(false)}
+        isPlusUser={isPlusUser}
       />
     </>
   );

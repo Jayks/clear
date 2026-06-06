@@ -4,25 +4,37 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addCircleExpenseSchema, type AddCircleExpenseInput } from "@/lib/validations/circle-expense";
 import { addCircleExpense } from "@/app/actions/circle";
+import { getSignedReceiptUploadUrl } from "@/app/actions/upload-receipt";
+import { updateExpenseMedia } from "@/app/actions/update-expense-media";
+import { ReceiptScannerSheet } from "@/components/expense/receipt-scanner-sheet";
 import { getGroupConfig } from "@/lib/group-config";
+import { mapToGroupCategory } from "@/lib/receipt/map-category";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { hapticLight } from "@/lib/haptics";
 import type { Group } from "@/lib/db/schema/groups";
-import { Wallet } from "lucide-react";
+import { Camera, Wallet } from "lucide-react";
+import type { ParsedReceipt } from "@/lib/receipt/types";
 
 interface Props {
-  group: Group;
+  group:       Group;
+  isPlusUser?: boolean;
 }
 
-export function AddCircleExpenseForm({ group }: Props) {
+export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
 
   const today     = new Date().toISOString().split("T")[0];
   const yesterday = new Date(Date.now() - 864e5).toISOString().split("T")[0];
+
+  // ── Scanner state ──────────────────────────────────────────────────────────
+  const [scannerOpen, setScannerOpen]   = useState(false);
+  const [wasScanFilled, setWasScanFilled] = useState(false);
+  const pendingProofFileRef              = useRef<File | null>(null);
 
   const {
     register,
@@ -33,12 +45,12 @@ export function AddCircleExpenseForm({ group }: Props) {
   } = useForm<AddCircleExpenseInput>({
     resolver: zodResolver(addCircleExpenseSchema),
     defaultValues: {
-      groupId:     group.id,
-      currency:    group.defaultCurrency,
-      expenseDate: today,
-      category:    "other",
+      groupId:        group.id,
+      currency:       group.defaultCurrency,
+      expenseDate:    today,
+      category:       "other",
       customCategory: "",
-      isAdvance:   false,
+      isAdvance:      false,
     },
   });
 
@@ -46,6 +58,32 @@ export function AddCircleExpenseForm({ group }: Props) {
   const currentDate = watch("expenseDate");
   const isAdvance   = watch("isAdvance");
   const currency    = watch("currency");
+
+  // ── Receipt scanner callback (fills amount, description, date, category only) ──
+  function handleReceiptExtracted(result: ParsedReceipt, _keepProof: boolean) {
+    if (result.description) setValue("description", result.description);
+    if (result.amount !== null) setValue("amount", result.amount);
+    if (result.expenseDate) setValue("expenseDate", result.expenseDate);
+
+    const mappedCat = mapToGroupCategory(result.category, "circle");
+    setValue("category", mappedCat);
+    setValue("customCategory", "");
+    setValue("wasAiScanned", true);
+    setWasScanFilled(true);
+  }
+
+  // ── Background proof upload ────────────────────────────────────────────────
+  async function uploadReceiptProofInBackground(expenseId: string, groupId: string, file: File) {
+    try {
+      const upload = await getSignedReceiptUploadUrl({ mimeType: "image/jpeg", groupId });
+      if (!upload.ok) return;
+      const supabase = createClient();
+      await supabase.storage.from("receipt-photos").uploadToSignedUrl(upload.path, upload.token, file);
+      await updateExpenseMedia(expenseId, groupId, { receiptUrl: upload.publicUrl });
+    } catch {
+      toast.warning("Couldn't save receipt photo — expense was saved without it");
+    }
+  }
 
   async function onSubmit(data: AddCircleExpenseInput) {
     setSubmitting(true);
@@ -57,6 +95,14 @@ export function AddCircleExpenseForm({ group }: Props) {
       return;
     }
     hapticLight();
+
+    // Background proof upload
+    const proofFile = pendingProofFileRef.current;
+    if (proofFile && result.expenseId) {
+      pendingProofFileRef.current = null;
+      uploadReceiptProofInBackground(result.expenseId, group.id, proofFile);
+    }
+
     toast.success(data.isAdvance ? "Advance logged!" : "Wallet expense logged!");
     router.push(`/groups/${group.id}/expenses`);
   }
@@ -64,6 +110,30 @@ export function AddCircleExpenseForm({ group }: Props) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <input type="hidden" {...register("groupId")} />
+
+      {/* Scan receipt button */}
+      <button
+        type="button"
+        onClick={() => setScannerOpen(true)}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                   bg-white/40 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/40
+                   hover:border-cyan-400/60 dark:hover:border-cyan-600/40 transition-all group"
+      >
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500
+                        flex items-center justify-center shrink-0
+                        group-hover:shadow-sm group-hover:shadow-cyan-500/25 transition-shadow">
+          <Camera className="w-3.5 h-3.5 text-white" />
+        </div>
+        <span className="flex-1 text-sm font-medium text-left text-slate-600 dark:text-slate-300">
+          Scan receipt
+        </span>
+        {!isPlusUser ? (
+          <span className="text-xs font-semibold bg-gradient-to-r from-cyan-500 to-teal-500
+                           bg-clip-text text-transparent">Plus</span>
+        ) : wasScanFilled ? (
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✨ Filled</span>
+        ) : null}
+      </button>
 
       {/* Source toggle — wallet draw vs organiser advance */}
       <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
@@ -274,6 +344,17 @@ export function AddCircleExpenseForm({ group }: Props) {
       >
         {submitting ? "Saving…" : isAdvance ? "Log advance" : "Log wallet expense"}
       </button>
+
+      {/* Receipt scanner sheet */}
+      <ReceiptScannerSheet
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onExtracted={handleReceiptExtracted}
+        mode="circle"
+        groupType="circle"
+        isPlusUser={isPlusUser}
+        pendingProofRef={pendingProofFileRef}
+      />
     </form>
   );
 }

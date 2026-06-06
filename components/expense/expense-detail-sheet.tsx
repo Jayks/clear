@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Pencil, Loader2, CheckCircle2, XCircle, Clock, Users, Smile, MessageCircle } from "lucide-react";
+import { X, Pencil, Loader2, CheckCircle2, XCircle, Clock, Users, Smile, MessageCircle, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
@@ -438,6 +438,35 @@ export function ExpenseDetailSheet({
                     <p className="text-sm text-slate-700 dark:text-slate-200">
                       {expense.notes}
                     </p>
+                  </div>
+                )}
+
+                {/* Receipt proof photo */}
+                {expense.receiptUrl && (
+                  <div>
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                        <Paperclip className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Receipt</span>
+                      <div className="flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+                    </div>
+                    <a
+                      href={expense.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={expense.receiptUrl}
+                        alt="Receipt proof"
+                        className="w-full max-h-52 object-contain"
+                      />
+                      <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 py-1">
+                        Tap to open full size
+                      </p>
+                    </a>
                   </div>
                 )}
 

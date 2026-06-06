@@ -20,9 +20,10 @@ export interface GroupItem {
 }
 
 interface Props {
-  trips:   GroupItem[];
-  nests:   GroupItem[];
-  circles: GroupItem[];
+  trips:       GroupItem[];
+  nests:       GroupItem[];
+  circles:     GroupItem[];
+  isPlusUser?: boolean;
 }
 
 // Max tiles shown in "Recent" section
@@ -34,7 +35,7 @@ const FAB_SHADOW   = "shadow-orange-500/35";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function GlobalFab({ trips, nests, circles }: Props) {
+export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) {
   const [mounted,        setMounted]        = useState(false);
   const [fabOpen,        setFabOpen]        = useState(false);
   const [pickerOpen,     setPickerOpen]     = useState(false);
@@ -209,6 +210,7 @@ export function GlobalFab({ trips, nests, circles }: Props) {
           onBack={allActive.length > 1 ? handleBack : undefined}
           groupStartDate={quickAddGroup.group.startDate}
           groupEndDate={quickAddGroup.group.endDate}
+          isPlusUser={isPlusUser}
         />
       )}
 

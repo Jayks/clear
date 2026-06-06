@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, date, numeric, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, date, numeric, boolean, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { groups } from "./groups";
 import { groupMembers } from "./group-members";
@@ -23,7 +23,52 @@ export const expenses = pgTable("expenses", {
   updatedByUserId: uuid("updated_by_user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+  // Receipt scanning & map view columns
+  location:         jsonb("location"),
+  receiptUrl:       text("receipt_url"),
+  receiptItems:     jsonb("receipt_items"),
+  receiptScannedAt: timestamp("receipt_scanned_at", { withTimezone: true }),
 });
 
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
+
+// ── Receipt / location runtime types ─────────────────────────────────────────
+// jsonb columns return `unknown` from Drizzle — always use these type guards.
+
+export interface ExpenseLocation {
+  lat:      number;
+  lng:      number;
+  name:     string;
+  address?: string;
+}
+
+export interface ReceiptItem {
+  description: string;
+  amount:      number;
+  quantity?:   number;
+}
+
+/** Safe cast for the `location` jsonb column. Returns null for any invalid shape. */
+export function parseExpenseLocation(raw: unknown): ExpenseLocation | null {
+  if (!raw || typeof raw !== "object") return null;
+  const loc = raw as Record<string, unknown>;
+  if (
+    typeof loc.lat  !== "number" ||
+    typeof loc.lng  !== "number" ||
+    typeof loc.name !== "string"
+  ) return null;
+  return raw as ExpenseLocation;
+}
+
+/** Safe cast for the `receipt_items` jsonb column. Filters out any malformed entries. */
+export function parseReceiptItems(raw: unknown): ReceiptItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (item): item is ReceiptItem =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as ReceiptItem).description === "string" &&
+      typeof (item as ReceiptItem).amount      === "number",
+  );
+}

@@ -11,7 +11,7 @@ import { ensureDemoGroup } from "@/app/actions/demo";
 import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 import { LongPressHint } from "@/components/shared/long-press-hint";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
-import { getGroupNudge, getGroupsAdminPlans } from "@/lib/subscription/gates";
+import { getGroupNudge, getGroupsAdminPlans, canUseAI } from "@/lib/subscription/gates";
 import { SectionPillNav } from "@/components/shared/section-pill-nav";
 import type { NavSection, CreatePill } from "@/components/shared/section-pill-nav";
 import { StreamBadgeSync } from "@/components/stream/stream-badge-sync";
@@ -27,6 +27,7 @@ export default async function GroupsPage() {
     getAllGroups().catch(() => ({ active: [], archived: [] })),
     getCurrentUser(),
   ]);
+  const isPlusUser = user ? await canUseAI(user.id) : false;
 
   // ── Split active groups by type ───────────────────────────────────────────
   const trips   = groups.filter((g) => g.group.groupType === "trip");
@@ -484,7 +485,7 @@ export default async function GroupsPage() {
       )}
 
       {/* ── Global FAB ─────────────────────────────────────────────────────── */}
-      {!isEmpty && <GlobalFab trips={trips} nests={nests} circles={circles} />}
+      {!isEmpty && <GlobalFab trips={trips} nests={nests} circles={circles} isPlusUser={isPlusUser} />}
     </div>
   );
 }

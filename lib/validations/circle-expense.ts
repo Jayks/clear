@@ -10,6 +10,10 @@ export const addCircleExpenseSchema = z.object({
   expenseDate:    z.string().min(1, "Date is required"),
   notes:          z.string().max(500).optional(),
   isAdvance:      z.boolean(),
+  // Receipt scanning fields (no location / receiptItems — circle expenses are single-line pool draws)
+  receiptUrl:   z.string().url().nullable().optional(),
+  wasAiScanned: z.boolean().optional(),
+  clearReceipt: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.category === "other" && (!data.customCategory || data.customCategory.trim() === "")) {
     ctx.addIssue({

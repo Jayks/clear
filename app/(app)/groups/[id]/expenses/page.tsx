@@ -213,6 +213,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         members={members}
         groupStartDate={group.startDate}
         groupEndDate={group.endDate}
+        isPlusUser={aiAllowed}
       />
 
       {expenses.length === 0 ? (

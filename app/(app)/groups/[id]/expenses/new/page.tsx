@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
-import { canUseNonEqualSplit } from "@/lib/subscription/gates";
+import { canUseNonEqualSplit, canUseAI } from "@/lib/subscription/gates";
 import { getGroupConfig } from "@/lib/group-config";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 import { Receipt, Coins } from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
 import Link from "next/link";
@@ -16,10 +17,12 @@ export default async function NewExpensePage({
   searchParams: Promise<{ from?: string }>;
 }) {
   const [{ id }, { from }] = await Promise.all([params, searchParams]);
-  const [data, nonEqualAllowed] = await Promise.all([
+  const [data, nonEqualAllowed, user] = await Promise.all([
     getGroupWithMembers(id),
     canUseNonEqualSplit(id),
+    getCurrentUser(),
   ]);
+  const isPlusUser = user ? await canUseAI(user.id) : false;
   if (!data) notFound();
 
   const { group, members, currentMember } = data;
@@ -53,7 +56,7 @@ export default async function NewExpensePage({
         </div>
 
         <div className="glass rounded-2xl p-6">
-          <AddCircleExpenseForm group={group} />
+          <AddCircleExpenseForm group={group} isPlusUser={isPlusUser} />
         </div>
       </div>
     );
@@ -80,7 +83,7 @@ export default async function NewExpensePage({
       </div>
 
       <div className="glass rounded-2xl p-6">
-        <AddExpenseForm group={group} members={members} canUseNonEqual={nonEqualAllowed} currentMemberId={currentMember?.id} />
+        <AddExpenseForm group={group} members={members} canUseNonEqual={nonEqualAllowed} currentMemberId={currentMember?.id} isPlusUser={isPlusUser} />
       </div>
     </div>
   );

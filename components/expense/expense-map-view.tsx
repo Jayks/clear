@@ -131,13 +131,18 @@ export function ExpenseMapView({
         });
 
         map.on("load", () => {
+          // Resize first so Mapbox knows the real canvas dimensions (container
+          // may still be laying out or animating in when new Map() was called).
+          map.resize();
+
           if (!restoreCenter && allLocated.length > 0) {
             const bounds = new mapboxgl.default.LngLatBounds();
             allLocated.forEach((e) => {
               const loc = parseExpenseLocation(e.location)!;
               bounds.extend([loc.lng, loc.lat]);
             });
-            map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 0 });
+            // maxZoom 13 = neighbourhood/district level; 14 is too close (street-level)
+            map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 0 });
           }
           mapInstance.current = map;
           setMapReady(true);
@@ -364,7 +369,7 @@ export function ExpenseMapView({
       )}
 
       {/* ── Map container ────────────────────────────────────────────────────── */}
-      <div className="relative h-[calc(100dvh-220px)] md:h-[480px] rounded-2xl overflow-hidden shadow-md">
+      <div className="relative h-[360px] md:h-[480px] rounded-2xl overflow-hidden shadow-md">
         <div ref={mapContainerRef} className="w-full h-full" />
 
         {/* Empty state overlay */}

@@ -1,4 +1,5 @@
 import type { Expense } from "@/lib/db/schema/expenses";
+import { parseExpenseLocation } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 import { CategoryIcon } from "./category-icon";
@@ -7,7 +8,7 @@ import { formatCurrency, formatDate, getMemberName } from "@/lib/utils";
 import { DeleteExpenseButton } from "./delete-expense-button";
 import { DuplicateExpenseButton } from "./duplicate-expense-button";
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { MapPin, Pencil } from "lucide-react";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -64,6 +65,16 @@ export function ExpenseCard({ expense, members, currentUserId, currentMemberId, 
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {payerName} · {dateDisplay}
             </p>
+            {/* Location row — shown when expense has a GPS location, non-compact only */}
+            {!compact && (() => {
+              const loc = parseExpenseLocation(expense.location);
+              return loc ? (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{loc.name}</span>
+                </div>
+              ) : null;
+            })()}
             {/* Interaction signal pills */}
             {interactionCount && (interactionCount.hasUnread || interactionCount.pendingDispute || interactionCount.commentCount > 0) && (
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">

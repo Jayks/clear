@@ -972,13 +972,32 @@ function DayGroupedTimeline({
     return dates;
   }, [startDate, endDate, isFiltered]);
 
-  // Merged list: fill trip range with empty days, or just use actual days
+  // Merged list: fill trip range with empty days, or just use actual days.
+  // Pre-trip and post-trip expense dates are prepended / appended so they always
+  // appear even though allDates only covers [startDate, endDate].
   const mergedDays = useMemo((): Array<{ date: string; expenses: Expense[] }> => {
     if (!allDates) return days.map(([date, expenses]) => ({ date, expenses }));
-    return allDates.map((date) => ({
+
+    const tripFirst = allDates[0];
+    const tripLast  = allDates[allDates.length - 1];
+
+    // Expense dates that fall before the trip start — sorted ascending
+    const preTrip = days
+      .filter(([d]) => d !== "unknown" && d < tripFirst)
+      .map(([date, exps]) => ({ date, expenses: exps }));
+
+    // The trip range (including empty days)
+    const tripRange = allDates.map((date) => ({
       date,
       expenses: daysMap.get(date) ?? [],
     }));
+
+    // Expense dates that fall after the trip end — sorted ascending
+    const postTrip = days
+      .filter(([d]) => d !== "unknown" && d > tripLast)
+      .map(([date, exps]) => ({ date, expenses: exps }));
+
+    return [...preTrip, ...tripRange, ...postTrip];
   }, [allDates, days, daysMap]);
 
   // Today's date string — used for trailing-trim guard and "Today" badge

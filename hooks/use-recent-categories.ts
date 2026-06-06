@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 const STORAGE_KEY: Record<string, string> = {
   trip: "clear_recent_categories_trip",
@@ -12,14 +12,19 @@ const MAX_RECENTS = 3;
 export function useRecentCategories(groupType: string) {
   const key = STORAGE_KEY[groupType] ?? "clear_recent_categories_trip";
 
-  const [recents, setRecents] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
+  // Start with [] on both server and client to avoid hydration mismatch.
+  // Populate from localStorage in useEffect (after hydration) — same pattern as
+  // RepeatTripPrompt and SettledCelebration per CLAUDE.md.
+  const [recents, setRecents] = useState<string[]>([]);
+
+  useEffect(() => {
     try {
-      return (JSON.parse(localStorage.getItem(key) ?? "[]") as string[]).slice(0, MAX_RECENTS);
+      const stored = (JSON.parse(localStorage.getItem(key) ?? "[]") as string[]).slice(0, MAX_RECENTS);
+      setRecents(stored);
     } catch {
-      return [];
+      // noop — malformed localStorage value; stay with []
     }
-  });
+  }, [key]);
 
   const addRecent = useCallback(
     (category: string) => {

@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Pencil, Loader2, CheckCircle2, XCircle, Clock, Users, Smile, MessageCircle, Paperclip } from "lucide-react";
+import { X, Pencil, Loader2, CheckCircle2, XCircle, Clock, Users, Smile, MessageCircle, Paperclip, MapPin, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import type { Expense } from "@/lib/db/schema/expenses";
+import { parseExpenseLocation, parseReceiptItems } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseSplit } from "@/lib/db/schema/expense-splits";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
@@ -33,6 +34,7 @@ import { ThreadDiscussion, type OptimisticComment } from "./thread-discussion";
 import { ThreadCommentInput } from "./thread-comment-input";
 import { SeenAvatarStack } from "./seen-avatar-stack";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { clearExpenseReceipt } from "@/app/actions/update-expense-media";
 
 // ── Comment loading skeleton ─────────────────────────────────────────────────
 function CommentSkeleton() {
@@ -99,6 +101,9 @@ export function ExpenseDetailSheet({
     interactionCount?.myReaction ?? null
   );
   const [isReacting, setIsReacting] = useState(false);
+
+  // ── Receipt removal ──────────────────────────────────────────────────────
+  const [removingReceipt, setRemovingReceipt] = useState(false);
 
   // ── Forms ────────────────────────────────────────────────────────────────
   const [showQuestionForm, setShowQuestionForm] = useState(false);
@@ -295,6 +300,24 @@ export function ExpenseDetailSheet({
     });
   }
 
+  async function handleRemoveReceipt() {
+    if (!canEdit || removingReceipt) return;
+    setRemovingReceipt(true);
+    try {
+      const result = await clearExpenseReceipt(expense.id, expense.groupId);
+      if (result.ok) {
+        toast.success("Receipt photo removed");
+        router.refresh();
+      } else {
+        toast.error("Couldn't remove receipt. Try again.");
+      }
+    } catch {
+      toast.error("Couldn't remove receipt. Try again.");
+    } finally {
+      setRemovingReceipt(false);
+    }
+  }
+
   async function handlePost(content: string, mentionedIds: string[]) {
     // 1. Optimistic bubble
     const tempId = `opt-${Date.now()}`;
@@ -441,8 +464,51 @@ export function ExpenseDetailSheet({
                   </div>
                 )}
 
-                {/* Receipt proof photo */}
-                {expense.receiptUrl && (
+                {/* Location badge */}
+                {(() => {
+                  const loc = parseExpenseLocation(expense.location);
+                  return loc ? (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+                      <div className="w-7 h-7 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
+                        <MapPin className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{loc.name}</p>
+                        {loc.address && <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{loc.address}</p>}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Receipt items accordion */}
+                {(() => {
+                  const items = parseReceiptItems(expense.receiptItems);
+                  return items.length > 0 ? (
+                    <details className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                      <summary className="px-4 py-3 text-sm font-medium cursor-pointer select-none list-none
+                                          flex items-center justify-between bg-slate-50/60 dark:bg-slate-800/40
+                                          hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors">
+                        <span className="text-slate-700 dark:text-slate-200">What was ordered · {items.length} item{items.length !== 1 ? "s" : ""}</span>
+                        <ChevronDown className="w-4 h-4 text-slate-400 transition-transform [[open]_&]:rotate-180" />
+                      </summary>
+                      <div className="px-4 pb-3 space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-2.5 bg-white/40 dark:bg-slate-900/20">
+                        {items.map((item, i) => (
+                          <div key={i} className="flex justify-between text-sm gap-2">
+                            <span className="text-slate-600 dark:text-slate-300 truncate">
+                              {item.quantity && item.quantity > 1 ? `${item.quantity}× ` : ""}{item.description}
+                            </span>
+                            <span className="text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
+                              {formatCurrency(item.amount, expense.currency)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ) : null;
+                })()}
+
+                {/* Receipt proof photo + AI badge + remove */}
+                {(expense.receiptUrl || expense.receiptScannedAt) && (
                   <div>
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
@@ -451,22 +517,41 @@ export function ExpenseDetailSheet({
                       <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Receipt</span>
                       <div className="flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
                     </div>
-                    <a
-                      href={expense.receiptUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={expense.receiptUrl}
-                        alt="Receipt proof"
-                        className="w-full max-h-52 object-contain"
-                      />
-                      <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 py-1">
-                        Tap to open full size
+                    {expense.receiptUrl && (
+                      <a
+                        href={expense.receiptUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={expense.receiptUrl}
+                          alt="Receipt proof"
+                          className="w-full max-h-52 object-contain"
+                        />
+                        <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 py-1">
+                          Tap to open full size
+                        </p>
+                      </a>
+                    )}
+                    {/* AI scan badge */}
+                    {expense.receiptScannedAt && (
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-1.5">
+                        ✨ Filled with AI scan · {formatDate(expense.receiptScannedAt)}
                       </p>
-                    </a>
+                    )}
+                    {/* Remove receipt button — only when proof exists and user can edit */}
+                    {expense.receiptUrl && canEdit && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveReceipt}
+                        disabled={removingReceipt}
+                        className="text-xs text-red-500 dark:text-red-400 hover:underline block text-center w-full mt-1 disabled:opacity-50"
+                      >
+                        {removingReceipt ? "Removing…" : "Remove receipt photo"}
+                      </button>
+                    )}
                   </div>
                 )}
 

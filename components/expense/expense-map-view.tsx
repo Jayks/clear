@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import "mapbox-gl/dist/mapbox-gl.css";
 import { useTheme } from "next-themes";
 import { format } from "date-fns";
 import { MapPin, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
@@ -107,6 +108,12 @@ export function ExpenseMapView({
         mapboxgl.default.accessToken = token;
 
         if (!mapContainerRef.current) return;
+
+        // Clear any stale DOM before handing the container to Mapbox.
+        // React never renders children inside this div, so wiping it is safe.
+        while (mapContainerRef.current.firstChild) {
+          mapContainerRef.current.removeChild(mapContainerRef.current.firstChild);
+        }
 
         const locList = allLocated.map((e) => parseExpenseLocation(e.location)!);
         const lngs    = locList.map((l) => l.lng).sort((a, b) => a - b);

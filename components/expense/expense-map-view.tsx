@@ -747,39 +747,87 @@ export function ExpenseMapView({
     // the `routeLocations` memo comment for why these must never diverge.
     const coords = routeLocations.map((loc) => [loc.lng, loc.lat]);
 
+    // Standard's `day`/`night` lightPresets are dramatically different
+    // basemap luminances — a single hex pair can't read clearly against
+    // both. (First attempt: amber-500/emerald-500 looked great by day,
+    // "not visible clearly" by night per user testing.) Keeps the SAME hue
+    // identity in both themes (green = traveled, amber = upcoming) but
+    // shifts it along the tint/shade axis — brighter, lighter tints for the
+    // dark "night" basemap; deeper, richer shades for the bright "day"
+    // basemap — exactly mirroring how every Tailwind colour class elsewhere
+    // in this app carries a `dark:` counterpart (CLAUDE.md "every colour
+    // class needs a dark: counterpart"). Recomputed on every theme toggle —
+    // this effect already depends on `mapGeneration`, which increments
+    // whenever the theme-driven map recreation completes.
+    const isDark = resolvedTheme === "dark";
+    const [traveledStart, traveledMid, traveledEnd] = isDark
+      ? ["#34D399", "#6EE7B7", "#A7F3D0"] // emerald 400→300→200 — bright against a dark basemap
+      : ["#047857", "#059669", "#10B981"]; // emerald 700→600→500 — deep enough to hold up against a bright basemap
+    const upcomingColor   = isDark ? "#FCD34D" : "#D97706"; // amber-300 (dark) / amber-600 (light)
+    const upcomingOpacity = isDark ? 0.6 : 0.45;
+    const glowColor       = isDark ? "#FCD34D" : "#F59E0B";
+    const glowOpacity     = isDark ? 0.28 : 0.22;
+
     map.addSource("trip-path", {
       type:        "geojson",
       lineMetrics: true, // required for line-trim-offset to work
       data: { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: {} },
     });
+    // `slot: "top"` places these layers above Standard's basemap layers in
+    // DRAW ORDER — necessary so the path isn't buried under 3D buildings/
+    // labels — but it does NOT exempt them from Standard's scene-wide
+    // lighting/fog colour grading: that's a post-process applied across the
+    // whole render, "top" slot included, which is why the first attempt
+    // still came out a uniform cyan-ish blue wash in the "night" preset
+    // (de-saturating + cooling the authored greens and ambers alike toward
+    // the same hue — "no diff between paths" all over again, just less black
+    // about it). `*-emissive-strength` is Standard's documented escape hatch:
+    // it makes a layer "glow with its own authored colour" — self-illuminated,
+    // independent of the scene's lighting/fog model — exactly the "visible in
+    // all theme layouts" requirement. Set to 1 (fully self-lit) on all three
+    // path layers so the green/amber hues render true in BOTH lightPresets.
+    //
     // Ambient glow underlay — a wide, heavily-blurred duplicate of the FULL
     // route at low opacity. Gives the path a soft "lit from within" presence
     // against busy map tiles (echoes the pin glow language above) without
     // needing to stay in sync with the reveal animation — it's atmosphere,
     // not signal, so it can simply always show the whole planned route.
     // Sits below `trip-path-bg` so the crisp dashed/solid lines stay legible
-    // on top of it.
+    // on top of it. Amber to match `trip-path-bg`'s "road ahead" identity —
+    // a warm ambient wash under the whole route, with the green "traveled"
+    // overlay popping brightly on top of it where the journey has progressed.
     map.addLayer({
       id:     "trip-path-glow",
       type:   "line",
+      slot:   "top",
       source: "trip-path",
       paint:  {
-        "line-color":   "#06B6D4",
-        "line-width":   16,
-        "line-blur":    9,
-        "line-opacity": 0.3,
+        "line-color":             glowColor,
+        "line-width":             16,
+        "line-blur":              9,
+        "line-opacity":           glowOpacity,
+        "line-emissive-strength": 1,
       },
     });
-    // Faint dashed background = the full planned route, always visible.
+    // Faint dashed background = the full planned route, always visible — i.e.
+    // "the road ahead". Muted amber/yellow per the user's explicit ask for a
+    // "subtle... muted color for upcoming path", reading clearly as "not yet
+    // traveled" against the brighter green overlay that gets drawn on top of
+    // it (below) as the journey is revealed. Bumped opacity from the original
+    // 0.15 — at the old low-signal cyan tint this layer was nearly invisible,
+    // which was *why* "traveled vs upcoming" read as "no difference" before:
+    // there was nothing distinct to contrast the revealed overlay against.
     map.addLayer({
       id:     "trip-path-bg",
       type:   "line",
+      slot:   "top",
       source: "trip-path",
       paint:  {
-        "line-color":     "#06B6D4",
-        "line-width":     2,
-        "line-opacity":   0.15,
-        "line-dasharray": [0, 4, 3],
+        "line-color":             upcomingColor,
+        "line-width":             2,
+        "line-opacity":           upcomingOpacity,
+        "line-dasharray":         [0, 4, 3],
+        "line-emissive-strength": 1,
       },
     });
     // Solid "revealed so far" overlay. line-trim-offset ONLY takes visual effect
@@ -789,27 +837,33 @@ export function ExpenseMapView({
     // is unsupported in Mapbox GL JS, so this overlay is solid; the dashed look
     // lives on the background layer above instead.
     //
-    // Cyan → teal gradient along `line-progress` (matches the brand's
-    // `from-cyan-500 to-teal-500` language used elsewhere) — the revealed
-    // line itself now visually "travels" from the trip's start color to its
-    // destination color as the journey progresses, not just grows in length.
+    // Drawn LAST (renders on top of `trip-path-bg`'s full-route amber dashes),
+    // so the "traveled" stretch visually overwrites the "upcoming" amber with
+    // a brighter solid green wherever `line-trim-offset` has revealed it —
+    // this layering IS the traveled/upcoming contrast the user asked for, not
+    // a separate indicator to track in sync. Emerald gradient — darker/deeper
+    // at the trip's start, brightening toward the leading edge — "glowing
+    // green" per the user's ask, and reads as "where the journey currently is"
+    // without needing a separate leading-edge treatment.
     map.addLayer({
       id:     "trip-path",
       type:   "line",
+      slot:   "top",
       source: "trip-path",
       paint:  {
-        "line-color":       "#06B6D4",
-        "line-width":       2.5,
-        "line-gradient":    [
+        "line-color":             traveledMid,
+        "line-width":             2.5,
+        "line-gradient":          [
           "interpolate", ["linear"], ["line-progress"],
-          0,    "#06B6D4", // cyan-500
-          0.5,  "#0D9F9F", // cyan↔teal blend midpoint
-          1,    "#14B8A6", // teal-500
+          0,    traveledStart, // deeper/dimmer at the trip's start
+          0.5,  traveledMid,
+          1,    traveledEnd,   // brighter at the leading edge — "where the journey currently is"
         ],
-        "line-trim-offset": [0, 1], // fully hidden = correct start state
+        "line-trim-offset":       [0, 1], // fully hidden = correct start state
+        "line-emissive-strength": 1,
       },
     });
-  }, [mapReady, mapGeneration, routeLocations]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, mapGeneration, routeLocations, resolvedTheme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scrubber → reveal trip path + leading-edge marker (animated) ─────────────
   // Pin visibility is handled by the marker/clustering effect (scrub-filters

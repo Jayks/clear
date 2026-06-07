@@ -169,7 +169,21 @@ export function ExpenseMapView({
   const routeLocations = useMemo(
     () =>
       [...filteredLocated]
-        .sort((a, b) => a.expenseDate.localeCompare(b.expenseDate))
+        .sort((a, b) => {
+          const byDate = a.expenseDate.localeCompare(b.expenseDate);
+          if (byDate !== 0) return byDate;
+          // Same-day tie-break: `expenses` arrives ordered `expenseDate DESC,
+          // createdAt DESC` (newest-logged-first, right for a list view) — a
+          // PLAIN stable re-sort on `expenseDate` alone would silently inherit
+          // that DESC tie-order, drawing the route in REVERSE for any day with
+          // 2+ locations (e.g. "lounge snacks in Chennai" then "dinner in
+          // Connaught Place, Delhi" would route Delhi→Chennai→Delhi — a
+          // confusing backtrack zigzag with no story behind it). `createdAt`
+          // ASC is the best available proxy for "the order things actually
+          // happened" (no time-of-day field exists) — people log same-day
+          // expenses roughly as the day unfolds.
+          return a.createdAt.getTime() - b.createdAt.getTime();
+        })
         .map((e) => ({ ...parseExpenseLocation(e.location)!, expenseDate: e.expenseDate })),
     [filteredLocated],
   );

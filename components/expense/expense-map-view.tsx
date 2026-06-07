@@ -41,9 +41,21 @@ const PATH_REVEAL_MAX_DURATION_MS = 2200;
 /** Pause between consecutive stops in a multi-stop day's one-by-one reveal
  *  sequence — long enough to register each stop as its own "beat" (camera
  *  settles, caption reads) without feeling sluggish when stepping through a
- *  busy day. Applies uniformly whether the sequence was triggered by autoplay,
- *  a chevron tap, or dragging the scrubber onto that day. */
+ *  busy day. Applies to MANUAL scrub (chevron tap / dragging the scrubber),
+ *  where the user already controls pace by how briskly they navigate. */
 const SUB_STEP_MS = 1100;
+
+/** Same pause, but for CINEMA MODE's autoplay specifically — markedly longer
+ *  than `SUB_STEP_MS`. Cinema close-ups float their zoom floor up to
+ *  `ZOOM_CINEMA_CLOSEUP` so Standard's 3D buildings/landmarks have something
+ *  to extrude into — but that's also a fresh, more-detailed zoom level the
+ *  map likely hasn't fetched/rendered tiles for yet. At the brisk manual pace
+ *  the camera was moving on before those tiles finished loading and the
+ *  buildings had popped into relief — the exact "looks the same, no
+ *  structures" complaint the zoom bump was meant to fix. Autoplay is a
+ *  watch-don't-drive experience, so the extra dwell reads as "cinematic
+ *  pacing", not lag. */
+const SUB_STEP_MS_CINEMA = 2600;
 
 /** Maps a reveal-fraction delta (how much of the route's total length this
  *  scrub step newly covers, in [0, 1]) to an animation duration — linear
@@ -147,7 +159,23 @@ export function ExpenseMapView({
   const [cinemaMode, setCinemaMode]   = useState(false);
   const [isPlaying, setIsPlaying]     = useState(false);
   const autoplayTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Mirrors `cinemaMode` for the sub-day sequencer effect (declared further
+  // below) to read at `setTimeout` schedule-time without depending on it —
+  // see that effect's comment for why a dependency would tear down a running
+  // multi-stop walk mid-sequence. Setting a ref directly during render is a
+  // documented-safe pattern (no extra effect needed; always current by the
+  // time any closure/timer callback runs).
+  const cinemaModeRef                 = useRef(cinemaMode);
+  cinemaModeRef.current = cinemaMode;
   const PITCH_CINEMA = 52; // degrees — enough perspective to feel "3D" without disorienting at country zoom
+  // Standard's `show3dObjects` buildings/landmarks only render as visible
+  // relief from roughly street-level zoom upward — at the regular scrub
+  // floor (13, "neighbourhood/district level") footprints are too small to
+  // extrude into anything perceptible, so toggling 3D on does ~nothing
+  // visually there. Cinema-mode close-up arrivals float their zoom floor up
+  // to this instead, so the "wow" the 3D toggle exists for actually appears
+  // exactly where the camera lingers on a single place.
+  const ZOOM_CINEMA_CLOSEUP = 16;
   const AUTOPLAY_STEP_MS = 3400; // per-day pace — long enough to register the reveal + pan + caption read
 
   // ── Discovery banner — SSR-safe localStorage read ───────────────────────────
@@ -344,8 +372,20 @@ export function ExpenseMapView({
   // (The STARTING value of `scrubSubStep` for this date/stop-count is set
   // synchronously during render, just above — this effect owns only the
   // ongoing timer-driven advance through 1, 2, … `subStepCount`.)
+  //
+  // Reads `cinemaMode` through a ref (`cinemaModeRef`, set during render —
+  // see its declaration) rather than as an effect dependency: the timer must
+  // span Day 4's whole multi-stop walk uninterrupted, but cinema mode can be
+  // toggled mid-walk (Escape / exit button). Depending on `cinemaMode`
+  // directly would tear the running sequence down and restart `i` at 0 —
+  // `scrubSubStep` would visibly JUMP BACKWARD to wherever the fresh sequence
+  // begins while the day's `currentDayStops` stays put. Reading the ref keeps
+  // the same uninterrupted walk; only the PACE of its remaining beats changes
+  // (cinema's longer `SUB_STEP_MS_CINEMA` dwell ⇄ manual's brisker
+  // `SUB_STEP_MS`) the instant the mode flips.
   useEffect(() => {
     if (!scrubDate || subStepCount <= 1) return; // single-/no-stop — already fully revealed above; nothing to time
+    const stepMs = () => (cinemaModeRef.current ? SUB_STEP_MS_CINEMA : SUB_STEP_MS);
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     let i = 0;
@@ -353,9 +393,9 @@ export function ExpenseMapView({
       if (cancelled) return;
       i += 1;
       setScrubSubStep(i);
-      if (i < subStepCount) timer = setTimeout(advance, SUB_STEP_MS);
+      if (i < subStepCount) timer = setTimeout(advance, stepMs());
     }
-    timer = setTimeout(advance, SUB_STEP_MS);
+    timer = setTimeout(advance, stepMs());
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -434,11 +474,15 @@ export function ExpenseMapView({
         const midLng  = lngs[Math.floor(lngs.length / 2)] ?? 0;
         const midLat  = lats[Math.floor(lats.length / 2)] ?? 0;
 
+        // Mapbox Standard (not light-v11/dark-v11) — far richer out of the box:
+        // colour-coded land use, hospital/landmark POI icons, road hierarchy —
+        // exactly the "brighter, more detailed, clearer place names" look asked
+        // for. Both themes share ONE style URL; light/dark is now a `lightPreset`
+        // CONFIG PROPERTY (set below, post-load) rather than a different style —
+        // Standard's `day`/`night` presets recolour the whole basemap to match.
         const map = new mapboxgl.default.Map({
           container: mapContainerRef.current,
-          style:     resolvedTheme === "dark"
-            ? "mapbox://styles/mapbox/dark-v11"
-            : "mapbox://styles/mapbox/light-v11",
+          style:     "mapbox://styles/mapbox/standard",
           center: restoreCenter ? [restoreCenter.lng, restoreCenter.lat] : [midLng, midLat],
           zoom:   restoreZoom ?? 11,
         });
@@ -447,6 +491,14 @@ export function ExpenseMapView({
           // Resize first so Mapbox knows the real canvas dimensions (container
           // may still be laying out or animating in when new Map() was called).
           map.resize();
+
+          // `lightPreset` is the Standard-style equivalent of swapping
+          // light-v11 ⇄ dark-v11 — recolours the whole basemap (sky, water,
+          // buildings, labels) to match the app's theme. Set on every (re)create
+          // — including the destroy/recreate that already runs on theme toggle —
+          // so a freshly (re)built map always opens in the CURRENT theme's preset
+          // rather than Standard's `day` default.
+          map.setConfigProperty("basemap", "lightPreset", resolvedTheme === "dark" ? "night" : "day");
 
           if (!restoreCenter && allLocated.length > 0) {
             const bounds = new mapboxgl.default.LngLatBounds();
@@ -923,7 +975,7 @@ export function ExpenseMapView({
         .slice(0, 1);
       if (target.length === 0) return;
       const { lng, lat } = parseExpenseLocation(target[0].location)!;
-      map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500, pitch });
+      map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), cinemaMode ? ZOOM_CINEMA_CLOSEUP : 13), duration: 500, pitch });
       return;
     }
 
@@ -956,7 +1008,7 @@ export function ExpenseMapView({
         });
       } else {
         const { lng, lat } = currentDayStops[0][0];
-        map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500, pitch });
+        map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), cinemaMode ? ZOOM_CINEMA_CLOSEUP : 13), duration: 500, pitch });
       }
       return;
     }
@@ -977,7 +1029,7 @@ export function ExpenseMapView({
     // arrival (caption reads, pin drops in) before the final fitBounds above
     // zooms out to tie them together as a single "here's the whole day" view.
     const { lng, lat } = currentDayStops[scrubSubStep - 1][0];
-    map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500, pitch });
+    map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), cinemaMode ? ZOOM_CINEMA_CLOSEUP : 13), duration: 500, pitch });
   }, [mapReady, mapGeneration, scrubDate, filteredLocated, cinemaMode, currentDayStops, dayComplete, scrubSubStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Find the selected expense ─────────────────────────────────────────────────
@@ -1090,12 +1142,24 @@ export function ExpenseMapView({
   // (or restored card) dimensions. `requestAnimationFrame` lets the CSS layout
   // settle first; calling `resize()` before the container's new size is committed
   // measures the PRE-transition box and leaves Mapbox's canvas mis-sized/blurry.
+  //
+  // `show3dObjects` is flipped alongside the pitch — buildings/landmarks/trees
+  // rise into relief exactly when there's a tilted camera to appreciate them
+  // from (at the regular flat top-down pitch they'd just look like coloured
+  // rooftops, plus extra render cost for no visual gain). This is the
+  // "satellite 3D" wow asked for, WITHOUT a style swap: Standard already ships
+  // 3D buildings/landmarks as a config toggle on the SAME style/tiles already
+  // loaded — no reload, no flicker, no loss of the place labels that make each
+  // cinema-mode close-up legible (a literal satellite swap would cost exactly
+  // that legibility at the close zooms cinema mode lives at — see the design
+  // discussion this was weighed against).
   useEffect(() => {
     if (!mapReady || !mapInstance.current) return;
     const map = mapInstance.current;
     const raf = requestAnimationFrame(() => {
       map.resize();
       map.easeTo({ pitch: cinemaMode ? PITCH_CINEMA : 0, duration: 700 });
+      map.setConfigProperty("basemap", "show3dObjects", cinemaMode);
     });
     return () => cancelAnimationFrame(raf);
   }, [cinemaMode, mapReady, mapGeneration]); // eslint-disable-line react-hooks/exhaustive-deps

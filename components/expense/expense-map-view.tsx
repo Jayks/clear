@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useTheme } from "next-themes";
 import { format } from "date-fns";
@@ -83,14 +83,23 @@ export function ExpenseMapView({
   const todayStr   = format(new Date(), "yyyy-MM-dd");
   const isActive   = isTripActive(groupStartDate, groupEndDate, todayStr);
 
-  // Located expenses from the full list (not paginated) — used for map pins + path
-  const allLocated      = getLocatedExpenses(expenses);
-  const filteredLocated = getLocatedExpenses(filteredExpenses);
+  // Located expenses from the full list (not paginated) — used for map pins + path.
+  // Memoized: getLocatedExpenses(...) returns a fresh array reference every call,
+  // and these feed several useEffect dependency arrays (clustering, path, scrubber
+  // pan). Without memoization, every render — including ones triggered by
+  // selectedExpenseId changing on pin tap — produces new array identities, which
+  // re-fires those effects mid-flight (interrupting in-progress easeTo/fitBounds
+  // animations and recreating markers), producing exactly the jumpy/inconsistent
+  // pin visibility the manual tests surfaced.
+  const allLocated = useMemo(() => getLocatedExpenses(expenses), [expenses]);
+  const filteredLocated = useMemo(
+    () => getLocatedExpenses(filteredExpenses),
+    [filteredExpenses],
+  );
 
-  const scrubDates = computeScrubDates(
-    groupStartDate,
-    groupEndDate,
-    allLocated.map((e) => e.expenseDate),
+  const scrubDates = useMemo(
+    () => computeScrubDates(groupStartDate, groupEndDate, allLocated.map((e) => e.expenseDate)),
+    [groupStartDate, groupEndDate, allLocated],
   );
 
   // Active trips open scrubbed to "today" (where the trip currently stands).

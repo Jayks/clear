@@ -247,17 +247,23 @@ export function ExpenseMapView({
           }),
         );
 
+        // Query the FULL world extent — not the live viewport (map.getBounds()).
+        // The scrubber auto-pans the map toward each new day's pin, so the
+        // viewport keeps moving; querying it would mean every already-revealed
+        // pin that has scrolled offscreen simply never gets returned by
+        // getClusters (it's not "hidden", it's never queried) — exactly the
+        // "previous pin not visible" / "wrong pin shown" symptom reported.
+        // Trip-scale pin counts are small (tens, not thousands), so querying
+        // the whole world is cheap; clustering still adapts correctly to the
+        // current zoom level via Math.floor(map.getZoom()).
+        const WORLD_BBOX: [number, number, number, number] = [-180, -85, 180, 85];
+
         function render() {
           if (cancelled || !map) return;
           markersRef.current.forEach((m) => m.remove());
           markersRef.current = [];
 
-          const b = map.getBounds();
-          if (!b) return;
-          const bbox: [number, number, number, number] = [
-            b.getWest(), b.getSouth(), b.getEast(), b.getNorth(),
-          ];
-          const clusters = index.getClusters(bbox, Math.floor(map.getZoom()));
+          const clusters = index.getClusters(WORLD_BBOX, Math.floor(map.getZoom()));
 
           clusters.forEach((cluster) => {
             const el     = document.createElement("div");

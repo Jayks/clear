@@ -211,47 +211,54 @@ export function ExpenseMapView({
     let cancelled = false;
     let detachMoveEnd = () => {};
 
-    import("supercluster").then(({ default: Supercluster }) => {
-      if (cancelled || !mapReady || !mapInstance.current) return;
+    // Resolve BOTH dynamic deps up front so render() below is fully synchronous.
+    // It used to re-`import("mapbox-gl")` on every call — since render() runs on
+    // every "moveend" and our scrubber now drives programmatic easeTo/fitBounds
+    // (firing several move/moveend events per step), overlapping render() calls
+    // raced: a later call's synchronous markersRef-clear could run before an
+    // earlier call's async marker-creation finished, orphaning/dropping markers
+    // and leaving an inconsistent final set ("previous pin not visible", "wrong
+    // pin shown"). Resolving mapboxgl once eliminates the interleaving entirely.
+    Promise.all([import("supercluster"), import("mapbox-gl")]).then(
+      ([{ default: Supercluster }, mapboxgl]) => {
+        if (cancelled || !mapReady || !mapInstance.current) return;
 
-      // Scrub-filter BEFORE clustering — pins for expenses after the scrubbed
-      // date must never be created, otherwise render() (e.g. on map pan/zoom
-      // moveend) would recreate them from scratch and undo any display toggle
-      // applied after the fact.
-      const scrubVisible = filteredLocated.filter(
-        (e) => !scrubDate || e.expenseDate <= scrubDate,
-      );
+        // Scrub-filter BEFORE clustering — pins for expenses after the scrubbed
+        // date must never be created, otherwise render() (e.g. on map pan/zoom
+        // moveend) would recreate them from scratch and undo any display toggle
+        // applied after the fact.
+        const scrubVisible = filteredLocated.filter(
+          (e) => !scrubDate || e.expenseDate <= scrubDate,
+        );
 
-      const index = new Supercluster({ radius: 60, maxZoom: 14 });
-      index.load(
-        scrubVisible.map((e) => {
-          const loc = parseExpenseLocation(e.location)!;
-          return {
-            type:       "Feature" as const,
-            geometry:   { type: "Point" as const, coordinates: [loc.lng, loc.lat] },
-            properties: {
-              id:          e.id,
-              amount:      Number(e.amount),
-              expenseDate: e.expenseDate,
-            },
-          };
-        }),
-      );
+        const index = new Supercluster({ radius: 60, maxZoom: 14 });
+        index.load(
+          scrubVisible.map((e) => {
+            const loc = parseExpenseLocation(e.location)!;
+            return {
+              type:       "Feature" as const,
+              geometry:   { type: "Point" as const, coordinates: [loc.lng, loc.lat] },
+              properties: {
+                id:          e.id,
+                amount:      Number(e.amount),
+                expenseDate: e.expenseDate,
+              },
+            };
+          }),
+        );
 
-      function render() {
-        if (cancelled || !map) return;
-        markersRef.current.forEach((m) => m.remove());
-        markersRef.current = [];
+        function render() {
+          if (cancelled || !map) return;
+          markersRef.current.forEach((m) => m.remove());
+          markersRef.current = [];
 
-        const b = map.getBounds();
-        if (!b) return;
-        const bbox: [number, number, number, number] = [
-          b.getWest(), b.getSouth(), b.getEast(), b.getNorth(),
-        ];
-        const clusters = index.getClusters(bbox, Math.floor(map.getZoom()));
+          const b = map.getBounds();
+          if (!b) return;
+          const bbox: [number, number, number, number] = [
+            b.getWest(), b.getSouth(), b.getEast(), b.getNorth(),
+          ];
+          const clusters = index.getClusters(bbox, Math.floor(map.getZoom()));
 
-        import("mapbox-gl").then((mapboxgl) => {
-          if (cancelled) return;
           clusters.forEach((cluster) => {
             const el     = document.createElement("div");
             const coords = cluster.geometry.coordinates as [number, number];
@@ -278,13 +285,13 @@ export function ExpenseMapView({
                 .addTo(map),
             );
           });
-        });
-      }
+        }
 
-      map.on("moveend", render);
-      detachMoveEnd = () => map.off("moveend", render);
-      render();
-    });
+        map.on("moveend", render);
+        detachMoveEnd = () => map.off("moveend", render);
+        render();
+      },
+    );
 
     // Cleanup MUST be returned directly from the effect body — not from inside
     // the .then() — otherwise React never calls it and listeners pile up across

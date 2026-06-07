@@ -178,6 +178,20 @@ router.push(`/groups/${group.id}/expenses`);
 
 **Expense `receiptUrl` + detail sheet**: `expenses.receiptUrl` (DB: `receipt_url text`) stores the Supabase Storage public URL. `ExpenseDetailSheet` renders a "Receipt" section (cyan Paperclip header) with thumbnail + "Tap to open full size" link when `expense.receiptUrl` is non-null. `updateExpenseMedia` server action (`app/actions/update-expense-media.ts`) writes the URL after background upload.
 
+### Expense Map View — `expense-map-view.tsx` patterns
+
+`components/expense/expense-map-view.tsx` — fourth expense list mode (trips only): Mapbox GL pins with Supercluster clustering, an animated `line-trim-offset` route path, and a date scrubber that auto-pans the camera day by day. `lib/expense/map-helpers.ts` holds the pure helpers (emoji lookup, truncation, haversine distance, spread-out detection — all unit-tested in `lib/receipt/phase6-map.test.ts`).
+
+**`mapGeneration` counter — required for every effect that touches `mapInstance.current`**: a theme toggle destroys the old `mapboxgl.Map` and recreates it (`setMapReady(false)` → async rebuild → `setMapReady(true)`). If the new map's `"load"` fires fast enough (cached style/tiles) to land in the same React batch, React can collapse `true → false → true` into a perceived no-op — dependent effects never see `mapReady` change and stay bound to the destroyed instance (blank map, esp. visible after a dark-mode switch). `mapInstance.current` is a ref, so mutating it doesn't trigger re-renders either. Fix: bump a `mapGeneration` counter in the `"load"` handler (alongside `setMapReady(true)`) and include it in **every** effect's dependency array that reads `mapInstance.current` (markers/clustering, trip-path setup, reveal-path, pan-toward-day) — a counter increment can never be collapsed away by batching.
+
+**Tear down before recreate — guards React Strict Mode double-invoke**: `initMap`'s body resumes asynchronously after `import("mapbox-gl")` resolves, so a stale call can still be in flight when a fresh one starts (dev-mode StrictMode double-mounts). Without a guard, two live `Map` instances can attach to the same container — the second's internal DOM setup wipes the first's canvas out from under it, orphaning any markers already `.addTo()`'d on it (created successfully, `getClusters()` finds them, yet nothing is visible). Always check `if (mapInstance.current) { …remove markers, mapInstance.current.remove(), mapInstance.current = null… }` at the top of `initMap`'s async resolution, before constructing the new `Map`.
+
+**Day-scrub camera always uses `fitBounds`, never `easeTo`-to-centroid**: a plain ease-to-midpoint has two failure modes — spread-out same-day pairs (Chennai lunch + Delhi dinner, ~1750km) average to a meaningless point over open country, and close-together pairs (T. Nagar + Marina, ~10km) stay merged in a cluster bubble because panning alone doesn't change zoom. `fitBounds` computes a zoom that frames the day's pins snugly, which for close pairs naturally pushes them past Supercluster's clustering radius so they "bloom" into individual rich chips. `isSpreadOut(locs)` (50km threshold, `lib/expense/map-helpers.ts`) only changes the `padding`/`maxZoom` passed to `fitBounds` — never the choice between `fitBounds` and `easeTo`.
+
+**Duplicate-coordinate marker offset**: two expenses pinned to the *exact same* lat/lng (e.g. both logged at "Chandni Chowk, Delhi") always cluster below Supercluster's `maxZoom` (zero pixel distance), but past it they return as separate raw points still anchored to the identical coordinate — stacking their chips into an illegible overlap. `render()` tracks a `seenAt: Map<coordKey, count>` and applies a small per-index diagonal `Marker` `offset` (`[idx * 16, idx * -12]`) to fan duplicates out into a readable stagger. Cluster bubbles never need this — Supercluster always collapses same-spot points into one feature regardless of zoom.
+
+**Seed data for map testing**: `pnpm seed:panindia` (`scripts/seed-pan-india.ts`) creates "Pan-India Explorer 2026" — 18 located expenses across 7 days deliberately covering every map scenario (close pairs, same-city clusters, cross-country same-day spread, dense clustering, isolated pins). Use it for any future map-feature regression testing.
+
 ### Login — modal vs standalone
 
 Login renders as a **modal overlay** (via Next.js parallel routes + intercepting routes) when navigated to client-side from a marketing page; it renders as a **standalone full page** when accessed directly (new tab, email link) or via a `proxy.ts` hard redirect.
@@ -418,6 +432,7 @@ pnpm test / pnpm test --run
 pnpm db:push / db:studio
 pnpm seed                # Goa trip — 10 members, 30 expenses
 pnpm seed:temple         # South India temple tour — 20 members
+pnpm seed:panindia       # Pan-India Explorer — 5 members, 18 located expenses across every map-pin scenario
 pnpm seed:streams        # 3 stream counterparts, 30 entries (all statuses)
 ```
 

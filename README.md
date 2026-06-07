@@ -42,6 +42,7 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 - **Expense detail** — tap any expense card to open a WhatsApp-style bottom sheet: amount, split breakdown, notes, compact reaction pills, pending dispute card, resolved dispute history, an inline comment thread with a persistent footer input, and a direct "View thread" link — no separate page needed for the common case
 - **Expense search** — instant search across description and category; filters and pagination compose naturally; pagination only appears for groups with >20 expenses (smaller groups show all at once)
 - **Timeline view** — third expense list mode (trips only): animated day-by-day view with stacked category bar (proportional colored segments, clickable to filter), √-scaled payer avatar chips (area ∝ amount paid), count-up day totals, connector threads that draw on scroll, Day X/Y orientation badges, 🔥 busiest day callouts, and empty-day ghost rows for the full trip range
+- **Map view** — fourth expense list mode (trips only): every located expense (AI-scanned GPS or manually pinned) plotted on a Mapbox map with Supercluster clustering — individual stops show rich chips (category emoji + truncated description + amount), dense groupings collapse into "N · ₹total" cluster bubbles that bloom into chips on zoom-in. An animated `line-trim-offset` route path traces the trip geographically. A date scrubber replays the trip day by day, auto-framing the camera to that day's pins (`fitBounds` — wide for cross-country same-day spreads like a Chennai-to-Delhi flight day, tight for same-city clusters so they un-merge into readable chips). Full dark-mode support.
 - **Expense audit trail** — every card and edit page shows who logged the expense and who last edited it, with relative timestamps
 - **Expense card actions** — Edit, Duplicate, Delete revealed on hover (desktop) or via swipe-left overlay with large tap targets (mobile); no visual clutter when browsing
 - **Category recents** — the last 3 used categories appear as quick-tap pills above the full category selector in the expense form (separate per group type)
@@ -180,6 +181,7 @@ pnpm db:push          # push schema to DB
 pnpm db:studio        # open Drizzle Studio
 pnpm seed             # seed Goa trip demo data
 pnpm seed:temple      # seed South India temple tour
+pnpm seed:panindia    # seed Pan-India Explorer trip — 18 located expenses covering every map-pin scenario
 pnpm seed:streams     # seed 3 stream counterparts, 30 entries (all statuses)
 pnpm seed:circles     # seed 4 circles covering Phase 4+5 test scenarios
 ```

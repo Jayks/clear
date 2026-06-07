@@ -14,6 +14,9 @@ import {
   computeScrubDates,
   computeRevealFraction,
   getLocatedExpenses,
+  getCategoryEmoji,
+  truncateAtWord,
+  isSpreadOut,
 } from "@/lib/expense/map-helpers";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 
@@ -66,6 +69,19 @@ export function ExpenseMapView({
   const mapInstance     = useRef<import("mapbox-gl").Map | null>(null);
   const markersRef      = useRef<import("mapbox-gl").Marker[]>([]);
   const [mapReady, setMapReady]           = useState(false);
+  // Bumped every time a *new* mapboxgl.Map instance becomes ready (initial
+  // mount AND theme-change recreate). `mapReady` alone isn't a reliable effect
+  // dependency for "did the underlying map instance change?": on a theme
+  // toggle, the old instance is destroyed (`setMapReady(false)`) and a new one
+  // created (`setMapReady(true)`) — but if the new map's "load" fires inside
+  // the same React batch (cached style/tiles), React can collapse `true → false
+  // → true` into a no-op render, so dependent effects never see `mapReady`
+  // change and never re-bind to the new instance (markers/listeners stay
+  // attached to the destroyed map → blank screen, exactly the "dark mode shows
+  // nothing" symptom). `mapInstance.current` is a ref — mutating it doesn't
+  // trigger re-renders either. This counter always changes on recreation, so
+  // it's a dependable re-run signal regardless of batching.
+  const [mapGeneration, setMapGeneration] = useState(0);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
 
@@ -125,6 +141,26 @@ export function ExpenseMapView({
 
         if (!mapContainerRef.current) return;
 
+        // Guard against overlapping init calls. React Strict Mode double-invokes
+        // effects in dev (mount → cleanup → mount again), and this function's
+        // body resumes asynchronously after the dynamic import resolves — so a
+        // stale call can still be in flight when a fresh one starts. Without
+        // this guard, TWO live mapboxgl.Map instances can end up attached to
+        // the same container: the second constructor's internal DOM setup wipes
+        // the first instance's canvas out from under it, orphaning any markers
+        // already `.addTo()`'d on the first map (created, `getClusters()` finds
+        // them, yet nothing is visible — exactly the "blank on first load, fixed
+        // by switching views and back" symptom). Tearing down any previous
+        // instance — markers included — before constructing a new one guarantees
+        // exactly one live map, correctly sized to its final container.
+        if (mapInstance.current) {
+          markersRef.current.forEach((m) => m.remove());
+          markersRef.current = [];
+          mapInstance.current.remove();
+          mapInstance.current = null;
+          setMapReady(false);
+        }
+
         // Clear any stale DOM before handing the container to Mapbox.
         // React never renders children inside this div, so wiping it is safe.
         while (mapContainerRef.current.firstChild) {
@@ -162,6 +198,7 @@ export function ExpenseMapView({
           }
           mapInstance.current = map;
           setMapReady(true);
+          setMapGeneration((g) => g + 1);
         });
       });
     },
@@ -231,7 +268,19 @@ export function ExpenseMapView({
           (e) => !scrubDate || e.expenseDate <= scrubDate,
         );
 
-        const index = new Supercluster({ radius: 60, maxZoom: 14 });
+        // map/reduce let Supercluster carry an aggregated `amount` total on
+        // cluster features (point_count is built in; the running total isn't).
+        // This powers the "N · ₹total" cluster bubble label — computed once
+        // during index.load, not re-summed on every render.
+        const index = new Supercluster<
+          { id: string; amount: number; description: string; category: string; expenseDate: string },
+          { amount: number }
+        >({
+          radius: 60,
+          maxZoom: 14,
+          map: (props) => ({ amount: props.amount }),
+          reduce: (acc, props) => { acc.amount += props.amount; },
+        });
         index.load(
           scrubVisible.map((e) => {
             const loc = parseExpenseLocation(e.location)!;
@@ -241,6 +290,8 @@ export function ExpenseMapView({
               properties: {
                 id:          e.id,
                 amount:      Number(e.amount),
+                description: e.description,
+                category:    e.category,
                 expenseDate: e.expenseDate,
               },
             };
@@ -265,28 +316,74 @@ export function ExpenseMapView({
 
           const clusters = index.getClusters(WORLD_BBOX, Math.floor(map.getZoom()));
 
+          // Two expenses logged at the very same spot (e.g. "Street food
+          // crawl" + "Auto-rickshaw rides" both pinned to Chandni Chowk) have
+          // zero pixel distance, so Supercluster clusters them at every zoom
+          // up to its maxZoom (14) — but past that it returns them as separate
+          // raw points still anchored to the identical lng/lat, stacking their
+          // chips exactly on top of each other into an illegible overlap. Fan
+          // same-spot individual chips out with a small per-index pixel offset
+          // (diagonal stagger) so each stays readable and independently
+          // tappable — `cluster-pin` bubbles never hit this since they always
+          // collapse same-spot points into one feature regardless of zoom.
+          const seenAt = new Map<string, number>();
+
           clusters.forEach((cluster) => {
             const el     = document.createElement("div");
             const coords = cluster.geometry.coordinates as [number, number];
+            const isCluster = !!(cluster.properties as { cluster?: boolean }).cluster;
 
-            if ((cluster.properties as { cluster?: boolean }).cluster) {
-              const count = (cluster.properties as { point_count: number }).point_count;
+            let markerOffset: [number, number] = [0, 0];
+            if (!isCluster) {
+              const key = `${coords[0].toFixed(5)},${coords[1].toFixed(5)}`;
+              const dupeIdx = seenAt.get(key) ?? 0;
+              seenAt.set(key, dupeIdx + 1);
+              if (dupeIdx > 0) markerOffset = [dupeIdx * 16, dupeIdx * -12];
+            }
+
+            if (isCluster) {
+              // Supercluster decided these pins are too close together to
+              // stand alone at this zoom — show a count + total summary
+              // bubble rather than trying to cram N descriptions into one spot.
+              const { point_count: count, amount: total } = cluster.properties as {
+                point_count: number;
+                amount: number;
+              };
               el.className   = "cluster-pin";
-              el.textContent = `${count}`;
+              el.textContent = `${count} · ${compactAmount(total, currency)}`;
               el.onclick = () =>
                 map.easeTo({ center: coords, zoom: map.getZoom() + 3 });
             } else {
-              const expId    = (cluster.properties as { id: string }).id;
-              const amount   = (cluster.properties as { amount: number }).amount;
+              // Supercluster decided this pin has enough breathing room to
+              // render alone — that's exactly the signal that it's safe to
+              // show the richer "🍽 Lunch at Sara… · ₹450" chip here. We're
+              // not fighting the declutter, we're riding on top of it.
+              const { id: expId, amount, description, category } = cluster.properties as {
+                id: string;
+                amount: number;
+                description: string;
+                category: string;
+              };
               const isSelected = selectedExpenseId === expId;
-              el.className        = `expense-pin${isSelected ? " selected" : ""}`;
+              const emoji      = getCategoryEmoji(category);
+              const label      = truncateAtWord(description, 18);
+
+              el.className        = `expense-chip-pin${isSelected ? " selected" : ""}`;
               el.dataset.expenseId = expId;
-              el.textContent      = compactAmount(amount, currency);
+              el.innerHTML = "";
+              const emojiSpan = document.createElement("span");
+              emojiSpan.textContent = emoji;
+              const labelSpan = document.createElement("span");
+              labelSpan.textContent = label;
+              const amountSpan = document.createElement("span");
+              amountSpan.className = "chip-amount";
+              amountSpan.textContent = `· ${compactAmount(amount, currency)}`;
+              el.append(emojiSpan, labelSpan, amountSpan);
               el.onclick = () => setSelectedExpenseId(expId);
             }
 
             markersRef.current.push(
-              new mapboxgl.default.Marker({ element: el, anchor: "bottom" })
+              new mapboxgl.default.Marker({ element: el, anchor: "bottom", offset: markerOffset })
                 .setLngLat(coords)
                 .addTo(map),
             );
@@ -306,7 +403,7 @@ export function ExpenseMapView({
       cancelled = true;
       detachMoveEnd();
     };
-  }, [mapReady, filteredLocated, selectedExpenseId, currency, scrubDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, mapGeneration, filteredLocated, selectedExpenseId, currency, scrubDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Trip path (line-trim-offset) ─────────────────────────────────────────────
   useEffect(() => {
@@ -366,7 +463,7 @@ export function ExpenseMapView({
         "line-trim-offset": [0, 1], // fully hidden = correct start state
       },
     });
-  }, [mapReady, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, mapGeneration, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scrubber → reveal trip path ───────────────────────────────────────────────
   // Pin visibility is handled by the marker/clustering effect (scrub-filters
@@ -378,7 +475,7 @@ export function ExpenseMapView({
 
     const revealed = computeRevealFraction(scrubDate, scrubDates);
     map.setPaintProperty("trip-path", "line-trim-offset", [revealed, 1]);
-  }, [mapReady, scrubDate, scrubDates]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, mapGeneration, scrubDate, scrubDates]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scrubber → pan map toward the day's pin(s) ───────────────────────────────
   // Without this, stepping the scrubber can reveal a pin outside the current
@@ -415,10 +512,39 @@ export function ExpenseMapView({
 
     if (target.length === 0) return;
     const locs = target.map((e) => parseExpenseLocation(e.location)!);
-    const lng  = locs.reduce((sum, l) => sum + l.lng, 0) / locs.length;
-    const lat  = locs.reduce((sum, l) => sum + l.lat, 0) / locs.length;
-    map.easeTo({ center: [lng, lat], duration: 500 });
-  }, [mapReady, scrubDate, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Multi-stop days always fitBounds rather than ease toward the centroid.
+    // A plain ease-to-midpoint has two failure modes:
+    //   - Spread out (Chennai lunch + Delhi dinner, ~1750km): the average
+    //     lands on a meaningless midpoint over open country — neither city
+    //     would be visible.
+    //   - Close together (T. Nagar + Marina, ~10km): the centroid IS visible,
+    //     but panning alone leaves the camera at whatever zoom it already had
+    //     (often the continent-wide initial view) — so the pins stay merged
+    //     in a single cluster bubble instead of "blooming" into individual
+    //     rich chips. fitBounds computes a zoom that frames the day's pins
+    //     snugly, which naturally pushes them far enough apart on screen to
+    //     clear Supercluster's clustering radius.
+    // Padding/maxZoom differ by spread: far-apart pairs need a wide frame that
+    // keeps both cities on screen; close pairs can — and should — zoom in much
+    // tighter so their description + amount chips are readable.
+    if (locs.length > 1) {
+      const spread = isSpreadOut(locs);
+      import("mapbox-gl").then((mapboxgl) => {
+        const bounds = new mapboxgl.default.LngLatBounds();
+        locs.forEach((l) => bounds.extend([l.lng, l.lat]));
+        map.fitBounds(bounds, {
+          padding: spread ? 64 : 80,
+          maxZoom:  spread ? 12 : 15,
+          duration: 500,
+        });
+      });
+      return;
+    }
+
+    const [{ lng, lat }] = locs;
+    map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500 });
+  }, [mapReady, mapGeneration, scrubDate, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Find the selected expense ─────────────────────────────────────────────────
   const selectedExpense = selectedExpenseId

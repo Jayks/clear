@@ -80,9 +80,8 @@ export function ExpenseMapView({
   }
 
   // ── Today / active trip / scrubber ──────────────────────────────────────────
-  const todayStr      = format(new Date(), "yyyy-MM-dd");
-  const isActive      = isTripActive(groupStartDate, groupEndDate, todayStr);
-  const [scrubDate, setScrubDate] = useState<string | null>(isActive ? todayStr : null);
+  const todayStr   = format(new Date(), "yyyy-MM-dd");
+  const isActive   = isTripActive(groupStartDate, groupEndDate, todayStr);
 
   // Located expenses from the full list (not paginated) — used for map pins + path
   const allLocated      = getLocatedExpenses(expenses);
@@ -92,6 +91,14 @@ export function ExpenseMapView({
     groupStartDate,
     groupEndDate,
     allLocated.map((e) => e.expenseDate),
+  );
+
+  // Active trips open scrubbed to "today" (where the trip currently stands).
+  // Past/future trips open at day 1 — opening on "All" would dump the entire
+  // path on load and contradict the discovery hint ("replay your trip day by
+  // day"), so the scrubber starts at the beginning and invites stepping through.
+  const [scrubDate, setScrubDate] = useState<string | null>(
+    isActive ? todayStr : (scrubDates[0] ?? null),
   );
 
   // ── Map init ─────────────────────────────────────────────────────────────────
@@ -334,6 +341,31 @@ export function ExpenseMapView({
     const revealed = computeRevealFraction(scrubDate, scrubDates);
     map.setPaintProperty("trip-path", "line-trim-offset", [revealed, 1]);
   }, [mapReady, scrubDate, scrubDates]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Scrubber → pan map toward the day's pin(s) ───────────────────────────────
+  // Without this, stepping the scrubber can reveal a pin outside the current
+  // viewport and the user has to manually drag the map to find it. Ease the
+  // view toward the centroid of that day's expenses (or the most recent prior
+  // one, if nothing is dated exactly on the scrubbed day) on every step.
+  // "All" (scrubDate === null) leaves the map alone — the user is free-panning.
+  useEffect(() => {
+    if (!mapReady || !mapInstance.current || !scrubDate) return;
+    const map = mapInstance.current;
+
+    const onDay = filteredLocated.filter((e) => e.expenseDate === scrubDate);
+    const target = onDay.length > 0
+      ? onDay
+      : filteredLocated
+          .filter((e) => e.expenseDate <= scrubDate)
+          .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate))
+          .slice(0, 1);
+
+    if (target.length === 0) return;
+    const locs = target.map((e) => parseExpenseLocation(e.location)!);
+    const lng  = locs.reduce((sum, l) => sum + l.lng, 0) / locs.length;
+    const lat  = locs.reduce((sum, l) => sum + l.lat, 0) / locs.length;
+    map.easeTo({ center: [lng, lat], duration: 500 });
+  }, [mapReady, scrubDate, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Find the selected expense ─────────────────────────────────────────────────
   const selectedExpense = selectedExpenseId

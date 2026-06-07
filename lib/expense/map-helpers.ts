@@ -52,25 +52,52 @@ export function computeScrubDates(
 // ── line-trim-offset reveal fraction ─────────────────────────────────────────
 
 /**
- * Computes the `revealed` fraction for Mapbox `line-trim-offset`.
+ * Computes the `revealed` fraction for Mapbox `line-trim-offset` BY ROUTE
+ * DISTANCE — the same way Mapbox's `line-progress` normalizes internally
+ * (cumulative great-circle length, not vertex count). This is the fraction
+ * that must drive both `setPaintProperty(..., "line-trim-offset", ...)` AND
+ * `pointAlongLine` for the visible line and the leading-edge marker to ever
+ * agree on "where today is" along the route.
  *
- * `[0, 0]`  → entire path visible  (all dates shown, "All" button state)
- * `[0, 1]`  → entire path hidden   (no dates visible)
- * `[rev, 1]`→ first `rev` fraction shown chronologically
+ * Reveals through the LAST waypoint whose `expenseDate` is on or before
+ * `scrubDate` (everything strictly later stays hidden) — i.e. "show
+ * everywhere we'd been by the end of this day".
  *
- * @param scrubDate  The currently selected date, or null for "show all".
- * @param scrubDates The full ordered list from `computeScrubDates`.
- * @returns          The `revealed` fraction in [0, 1].
+ * `locations` must be the exact chronologically-sorted geometry used to
+ * build the `trip-path` LineString (see `routeLocations` in the component) —
+ * any divergence desyncs the line from the marker again.
+ *
+ * @returns The `revealed` fraction in [0, 1]. `1` for "show all" (no
+ * scrubDate), fewer than 2 locations, or a zero-length route.
  */
-export function computeRevealFraction(
+export function computeDistanceRevealFraction(
   scrubDate: string | null,
-  scrubDates: string[],
+  locations: { lat: number; lng: number; expenseDate: string }[],
 ): number {
-  if (!scrubDate || scrubDates.length === 0) return 1; // show all
-  const totalDays = Math.max(scrubDates.length - 1, 1);
-  const idx = scrubDates.indexOf(scrubDate);
-  if (idx < 0) return 1; // unknown date — show all
-  return idx / totalDays;
+  if (!scrubDate || locations.length < 2) return 1;
+
+  const segmentKm: number[] = [];
+  let totalKm = 0;
+  for (let i = 0; i < locations.length - 1; i++) {
+    const km = haversineDistanceKm(locations[i], locations[i + 1]);
+    segmentKm.push(km);
+    totalKm += km;
+  }
+  if (totalKm === 0) return 1; // every point identical — nothing to reveal incrementally
+
+  let cumKm = 0;
+  let revealedKm = 0;
+  let matchedAny = false;
+  for (let i = 0; i < locations.length; i++) {
+    if (locations[i].expenseDate <= scrubDate) {
+      revealedKm = cumKm;
+      matchedAny = true;
+    }
+    if (i < segmentKm.length) cumKm += segmentKm[i];
+  }
+  if (!matchedAny) return 0; // scrubbed to a date before the route begins
+
+  return Math.min(revealedKm / totalKm, 1);
 }
 
 // ── Located-expense filter ────────────────────────────────────────────────────
@@ -142,6 +169,25 @@ export function truncateAtWord(text: string, maxLength: number): string {
   return `${cut.trimEnd()}…`;
 }
 
+// ── Animation easing / interpolation ──────────────────────────────────────────
+
+/**
+ * Cubic ease-out: starts fast, settles gently into the target. Used to animate
+ * the trip-path `line-trim-offset` reveal smoothly in sync with the camera's
+ * `easeTo`/`fitBounds` pan (also 500ms) — without this, the route line snaps
+ * instantly to its new revealed length while the camera glides, which reads as
+ * "the line isn't animating" relative to the moving viewport.
+ */
+export function easeOutCubic(t: number): number {
+  const clamped = Math.min(Math.max(t, 0), 1);
+  return 1 - Math.pow(1 - clamped, 3);
+}
+
+/** Linear interpolation between `from` and `to` at fraction `t` (not clamped — callers control range). */
+export function lerp(from: number, to: number, t: number): number {
+  return from + (to - from) * t;
+}
+
 // ── Cross-location distance (for "spread out" detection) ─────────────────────
 
 /**
@@ -162,6 +208,54 @@ export function haversineDistanceKm(
     Math.sin(dLat / 2) ** 2 +
     Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
   return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Walks `fraction` (0–1) of a polyline's total great-circle length and returns
+ * the interpolated `{ lat, lng }` at that point — i.e. the geographic position
+ * corresponding to a given Mapbox `line-progress` value.
+ *
+ * Powers the "leading edge" marker that rides the tip of the trip-path's
+ * reveal animation: at any instant its position must match exactly where the
+ * `line-trim-offset` trim currently ends, or the marker visibly detaches from
+ * the line it's meant to be tracing. Distance is measured the same way for
+ * every segment (haversine, matching how `line-progress` is normalized by
+ * cumulative length, not by waypoint count) — so the marker naturally glides
+ * faster across long inter-city hops and slower through dense same-city
+ * clusters, exactly mirroring how the revealed line itself grows.
+ *
+ * Returns `null` when there's no line to walk (fewer than 2 points).
+ */
+export function pointAlongLine(
+  locations: { lat: number; lng: number }[],
+  fraction: number,
+): { lat: number; lng: number } | null {
+  if (locations.length < 2) return null;
+  const t = Math.min(Math.max(fraction, 0), 1);
+
+  const segmentKm: number[] = [];
+  let totalKm = 0;
+  for (let i = 0; i < locations.length - 1; i++) {
+    const km = haversineDistanceKm(locations[i], locations[i + 1]);
+    segmentKm.push(km);
+    totalKm += km;
+  }
+  if (totalKm === 0) return locations[0]; // every point identical — nowhere to walk
+
+  const targetKm = t * totalKm;
+  let walkedKm = 0;
+  for (let i = 0; i < segmentKm.length; i++) {
+    const segKm    = segmentKm[i];
+    const segEndKm = walkedKm + segKm;
+    if (targetKm <= segEndKm || i === segmentKm.length - 1) {
+      const segT = segKm === 0 ? 0 : (targetKm - walkedKm) / segKm;
+      const a = locations[i];
+      const b = locations[i + 1];
+      return { lat: lerp(a.lat, b.lat, segT), lng: lerp(a.lng, b.lng, segT) };
+    }
+    walkedKm = segEndKm;
+  }
+  return locations[locations.length - 1];
 }
 
 /** Above this diagonal span, same-day locations are "spread out" enough that a

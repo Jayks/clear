@@ -294,7 +294,10 @@ html { scroll-behavior: smooth; }
   padding: 3px 7px;
   border-radius: 999px;
   border: 1.5px solid rgba(255,255,255,0.7);
-  box-shadow: 0 2px 8px rgba(6,182,212,0.4);
+  /* Two-layer shadow: a tight depth shadow (lifts it off the map) plus a
+     wider, softer halo (the actual "glow" — gives pins a gentle ambient
+     presence against busy tiles instead of looking pasted-on-flat). */
+  box-shadow: 0 2px 8px rgba(6,182,212,0.4), 0 0 14px 1px rgba(6,182,212,0.22);
   white-space: nowrap;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -302,50 +305,69 @@ html { scroll-behavior: smooth; }
 }
 .expense-pin:hover, .expense-pin.selected {
   transform: scale(1.12);
-  box-shadow: 0 4px 16px rgba(6,182,212,0.55);
+  box-shadow: 0 4px 16px rgba(6,182,212,0.55), 0 0 20px 2px rgba(6,182,212,0.32);
 }
 .expense-pin.selected {
   background: #0891B2; /* cyan-600 */
   border-color: #fff;
+  /* NOTE: selecting a pin immediately opens ExpenseDetailSheet over the map
+     (isOpen={!!selectedExpenseId}), so a "selected" pin is essentially never
+     visible to look at — a breathing-pulse animation here would be dead
+     code (built it, then discovered it's unobservable in practice; removed
+     rather than ship motion nobody will ever see). The static stronger glow
+     below is what's actually visible, in the split-second before the sheet
+     covers the map and again immediately after it closes. */
 }
 
 .cluster-pin {
   background: rgba(6,182,212,0.35);
   color: #0891B2;
-  font-size: 11px;
-  font-weight: 700;
-  min-width: 36px;
-  height: 36px;
-  padding: 0 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 9px;
   border-radius: 999px;
   border: 2px solid #06B6D4;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(6,182,212,0.3);
+  /* Clusters represent "more to discover here" — a slightly stronger ambient
+     glow than individual pins invites a tap/zoom-in without needing extra copy. */
+  box-shadow: 0 2px 8px rgba(6,182,212,0.3), 0 0 16px 2px rgba(6,182,212,0.2);
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(255,255,255,0.4);
 }
-.cluster-pin:hover { transform: scale(1.1); }
+.cluster-pin:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 14px rgba(6,182,212,0.4), 0 0 22px 4px rgba(6,182,212,0.3);
+}
 
 /* Rich chip for individually-rendered pins — "🍽 Lunch at Sara… · ₹450".
    Supercluster has already decided these pins have enough breathing room at
    the current zoom (that's WHY they're not clustered), so showing a wider
-   label here doesn't fight the declutter — it rides on top of it. */
+   label here doesn't fight the declutter — it rides on top of it.
+   Text is sized up from the original 11px and given a soft dark text-shadow —
+   white-on-cyan reads fine in isolation, but at the small sizes pins render at
+   it was getting lost against bright map tiles (water, light terrain) bleeding
+   through the chip's translucency at the edges. The shadow adds just enough
+   definition without looking heavy. */
 .expense-chip-pin {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: #06B6D4; /* cyan-500 */
   color: #fff;
   font-size: 11px;
   font-weight: 600;
-  min-height: 28px;
-  padding: 4px 10px;
+  min-height: 30px;
+  padding: 5px 11px;
   border-radius: 999px;
   border: 1.5px solid rgba(255,255,255,0.7);
-  box-shadow: 0 2px 8px rgba(6,182,212,0.4);
+  box-shadow: 0 2px 8px rgba(6,182,212,0.4), 0 0 14px 1px rgba(6,182,212,0.22);
   white-space: nowrap;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -353,21 +375,43 @@ html { scroll-behavior: smooth; }
 }
 .expense-chip-pin:hover, .expense-chip-pin.selected {
   transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(6,182,212,0.55);
+  box-shadow: 0 4px 16px rgba(6,182,212,0.55), 0 0 20px 2px rgba(6,182,212,0.32);
 }
 .expense-chip-pin.selected {
   background: #0891B2; /* cyan-600 */
   border-color: #fff;
 }
-.expense-chip-pin .chip-amount {
-  opacity: 0.85;
+/* Larger, independently-sized emoji — at the chip's 11px text size the emoji
+   glyph rendered too small to read as its shape (a "🍽" at 11px looks like a
+   smudge, not a plate). Bumping it up on its own keeps the label text compact
+   while making the category instantly recognisable at a glance. */
+.expense-chip-pin .chip-emoji {
+  font-size: 15px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+.expense-chip-pin .chip-label {
+  font-size: 12px;
   font-weight: 700;
+  text-shadow: 0 1px 2px rgba(8,71,89,0.45);
+}
+.expense-chip-pin .chip-amount {
+  font-size: 11.5px;
+  font-weight: 800;
+  opacity: 0.92;
+  text-shadow: 0 1px 2px rgba(8,71,89,0.45);
 }
 
 /* Dark mode overrides */
 .dark .expense-pin {
   background: #0891B2;
   border-color: rgba(255,255,255,0.5);
+  /* Brighter cyan-400 glow reads better against dark map tiles than the
+     light-mode cyan-500 — the darker base swallows a dim glow entirely. */
+  box-shadow: 0 2px 8px rgba(34,211,238,0.35), 0 0 16px 1px rgba(34,211,238,0.28);
+}
+.dark .expense-pin:hover, .dark .expense-pin.selected {
+  box-shadow: 0 4px 16px rgba(34,211,238,0.5), 0 0 22px 2px rgba(34,211,238,0.4);
 }
 .dark .expense-pin.selected {
   background: #0E7490; /* cyan-700 */
@@ -376,11 +420,146 @@ html { scroll-behavior: smooth; }
   background: rgba(8,145,178,0.4);
   color: #67E8F9; /* cyan-300 */
   border-color: #22D3EE; /* cyan-400 */
+  box-shadow: 0 2px 8px rgba(34,211,238,0.25), 0 0 18px 2px rgba(34,211,238,0.25);
+  /* Light mode's text-shadow is a soft highlight (dark text needs lift off a
+     pale background); dark mode inverts to light text on a dark background,
+     where that same light shadow would read as a clashing glow. Swap to a
+     dark shadow for the same "definition against busy map tiles" effect. */
+  text-shadow: 0 1px 2px rgba(8,47,73,0.6);
 }
 .dark .expense-chip-pin {
   background: #0891B2;
   border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 2px 8px rgba(34,211,238,0.35), 0 0 16px 1px rgba(34,211,238,0.28);
+}
+.dark .expense-chip-pin:hover, .dark .expense-chip-pin.selected {
+  box-shadow: 0 4px 16px rgba(34,211,238,0.5), 0 0 22px 2px rgba(34,211,238,0.4);
 }
 .dark .expense-chip-pin.selected {
   background: #0E7490; /* cyan-700 */
+}
+
+/* Date scrubber — replaces the bare `accent-cyan-500` native range input with
+   a track that visually fills cyan→teal up to the current day (the `--scrub-pct`
+   custom property is set inline from the component, since a plain CSS class has
+   no way to know the live value) and a gradient thumb echoing the route-line and
+   pin glow language. Each browser engine needs its own pseudo-element rules —
+   there's no shared standard for styling range inputs. */
+.map-scrubber {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #06B6D4 0%, #14B8A6 var(--scrub-pct, 0%),
+    rgba(148,163,184,0.25) var(--scrub-pct, 0%), rgba(148,163,184,0.25) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+.map-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #06B6D4, #14B8A6);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(6,182,212,0.45);
+  margin-top: -5px; /* (16px thumb − 6px track) / 2 — centers the thumb on the track */
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.map-scrubber:hover::-webkit-slider-thumb,
+.map-scrubber:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 2px 14px rgba(6,182,212,0.6);
+}
+.map-scrubber::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148,163,184,0.25);
+}
+.map-scrubber::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #06B6D4, #14B8A6);
+}
+.map-scrubber::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #06B6D4, #14B8A6);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(6,182,212,0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.map-scrubber:hover::-moz-range-thumb,
+.map-scrubber:active::-moz-range-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 2px 14px rgba(6,182,212,0.6);
+}
+.dark .map-scrubber {
+  background: linear-gradient(
+    to right,
+    #22D3EE 0%, #2DD4BF var(--scrub-pct, 0%),
+    rgba(71,85,105,0.4) var(--scrub-pct, 0%), rgba(71,85,105,0.4) 100%
+  );
+}
+.dark .map-scrubber::-moz-range-track {
+  background: rgba(71,85,105,0.4);
+}
+.dark .map-scrubber::-moz-range-progress {
+  background: linear-gradient(to right, #22D3EE, #2DD4BF);
+}
+
+/* Leading-edge marker — a small glowing dot that rides the tip of the
+   trip-path's line-trim-offset reveal animation as the scrubber advances.
+   A thin 2.5px line slowly growing barely registers as motion on its own;
+   a moving glowing object riding its tip makes the "drawing itself toward
+   the new pin" effect immediately perceptible. Pulses outward continuously
+   (like a location "breathing" dot) so it reads as "live" even when the
+   reveal briefly pauses (snap-to-target branch in the component). */
+.route-lead-marker {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  /* The clustering effect's render() tears down and re-appends every chip-pin
+     marker on each map move/zoom — including mid-flight during the camera's
+     auto-pan toward the new day's pin — so they routinely land LATER in DOM
+     than this marker (later = on top in a shared stacking context) and can
+     fully cover it, especially right as it arrives at the destination pin's
+     coordinate. A z-index pins this marker above chip pins regardless of
+     DOM insertion order, so it's never visually swallowed mid-glide. */
+  z-index: 5;
+}
+.route-lead-marker-dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #06B6D4; /* cyan-500 */
+  border: 2px solid #fff;
+  box-shadow: 0 0 8px rgba(6,182,212,0.8), 0 2px 6px rgba(0,0,0,0.25);
+}
+.route-lead-marker-pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  background: rgba(6,182,212,0.45);
+  animation: route-lead-pulse 1.4s ease-out infinite;
+}
+@keyframes route-lead-pulse {
+  0%   { transform: scale(0.5); opacity: 0.7; }
+  70%  { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.dark .route-lead-marker-dot {
+  background: #22D3EE; /* cyan-400 */
+  border-color: rgba(15,23,42,0.85);
+  box-shadow: 0 0 10px rgba(34,211,238,0.9), 0 2px 6px rgba(0,0,0,0.4);
+}
+.dark .route-lead-marker-pulse {
+  background: rgba(34,211,238,0.4);
 }

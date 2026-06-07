@@ -12,13 +12,40 @@ import { ExpenseDetailSheet } from "./expense-detail-sheet";
 import {
   isTripActive,
   computeScrubDates,
-  computeRevealFraction,
+  computeDistanceRevealFraction,
   getLocatedExpenses,
   getCategoryEmoji,
   truncateAtWord,
   isSpreadOut,
+  easeOutCubic,
+  lerp,
+  pointAlongLine,
 } from "@/lib/expense/map-helpers";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
+
+/** Reveal-animation duration range, in ms — scaled by how much of the route's
+ *  total DISTANCE a scrub step actually covers (see `revealDurationForDelta`).
+ *  A fixed duration made every step — a 30km local hop and a 1750km
+ *  inter-city leap alike — complete in the same span: the short hops felt
+ *  fine, but big jumps covered enormous ground in that same instant and read
+ *  as a teleport/snap rather than "traveling". Both bounds sit clear of the
+ *  camera's 500ms pan (floor still lets the camera arrive first and the route
+ *  keep extending for a beat — the "drawing itself" sensation; ceiling caps
+ *  how long a single mega-leg can hold up the next scrub step). */
+const PATH_REVEAL_MIN_DURATION_MS = 700;
+const PATH_REVEAL_MAX_DURATION_MS = 2200;
+
+/** Maps a reveal-fraction delta (how much of the route's total length this
+ *  scrub step newly covers, in [0, 1]) to an animation duration — linear
+ *  interpolation between the floor and ceiling above. A tiny same-city hop
+ *  (delta ≈ 0.02) animates near the floor; jumping clear across the country
+ *  in one step (delta ≈ 1, e.g. stepping straight from "All" to day 1, or a
+ *  single day covering most of the trip's ground) takes the full ceiling —
+ *  long enough to actually read as "covering serious distance". */
+function revealDurationForDelta(deltaFraction: number): number {
+  const clamped = Math.min(Math.abs(deltaFraction), 1);
+  return lerp(PATH_REVEAL_MIN_DURATION_MS, PATH_REVEAL_MAX_DURATION_MS, clamped);
+}
 
 /** Compact amount label for map pins (e.g. ₹1.2k, ₹15k). */
 function compactAmount(amount: number, currency: string): string {
@@ -68,6 +95,22 @@ export function ExpenseMapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstance     = useRef<import("mapbox-gl").Map | null>(null);
   const markersRef      = useRef<import("mapbox-gl").Marker[]>([]);
+  // Tracks the trip-path's current/last-animated reveal fraction (independent
+  // of React state — read inside a rAF loop) so a new scrub step interpolates
+  // from wherever the line visually is right now, not from the previous
+  // target's start. Also lets the "layer was just recreated at [0,1]" case
+  // (theme-toggle remount) snap back to the correct value without re-animating
+  // from zero — see the reveal effect below.
+  const revealedFractionRef = useRef(0);
+  const revealAnimFrameRef  = useRef<number | null>(null);
+  // Glowing dot that rides the tip of the trip-path's reveal animation —
+  // makes the line's "drawing in" motion actually perceptible (a thin 2.5px
+  // line slowly growing is a weak visual signal on its own; a moving dot is
+  // not). Lazily created on first use inside the reveal effect (needs the
+  // dynamically-imported mapboxgl.Marker constructor); persists across scrub
+  // steps and is repositioned each animation frame, removed in the "All"
+  // state (no single "current position" exists when showing the whole route).
+  const leadingMarkerRef = useRef<import("mapbox-gl").Marker | null>(null);
   const [mapReady, setMapReady]           = useState(false);
   // Bumped every time a *new* mapboxgl.Map instance becomes ready (initial
   // mount AND theme-change recreate). `mapReady` alone isn't a reliable effect
@@ -113,6 +156,24 @@ export function ExpenseMapView({
     [filteredExpenses],
   );
 
+  // Chronological route geometry — same sort order used to build the
+  // "trip-path" GeoJSON LineString below. Memoized and shared with the
+  // reveal-fraction calculation AND the leading-edge marker effect so all
+  // three always agree on the EXACT same line; if they computed their own
+  // sorted lists independently, a transient mismatch (e.g. mid-render during
+  // a filter change) could detach the marker — or the reveal itself — from
+  // the line it's meant to trace. `expenseDate` is carried alongside each
+  // point because `computeDistanceRevealFraction` needs to know which
+  // waypoints fall on/before the scrubbed day (see its doc comment for why
+  // a uniform per-day fraction can't substitute for this).
+  const routeLocations = useMemo(
+    () =>
+      [...filteredLocated]
+        .sort((a, b) => a.expenseDate.localeCompare(b.expenseDate))
+        .map((e) => ({ ...parseExpenseLocation(e.location)!, expenseDate: e.expenseDate })),
+    [filteredLocated],
+  );
+
   const scrubDates = useMemo(
     () => computeScrubDates(groupStartDate, groupEndDate, allLocated.map((e) => e.expenseDate)),
     [groupStartDate, groupEndDate, allLocated],
@@ -156,6 +217,10 @@ export function ExpenseMapView({
         if (mapInstance.current) {
           markersRef.current.forEach((m) => m.remove());
           markersRef.current = [];
+          if (leadingMarkerRef.current) {
+            leadingMarkerRef.current.remove();
+            leadingMarkerRef.current = null;
+          }
           mapInstance.current.remove();
           mapInstance.current = null;
           setMapReady(false);
@@ -220,6 +285,10 @@ export function ExpenseMapView({
     setMapReady(false);
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
+    if (leadingMarkerRef.current) {
+      leadingMarkerRef.current.remove();
+      leadingMarkerRef.current = null;
+    }
     mapInstance.current.remove();
     mapInstance.current = null;
     initMap(savedCenter, savedZoom);
@@ -230,6 +299,10 @@ export function ExpenseMapView({
     return () => {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
+      if (leadingMarkerRef.current) {
+        leadingMarkerRef.current.remove();
+        leadingMarkerRef.current = null;
+      }
       if (mapInstance.current) {
         mapInstance.current.remove();
         mapInstance.current = null;
@@ -372,8 +445,10 @@ export function ExpenseMapView({
               el.dataset.expenseId = expId;
               el.innerHTML = "";
               const emojiSpan = document.createElement("span");
+              emojiSpan.className = "chip-emoji";
               emojiSpan.textContent = emoji;
               const labelSpan = document.createElement("span");
+              labelSpan.className = "chip-label";
               labelSpan.textContent = label;
               const amountSpan = document.createElement("span");
               amountSpan.className = "chip-amount";
@@ -412,23 +487,39 @@ export function ExpenseMapView({
 
     // Remove old layers first (both reference the same source), then the source.
     // Order matters: Mapbox rejects removeSource() while any layer still uses it.
-    if (map.getLayer("trip-path"))    map.removeLayer("trip-path");
-    if (map.getLayer("trip-path-bg")) map.removeLayer("trip-path-bg");
-    if (map.getSource("trip-path"))   map.removeSource("trip-path");
+    if (map.getLayer("trip-path"))      map.removeLayer("trip-path");
+    if (map.getLayer("trip-path-bg"))   map.removeLayer("trip-path-bg");
+    if (map.getLayer("trip-path-glow")) map.removeLayer("trip-path-glow");
+    if (map.getSource("trip-path"))     map.removeSource("trip-path");
 
-    if (filteredLocated.length < 2) return; // LineString requires ≥2 coords
+    if (routeLocations.length < 2) return; // LineString requires ≥2 coords
 
-    const coords = [...filteredLocated]
-      .sort((a, b) => a.expenseDate.localeCompare(b.expenseDate))
-      .map((e) => {
-        const loc = parseExpenseLocation(e.location)!;
-        return [loc.lng, loc.lat];
-      });
+    // Shares the exact sorted geometry the leading-edge marker walks — see
+    // the `routeLocations` memo comment for why these must never diverge.
+    const coords = routeLocations.map((loc) => [loc.lng, loc.lat]);
 
     map.addSource("trip-path", {
       type:        "geojson",
       lineMetrics: true, // required for line-trim-offset to work
       data: { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: {} },
+    });
+    // Ambient glow underlay — a wide, heavily-blurred duplicate of the FULL
+    // route at low opacity. Gives the path a soft "lit from within" presence
+    // against busy map tiles (echoes the pin glow language above) without
+    // needing to stay in sync with the reveal animation — it's atmosphere,
+    // not signal, so it can simply always show the whole planned route.
+    // Sits below `trip-path-bg` so the crisp dashed/solid lines stay legible
+    // on top of it.
+    map.addLayer({
+      id:     "trip-path-glow",
+      type:   "line",
+      source: "trip-path",
+      paint:  {
+        "line-color":   "#06B6D4",
+        "line-width":   16,
+        "line-blur":    9,
+        "line-opacity": 0.3,
+      },
     });
     // Faint dashed background = the full planned route, always visible.
     map.addLayer({
@@ -448,6 +539,11 @@ export function ExpenseMapView({
     // which is exactly what was happening here). line-gradient + line-dasharray
     // is unsupported in Mapbox GL JS, so this overlay is solid; the dashed look
     // lives on the background layer above instead.
+    //
+    // Cyan → teal gradient along `line-progress` (matches the brand's
+    // `from-cyan-500 to-teal-500` language used elsewhere) — the revealed
+    // line itself now visually "travels" from the trip's start color to its
+    // destination color as the journey progresses, not just grows in length.
     map.addLayer({
       id:     "trip-path",
       type:   "line",
@@ -457,25 +553,124 @@ export function ExpenseMapView({
         "line-width":       2.5,
         "line-gradient":    [
           "interpolate", ["linear"], ["line-progress"],
-          0, "#06B6D4",
-          1, "#06B6D4",
+          0,    "#06B6D4", // cyan-500
+          0.5,  "#0D9F9F", // cyan↔teal blend midpoint
+          1,    "#14B8A6", // teal-500
         ],
         "line-trim-offset": [0, 1], // fully hidden = correct start state
       },
     });
-  }, [mapReady, mapGeneration, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, mapGeneration, routeLocations]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Scrubber → reveal trip path ───────────────────────────────────────────────
+  // ── Scrubber → reveal trip path + leading-edge marker (animated) ─────────────
   // Pin visibility is handled by the marker/clustering effect (scrub-filters
   // BEFORE building the supercluster index — see comment there for why).
+  //
+  // `setPaintProperty` applies instantly — without this animation loop the
+  // route line would snap straight to its new revealed length in one frame,
+  // which (even alongside the camera's 500ms glide — see the pan effect below)
+  // barely registered as motion. Interpolating the trim fraction over
+  // PATH_REVEAL_DURATION_MS (longer than the camera pan — see its comment)
+  // with an ease-out makes the line visibly "draw itself" toward the new pin —
+  // BUT a thin 2.5px line slowly growing is still a weak signal on its own
+  // (people notice moving objects far more readily than a creeping endpoint).
+  // So a small glowing dot rides the exact tip of the reveal — its position
+  // each frame is `pointAlongLine(routeLocations, currentFraction)`, the same
+  // fraction driving the trim, so it never visibly detaches from the line.
   useEffect(() => {
     if (!mapReady || !mapInstance.current) return;
     const map = mapInstance.current;
     if (!map.getLayer("trip-path")) return;
 
-    const revealed = computeRevealFraction(scrubDate, scrubDates);
-    map.setPaintProperty("trip-path", "line-trim-offset", [revealed, 1]);
-  }, [mapReady, mapGeneration, scrubDate, scrubDates]); // eslint-disable-line react-hooks/exhaustive-deps
+    let cancelled = false;
+
+    import("mapbox-gl").then((mapboxgl) => {
+      if (cancelled || !mapInstance.current || !mapInstance.current.getLayer("trip-path")) return;
+
+      if (revealAnimFrameRef.current !== null) {
+        cancelAnimationFrame(revealAnimFrameRef.current);
+        revealAnimFrameRef.current = null;
+      }
+
+      // Positions (or hides) the leading-edge dot for a given reveal fraction.
+      // No single "current position" exists in the "All" state (scrubDate ===
+      // null — the whole route is shown at once, there's no "now") or when
+      // there's no line to walk, so the marker is removed rather than parked
+      // somewhere meaningless.
+      function syncLeadingMarker(fraction: number) {
+        if (cancelled || !mapInstance.current) return;
+        if (!scrubDate || routeLocations.length < 2) {
+          if (leadingMarkerRef.current) {
+            leadingMarkerRef.current.remove();
+            leadingMarkerRef.current = null;
+          }
+          return;
+        }
+        const point = pointAlongLine(routeLocations, fraction);
+        if (!point) return;
+        if (!leadingMarkerRef.current) {
+          const el = document.createElement("div");
+          el.className = "route-lead-marker";
+          el.innerHTML =
+            '<span class="route-lead-marker-pulse"></span><span class="route-lead-marker-dot"></span>';
+          leadingMarkerRef.current = new mapboxgl.default.Marker({ element: el, anchor: "center" })
+            .setLngLat([point.lng, point.lat])
+            .addTo(mapInstance.current);
+        } else {
+          leadingMarkerRef.current.setLngLat([point.lng, point.lat]);
+        }
+      }
+
+      const target = computeDistanceRevealFraction(scrubDate, routeLocations);
+      const start  = revealedFractionRef.current;
+
+      // Nothing to animate — e.g. initial mount at day 1 (target === 0 ===
+      // start), or a theme-toggle remount where the freshly-recreated layer
+      // needs to be restored straight to its already-correct value (no
+      // visible "re-draw"). Marker still needs (re)placing/hiding to match.
+      if (Math.abs(target - start) < 0.0005) {
+        revealedFractionRef.current = target;
+        mapInstance.current.setPaintProperty("trip-path", "line-trim-offset", [target, 1]);
+        syncLeadingMarker(target);
+        return;
+      }
+
+      // How much of the route's total length this step newly reveals — NOT
+      // the camera-pan duration's concern (that's about framing the new pin),
+      // but central to how "far" the line + marker visually travel right now.
+      // Scaling the duration by this delta is what makes a short hop glide
+      // briskly while a cross-country leap takes long enough to actually
+      // register as covering serious ground (see `revealDurationForDelta`).
+      const duration  = revealDurationForDelta(target - start);
+      const startTime = performance.now();
+
+      function step(now: number) {
+        // Re-check on every frame — the map can be torn down (theme toggle,
+        // unmount) mid-animation; writing to a destroyed layer throws.
+        if (cancelled || !mapInstance.current || !mapInstance.current.getLayer("trip-path")) {
+          revealAnimFrameRef.current = null;
+          return;
+        }
+        const elapsed = now - startTime;
+        const t       = Math.min(elapsed / duration, 1);
+        const value   = lerp(start, target, easeOutCubic(t));
+        revealedFractionRef.current = value;
+        mapInstance.current.setPaintProperty("trip-path", "line-trim-offset", [value, 1]);
+        syncLeadingMarker(value);
+
+        revealAnimFrameRef.current = t < 1 ? requestAnimationFrame(step) : null;
+      }
+      revealAnimFrameRef.current = requestAnimationFrame(step);
+    });
+
+    return () => {
+      cancelled = true;
+      if (revealAnimFrameRef.current !== null) {
+        cancelAnimationFrame(revealAnimFrameRef.current);
+        revealAnimFrameRef.current = null;
+      }
+    };
+  }, [mapReady, mapGeneration, scrubDate, routeLocations]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scrubber → pan map toward the day's pin(s) ───────────────────────────────
   // Without this, stepping the scrubber can reveal a pin outside the current
@@ -597,33 +792,40 @@ export function ExpenseMapView({
       )}
 
       {/* ── Map container ────────────────────────────────────────────────────── */}
-      <div className="relative h-[360px] md:h-[480px] rounded-2xl overflow-hidden shadow-md">
-        <div ref={mapContainerRef} className="w-full h-full" />
+      {/* Glass frame — translucent border + ambient cyan shadow, echoing the
+          `.glass` card / TripCard `shadow-cyan-500/15` language used across the
+          app, so the map reads as "part of the experience" rather than a plain
+          embedded widget. The frame's padding shows the glass through as a soft
+          border around the map's own rounded corners. */}
+      <div className="relative p-1.5 rounded-[22px] glass shadow-lg shadow-cyan-500/15 dark:shadow-cyan-950/40">
+        <div className="relative h-[360px] md:h-[480px] rounded-2xl overflow-hidden shadow-inner">
+          <div ref={mapContainerRef} className="w-full h-full" />
 
-        {/* Empty state overlay */}
-        {filteredLocated.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 rounded-2xl">
-            <div className="text-center p-6">
-              <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                No located expenses match this filter
-              </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                Remove filters to see all pinned expenses
-              </p>
+          {/* Empty state overlay */}
+          {filteredLocated.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 rounded-2xl">
+              <div className="text-center p-6">
+                <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                  No located expenses match this filter
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  Remove filters to see all pinned expenses
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Loading state */}
-        {!mapReady && filteredLocated.length > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-2xl">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs text-slate-500">Loading map…</p>
+          {/* Loading state */}
+          {!mapReady && filteredLocated.length > 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-2xl">
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-slate-500">Loading map…</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── Date scrubber ─────────────────────────────────────────────────────── */}
@@ -646,13 +848,27 @@ export function ExpenseMapView({
               type="range"
               min={0}
               max={scrubDates.length}
-              value={scrubDate ? scrubDates.indexOf(scrubDate) : scrubDates.length}
+              value={scrubIdx}
               onChange={(e) => {
                 const idx = Number(e.target.value);
                 setScrubDate(idx >= scrubDates.length ? null : scrubDates[idx]);
               }}
-              className="w-full accent-cyan-500"
+              className="map-scrubber relative z-10"
+              style={{ "--scrub-pct": `${(scrubIdx / scrubDates.length) * 100}%` } as React.CSSProperties}
             />
+            {/* Day-tick marks — a faint rhythm of dots along the track giving an
+                at-a-glance sense of "how many days this trip spans", echoing the
+                Google Maps Timeline day-by-day feel. Purely decorative/ambient
+                (not pixel-locked to thumb stops — the extra "All" step throws
+                off perfect alignment) so `pointer-events-none` keeps dragging
+                untouched. */}
+            {scrubDates.length > 1 && (
+              <div className="absolute inset-x-[8px] top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none">
+                {scrubDates.map((d) => (
+                  <span key={d} className="w-[3px] h-[3px] rounded-full bg-white/80 dark:bg-slate-900/60" />
+                ))}
+              </div>
+            )}
           </div>
 
           <button

@@ -347,10 +347,25 @@ export function ExpenseMapView({
   // viewport and the user has to manually drag the map to find it. Ease the
   // view toward the centroid of that day's expenses (or the most recent prior
   // one, if nothing is dated exactly on the scrubbed day) on every step.
-  // "All" (scrubDate === null) leaves the map alone — the user is free-panning.
+  // Reaching "All" (scrubDate === null, the final forward step past the last
+  // day) zooms back out to fit every visible pin — mirroring the initial
+  // fitBounds — rather than leaving the map looking "stuck" on the last spot.
   useEffect(() => {
-    if (!mapReady || !mapInstance.current || !scrubDate) return;
+    if (!mapReady || !mapInstance.current) return;
     const map = mapInstance.current;
+
+    if (!scrubDate) {
+      if (filteredLocated.length === 0) return;
+      import("mapbox-gl").then((mapboxgl) => {
+        const bounds = new mapboxgl.default.LngLatBounds();
+        filteredLocated.forEach((e) => {
+          const loc = parseExpenseLocation(e.location)!;
+          bounds.extend([loc.lng, loc.lat]);
+        });
+        map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 500 });
+      });
+      return;
+    }
 
     const onDay = filteredLocated.filter((e) => e.expenseDate === scrubDate);
     const target = onDay.length > 0

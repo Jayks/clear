@@ -192,9 +192,17 @@ export function ExpenseMapView({
     import("supercluster").then(({ default: Supercluster }) => {
       if (!mapReady || !mapInstance.current) return;
 
+      // Scrub-filter BEFORE clustering — pins for expenses after the scrubbed
+      // date must never be created, otherwise the next render() (e.g. on
+      // map pan/zoom moveend) recreates them from scratch and undoes any
+      // display:none toggle applied after the fact.
+      const scrubVisible = filteredLocated.filter(
+        (e) => !scrubDate || e.expenseDate <= scrubDate,
+      );
+
       const index = new Supercluster({ radius: 60, maxZoom: 14 });
       index.load(
-        filteredLocated.map((e) => {
+        scrubVisible.map((e) => {
           const loc = parseExpenseLocation(e.location)!;
           return {
             type:       "Feature" as const,
@@ -254,7 +262,7 @@ export function ExpenseMapView({
       render();
       return () => { map.off("moveend", render); };
     });
-  }, [mapReady, filteredLocated, selectedExpenseId, currency]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, filteredLocated, selectedExpenseId, currency, scrubDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Trip path (line-trim-offset) ─────────────────────────────────────────────
   useEffect(() => {
@@ -300,7 +308,9 @@ export function ExpenseMapView({
     });
   }, [mapReady, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Scrubber → reveal path + show/hide pins ──────────────────────────────────
+  // ── Scrubber → reveal trip path ───────────────────────────────────────────────
+  // Pin visibility is handled by the marker/clustering effect (scrub-filters
+  // BEFORE building the supercluster index — see comment there for why).
   useEffect(() => {
     if (!mapReady || !mapInstance.current) return;
     const map = mapInstance.current;
@@ -308,15 +318,7 @@ export function ExpenseMapView({
 
     const revealed = computeRevealFraction(scrubDate, scrubDates);
     map.setPaintProperty("trip-path", "line-trim-offset", [revealed, 1]);
-
-    // Show/hide pins based on their date vs scrubDate
-    filteredLocated.forEach((e) => {
-      const pin = document.querySelector(`[data-expense-id="${e.id}"]`) as HTMLElement | null;
-      if (pin) {
-        pin.style.display = (!scrubDate || e.expenseDate <= scrubDate) ? "" : "none";
-      }
-    });
-  }, [mapReady, scrubDate, scrubDates, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, scrubDate, scrubDates]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Find the selected expense ─────────────────────────────────────────────────
   const selectedExpense = selectedExpenseId

@@ -100,6 +100,92 @@ export function computeDistanceRevealFraction(
   return Math.min(revealedKm / totalKm, 1);
 }
 
+// ── Index-based reveal fraction (sub-day stepping) ────────────────────────────
+
+/**
+ * Same distance-based normalization as `computeDistanceRevealFraction`, but
+ * reveals "through waypoint at `throughIndex`" (inclusive) rather than
+ * "through the last waypoint on/before a date". Powers sub-day stepping —
+ * walking a multi-stop day's distinct locations one at a time (cinema replay
+ * AND manual scrub both pause to sequence through them) instead of dumping
+ * the whole day's stretch of route in one jump, which is what prompted this:
+ * a cluster of same-day pins used to all "appear at once".
+ *
+ * `throughIndex < 0` reveals nothing (0); `throughIndex >= locations.length - 1`
+ * reveals everything (1) — mirrors the date-based helper's boundary behavior so
+ * the two stay visually consistent at a day's start/end (the "day complete"
+ * sub-step must land on EXACTLY the same fraction `computeDistanceRevealFraction`
+ * would produce, or the line would visibly jump when the sequence finishes).
+ *
+ * @returns The `revealed` fraction in [0, 1].
+ */
+export function computeDistanceRevealFractionThroughIndex(
+  throughIndex: number,
+  locations: { lat: number; lng: number }[],
+): number {
+  if (locations.length < 2) return 1;
+
+  const segmentKm: number[] = [];
+  let totalKm = 0;
+  for (let i = 0; i < locations.length - 1; i++) {
+    const km = haversineDistanceKm(locations[i], locations[i + 1]);
+    segmentKm.push(km);
+    totalKm += km;
+  }
+  // Every point identical — nothing to reveal incrementally (checked BEFORE
+  // the index bounds below: an all-zero route is "fully revealed" regardless
+  // of which index you're "at", matching computeDistanceRevealFraction).
+  if (totalKm === 0) return 1;
+
+  if (throughIndex <= 0) return 0;
+  if (throughIndex >= locations.length - 1) return 1;
+
+  // "Revealed through waypoint i" = distance travelled to ARRIVE at waypoint
+  // i — i.e. the segments that lead INTO it (0..i-1), not the one departing
+  // FROM it. This mirrors `computeDistanceRevealFraction`'s exact accumulation
+  // order (its `revealedKm = cumKm` snapshot happens BEFORE `cumKm` absorbs
+  // the current waypoint's outgoing segment) — get this backwards and the
+  // "day complete" sub-step lands ~2% short of where the date-based reveal
+  // would be, producing a visible micro-jump at the hand-off.
+  let revealedKm = 0;
+  for (let i = 0; i < throughIndex; i++) revealedKm += segmentKm[i];
+  return Math.min(revealedKm / totalKm, 1);
+}
+
+// ── Same-day stop grouping (sub-day stepping) ─────────────────────────────────
+
+/**
+ * Groups same-day locations into distinct "stops" by EXACT coordinate —
+ * mirroring the duplicate-coordinate detection the marker fan-out offset
+ * already relies on (`seenAt` in the map component). Two expenses logged at
+ * the identical lat/lng (three meals all tagged "Hotel Taj, Chennai") are the
+ * same physical stop and must reveal/pan together as one beat — hopping the
+ * camera between identical coordinates would be a pointless, disorienting
+ * non-move ("the cluster should have different locations — only then does
+ * one-by-one stepping make sense").
+ *
+ * Preserves the input's order (first-seen coordinate determines the group's
+ * position in the result) — callers pass chronologically-sorted input so the
+ * groups come out in "the order things happened" too.
+ */
+export function groupLocationsIntoStops<T extends { lat: number; lng: number }>(
+  locations: T[],
+): T[][] {
+  const order: string[] = [];
+  const groups = new Map<string, T[]>();
+  for (const loc of locations) {
+    const key = `${loc.lat},${loc.lng}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(loc);
+    } else {
+      groups.set(key, [loc]);
+      order.push(key);
+    }
+  }
+  return order.map((key) => groups.get(key)!);
+}
+
 // ── Located-expense filter ────────────────────────────────────────────────────
 
 /**

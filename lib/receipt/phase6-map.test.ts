@@ -18,6 +18,8 @@ import {
   isTripActive,
   computeScrubDates,
   computeDistanceRevealFraction,
+  computeDistanceRevealFractionThroughIndex,
+  groupLocationsIntoStops,
   getLocatedExpenses,
   CATEGORY_EMOJI,
   CATEGORY_EMOJI_FALLBACK,
@@ -191,6 +193,102 @@ describe("computeDistanceRevealFraction", () => {
       expenseDate: `2026-06-${String(i + 1).padStart(2, "0")}`,
     }));
     expect(computeDistanceRevealFraction("2026-06-12", many)).toBe(1);
+  });
+});
+
+// ── computeDistanceRevealFractionThroughIndex ─────────────────────────────────
+// Sub-day stepping — reveals "through waypoint N", not "through end of day X".
+// The "day complete" sub-step (throughIndex = last waypoint of that day) MUST
+// match `computeDistanceRevealFraction`'s result exactly, or the line visibly
+// jumps the instant the one-by-one sequence finishes and hands off.
+
+describe("computeDistanceRevealFractionThroughIndex", () => {
+  const chennai = { lat: 13.0827, lng: 80.2707 };
+  const delhi   = { lat: 28.7041, lng: 77.1025 };
+  const suburb  = { lat: 28.4595, lng: 77.0266 };
+  const route   = [chennai, delhi, suburb];
+
+  it("returns 1 when fewer than 2 locations", () => {
+    expect(computeDistanceRevealFractionThroughIndex(0, [chennai])).toBe(1);
+  });
+
+  it("returns 0 for a negative index — nothing revealed yet", () => {
+    expect(computeDistanceRevealFractionThroughIndex(-1, route)).toBe(0);
+  });
+
+  it("returns 1 once the index reaches the last waypoint (or beyond)", () => {
+    expect(computeDistanceRevealFractionThroughIndex(2, route)).toBe(1);
+    expect(computeDistanceRevealFractionThroughIndex(99, route)).toBe(1);
+  });
+
+  it("matches computeDistanceRevealFraction at each date boundary — no hand-off jump", () => {
+    const dated = [
+      { ...chennai, expenseDate: "2026-06-01" },
+      { ...delhi,   expenseDate: "2026-06-02" },
+      { ...suburb,  expenseDate: "2026-06-03" },
+    ];
+    expect(computeDistanceRevealFractionThroughIndex(0, dated))
+      .toBeCloseTo(computeDistanceRevealFraction("2026-06-01", dated), 10);
+    expect(computeDistanceRevealFractionThroughIndex(1, dated))
+      .toBeCloseTo(computeDistanceRevealFraction("2026-06-02", dated), 10);
+    expect(computeDistanceRevealFractionThroughIndex(2, dated))
+      .toBeCloseTo(computeDistanceRevealFraction("2026-06-03", dated), 10);
+  });
+
+  it("weights by distance, not by index — first leg dominates", () => {
+    // Mirrors the date-based helper's "~0.98 not 0.5" crux: revealing through
+    // waypoint 1 (Delhi) of 3 already covers ~98% of the total route distance.
+    const fraction = computeDistanceRevealFractionThroughIndex(1, route);
+    expect(fraction).toBeGreaterThan(0.95);
+    expect(fraction).toBeLessThan(1);
+  });
+
+  it("returns 1 when every point is identical — nothing to reveal incrementally", () => {
+    const samePoint = { lat: 28.7041, lng: 77.1025 };
+    expect(computeDistanceRevealFractionThroughIndex(0, [samePoint, samePoint])).toBe(1);
+  });
+});
+
+// ── groupLocationsIntoStops ───────────────────────────────────────────────────
+// "The cluster should have different locations — only then does one-by-one
+// stepping make sense." Same-coordinate expenses (three meals all logged at
+// "Hotel Taj, Chennai") collapse into a single stop; the camera shouldn't hop
+// to the identical spot three times in a row.
+
+describe("groupLocationsIntoStops", () => {
+  const taj      = { lat: 13.0827, lng: 80.2707, label: "taj-1" };
+  const tajAgain = { lat: 13.0827, lng: 80.2707, label: "taj-2" };
+  const marina   = { lat: 13.0500, lng: 80.2824, label: "marina" };
+  const tnagar   = { lat: 13.0418, lng: 80.2341, label: "tnagar" };
+
+  it("groups expenses sharing an exact coordinate into one stop", () => {
+    const stops = groupLocationsIntoStops([taj, tajAgain]);
+    expect(stops).toHaveLength(1);
+    expect(stops[0]).toHaveLength(2);
+  });
+
+  it("keeps distinct coordinates as separate stops, in first-seen order", () => {
+    const stops = groupLocationsIntoStops([taj, marina, tnagar]);
+    expect(stops).toHaveLength(3);
+    expect(stops.map((s) => s[0].label)).toEqual(["taj-1", "marina", "tnagar"]);
+  });
+
+  it("interleaves a repeat coordinate into its first group, not a new one", () => {
+    // breakfast @ Taj, lunch @ Marina, dinner back @ Taj — should be 2 stops
+    // (Taj, Marina), with both Taj visits grouped together, not 3 hops.
+    const stops = groupLocationsIntoStops([taj, marina, tajAgain]);
+    expect(stops).toHaveLength(2);
+    expect(stops[0].map((l) => l.label)).toEqual(["taj-1", "taj-2"]);
+    expect(stops[1].map((l) => l.label)).toEqual(["marina"]);
+  });
+
+  it("returns one single-item stop per location when all coordinates differ", () => {
+    const stops = groupLocationsIntoStops([taj, marina, tnagar]);
+    expect(stops.every((s) => s.length === 1)).toBe(true);
+  });
+
+  it("returns an empty array for an empty input", () => {
+    expect(groupLocationsIntoStops([])).toEqual([]);
   });
 });
 

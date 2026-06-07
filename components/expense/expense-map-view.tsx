@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useTheme } from "next-themes";
 import { format } from "date-fns";
-import { MapPin, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { MapPin, SlidersHorizontal, ChevronLeft, ChevronRight, Play, Pause, X, RotateCcw } from "lucide-react";
 import { parseExpenseLocation } from "@/lib/db/schema/expenses";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -13,6 +14,8 @@ import {
   isTripActive,
   computeScrubDates,
   computeDistanceRevealFraction,
+  computeDistanceRevealFractionThroughIndex,
+  groupLocationsIntoStops,
   getLocatedExpenses,
   getCategoryEmoji,
   truncateAtWord,
@@ -34,6 +37,13 @@ import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
  *  how long a single mega-leg can hold up the next scrub step). */
 const PATH_REVEAL_MIN_DURATION_MS = 700;
 const PATH_REVEAL_MAX_DURATION_MS = 2200;
+
+/** Pause between consecutive stops in a multi-stop day's one-by-one reveal
+ *  sequence — long enough to register each stop as its own "beat" (camera
+ *  settles, caption reads) without feeling sluggish when stepping through a
+ *  busy day. Applies uniformly whether the sequence was triggered by autoplay,
+ *  a chevron tap, or dragging the scrubber onto that day. */
+const SUB_STEP_MS = 1100;
 
 /** Maps a reveal-fraction delta (how much of the route's total length this
  *  scrub step newly covers, in [0, 1]) to an animation duration — linear
@@ -128,6 +138,18 @@ export function ExpenseMapView({
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
 
+  // ── Cinema mode (movie-style trip replay) ───────────────────────────────────
+  // Full-screen autoplay through the trip — the "share this as a memory" payoff.
+  // Reuses the SAME map instance/container (just expands it via fixed
+  // positioning + `map.resize()`) rather than mounting a second Mapbox.Map —
+  // far simpler than a portal-based DOM move, and avoids the canvas-context
+  // issues that come with detaching/reattaching a WebGL canvas.
+  const [cinemaMode, setCinemaMode]   = useState(false);
+  const [isPlaying, setIsPlaying]     = useState(false);
+  const autoplayTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const PITCH_CINEMA = 52; // degrees — enough perspective to feel "3D" without disorienting at country zoom
+  const AUTOPLAY_STEP_MS = 3400; // per-day pace — long enough to register the reveal + pan + caption read
+
   // ── Discovery banner — SSR-safe localStorage read ───────────────────────────
   const [hasSeenMapHint, setHasSeenMapHint] = useState(true); // assume seen until client loads
   useEffect(() => {
@@ -166,32 +188,75 @@ export function ExpenseMapView({
   // point because `computeDistanceRevealFraction` needs to know which
   // waypoints fall on/before the scrubbed day (see its doc comment for why
   // a uniform per-day fraction can't substitute for this).
+  // Full expense objects in chronological route order — the SAME sort as
+  // `routeLocations` below (in fact `routeLocations` is now derived FROM this,
+  // so the two can never diverge — exactly the kind of "two lists computing
+  // their own sort independently" mismatch this file's comments warn about
+  // elsewhere). Keeping the full `Expense` (not just lat/lng+date) is what
+  // lets sub-day stepping show a per-stop caption — description, category
+  // emoji, amount — for each beat as the camera visits it one by one.
+  const chronologicalLocated = useMemo(
+    () =>
+      [...filteredLocated].sort((a, b) => {
+        const byDate = a.expenseDate.localeCompare(b.expenseDate);
+        if (byDate !== 0) return byDate;
+        // Same-day tie-break: `expenses` arrives ordered `expenseDate DESC,
+        // createdAt DESC` (newest-logged-first, right for a list view) — a
+        // PLAIN stable re-sort on `expenseDate` alone would silently inherit
+        // that DESC tie-order, drawing the route in REVERSE for any day with
+        // 2+ locations (e.g. "lounge snacks in Chennai" then "dinner in
+        // Connaught Place, Delhi" would route Delhi→Chennai→Delhi — a
+        // confusing backtrack zigzag with no story behind it). `createdAt`
+        // ASC is the best available proxy for "the order things actually
+        // happened" (no time-of-day field exists) — people log same-day
+        // expenses roughly as the day unfolds.
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      }),
+    [filteredLocated],
+  );
+
   const routeLocations = useMemo(
     () =>
-      [...filteredLocated]
-        .sort((a, b) => {
-          const byDate = a.expenseDate.localeCompare(b.expenseDate);
-          if (byDate !== 0) return byDate;
-          // Same-day tie-break: `expenses` arrives ordered `expenseDate DESC,
-          // createdAt DESC` (newest-logged-first, right for a list view) — a
-          // PLAIN stable re-sort on `expenseDate` alone would silently inherit
-          // that DESC tie-order, drawing the route in REVERSE for any day with
-          // 2+ locations (e.g. "lounge snacks in Chennai" then "dinner in
-          // Connaught Place, Delhi" would route Delhi→Chennai→Delhi — a
-          // confusing backtrack zigzag with no story behind it). `createdAt`
-          // ASC is the best available proxy for "the order things actually
-          // happened" (no time-of-day field exists) — people log same-day
-          // expenses roughly as the day unfolds.
-          return a.createdAt.getTime() - b.createdAt.getTime();
-        })
-        .map((e) => ({ ...parseExpenseLocation(e.location)!, expenseDate: e.expenseDate })),
-    [filteredLocated],
+      chronologicalLocated.map((e) => ({ ...parseExpenseLocation(e.location)!, expenseDate: e.expenseDate })),
+    [chronologicalLocated],
   );
 
   const scrubDates = useMemo(
     () => computeScrubDates(groupStartDate, groupEndDate, allLocated.map((e) => e.expenseDate)),
     [groupStartDate, groupEndDate, allLocated],
   );
+
+  // ── Per-day highlight captions (cinema mode milestone flags) ─────────────────
+  // "Day 3 · Feb 3 · 🍽 Late dinner near Connaught Place · ₹5.3k across 2 stops"
+  // — built once from `routeLocations` (already correctly chronologically
+  // ordered — see its sort comment) so the caption's "biggest stop" always
+  // matches what's visibly highlighted on the route for that day.
+  const dayCaptions = useMemo(() => {
+    type DayCaption = { total: number; count: number; topAmount: number; topDescription: string; topEmoji: string };
+    const byDate = new Map<string, DayCaption>();
+    for (const e of filteredLocated) {
+      const amount  = Number(e.amount);
+      const existing = byDate.get(e.expenseDate);
+      if (!existing) {
+        byDate.set(e.expenseDate, {
+          total: amount,
+          count: 1,
+          topAmount: amount,
+          topDescription: e.description,
+          topEmoji: getCategoryEmoji(e.category),
+        });
+      } else {
+        existing.total += amount;
+        existing.count += 1;
+        if (amount > existing.topAmount) {
+          existing.topAmount     = amount;
+          existing.topDescription = e.description;
+          existing.topEmoji       = getCategoryEmoji(e.category);
+        }
+      }
+    }
+    return byDate;
+  }, [filteredLocated]);
 
   // Active trips open scrubbed to "today" (where the trip currently stands).
   // Past/future trips open at day 1 — opening on "All" would dump the entire
@@ -200,6 +265,123 @@ export function ExpenseMapView({
   const [scrubDate, setScrubDate] = useState<string | null>(
     isActive ? todayStr : (scrubDates[0] ?? null),
   );
+
+  // ── Sub-day stepping: distinct stops for the currently-scrubbed day ─────────
+  // Grouped by EXACT coordinate (see `groupLocationsIntoStops` doc) — "the
+  // cluster should have different locations, only then does one-by-one
+  // stepping make sense". A day with one stop (however many expenses pile up
+  // there) behaves exactly as before: `subStepCount <= 1` short-circuits the
+  // sequencer below to reveal everything immediately, no animation.
+  const currentDayStops = useMemo(
+    () =>
+      scrubDate
+        ? groupLocationsIntoStops(
+            chronologicalLocated
+              .filter((e) => e.expenseDate === scrubDate)
+              .map((e) => ({ ...parseExpenseLocation(e.location)!, expense: e })),
+          )
+        : [],
+    [scrubDate, chronologicalLocated],
+  );
+  const subStepCount = currentDayStops.length;
+
+  // How many of today's distinct stops have been progressively revealed.
+  // Driven by the sequencer effect below — NOT by direct user input — so it
+  // stays correct regardless of how the user arrived at this `scrubDate`
+  // (autoplay, chevron tap, or dragging the scrubber all funnel through the
+  // same `scrubDate` change and trigger the same one-by-one sequence).
+  //
+  // Reset SYNCHRONOUSLY DURING RENDER — React's documented "adjust state
+  // while rendering" pattern (https://react.dev/reference/react/useState#storing-information-from-previous-renders)
+  // — rather than in a `useEffect`. An effect-based reset runs AFTER the
+  // date/filter change has already committed and painted, so there is always
+  // one rendered (and visible) frame where `currentDayStops` reflects the NEW
+  // day but `scrubSubStep` is still the OLD day's terminal value — e.g.
+  // landing on a 3-stop day right after a 2-stop day briefly indexes
+  // `currentDayStops[1]` (skipping stop 0 entirely), or the reverse: landing
+  // on a 2-stop day after a 3-stop one immediately satisfies `dayComplete`
+  // and skips that day's whole sequence. That stale single frame is exactly
+  // the camera "hopping to the wrong stop out of order" the user saw.
+  // Resetting here keeps `scrubSubStep` and `currentDayStops` always in
+  // agreement within the same committed render — no observable mismatch.
+  const [scrubSubStep, setScrubSubStep] = useState(0);
+  const subStepResetKey = scrubDate ? `${scrubDate}:${subStepCount}` : null;
+  const [lastSubStepResetKey, setLastSubStepResetKey] = useState<string | null>(null);
+  if (subStepResetKey !== lastSubStepResetKey) {
+    setLastSubStepResetKey(subStepResetKey);
+    // Single-/no-stop days: reveal everything immediately — matches
+    // pre-sub-step behaviour exactly, no animation. Multi-stop days: start
+    // at "nothing revealed yet"; the timer effect below walks through each
+    // stop from here.
+    setScrubSubStep(subStepCount <= 1 ? subStepCount : 0);
+  }
+
+  // The index (into `routeLocations`/`chronologicalLocated`) of the LAST
+  // location belonging to the most-recently-revealed stop — i.e. "how far
+  // along the chronological route the reveal currently extends". Single-stop
+  // (or stop-less/gap) days fall straight through to `computeDistanceRevealFraction`'s
+  // existing "through end of day X" semantics — byte-identical to pre-sub-step
+  // behaviour — via the `dayComplete` branch.
+  const dayComplete = subStepCount <= 1 || scrubSubStep >= subStepCount;
+  const subStepRevealThroughIndex = useMemo(() => {
+    if (!scrubDate || dayComplete || subStepCount === 0) return -1;
+    const firstIdx = routeLocations.findIndex((l) => l.expenseDate === scrubDate);
+    if (firstIdx === -1) return -1;
+    // Count how many raw locations the revealed stops (1..scrubSubStep) span —
+    // a stop can bundle 2+ identical-coordinate expenses (e.g. three meals at
+    // the same hotel), each occupying its own slot in `routeLocations`.
+    let span = 0;
+    for (let i = 0; i < scrubSubStep; i++) span += currentDayStops[i].length;
+    return firstIdx + span - 1;
+  }, [scrubDate, dayComplete, subStepCount, scrubSubStep, currentDayStops, routeLocations]);
+
+  // Times the walk through a multi-stop day's distinct stops, one at a time —
+  // the direct fix for "everything seems to appear at once" on cluster days.
+  // Fires for EVERY arrival at a multi-stop `scrubDate`, regardless of how the
+  // user got there (autoplay, chevrons, or dragging the scrubber) — "show
+  // everything for Day 4 first" becomes "Day 4 always plays out its stops in
+  // order before settling", uniformly, rather than a slider-position concern.
+  // (The STARTING value of `scrubSubStep` for this date/stop-count is set
+  // synchronously during render, just above — this effect owns only the
+  // ongoing timer-driven advance through 1, 2, … `subStepCount`.)
+  useEffect(() => {
+    if (!scrubDate || subStepCount <= 1) return; // single-/no-stop — already fully revealed above; nothing to time
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let i = 0;
+    function advance() {
+      if (cancelled) return;
+      i += 1;
+      setScrubSubStep(i);
+      if (i < subStepCount) timer = setTimeout(advance, SUB_STEP_MS);
+    }
+    timer = setTimeout(advance, SUB_STEP_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [scrubDate, subStepCount]);
+
+  // Pin visibility for the current scrub position — `null` means "show
+  // everything" ("All"). Built from the SAME `currentDayStops` grouping that
+  // drives the sequencer/camera/captions, so a pin can never appear on the map
+  // a beat before (or after) its caption announces it. Prior days always show
+  // in full; the scrubbed day reveals stop-by-stop as `scrubSubStep` advances.
+  const scrubVisibleExpenseIds = useMemo(() => {
+    if (!scrubDate) return null;
+    const stopIndexByExpenseId = new Map<string, number>();
+    currentDayStops.forEach((stop, stopIdx) => {
+      for (const loc of stop) stopIndexByExpenseId.set(loc.expense.id, stopIdx);
+    });
+    const ids = new Set<string>();
+    for (const e of chronologicalLocated) {
+      if (e.expenseDate < scrubDate) { ids.add(e.id); continue; }
+      if (e.expenseDate > scrubDate) continue;
+      const stopIdx = stopIndexByExpenseId.get(e.id);
+      if (stopIdx !== undefined && stopIdx < scrubSubStep) ids.add(e.id);
+    }
+    return ids;
+  }, [scrubDate, scrubSubStep, currentDayStops, chronologicalLocated]);
 
   // ── Map init ─────────────────────────────────────────────────────────────────
   const initMap = useCallback(
@@ -348,11 +530,12 @@ export function ExpenseMapView({
         if (cancelled || !mapReady || !mapInstance.current) return;
 
         // Scrub-filter BEFORE clustering — pins for expenses after the scrubbed
-        // date must never be created, otherwise render() (e.g. on map pan/zoom
-        // moveend) would recreate them from scratch and undo any display toggle
-        // applied after the fact.
+        // date (or not yet "announced" by the sub-day sequencer — see
+        // `scrubVisibleExpenseIds`) must never be created, otherwise render()
+        // (e.g. on map pan/zoom moveend) would recreate them from scratch and
+        // undo any display toggle applied after the fact.
         const scrubVisible = filteredLocated.filter(
-          (e) => !scrubDate || e.expenseDate <= scrubDate,
+          (e) => scrubVisibleExpenseIds === null || scrubVisibleExpenseIds.has(e.id),
         );
 
         // map/reduce let Supercluster carry an aggregated `amount` total on
@@ -492,7 +675,7 @@ export function ExpenseMapView({
       cancelled = true;
       detachMoveEnd();
     };
-  }, [mapReady, mapGeneration, filteredLocated, selectedExpenseId, currency, scrubDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, mapGeneration, filteredLocated, selectedExpenseId, currency, scrubDate, scrubVisibleExpenseIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Trip path (line-trim-offset) ─────────────────────────────────────────────
   useEffect(() => {
@@ -635,7 +818,17 @@ export function ExpenseMapView({
         }
       }
 
-      const target = computeDistanceRevealFraction(scrubDate, routeLocations);
+      // Sub-day stepping: while a multi-stop day is mid-sequence, reveal only
+      // through the most-recently-announced stop (`subStepRevealThroughIndex`)
+      // rather than the whole day at once — the line "draws itself" in beats,
+      // matching the pins/captions appearing one by one. Once the day completes
+      // (`dayComplete`), this MUST fall through to the exact same date-based
+      // calculation as before — `computeDistanceRevealFractionThroughIndex` is
+      // built to land on an identical fraction at that hand-off (see its doc
+      // comment), so there's no visible jump when the sequence finishes.
+      const target = dayComplete
+        ? computeDistanceRevealFraction(scrubDate, routeLocations)
+        : computeDistanceRevealFractionThroughIndex(subStepRevealThroughIndex, routeLocations);
       const start  = revealedFractionRef.current;
 
       // Nothing to animate — e.g. initial mount at day 1 (target === 0 ===
@@ -684,7 +877,7 @@ export function ExpenseMapView({
         revealAnimFrameRef.current = null;
       }
     };
-  }, [mapReady, mapGeneration, scrubDate, routeLocations]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mapReady, mapGeneration, scrubDate, routeLocations, dayComplete, subStepRevealThroughIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scrubber → pan map toward the day's pin(s) ───────────────────────────────
   // Without this, stepping the scrubber can reveal a pin outside the current
@@ -706,54 +899,86 @@ export function ExpenseMapView({
           const loc = parseExpenseLocation(e.location)!;
           bounds.extend([loc.lng, loc.lat]);
         });
-        map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 500 });
+        map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 500, pitch: cinemaMode ? PITCH_CINEMA : 0 });
       });
       return;
     }
 
-    const onDay = filteredLocated.filter((e) => e.expenseDate === scrubDate);
-    const target = onDay.length > 0
-      ? onDay
-      : filteredLocated
-          .filter((e) => e.expenseDate <= scrubDate)
-          .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate))
-          .slice(0, 1);
+    // Explicit `pitch` on EVERY camera transition below — Mapbox's
+    // `fitBounds`/`easeTo` silently reset pitch to 0 when the option is
+    // omitted (cameraForBounds defaults bearing/pitch to 0 unless told
+    // otherwise). Without this, cinema mode's 52° tilt (set once on entry by
+    // the pitch-lifecycle effect) would be flattened back to flat-map on the
+    // very first day-scrub pan — which is exactly why only day 1 looked "3D"
+    // and every subsequent stop looked flat.
+    const pitch = cinemaMode ? PITCH_CINEMA : 0;
 
-    if (target.length === 0) return;
-    const locs = target.map((e) => parseExpenseLocation(e.location)!);
+    if (currentDayStops.length === 0) {
+      // No located expenses today (a "rest day" gap, or a future/past day with
+      // nothing logged) — hold on the most recent prior location rather than
+      // leaving the camera looking "stuck" on yesterday's full-day frame.
+      const target = filteredLocated
+        .filter((e) => e.expenseDate <= scrubDate)
+        .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate))
+        .slice(0, 1);
+      if (target.length === 0) return;
+      const { lng, lat } = parseExpenseLocation(target[0].location)!;
+      map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500, pitch });
+      return;
+    }
 
-    // Multi-stop days always fitBounds rather than ease toward the centroid.
-    // A plain ease-to-midpoint has two failure modes:
-    //   - Spread out (Chennai lunch + Delhi dinner, ~1750km): the average
-    //     lands on a meaningless midpoint over open country — neither city
-    //     would be visible.
-    //   - Close together (T. Nagar + Marina, ~10km): the centroid IS visible,
-    //     but panning alone leaves the camera at whatever zoom it already had
-    //     (often the continent-wide initial view) — so the pins stay merged
-    //     in a single cluster bubble instead of "blooming" into individual
-    //     rich chips. fitBounds computes a zoom that frames the day's pins
-    //     snugly, which naturally pushes them far enough apart on screen to
-    //     clear Supercluster's clustering radius.
-    // Padding/maxZoom differ by spread: far-apart pairs need a wide frame that
-    // keeps both cities on screen; close pairs can — and should — zoom in much
-    // tighter so their description + amount chips are readable.
-    if (locs.length > 1) {
-      const spread = isSpreadOut(locs);
-      import("mapbox-gl").then((mapboxgl) => {
-        const bounds = new mapboxgl.default.LngLatBounds();
-        locs.forEach((l) => bounds.extend([l.lng, l.lat]));
-        map.fitBounds(bounds, {
-          padding: spread ? 64 : 80,
-          maxZoom:  spread ? 12 : 15,
-          duration: 500,
+    if (currentDayStops.length === 1 || dayComplete) {
+      // Single-stop day (byte-identical to the pre-sub-step behaviour — no
+      // sequencing was ever needed here), OR a multi-stop day's one-by-one
+      // sequence has just finished: zoom OUT to frame every distinct stop
+      // together — the familiar "here's the whole cluster" landing that caps
+      // off the sequence, exactly like the old single-jump behaviour ended.
+      if (currentDayStops.length > 1) {
+        const reps   = currentDayStops.map((stop) => stop[0]); // one representative coordinate per distinct stop
+        const spread = isSpreadOut(reps);
+        import("mapbox-gl").then((mapboxgl) => {
+          const bounds = new mapboxgl.default.LngLatBounds();
+          reps.forEach((l) => bounds.extend([l.lng, l.lat]));
+          // Multi-stop days always fitBounds rather than ease toward the
+          // centroid. A plain ease-to-midpoint has two failure modes:
+          //   - Spread out (Chennai lunch + Delhi dinner, ~1750km): the
+          //     average lands on a meaningless midpoint over open country.
+          //   - Close together (T. Nagar + Marina, ~10km): panning alone
+          //     leaves the pins merged in a single cluster bubble instead of
+          //     "blooming" into individual rich chips. fitBounds computes a
+          //     zoom that naturally clears Supercluster's clustering radius.
+          map.fitBounds(bounds, {
+            padding: spread ? 64 : 80,
+            maxZoom:  spread ? 12 : 15,
+            duration: 500,
+            pitch,
+          });
         });
-      });
+      } else {
+        const { lng, lat } = currentDayStops[0][0];
+        map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500, pitch });
+      }
       return;
     }
 
-    const [{ lng, lat }] = locs;
-    map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500 });
-  }, [mapReady, mapGeneration, scrubDate, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (scrubSubStep === 0) {
+      // Just arrived on a multi-stop day — the sequencer's opening "nothing
+      // revealed yet" tick (mirrors the caption's day-aggregate placeholder
+      // for this same beat). No stop has appeared, so there's nothing to
+      // frame a close-up on yet (currentDayStops[-1] is undefined): hold the
+      // camera where it is. The first close-up arrival fires the instant
+      // stop 1 reveals, one tick from now.
+      return;
+    }
+
+    // Mid-sequence on a multi-stop day — frame ONLY the just-revealed stop.
+    // This is the camera half of "show every stop one by one rather than
+    // dumping the whole cluster at once": each beat gets its own close-up
+    // arrival (caption reads, pin drops in) before the final fitBounds above
+    // zooms out to tie them together as a single "here's the whole day" view.
+    const { lng, lat } = currentDayStops[scrubSubStep - 1][0];
+    map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 13), duration: 500, pitch });
+  }, [mapReady, mapGeneration, scrubDate, filteredLocated, cinemaMode, currentDayStops, dayComplete, scrubSubStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Find the selected expense ─────────────────────────────────────────────────
   const selectedExpense = selectedExpenseId
@@ -778,6 +1003,136 @@ export function ExpenseMapView({
         }
       })()
     : "All";
+
+  const isAtEnd = scrubDate === null && cinemaMode; // "All" reached via autoplay = the credits-roll moment
+
+  // ── Cinema caption — per-stop mid-sequence, day-aggregate once complete ─────
+  // "Show every stop one by one" extends to the milestone caption too: a
+  // 3-stop day no longer jumps straight to "₹5.3k across 3 stops" — each stop
+  // gets its own beat ("🍽 Lunch near Marina") before the day-aggregate caption
+  // takes over as the closing summary, mirroring the camera's per-stop arrivals
+  // then final zoom-out (see the day-scrub pan effect just above).
+  type CinemaCaption = { key: string; label: string; emoji: string; description: string; amountLine: string };
+  const cinemaCaption: CinemaCaption | null = useMemo(() => {
+    if (!scrubDate) return null;
+    // `scrubSubStep === 0` is the brief "arrived on this day, nothing
+    // revealed yet" tick the sequencer effect always starts at — there is no
+    // "just-revealed" stop to caption yet (currentDayStops[-1] is undefined).
+    // Fall through to the day-aggregate caption as a placeholder for that
+    // one beat; the per-stop captions take over the instant stop 1 reveals.
+    if (!dayComplete && currentDayStops.length > 1 && scrubSubStep > 0) {
+      const stop = currentDayStops[scrubSubStep - 1];
+      const top = stop.reduce((best, loc) =>
+        Number(loc.expense.amount) > Number(best.expense.amount) ? loc : best, stop[0]);
+      const stopTotal = stop.reduce((sum, loc) => sum + Number(loc.expense.amount), 0);
+      return {
+        key:         `${scrubDate}-stop-${scrubSubStep}`,
+        label:       `${scrubLabel} · stop ${scrubSubStep} of ${currentDayStops.length}`,
+        emoji:       getCategoryEmoji(top.expense.category),
+        description: truncateAtWord(top.expense.description, 42),
+        amountLine:  stop.length > 1
+          ? `${compactAmount(stopTotal, currency)} · ${stop.length} expenses here`
+          : compactAmount(stopTotal, currency),
+      };
+    }
+    const dayAgg = dayCaptions.get(scrubDate);
+    if (!dayAgg) return null;
+    return {
+      key:         scrubDate,
+      label:       scrubLabel,
+      emoji:       dayAgg.topEmoji,
+      description: truncateAtWord(dayAgg.topDescription, 42),
+      amountLine:  `${compactAmount(dayAgg.total, currency)} across ${dayAgg.count} ${dayAgg.count === 1 ? "stop" : "stops"}`,
+    };
+  }, [scrubDate, dayComplete, currentDayStops, scrubSubStep, scrubLabel, dayCaptions, currency]);
+
+  // ── Cinema mode controls ─────────────────────────────────────────────────────
+  const enterCinemaMode = useCallback(() => {
+    setCinemaMode(true);
+    setIsPlaying(true);
+    // Always replay from day 1 — "press play on the trip", not "continue
+    // scrubbing from wherever I happened to be". That's the movie framing.
+    setScrubDate(scrubDates[0] ?? null);
+  }, [scrubDates]);
+
+  const exitCinemaMode = useCallback(() => {
+    if (autoplayTimerRef.current) {
+      clearTimeout(autoplayTimerRef.current);
+      autoplayTimerRef.current = null;
+    }
+    setIsPlaying(false);
+    setCinemaMode(false);
+  }, []);
+
+  function togglePlayback() {
+    if (isAtEnd || (!isPlaying && scrubIdx >= scrubDates.length - 1 && scrubDate !== null)) {
+      setScrubDate(scrubDates[0] ?? null); // replay from the top
+    }
+    setIsPlaying((p) => !p);
+  }
+
+  // Esc closes cinema mode from anywhere — explicitly requested ("should be
+  // able to esc/cancel and come back to the map view at any point in time").
+  // Inline handler (not useSheetDismiss) — this is a fixed-position overlay
+  // reusing the existing map, not a portal/bottom-sheet on a form page; no
+  // history entry is involved. See CLAUDE.md's useSheetDismiss gotcha.
+  useEffect(() => {
+    if (!cinemaMode) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") exitCinemaMode();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [cinemaMode, exitCinemaMode]);
+
+  // Tilt the camera into a "3D-ish" cinematic perspective on entry, flatten it
+  // back on exit — and resize the map's canvas to match its new fixed-fullscreen
+  // (or restored card) dimensions. `requestAnimationFrame` lets the CSS layout
+  // settle first; calling `resize()` before the container's new size is committed
+  // measures the PRE-transition box and leaves Mapbox's canvas mis-sized/blurry.
+  useEffect(() => {
+    if (!mapReady || !mapInstance.current) return;
+    const map = mapInstance.current;
+    const raf = requestAnimationFrame(() => {
+      map.resize();
+      map.easeTo({ pitch: cinemaMode ? PITCH_CINEMA : 0, duration: 700 });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [cinemaMode, mapReady, mapGeneration]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Autoplay loop — advances the scrubber one day per tick while playing.
+  // Reuses the EXACT same `setScrubDate` path as manual scrubbing, so the
+  // reveal animation, camera pan, pin filtering, and captions all stay
+  // perfectly in sync without any cinema-mode-specific rendering branch.
+  // Reaching the end lands on "All" (credits-roll) and stops — `togglePlayback`
+  // restarts from day 1 when tapped again.
+  //
+  // GATED on `dayComplete`: a multi-stop day now plays out its own one-by-one
+  // sequence (see the sub-step sequencer effect) before it's "done" — without
+  // this gate, autoplay would race ahead mid-sequence and land on tomorrow
+  // before today finished revealing, exactly the "jumps past Day 4" behaviour
+  // that prompted this feature. Each `scrubSubStep` tick re-fires this effect;
+  // it simply no-ops (no timer scheduled) until the day completes, then the
+  // normal per-day pacing takes over for the advance.
+  useEffect(() => {
+    if (!cinemaMode || !isPlaying || !dayComplete) return;
+    autoplayTimerRef.current = setTimeout(() => {
+      const idx     = scrubDate ? scrubDates.indexOf(scrubDate) : scrubDates.length;
+      const nextIdx = idx + 1;
+      if (nextIdx >= scrubDates.length) {
+        setScrubDate(null);   // "All" — the finished, full-route credits view
+        setIsPlaying(false);
+      } else {
+        setScrubDate(scrubDates[nextIdx]);
+      }
+    }, AUTOPLAY_STEP_MS);
+    return () => {
+      if (autoplayTimerRef.current) {
+        clearTimeout(autoplayTimerRef.current);
+        autoplayTimerRef.current = null;
+      }
+    };
+  }, [cinemaMode, isPlaying, scrubDate, scrubDates, dayComplete]);
 
   if (allLocated.length === 0) return null;
 
@@ -806,13 +1161,27 @@ export function ExpenseMapView({
       )}
 
       {/* ── Map container ────────────────────────────────────────────────────── */}
-      {/* Glass frame — translucent border + ambient cyan shadow, echoing the
-          `.glass` card / TripCard `shadow-cyan-500/15` language used across the
-          app, so the map reads as "part of the experience" rather than a plain
-          embedded widget. The frame's padding shows the glass through as a soft
-          border around the map's own rounded corners. */}
-      <div className="relative p-1.5 rounded-[22px] glass shadow-lg shadow-cyan-500/15 dark:shadow-cyan-950/40">
-        <div className="relative h-[360px] md:h-[480px] rounded-2xl overflow-hidden shadow-inner">
+      {/* Glass frame in normal state — translucent border + ambient cyan shadow,
+          echoing the `.glass` card / TripCard `shadow-cyan-500/15` language so
+          the map reads as "part of the experience". In cinema mode the SAME
+          container expands to fill the viewport via `position: fixed` — no
+          portal, no second Mapbox instance, just CSS + `map.resize()` (see the
+          cinema-mode lifecycle effect). Reusing the live map avoids the
+          canvas-context issues that come with detaching/reattaching WebGL. */}
+      <div
+        className={
+          cinemaMode
+            ? "fixed inset-0 z-[100] bg-black"
+            : "relative p-1.5 rounded-[22px] glass shadow-lg shadow-cyan-500/15 dark:shadow-cyan-950/40"
+        }
+      >
+        <div
+          className={
+            cinemaMode
+              ? "relative w-full h-full"
+              : "relative h-[360px] md:h-[480px] rounded-2xl overflow-hidden shadow-inner"
+          }
+        >
           <div ref={mapContainerRef} className="w-full h-full" />
 
           {/* Empty state overlay */}
@@ -839,12 +1208,86 @@ export function ExpenseMapView({
               </div>
             </div>
           )}
+
+          {/* ── Cinema mode chrome ──────────────────────────────────────────── */}
+          {cinemaMode && (
+            <>
+              {/* Top gradient scrim — keeps the close button legible over busy tiles
+                  without a hard bar (matches the "cinematic", screen-recordable feel). */}
+              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none" />
+              <button
+                type="button"
+                onClick={exitCinemaMode}
+                aria-label="Exit trip replay"
+                className="absolute top-4 right-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-white/15 backdrop-blur-sm border border-white/25 text-white hover:bg-white/25 active:scale-95 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Milestone caption — the "story" payoff. Cross-fades stop to stop
+                  (mid-sequence) and day to day, reusing `cinemaCaption` so the
+                  highlighted moment always matches what the route just traced to
+                  and which pin just dropped in. Hidden in the "All" end-state (no
+                  single day/stop to caption) — the replay control takes over there. */}
+              <AnimatePresence mode="wait">
+                {cinemaCaption && (
+                  <motion.div
+                    key={cinemaCaption.key}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 max-w-[88%] sm:max-w-md text-center px-5 py-3 rounded-2xl bg-black/45 backdrop-blur-md border border-white/15 text-white shadow-lg"
+                  >
+                    <p className="text-[11px] font-medium tracking-wide text-cyan-300 uppercase">
+                      {cinemaCaption.label}
+                    </p>
+                    <p className="mt-0.5 text-sm sm:text-base font-semibold" style={{ fontFamily: "var(--font-fraunces)" }}>
+                      {cinemaCaption.emoji} {cinemaCaption.description}
+                    </p>
+                    <p className="mt-0.5 text-xs text-white/70">
+                      {cinemaCaption.amountLine}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Bottom scrim + play/pause/replay control */}
+              <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+              <button
+                type="button"
+                onClick={togglePlayback}
+                aria-label={isPlaying ? "Pause replay" : isAtEnd ? "Replay trip" : "Resume replay"}
+                className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 w-14 h-14 flex items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-lg shadow-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/50 active:scale-95 transition-all"
+              >
+                {isPlaying ? (
+                  <Pause className="w-5 h-5 fill-current" />
+                ) : isAtEnd ? (
+                  <RotateCcw className="w-5 h-5" />
+                ) : (
+                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* ── Date scrubber ─────────────────────────────────────────────────────── */}
-      {scrubDates.length > 0 && (
+      {scrubDates.length > 0 && !cinemaMode && (
         <div className="mt-3 flex items-center gap-2">
+          {scrubDates.length > 1 && (
+            <button
+              type="button"
+              onClick={enterCinemaMode}
+              aria-label="Play this trip"
+              title="Play this trip — full-screen replay"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm shadow-cyan-500/30 hover:shadow-md hover:shadow-cyan-500/40 active:scale-95 transition-all shrink-0"
+            >
+              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {

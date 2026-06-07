@@ -333,21 +333,37 @@ export function ExpenseMapView({
       lineMetrics: true, // required for line-trim-offset to work
       data: { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: {} },
     });
+    // Faint dashed background = the full planned route, always visible.
     map.addLayer({
       id:     "trip-path-bg",
       type:   "line",
       source: "trip-path",
-      paint:  { "line-color": "#06B6D4", "line-width": 2, "line-opacity": 0.15 },
+      paint:  {
+        "line-color":     "#06B6D4",
+        "line-width":     2,
+        "line-opacity":   0.15,
+        "line-dasharray": [0, 4, 3],
+      },
     });
+    // Solid "revealed so far" overlay. line-trim-offset ONLY takes visual effect
+    // when line-gradient is also set (confirmed against the Mapbox style spec —
+    // without it the trim is silently a no-op and the full line always renders,
+    // which is exactly what was happening here). line-gradient + line-dasharray
+    // is unsupported in Mapbox GL JS, so this overlay is solid; the dashed look
+    // lives on the background layer above instead.
     map.addLayer({
       id:     "trip-path",
       type:   "line",
       source: "trip-path",
       paint:  {
-        "line-color":        "#06B6D4",
-        "line-width":        2.5,
-        "line-dasharray":    [0, 4, 3],
-        "line-trim-offset":  [0, 1], // fully hidden = correct start state
+        "line-color":       "#06B6D4",
+        "line-width":       2.5,
+        "line-gradient":    [
+          "interpolate", ["linear"], ["line-progress"],
+          0, "#06B6D4",
+          1, "#06B6D4",
+        ],
+        "line-trim-offset": [0, 1], // fully hidden = correct start state
       },
     });
   }, [mapReady, filteredLocated]); // eslint-disable-line react-hooks/exhaustive-deps

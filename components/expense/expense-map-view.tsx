@@ -189,13 +189,19 @@ export function ExpenseMapView({
     if (!mapReady || !mapInstance.current) return;
     const map = mapInstance.current;
 
+    // Guards async resolution races: if this effect is cleaned up (deps changed,
+    // unmount) before import() resolves, `cancelled` prevents the stale callback
+    // from registering a listener that would never get torn down.
+    let cancelled = false;
+    let detachMoveEnd = () => {};
+
     import("supercluster").then(({ default: Supercluster }) => {
-      if (!mapReady || !mapInstance.current) return;
+      if (cancelled || !mapReady || !mapInstance.current) return;
 
       // Scrub-filter BEFORE clustering — pins for expenses after the scrubbed
-      // date must never be created, otherwise the next render() (e.g. on
-      // map pan/zoom moveend) recreates them from scratch and undoes any
-      // display:none toggle applied after the fact.
+      // date must never be created, otherwise render() (e.g. on map pan/zoom
+      // moveend) would recreate them from scratch and undo any display toggle
+      // applied after the fact.
       const scrubVisible = filteredLocated.filter(
         (e) => !scrubDate || e.expenseDate <= scrubDate,
       );
@@ -217,7 +223,7 @@ export function ExpenseMapView({
       );
 
       function render() {
-        if (!map) return;
+        if (cancelled || !map) return;
         markersRef.current.forEach((m) => m.remove());
         markersRef.current = [];
 
@@ -229,6 +235,7 @@ export function ExpenseMapView({
         const clusters = index.getClusters(bbox, Math.floor(map.getZoom()));
 
         import("mapbox-gl").then((mapboxgl) => {
+          if (cancelled) return;
           clusters.forEach((cluster) => {
             const el     = document.createElement("div");
             const coords = cluster.geometry.coordinates as [number, number];
@@ -259,9 +266,17 @@ export function ExpenseMapView({
       }
 
       map.on("moveend", render);
+      detachMoveEnd = () => map.off("moveend", render);
       render();
-      return () => { map.off("moveend", render); };
     });
+
+    // Cleanup MUST be returned directly from the effect body — not from inside
+    // the .then() — otherwise React never calls it and listeners pile up across
+    // re-runs (each carrying its own stale `index` snapshot, racing each other).
+    return () => {
+      cancelled = true;
+      detachMoveEnd();
+    };
   }, [mapReady, filteredLocated, selectedExpenseId, currency, scrubDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Trip path (line-trim-offset) ─────────────────────────────────────────────

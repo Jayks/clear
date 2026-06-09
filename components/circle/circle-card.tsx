@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { Check, Repeat2, Target } from "lucide-react";
+import { Check, MoreHorizontal, Repeat2, Target } from "lucide-react";
 import { toast } from "sonner";
 import type { Group } from "@/lib/db/schema/groups";
 import type { CircleCardData, PendingMember } from "@/lib/db/queries/circle";
@@ -11,6 +11,7 @@ import { selfReportContribution } from "@/app/actions/circle";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { RecordContributionSheet } from "./record-contribution-sheet";
 import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
+import { GroupActionHub } from "@/components/trip/group-action-hub";
 
 interface Props {
   group:    Group;
@@ -37,6 +38,55 @@ export function CircleCard({ group, cardData }: Props) {
   const [localPendingConfirm, setLocalPendingConfirm] = useState(serverPendingConfirm);
   const [recordMember,        setRecordMember]        = useState<PendingMember | null>(null);
   const [selfReporting,       setSelfReporting]       = useState(false);
+
+  // ── Long-press + hub state (mirrors TripCard pattern) ─────────────────────
+  const [isNavOpen,      setIsNavOpen]      = useState(false);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+  const longPressTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressNextClick = useRef(false);
+  const navBlockedRef   = useRef(false);
+  const touchStartPos   = useRef<{ x: number; y: number } | null>(null);
+
+  const LONG_PRESS_MS  = 500;
+  const MOVE_THRESHOLD = 8;
+
+  function startLongPress(e: React.TouchEvent) {
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    setIsLongPressing(true);
+    longPressTimer.current = setTimeout(() => {
+      suppressNextClick.current = true;
+      setIsLongPressing(false);
+      try { navigator.vibrate?.(12); } catch { /* unavailable */ }
+      setIsNavOpen(true);
+    }, LONG_PRESS_MS);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchStartPos.current) return;
+    const t = e.touches[0];
+    const moved =
+      Math.abs(t.clientX - touchStartPos.current.x) > MOVE_THRESHOLD ||
+      Math.abs(t.clientY - touchStartPos.current.y) > MOVE_THRESHOLD;
+    if (moved) cancelLongPress();
+  }
+
+  function cancelLongPress() {
+    setIsLongPressing(false);
+    touchStartPos.current = null;
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  function handleShareOpenChange(open: boolean) {
+    if (!open) {
+      cancelLongPress();
+      navBlockedRef.current = true;
+      setTimeout(() => { navBlockedRef.current = false; }, 300);
+    }
+  }
 
   // ── Mode-aware colours ────────────────────────────────────────────────────
   // Light mode:  very pale tinted gradient so coloured pattern pops
@@ -144,10 +194,19 @@ export function CircleCard({ group, cardData }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Outer wrapper: shadow + hover lift — NO overflow-hidden so shadow paints cleanly
-          (overflow-hidden + border-radius on the same element as box-shadow clips the shadow
-           in Chrome/Safari — same two-wrapper pattern as TripCard) */}
-      <div className={`relative h-full ${cardShadow} hover:-translate-y-0.5 transition-all duration-200`}>
+      {/* Outer wrapper: shadow + hover lift + long-press — NO overflow-hidden so shadow paints cleanly */}
+      <div
+        className={`relative h-full select-none ${cardShadow} hover:-translate-y-0.5 transition-all duration-200 ${isLongPressing ? "scale-[0.97] duration-500" : ""}`}
+        onTouchStart={startLongPress}
+        onTouchEnd={cancelLongPress}
+        onTouchMove={handleTouchMove}
+        onTouchCancel={cancelLongPress}
+        style={{ WebkitTouchCallout: "none", touchAction: "manipulation" } as React.CSSProperties}
+      >
+      {/* Long-press ring indicator */}
+      {isLongPressing && (
+        <div className="absolute inset-0 z-20 rounded-2xl ring-2 ring-violet-400/70 pointer-events-none" />
+      )}
       {/* Inner: glass card with overflow-hidden for content clipping */}
       <div className="glass rounded-2xl overflow-hidden relative h-full flex flex-col">
 
@@ -178,9 +237,20 @@ export function CircleCard({ group, cardData }: Props) {
           )}
         </div>
 
-        {/* ── Top-right: share ──────────────────────────────────────────── */}
-        <div className="absolute top-3 right-3 z-10">
-          <TripCardShareDrawer url={joinUrl} groupName={group.name} />
+        {/* ── Top-right: share + hub ────────────────────────────────────── */}
+        <div
+          className="absolute top-3 right-3 z-10 flex items-center gap-2"
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <TripCardShareDrawer url={joinUrl} groupName={group.name} onShareOpenChange={handleShareOpenChange} />
+          <button
+            type="button"
+            onClick={() => { if (!navBlockedRef.current) setIsNavOpen(true); }}
+            className="flex w-10 h-10 md:w-8 md:h-8 rounded-xl items-center justify-center text-slate-600 dark:text-slate-300 bg-black/10 dark:bg-black/30 hover:bg-black/20 dark:hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/10 active:scale-95 transition-all"
+            aria-label="Group actions"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
         </div>
 
         {/* ── Gradient header (h-44 — matches TripCard) ─────────────────── */}
@@ -328,6 +398,19 @@ export function CircleCard({ group, cardData }: Props) {
           onSuccess={handleRecordSuccess}
         />
       )}
+
+      {/* Group action hub — long-press or ⋯ button */}
+      <GroupActionHub
+        isOpen={isNavOpen}
+        onClose={() => setIsNavOpen(false)}
+        groupId={group.id}
+        groupName={group.name}
+        groupType={group.groupType}
+        currency={group.defaultCurrency}
+        isArchived={group.isArchived ?? false}
+        isAdmin={isAdmin}
+        joinUrl={joinUrl}
+      />
     </>
   );
 }

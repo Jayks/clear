@@ -156,9 +156,13 @@ export function GroupActionHub({
   // ── handlers ──────────────────────────────────────────────────────────────
 
   function openQuickAdd(mode: StartMode) {
+    // Clear the hub's fake history entry synchronously with replaceState (NOT go(-1)).
+    // go(-1) fires a popstate event which useSheetDismiss inside QuickAddSheet would
+    // catch and immediately close the sheet — so it opens and disappears in one tick.
+    if (window.history.state?.hubSheet) window.history.replaceState(null, "");
     setStartMode(mode);
     setQuickAddOpen(true);
-    onClose(); // close hub so sheet slides in cleanly above it
+    onClose();
   }
 
   function handleNavClick() {

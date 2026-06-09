@@ -101,6 +101,7 @@ const moreBtn =
 export function TripCard({ group, memberCount, balanceBadge, priority = false, isPlusPlan = false, isAdmin = false }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
+  const [photoLoaded, setPhotoLoaded] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
   const isNest     = group.groupType === "nest";
@@ -194,6 +195,13 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
 
       {/* Inner div: glass surface + overflow-hidden for image clipping and ribbon */}
       <div className={`relative glass rounded-2xl overflow-hidden${group.isDemo ? " ring-2 ring-amber-400/40" : group.isArchived ? " ring-2 ring-slate-400/30" : ""}`}>
+        {/* Type-matched colour stripe — z-20 so it sits above the cover photo and gradient overlay */}
+        <div className={`absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-2xl ${
+          group.isDemo     ? "bg-gradient-to-r from-amber-400/80  via-amber-300/50  to-transparent" :
+          group.isArchived ? "bg-gradient-to-r from-slate-400/50  via-slate-300/30  to-transparent" :
+          isNest           ? "bg-gradient-to-r from-emerald-400/80 via-emerald-300/50 to-transparent" :
+                             "bg-gradient-to-r from-cyan-400/80    via-cyan-300/50    to-transparent"
+        }`} />
         <Link
           href={`/groups/${group.id}`}
           className="block"
@@ -211,7 +219,8 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
                 alt={group.name}
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                className="object-cover"
+                className={`object-cover transition-opacity duration-500 ${photoLoaded ? "opacity-100" : "opacity-0"}`}
+                onLoad={() => setPhotoLoaded(true)}
                 priority={priority}
               />
             ) : (
@@ -245,13 +254,16 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
                   {memberCount} {memberCount === 1 ? "member" : "members"}
                 </p>
               ) : tripStatus ? (
-                /* Alive status replaces the date line when the trip is active/recent */
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {tripStatus.type === "active" && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                  )}
-                  <span className={`text-xs font-semibold ${tripStatus.color}`}>
-                    {tripStatus.label}
+                /* Alive status — glass pill badge, more prominent than plain text */
+                <div className="mt-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold text-white bg-black/30 backdrop-blur-md border border-white/20 shadow-sm">
+                    {tripStatus.type === "active" && (
+                      <span className="relative flex w-1.5 h-1.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75" />
+                        <span className="relative inline-flex rounded-full w-1.5 h-1.5 bg-cyan-300" />
+                      </span>
+                    )}
+                    <span className={tripStatus.color}>{tripStatus.label}</span>
                   </span>
                 </div>
               ) : (group.startDate || group.endDate) ? (

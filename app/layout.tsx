@@ -55,14 +55,14 @@ export default function RootLayout({
           <ServiceWorkerRegistration />
           {/* Decorative background blobs */}
           <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-            <div className="absolute -top-48 -right-48 w-[600px] h-[600px] rounded-full bg-cyan-300/20 dark:bg-cyan-900/15 blur-3xl" />
-            <div className="absolute top-1/3 -left-48 w-[500px] h-[500px] rounded-full bg-teal-300/20 dark:bg-teal-900/15 blur-3xl" />
-            <div className="absolute -bottom-48 right-1/4 w-[500px] h-[500px] rounded-full bg-blue-300/15 dark:bg-blue-900/15 blur-3xl" />
-            <div className="absolute top-2/3 right-1/3 w-80 h-80 rounded-full bg-emerald-300/15 dark:bg-emerald-900/10 blur-3xl" />
+            <div className="absolute -top-48 -right-48 w-[600px] h-[600px] rounded-full bg-cyan-300/20 dark:bg-cyan-800/20 blur-3xl" />
+            <div className="absolute top-1/3 -left-48 w-[500px] h-[500px] rounded-full bg-teal-300/20 dark:bg-teal-800/20 blur-3xl" />
+            <div className="absolute -bottom-48 right-1/4 w-[500px] h-[500px] rounded-full bg-blue-300/15 dark:bg-blue-800/20 blur-3xl" />
+            <div className="absolute top-2/3 right-1/3 w-80 h-80 rounded-full bg-emerald-300/15 dark:bg-emerald-800/15 blur-3xl" />
           </div>
           {children}
           {modal}
-          <Toaster richColors position="bottom-right" />
+          <Toaster richColors position="bottom-center" />
           <IOSInstallHint />
         </ThemeProvider>
         {GA_ID && (

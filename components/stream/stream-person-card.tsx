@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { SplitAmount } from "@/components/shared/split-amount";
 import type { PersonSummary } from "@/lib/db/queries/stream";
 
 interface Props {
@@ -68,7 +69,7 @@ export function StreamPersonCard({ person, variant }: Props) {
         <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
           {person.name}
         </p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+        <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">
           {person.activeCount} {streamLabel}
           {person.hasPending  && " · ⏳ pending"}
           {person.hasDisputed && " · ⚠ disputed"}
@@ -76,16 +77,16 @@ export function StreamPersonCard({ person, variant }: Props) {
         </p>
       </div>
 
-      <p
+      <SplitAmount
+        amount={amount}
+        currency={person.currency}
         className={cn(
           "text-base font-bold tabular-nums shrink-0",
           isOwed
             ? "text-emerald-600 dark:text-emerald-400"
             : "text-amber-600  dark:text-amber-400",
         )}
-      >
-        {amountStr}
-      </p>
+      />
 
       <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 group-hover:text-slate-400 transition-colors" />
     </Link>

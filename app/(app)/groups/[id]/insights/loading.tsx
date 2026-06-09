@@ -76,7 +76,7 @@ export default function InsightsLoading() {
           <Skeleton className="w-3.5 h-3.5 rounded" />
         </div>
         <Skeleton className="h-3.5 w-20 rounded" />
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/50 to-transparent dark:from-amber-800/30 dark:to-transparent" />
+        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/50 to-transparent dark:from-amber-800/30 dark:to-transparent" />
       </div>
 
       {/* Charts grid */}
@@ -92,7 +92,7 @@ export default function InsightsLoading() {
           <Skeleton className="w-3.5 h-3.5 rounded" />
         </div>
         <Skeleton className="h-3.5 w-28 rounded" />
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/50 to-transparent dark:from-amber-800/30 dark:to-transparent" />
+        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/50 to-transparent dark:from-amber-800/30 dark:to-transparent" />
       </div>
 
       {/* Group dynamics card */}

@@ -20,6 +20,7 @@ import { GlobalFab } from "@/components/shared/global-fab";
 import { HomeGreeting } from "@/components/shared/home-greeting";
 import { CircleCardServer, CircleCardSkeleton } from "@/components/circle/circle-card-server";
 import { HomeControlBar } from "@/components/shared/home-control-bar";
+import { BadgePop } from "@/components/shared/badge-pop";
 
 export default async function GroupsPage() {
   await ensureDemoGroup().catch(() => {});
@@ -108,12 +109,12 @@ export default async function GroupsPage() {
       {(trips.length > 0 || (groups.length > 0 && nests.length > 0)) && (
         <section id="trips" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30
+            <BadgePop className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30
                             flex items-center justify-center shrink-0">
               <MapPin className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-            </div>
+            </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Trips</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                             from-cyan-200/70 to-transparent
                             dark:from-cyan-800/40 dark:to-transparent" />
             <Link
@@ -198,12 +199,12 @@ export default async function GroupsPage() {
       {(nests.length > 0 || (groups.length > 0 && trips.length > 0)) && (
         <section id="nests" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/30
+            <BadgePop className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/30
                             flex items-center justify-center shrink-0">
               <Home className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            </div>
+            </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nests</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                             from-emerald-200/70 to-transparent
                             dark:from-emerald-800/40 dark:to-transparent" />
             <Link
@@ -286,12 +287,12 @@ export default async function GroupsPage() {
       {circles.length > 0 && (
         <section id="circles" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30
+            <BadgePop className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30
                             flex items-center justify-center shrink-0">
               <Coins className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
-            </div>
+            </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Circles</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                             from-violet-200/70 to-transparent
                             dark:from-violet-800/40 dark:to-transparent" />
             <Link
@@ -334,12 +335,12 @@ export default async function GroupsPage() {
       {archivedTrips.length > 0 && (
         <section id="archived-trips" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30
+            <BadgePop className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30
                             flex items-center justify-center shrink-0">
               <MapPin className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-            </div>
+            </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Trips</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                             from-cyan-200/70 to-transparent
                             dark:from-cyan-800/40 dark:to-transparent" />
           </div>
@@ -361,12 +362,12 @@ export default async function GroupsPage() {
       {archivedNests.length > 0 && (
         <section id="archived-nests" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/30
+            <BadgePop className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/30
                             flex items-center justify-center shrink-0">
               <Home className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            </div>
+            </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nests</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                             from-emerald-200/70 to-transparent
                             dark:from-emerald-800/40 dark:to-transparent" />
           </div>
@@ -391,12 +392,12 @@ export default async function GroupsPage() {
       {archivedCircles.length > 0 && (
         <section id="archived-circles" data-group-section="" className="scroll-mt-28 mb-10">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30
+            <BadgePop className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30
                             flex items-center justify-center shrink-0">
               <Coins className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
-            </div>
+            </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Circles</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                             from-violet-200/70 to-transparent
                             dark:from-violet-800/40 dark:to-transparent" />
           </div>

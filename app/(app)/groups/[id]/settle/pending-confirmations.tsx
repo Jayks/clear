@@ -84,7 +84,7 @@ export function PendingConfirmations({ pending, groupId, currentUserId, isAdmin,
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Pending confirmation
           </span>
-          <div className="flex-1 h-[1.5px] bg-gradient-to-r
+          <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                           from-amber-200/70 to-transparent
                           dark:from-amber-800/40 dark:to-transparent" />
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full

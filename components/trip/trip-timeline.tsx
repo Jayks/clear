@@ -345,7 +345,7 @@ export function TripTimeline({ days, startDate, endDate, currency }: Props) {
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           Day by day
         </span>
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
       </div>
 
       {/* Day cards */}

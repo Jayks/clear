@@ -515,7 +515,7 @@ export function ExpenseDetailSheet({
                         <Paperclip className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                       </div>
                       <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Receipt</span>
-                      <div className="flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+                      <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
                     </div>
                     {expense.receiptUrl && (
                       <a
@@ -562,7 +562,7 @@ export function ExpenseDetailSheet({
                       <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     </div>
                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Split</span>
-                    <div className="flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
+                    <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
                   </div>
                   {splits === null ? (
                     <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
@@ -693,7 +693,7 @@ export function ExpenseDetailSheet({
                       <Smile className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     </div>
                     <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Respond</span>
-                    <div className="flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
+                    <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {(["thumbs_up"] as const).map((emoji) => {

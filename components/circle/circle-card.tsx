@@ -200,6 +200,12 @@ export function CircleCard({ group, cardData }: Props) {
       )}
       {/* Inner: glass card with overflow-hidden for content clipping */}
       <div className="glass rounded-2xl overflow-hidden relative h-full flex flex-col">
+        {/* Type-matched colour stripe — above the gradient header */}
+        <div className={`absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-2xl ${
+          isOneTime
+            ? "bg-gradient-to-r from-amber-400/80 via-amber-300/50 to-transparent"
+            : "bg-gradient-to-r from-violet-400/80 via-violet-300/50 to-transparent"
+        }`} />
 
         {/* ── Top-left: mode badge + deadline / month pill ──────────────── */}
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">

@@ -14,6 +14,20 @@ html { scroll-behavior: smooth; }
   to   { opacity: 1; transform: none; }
 }
 
+/* ─── Section rule-line draw-in keyframe ─────────────────────────────────── */
+/* Scales the gradient rule from left to right on first render/scroll entry.
+   transform-origin: left set via inline style on the element. */
+@keyframes rule-enter {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+.animate-rule-enter {
+  transform-origin: left;
+  animation: rule-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.25s;
+}
+
+
 /* ─── Circle goal celebration confetti keyframe ─────────────────────────── */
 @keyframes confettiFall {
   0%   { transform: translateY(0)    rotate(0deg)   scaleX(1);   opacity: 1; }
@@ -159,7 +173,7 @@ html { scroll-behavior: smooth; }
     background-attachment: fixed;
   }
   .dark body {
-    background: linear-gradient(135deg, #0F172A 0%, #0C1520 35%, #0A1A18 70%, #0B1F15 100%);
+    background: linear-gradient(135deg, #0D1B2A 0%, #091C1A 35%, #0A1F17 70%, #0C1A24 100%);
     background-attachment: fixed;
   }
   h1, h2, h3, h4, h5, h6 {

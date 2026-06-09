@@ -30,7 +30,7 @@ export function StreamSummaryStripClient({ summary }: Props) {
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Streams
           </span>
-          <div className="flex-1 h-[1.5px] bg-gradient-to-r
+          <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                           from-indigo-200/70 to-transparent
                           dark:from-indigo-800/40 dark:to-transparent" />
 

@@ -279,7 +279,7 @@ export function ProfileSection({ currentDisplayName, userEmail, userAvatarUrl, u
             <Smartphone className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
           </div>
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">UPI IDs</span>
-          <div className="flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+          <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
         </div>
 
         <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">

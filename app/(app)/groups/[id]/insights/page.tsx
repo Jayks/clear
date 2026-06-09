@@ -485,7 +485,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
             <PieChart className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
           </div>
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Breakdown</span>
-          <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
+          <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="insights-charts">
           <CategoryDonut data={insights.byCategory} currency={currency} />
@@ -512,7 +512,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
               <Users className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             </div>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Group dynamics</span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
           </div>
           <GroupRolesCard data={groupRoles} />
         </FadeIn>

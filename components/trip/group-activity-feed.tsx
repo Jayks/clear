@@ -102,7 +102,7 @@ export async function GroupActivityFeed({ groupId, currentMemberId, groupType }:
           <Activity className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
         </div>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent activity</span>
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
+        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
         <Link
           href={`/groups/${groupId}/expenses`}
           className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline shrink-0"

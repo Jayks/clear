@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, BarChart2, ArrowLeftRight } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -49,13 +50,21 @@ export function MobileNav() {
               href={href}
               data-tour={tourId}
               className={cn(
-                "relative flex flex-col items-center gap-1 px-8 py-2 rounded-xl min-h-[44px] justify-center transition-all",
+                "relative flex flex-col items-center gap-1 px-8 py-2 rounded-xl min-h-[44px] justify-center transition-colors",
                 active
-                  ? "text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60"
-                  : "text-slate-600 dark:text-slate-300",
+                  ? "text-cyan-600 dark:text-cyan-400"
+                  : "text-slate-500 dark:text-slate-400",
               )}
             >
-              <div className="relative">
+              {/* Sliding pill — Framer Motion animates this between tabs via layoutId */}
+              {active && (
+                <motion.div
+                  layoutId="nav-pill"
+                  className="absolute inset-x-1 top-1 bottom-1 rounded-xl bg-cyan-100 dark:bg-cyan-950/70"
+                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                />
+              )}
+              <div className="relative z-10">
                 <Icon className="w-5 h-5" />
                 {badge && (
                   <span
@@ -68,7 +77,7 @@ export function MobileNav() {
                   />
                 )}
               </div>
-              <span className="text-xs font-medium">{label}</span>
+              <span className="relative z-10 text-xs font-medium">{label}</span>
             </Link>
           );
         })}

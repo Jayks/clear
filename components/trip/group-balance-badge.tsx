@@ -1,5 +1,5 @@
 import { getBalances } from "@/lib/db/queries/balances";
-import { formatCurrency } from "@/lib/utils";
+import { SplitAmount } from "@/components/shared/split-amount";
 
 interface Props {
   groupId: string;
@@ -35,12 +35,12 @@ export async function GroupBalanceBadge({ groupId, memberId, currency }: Props) 
   }
 
   const isOwed = net > 0;
-  const amount = formatCurrency(Math.abs(net), currency);
 
   return (
     <div className="px-4 py-2 border-t border-white/20 dark:border-slate-700/30">
       <span className={`text-xs font-semibold ${isOwed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-        {isOwed ? `You're owed ${amount}` : `You owe ${amount}`}
+        {isOwed ? "You're owed " : "You owe "}
+        <SplitAmount amount={Math.abs(net)} currency={currency} />
       </span>
     </div>
   );

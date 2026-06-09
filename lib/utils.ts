@@ -12,7 +12,7 @@ export const CHART_AXIS_TICK = { fontSize: 10, fill: "#94A3B8" } as const;
 // BUG-03 fix: map each supported currency to the correct display locale so
 // number grouping matches the currency (e.g. USD → en-US "1,000,000" not
 // en-IN "10,00,000").  Falls back to "en-US" for any unsupported currency.
-const CURRENCY_LOCALE: Record<string, string> = {
+export const CURRENCY_LOCALE: Record<string, string> = {
   INR: "en-IN",
   USD: "en-US",
   EUR: "de-DE",

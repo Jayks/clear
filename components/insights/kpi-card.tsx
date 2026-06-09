@@ -26,7 +26,7 @@ export function KpiCard({ label, value, sub, accent, numericValue, currency }: K
             {value}
           </p>
         )}
-        {sub && <p className="text-xs text-white/60 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-white/80 mt-0.5">{sub}</p>}
       </div>
     );
   }
@@ -46,7 +46,7 @@ export function KpiCard({ label, value, sub, accent, numericValue, currency }: K
           {value}
         </p>
       )}
-      {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>}
     </div>
   );
 }

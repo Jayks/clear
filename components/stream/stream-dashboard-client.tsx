@@ -291,7 +291,7 @@ export function StreamDashboardClient({ data }: Props) {
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Recent activity
             </span>
-            <div className="flex-1 h-[1.5px] bg-gradient-to-r
+            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
                             from-slate-300/60 to-transparent
                             dark:from-slate-600/50 dark:to-transparent" />
           </div>
@@ -422,7 +422,7 @@ function SectionHeader({ icon, label }: { icon: "emerald" | "amber" | "slate"; l
         <StreamDot className={`w-2.5 h-2.5 ${styles.icon}`} />
       </div>
       <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-      <div className={`flex-1 h-[1.5px] bg-gradient-to-r ${styles.rule} to-transparent dark:to-transparent`} />
+      <div className={`animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r ${styles.rule} to-transparent dark:to-transparent`} />
     </div>
   );
 }

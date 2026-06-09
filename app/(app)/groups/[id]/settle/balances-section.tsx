@@ -44,7 +44,7 @@ function SectionHeader({ icon: Icon, label, subtitle }: { icon: React.ElementTyp
           <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
         </div>
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-emerald-200/70 to-transparent dark:from-emerald-800/40 dark:to-transparent" />
+        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-emerald-200/70 to-transparent dark:from-emerald-800/40 dark:to-transparent" />
       </div>
       {subtitle && (
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 pl-9">{subtitle}</p>

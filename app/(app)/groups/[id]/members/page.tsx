@@ -78,7 +78,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {members.length} {members.length === 1 ? "person" : "people"}
         </span>
-        <div className="flex-1 h-[1.5px] bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
+        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
       </div>
 
       <MemberListClient

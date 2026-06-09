@@ -37,6 +37,9 @@ interface TripCardProps {
   balanceBadge?: React.ReactNode;
   priority?: boolean;
   isPlusPlan?: boolean;
+  /** Whether the current user is an admin of this group. Passed to GroupActionHub
+   *  so Edit/Archive are only shown to admins. Defaults to false (safe default). */
+  isAdmin?: boolean;
 }
 
 // ── Trip alive status ─────────────────────────────────────────────────────────
@@ -96,7 +99,7 @@ const MOVE_THRESHOLD = 8;
 const moreBtn =
   "flex w-10 h-10 md:w-8 md:h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
-export function TripCard({ group, memberCount, balanceBadge, priority = false, isPlusPlan = false }: TripCardProps) {
+export function TripCard({ group, memberCount, balanceBadge, priority = false, isPlusPlan = false, isAdmin = false }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -328,6 +331,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         groupType={group.groupType}
         currency={group.defaultCurrency}
         isArchived={group.isArchived ?? false}
+        isAdmin={isAdmin}
         isPlusUser={isPlusPlan}
         joinUrl={joinUrl}
         groupStartDate={group.startDate}

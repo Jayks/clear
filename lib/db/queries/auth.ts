@@ -20,12 +20,15 @@ export const getMembership = cache(async (groupId: string, userId: string) => {
   return m ?? null;
 });
 
-/** Returns a map of groupId → memberId for the current user across multiple groups. */
-export async function getUserMemberIds(groupIds: string[], userId: string): Promise<Record<string, string>> {
+/** Returns a map of groupId → { id: memberId, role } for the current user across multiple groups. */
+export async function getUserMemberIds(
+  groupIds: string[],
+  userId: string,
+): Promise<Record<string, { id: string; role: string }>> {
   if (groupIds.length === 0) return {};
   const rows = await db
-    .select({ groupId: groupMembers.groupId, id: groupMembers.id })
+    .select({ groupId: groupMembers.groupId, id: groupMembers.id, role: groupMembers.role })
     .from(groupMembers)
     .where(and(eq(groupMembers.userId, userId), inArray(groupMembers.groupId, groupIds)));
-  return Object.fromEntries(rows.map((r) => [r.groupId, r.id]));
+  return Object.fromEntries(rows.map((r) => [r.groupId, { id: r.id, role: r.role }]));
 }

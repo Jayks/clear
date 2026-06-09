@@ -44,7 +44,7 @@ export default async function GroupsPage() {
   const [memberIds, groupNudge, adminPlans, streamBadge] = await Promise.all([
     user && allIds.length > 0
       ? getUserMemberIds(allIds, user.id)
-      : Promise.resolve<Record<string, string>>({}),
+      : Promise.resolve<Record<string, { id: string; role: string }>>({}),
     user ? getGroupNudge(user.id) : Promise.resolve(null),
     activeIds.length > 0
       ? getGroupsAdminPlans(activeIds)
@@ -162,7 +162,7 @@ export default async function GroupsPage() {
             <>
               <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {trips.map(({ group, memberCount }, index) => {
-                  const memberId = memberIds[group.id];
+                  const memberInfo = memberIds[group.id];
                   return (
                     <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
                       <TripCard
@@ -170,12 +170,13 @@ export default async function GroupsPage() {
                         memberCount={Number(memberCount)}
                         priority={index < 2}
                         isPlusPlan={adminPlans[group.id] === "plus"}
+                        isAdmin={memberInfo?.role === "admin"}
                         balanceBadge={
-                          memberId && !group.isDemo ? (
+                          memberInfo && !group.isDemo ? (
                             <Suspense key={group.id} fallback={balanceFallback()}>
                               <GroupBalanceBadge
                                 groupId={group.id}
-                                memberId={memberId}
+                                memberId={memberInfo.id}
                                 currency={group.defaultCurrency}
                               />
                             </Suspense>
@@ -252,7 +253,7 @@ export default async function GroupsPage() {
               initialDelayMs={trips.length > 0 ? trips.length * 80 : 0}
             >
               {nests.map(({ group, memberCount }, index) => {
-                const memberId = memberIds[group.id];
+                const memberInfo = memberIds[group.id];
                 return (
                   <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
                     <TripCard
@@ -260,12 +261,13 @@ export default async function GroupsPage() {
                       memberCount={Number(memberCount)}
                       priority={index < 2 && trips.length === 0}
                       isPlusPlan={adminPlans[group.id] === "plus"}
+                      isAdmin={memberInfo?.role === "admin"}
                       balanceBadge={
-                        memberId && !group.isDemo ? (
+                        memberInfo && !group.isDemo ? (
                           <Suspense key={group.id} fallback={balanceFallback()}>
                             <GroupBalanceBadge
                               groupId={group.id}
-                              memberId={memberId}
+                              memberId={memberInfo.id}
                               currency={group.defaultCurrency}
                             />
                           </Suspense>
@@ -344,7 +346,11 @@ export default async function GroupsPage() {
           <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {archivedTrips.map(({ group, memberCount }) => (
               <div key={group.id}>
-                <TripCard group={group} memberCount={Number(memberCount)} />
+                <TripCard
+                  group={group}
+                  memberCount={Number(memberCount)}
+                  isAdmin={memberIds[group.id]?.role === "admin"}
+                />
               </div>
             ))}
           </AnimatedList>
@@ -370,7 +376,11 @@ export default async function GroupsPage() {
           >
             {archivedNests.map(({ group, memberCount }) => (
               <div key={group.id}>
-                <TripCard group={group} memberCount={Number(memberCount)} />
+                <TripCard
+                  group={group}
+                  memberCount={Number(memberCount)}
+                  isAdmin={memberIds[group.id]?.role === "admin"}
+                />
               </div>
             ))}
           </AnimatedList>
@@ -400,7 +410,11 @@ export default async function GroupsPage() {
               <div key={group.id}>
                 {/* Archived circles use TripCard — interactive CircleCardServer
                     only makes sense for active groups */}
-                <TripCard group={group} memberCount={Number(memberCount)} />
+                <TripCard
+                  group={group}
+                  memberCount={Number(memberCount)}
+                  isAdmin={memberIds[group.id]?.role === "admin"}
+                />
               </div>
             ))}
           </AnimatedList>

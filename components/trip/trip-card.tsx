@@ -177,7 +177,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
       onTouchEnd={cancelLongPress}
       onTouchMove={handleTouchMove}
       onTouchCancel={cancelLongPress}
-      onContextMenu={(e) => { if (touchStartPos.current) e.preventDefault(); }}
+      onContextMenu={(e) => { if (suppressNextClick.current) e.preventDefault(); }}
       style={{ WebkitTouchCallout: "none", touchAction: "manipulation" } as React.CSSProperties}
     >
       {/* Cyan ring that appears during long-press to signal the gesture is registered */}

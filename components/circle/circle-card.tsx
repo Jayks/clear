@@ -201,7 +201,7 @@ export function CircleCard({ group, cardData }: Props) {
         onTouchEnd={cancelLongPress}
         onTouchMove={handleTouchMove}
         onTouchCancel={cancelLongPress}
-        onContextMenu={(e) => { if (touchStartPos.current) e.preventDefault(); }}
+        onContextMenu={(e) => { if (suppressNextClick.current) e.preventDefault(); }}
         style={{ WebkitTouchCallout: "none", touchAction: "manipulation" } as React.CSSProperties}
       >
       {/* Long-press ring indicator */}

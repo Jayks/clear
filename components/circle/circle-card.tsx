@@ -10,7 +10,6 @@ import { formatCurrency } from "@/lib/utils";
 import { selfReportContribution } from "@/app/actions/circle";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { RecordContributionSheet } from "./record-contribution-sheet";
-import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 import { GroupActionHub } from "@/components/trip/group-action-hub";
 
 interface Props {
@@ -44,7 +43,6 @@ export function CircleCard({ group, cardData }: Props) {
   const [isLongPressing, setIsLongPressing] = useState(false);
   const longPressTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressNextClick = useRef(false);
-  const navBlockedRef   = useRef(false);
   const touchStartPos   = useRef<{ x: number; y: number } | null>(null);
 
   const LONG_PRESS_MS  = 500;
@@ -77,14 +75,6 @@ export function CircleCard({ group, cardData }: Props) {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
-    }
-  }
-
-  function handleShareOpenChange(open: boolean) {
-    if (!open) {
-      cancelLongPress();
-      navBlockedRef.current = true;
-      setTimeout(() => { navBlockedRef.current = false; }, 300);
     }
   }
 
@@ -238,15 +228,14 @@ export function CircleCard({ group, cardData }: Props) {
           )}
         </div>
 
-        {/* ── Top-right: share + hub ────────────────────────────────────── */}
+        {/* ── Top-right: hub ───────────────────────────────────────────── */}
         <div
-          className="absolute top-3 right-3 z-10 flex items-center gap-2"
+          className="absolute top-3 right-3 z-10"
           onTouchStart={(e) => e.stopPropagation()}
         >
-          <TripCardShareDrawer url={joinUrl} groupName={group.name} onShareOpenChange={handleShareOpenChange} />
           <button
             type="button"
-            onClick={() => { if (!navBlockedRef.current) setIsNavOpen(true); }}
+            onClick={() => setIsNavOpen(true)}
             className="flex w-10 h-10 md:w-8 md:h-8 rounded-xl items-center justify-center text-slate-600 dark:text-slate-300 bg-black/10 dark:bg-black/30 hover:bg-black/20 dark:hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/10 active:scale-95 transition-all"
             aria-label="Group actions"
           >

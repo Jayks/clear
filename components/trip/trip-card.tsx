@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Users, MapPin, Home, MoreHorizontal } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import { formatDate } from "@/lib/utils";
-import { TripCardShareDrawer } from "./trip-card-share-drawer";
 import { GroupActionHub } from "./group-action-hub";
 
 // ── No-cover-photo SVG patterns ──────────────────────────────────────────────
@@ -114,12 +113,6 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
   // Link's onClick block that click so a long-press opens the nav sheet instead
   // of navigating.
   const suppressNextClick = useRef(false);
-  // When the QR dialog closes its backdrop unmounts before touchend fires.
-  // React stops processing synthetic events on unmounted elements, so the card's
-  // onTouchEnd={cancelLongPress} never runs — leaving the 500ms timer live.
-  // Explicitly cancel the timer here, and block the ⋯ button for 300ms to
-  // absorb the stray click event that fires after the backdrop disappears.
-  const navBlockedRef = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
   // Tour: programmatically open nav sheet via custom event dispatched by tour-context
@@ -130,14 +123,6 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
     window.addEventListener("open-demo-navsheet", onTourOpen);
     return () => window.removeEventListener("open-demo-navsheet", onTourOpen);
   }, [group.id]);
-
-  function handleShareOpenChange(open: boolean) {
-    if (!open) {
-      cancelLongPress();
-      navBlockedRef.current = true;
-      setTimeout(() => { navBlockedRef.current = false; }, 300);
-    }
-  }
 
   function startLongPress(e: React.TouchEvent) {
     const touch = e.touches[0];
@@ -313,9 +298,8 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         className="absolute top-3 right-3 z-10 flex items-center gap-2 md:gap-1.5"
         onTouchStart={(e) => e.stopPropagation()}
       >
-        <TripCardShareDrawer url={joinUrl} groupName={group.name} onShareOpenChange={handleShareOpenChange} />
         <button
-          onClick={() => { if (!navBlockedRef.current) setIsNavOpen(true); }}
+          onClick={() => setIsNavOpen(true)}
           className={moreBtn}
           aria-label="Group actions"
         >

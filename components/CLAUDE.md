@@ -119,7 +119,7 @@ Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — NOT `.glass` (60% o
 - **Inner div** (`glass rounded-2xl overflow-hidden`): clips image + ribbon. Contains `<Link>` (image area only → group overview).
 - **Top-left badges** are on the OUTER div (`absolute top-3 left-3 z-10`): type pill (`pointer-events-none`) + member count `<Link>` → `/members`.
 - **Balance badge** — wrapped in a `<Link>` → `/settle`. `onTouchStart stopPropagation` prevents triggering card's long-press timer.
-- **Top-right buttons** on outer div: Share + `⋯` — `⋯` always visible (`flex w-10 h-10 md:w-8 md:h-8`). (The old standalone `+` quick-add button was removed when `GroupActionHub` was introduced — Zone 1 of the hub handles all three add modes.)
+- **Top-right button** on outer div: `⋯` only (`flex w-10 h-10 md:w-8 md:h-8`) — opens `GroupActionHub`. (The old standalone Share button was removed; Share now lives in Zone 3 of the hub for all members. The old standalone `+` quick-add button was removed when `GroupActionHub` was introduced — Zone 1 handles all three add modes.)
 - **`GroupActionHub`** is also on outer div (rendered as a sibling portal to `document.body`).
 
 `suppressNextClick` ref pattern — long-press sets `true` when the 500ms timer fires; click handlers on badges call `e.preventDefault()` to block navigation after a long-press; **`onContextMenu` also checks it** (`onContextMenu={(e) => { if (suppressNextClick.current) e.preventDefault(); }}`) to suppress the browser right-click/hold menu on Windows touchscreen laptops. Do NOT use `touchStartPos.current` for this check — Windows Chrome fires `contextmenu` after `touchend`, at which point `touchStartPos` is already null.

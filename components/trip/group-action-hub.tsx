@@ -304,8 +304,8 @@ export function GroupActionHub({
                   </section>
 
                   {/* ── Zone 3: Manage ────────────────────────────────────── */}
-                  {/* Only show if the user is admin (or we don't know — show edit only) */}
-                  <section className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                  {/* Admins see Edit · Archive · Share; members see Share only. Hidden entirely when nothing to show. */}
+                  {(isAdmin !== false || !!joinUrl) && <section className="border-t border-slate-100 dark:border-slate-800 pt-4">
                     {archiveConfirm ? (
                       /* Inline confirmation bar */
                       <motion.div
@@ -386,7 +386,7 @@ export function GroupActionHub({
                         )}
                       </div>
                     )}
-                  </section>
+                  </section>}
 
                 </div>
 

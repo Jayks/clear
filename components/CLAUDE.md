@@ -67,7 +67,7 @@ All four financial contexts use the same pattern:
 .dark .glass     { background:rgba(15,23,42,0.75); border:1px solid rgba(51,65,85,0.6); }
 .dark .glass-sm  { background:rgba(15,23,42,0.65); border:1px solid rgba(51,65,85,0.5); }
 .dark .glass-nav { background:rgba(13,18,30,0.92); backdrop-filter:saturate(150%) blur(20px); }
-.dark body { background:linear-gradient(135deg,#0F172A,#0C1520,#0A1A18,#0B1F15); }
+.dark body { background:linear-gradient(135deg,#0D1B2A 0%,#091C1A 35%,#0A1F17 70%,#0C1A24 100%); }
 ```
 
 ### Typography
@@ -93,7 +93,7 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 
 ### Navigation
 - **Desktop**: sticky top — `ClearLogo` (28px), **Home** · **Streams** · **Insights**, ThemeToggle, avatar dropdown.
-- **Mobile bottom nav**: 3 tabs — **Home** (`/groups`) · **Streams** (`/stream`) · **Insights** (`/insights`). `MobileNav` reads `clear_stream_has_badge` from localStorage and shows a small dot on Streams (amber=disputed, green=new). Clears when pathname is `/stream*`.
+- **Mobile bottom nav**: 3 tabs — **Home** (`/groups`) · **Streams** (`/stream`) · **Insights** (`/insights`). `MobileNav` reads `clear_stream_has_badge` from localStorage and shows a small dot on Streams (amber=disputed, green=new). Clears when pathname is `/stream*`. Active tab rendered with a **sliding Framer Motion spring pill** (`layoutId="nav-pill"`, `bg-cyan-100 dark:bg-cyan-950/70`, spring stiffness 500 / damping 35) — icon + label rendered `relative z-10` on top of the absolute-positioned pill. Do NOT use a static bg class on the nav item; the pill handles the active background.
 - **Mobile top nav**: icon-only `AppNav` hidden on group detail pages (`isInsideGroup`) AND stream pages (`isInsideStream`). Those pages have their own custom sticky headers.
 - **App nav bars are transparent**: `AppNav`, `MobileNav`, `GroupMobileNav` all use `backdrop-blur-sm` (no background, no border). **Marketing/public pages** (`/`, `/pricing`, `/changelog`, `/admin`) still use `.glass-nav`. Do NOT use `.glass-nav` on in-app navbars.
 - Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page (outer container uses `pb-24 md:pb-0` to clear FAB). MobileNav inner div uses `.h-nav-safe`.
@@ -143,6 +143,8 @@ React portals bubble through the React tree, not the DOM — portal-spawning com
 - Scroll-triggered section reveals: `FadeIn` (`components/shared/fade-in.tsx`) — `useInView` once, `y 20→0, opacity 0→1`, 550ms, cubic `[0.25,0.1,0.25,1]`. Applied to below-fold sections in insights pages. Supports `delay` (ms) and `direction` (`up`|`left`|`right`|`none`).
 - Balance numbers: `CountUp` (Framer Motion animate). Accepts `maximumFractionDigits` prop (default 2; pass `0` for whole-number currencies like KPI cards).
 - `NavProgress` (`components/shared/nav-progress.tsx`) — cyan→teal bar at top. Lives in root `app/layout.tsx`. Triggers on `<a>` clicks + custom `navprogress` window event (dispatched before `window.location.href` navigations to cross-layout routes).
+- **`animate-rule-enter`** — CSS class in `globals.css` (`transform-origin: left; animation: rule-enter 0.7s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.25s`). Applied to every `h-[1.5px]` gradient rule line in section headers across the codebase. Works reliably for rule lines because most live inside `FadeIn` wrappers (below-fold sections) or at a scroll position the user hasn't reached yet — by the time the DOM enters the viewport the animation still has time to play. Do NOT use this for elements visible immediately at page-top (above the fold on first paint) — those need a Framer Motion `BadgePop`-style component instead.
+- **Mobile nav sliding pill** — `layoutId="nav-pill"` on the absolutely-positioned `motion.div` inside each active `MobileNav` link. Framer Motion interpolates the pill position between tabs via `layout` animations (spring stiffness 500 / damping 35). All nav content (`icon + label`) must be `relative z-10` to sit above the pill.
 
 #### `AnimatedList` API (`components/shared/animated-list.tsx`)
 ```tsx
@@ -375,10 +377,16 @@ Sits `sticky top-14 z-40 -mx-6 px-6 backdrop-blur-sm`. Pill size: `px-4 py-2 tex
 **`QuickAddSheet` `onBack` prop** — when provided, the sheet header left side shows `← Change group` (tappable, calls `onBack`). Without it, shows plain "Add expense" label. Backward-compatible (optional prop).
 
 ### HomeGreeting
-`components/shared/home-greeting.tsx` — `"use client"` personal greeting at the top of the Home page. Uses client's local time so the greeting matches the user's timezone (not server UTC). Three greetings: **Good morning** (5–11), **Good afternoon** (12–16), **Good evening** (17+, incl. late night — "Good night" omitted as it implies signoff). Renders `{greeting}, {firstName} 👋` in Fraunces `text-xl`. `firstName` extracted from `user.user_metadata.full_name` server-side and passed as prop; gracefully omits name if absent.
+`components/shared/home-greeting.tsx` — `"use client"` personal greeting at the top of the Home page. Uses client's local time so the greeting matches the user's timezone (not server UTC). Three greetings: **☀️ Good morning** (5–11), **⛅ Good afternoon** (12–16), **🌙 Good evening** (17+, incl. late night — "Good night" omitted as it implies signoff). Renders `{emoji} {greeting}, {firstName}` in Fraunces `text-2xl md:text-3xl` — emoji prefix, no trailing 👋 (removed to avoid double punctuation). `firstName` extracted from `user.user_metadata.full_name` server-side and passed as prop; gracefully omits name if absent.
 
 ### GroupSearchInput
 `components/shared/group-search-input.tsx` — `"use client"` search input. Only renders when `totalCount > 5`. Filters by querying `[data-group-card]` DOM elements and hiding those where `data-group-name` doesn't match. Also hides `[data-group-section]` elements when all their cards are hidden.
+
+### SplitAmount
+`components/shared/split-amount.tsx` — renders a currency amount with visual weight hierarchy: currency symbol at `font-medium opacity-70` (lighter) and the numeric digits at full weight. Uses `Intl.NumberFormat` + a regex split on first digit boundary. Props: `amount: number`, `currency?: string`, `className?: string`, `decimals?: number` (default 0). Use for any prominent money display (balance badges, person cards) where the symbol should recede and the number should dominate. Not a `"use client"` component — can be used in RSC. Requires `CURRENCY_LOCALE` from `lib/utils.ts` (exported).
+
+### BadgePop
+`components/shared/badge-pop.tsx` — `"use client"` Framer Motion wrapper that spring-animates its children from `scale(0) opacity(0)` to full size on mount (`scale: 1, opacity: 1`, spring stiffness 400 / damping 15, `delay: 0.05`). Use for section header icon-badge divs in RSC pages. **CSS `@keyframes` animations on SSR-rendered HTML fire during browser parse — before the user's eyes land on the page — so they are invisible.** `BadgePop` fires after React hydration (post-paint), guaranteeing the pop-in is user-visible. Wraps the `w-6 h-6 rounded-md bg-*` badge div; the `className` is applied to the `motion.div`. Do NOT use CSS `animate-badge-pop`.
 
 ### AddMembersSheet
 `app/(app)/groups/[id]/members/add-members-sheet.tsx` — `"use client"` unified member-add sheet replacing the retired `AddGuestForm` + `ImportMembersSheet`. Triggered by the single violet **[+ Add members]** button on the members page.

@@ -25,27 +25,43 @@ export async function CircleCardServer({ group }: Props) {
   }
 }
 
-/** Suspense skeleton shown while CircleCardServer loads. */
+/** Suspense skeleton shown while CircleCardServer loads.
+ *  Mirrors the actual CircleCard structure:
+ *  - 3px colour stripe at top
+ *  - h-44 gradient header (mode badge + hub button + name + wallet subtitle)
+ *  - 3px fill progress bar strip
+ *  - Bottom action strip (paid count + chip)
+ */
 export function CircleCardSkeleton() {
   return (
-    <div className="glass rounded-2xl overflow-hidden">
-      <div className="h-1 w-full bg-violet-200 dark:bg-violet-900/40 animate-pulse" />
-      <div className="p-4 space-y-3">
-        <div className="flex items-center gap-1.5">
-          <div className="h-3.5 w-14 rounded bg-violet-100 dark:bg-violet-900/30 animate-pulse" />
-          <div className="h-3 w-8 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
-        </div>
-        <div className="h-4 w-36 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
-        <div className="space-y-1.5">
-          <div className="flex justify-between">
-            <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
-            <div className="h-3 w-8 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+    <div className="shadow-md shadow-violet-500/15 rounded-2xl">
+      <div className="glass rounded-2xl overflow-hidden relative h-full flex flex-col animate-pulse">
+        {/* Colour stripe */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-2xl bg-gradient-to-r from-violet-400/80 via-violet-300/50 to-transparent" />
+
+        {/* h-44 gradient header */}
+        <div className="h-44 relative bg-gradient-to-br from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900 flex-none">
+          {/* Mode badge top-left */}
+          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+            <div className="h-4.5 w-16 rounded-full bg-indigo-200/70 dark:bg-indigo-700/40" />
+            <div className="h-4 w-10 rounded-full bg-black/10 dark:bg-black/30" />
           </div>
-          <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
+          {/* Hub button top-right */}
+          <div className="absolute top-3 right-3 w-9 h-9 rounded-xl bg-black/10 dark:bg-black/30" />
+          {/* Name + wallet at bottom */}
+          <div className="absolute bottom-3 left-4 right-4 space-y-1.5">
+            <div className="h-5 w-32 rounded-md bg-slate-300/60 dark:bg-slate-600/60" />
+            <div className="h-3 w-24 rounded bg-slate-300/40 dark:bg-slate-600/40" />
+          </div>
         </div>
-        <div className="flex gap-1.5">
-          <div className="h-6 w-16 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
-          <div className="h-6 w-16 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
+
+        {/* Progress bar strip */}
+        <div className="h-[3px] w-1/2 bg-indigo-300 dark:bg-indigo-600" />
+
+        {/* Bottom action strip */}
+        <div className="flex-1 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="h-3.5 w-20 rounded bg-slate-200 dark:bg-slate-700" />
+          <div className="h-6 w-20 rounded-lg bg-slate-200 dark:bg-slate-700 shrink-0" />
         </div>
       </div>
     </div>

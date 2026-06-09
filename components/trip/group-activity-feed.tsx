@@ -17,18 +17,30 @@ interface Props {
 export function ActivityFeedSkeleton() {
   return (
     <div>
+      {/* Section header: icon badge + label + rule + counter */}
       <div className="flex items-center gap-2.5 mb-3">
         <div className="w-6 h-6 rounded-md bg-slate-200 dark:bg-slate-700 animate-pulse shrink-0" />
         <div className="h-3.5 w-28 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
         <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700/50" />
         <div className="h-3 w-12 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
       </div>
+      {/* Activity rows — avatar + event badge overlay + 2-line text + timestamp */}
       <div className="space-y-1.5">
         {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/50 animate-pulse"
-          />
+          <div key={i} className="flex items-center gap-3 px-1 py-1.5 animate-pulse">
+            {/* Avatar with event-type badge dot */}
+            <div className="relative shrink-0">
+              <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900" />
+            </div>
+            {/* Primary + meta text */}
+            <div className="flex-1 space-y-1 min-w-0">
+              <div className="h-3 w-40 rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-2.5 w-28 rounded bg-slate-200/70 dark:bg-slate-700/70" />
+            </div>
+            {/* Relative timestamp */}
+            <div className="h-3 w-10 rounded bg-slate-200/70 dark:bg-slate-700/70 shrink-0" />
+          </div>
         ))}
       </div>
     </div>

@@ -1,5 +1,17 @@
 import { Skeleton } from "@/components/shared/skeleton";
 
+/**
+ * Loading skeleton for /groups/[id]/insights.
+ * Mirrors the actual Insights page structure:
+ *   1. Desktop header (back · icon · title · meta · share link)
+ *   2. Mobile meta-line
+ *   3. Opening sentence card
+ *   4. KPI grid (4 cards, accent first)
+ *   5. Highlights strip (3 vivid cards, quality-guarded — show anyway in skeleton)
+ *   6. Pace tracker card
+ *   7. Breakdown section header + 3 chart cards
+ *   8. Group dynamics section
+ */
 export default function InsightsLoading() {
   return (
     <div>
@@ -17,10 +29,16 @@ export default function InsightsLoading() {
       {/* Mobile meta-line */}
       <Skeleton className="md:hidden h-3.5 w-48 mb-3 rounded" />
 
+      {/* Opening sentence card — rule-based narrative */}
+      <div className="glass rounded-xl px-4 py-3 mb-6 space-y-1.5">
+        <Skeleton className="h-3.5 w-3/4" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+
       {/* KPI grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {/* Accent card */}
-        <div className="rounded-xl px-4 py-4 bg-gradient-to-br from-amber-500/25 to-orange-400/20 space-y-2">
+        {/* Accent card — amber gradient */}
+        <div className="rounded-xl px-4 py-4 bg-gradient-to-br from-amber-500/25 to-orange-400/20 dark:from-amber-900/30 dark:to-orange-900/20 space-y-2">
           <Skeleton className="h-3 w-20 bg-white/20 dark:bg-white/10" />
           <Skeleton className="h-7 w-28 bg-white/25 dark:bg-white/15" />
         </div>
@@ -47,7 +65,6 @@ export default function InsightsLoading() {
             <Skeleton className="h-8 w-8 rounded-lg mb-1" />
             <Skeleton className="h-3.5 w-full rounded" />
             <Skeleton className="h-2.5 w-4/5 rounded" />
-            <Skeleton className="h-2.5 w-3/5 rounded" />
           </div>
         ))}
       </div>
@@ -55,7 +72,7 @@ export default function InsightsLoading() {
       {/* Pace tracker card */}
       <div className="glass rounded-2xl p-5 mb-6 space-y-3">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-4 w-20 rounded" />
+          <Skeleton className="h-4 w-24 rounded" />
           <Skeleton className="h-6 w-20 rounded-full" />
         </div>
         <div className="flex items-end gap-6">
@@ -79,7 +96,7 @@ export default function InsightsLoading() {
         <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/50 to-transparent dark:from-amber-800/30 dark:to-transparent" />
       </div>
 
-      {/* Charts grid */}
+      {/* Charts grid — CategoryDonut · DailySpendBar · MemberContributions */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
         <Skeleton className="h-56 rounded-2xl" />
         <Skeleton className="h-56 rounded-2xl" />

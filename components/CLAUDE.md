@@ -100,7 +100,7 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 - **Within group routes on mobile**: `AppNav` hides (`hidden md:block`); `GroupMobileNav` renders inside `<main>` as `sticky top-0 z-40 -mx-6 -mt-6` (negative margins break out of padding).
 - **Within stream routes on mobile**: same — `AppNav` hides, custom stream header takes over with `backdrop-blur-sm`.
 - **Plus badge on avatar**: violet ✦ circle at `-bottom-0.5 -right-0.5`. Dropdown shows `✦ Plus` pill next to user name.
-- **Within group routes on mobile**: `AppNav` hides (`hidden md:block`); `GroupMobileNav` renders inside `<main>` as `sticky top-0 z-40 -mx-6 -mt-6` (negative margins break out of padding; sticky scrolls past TrialBanner). Shows: ← Back | group name (Fraunces) | `⋯` → `TripCardNavSheet`.
+- **Within group routes on mobile**: `AppNav` hides (`hidden md:block`); `GroupMobileNav` renders inside `<main>` as `sticky top-0 z-40 -mx-6 -mt-6` (negative margins break out of padding; sticky scrolls past TrialBanner). Shows: ← Back | group name (Fraunces) | `⋯` → `GroupActionHub`.
 - **Plus badge on avatar**: violet ✦ circle at `-bottom-0.5 -right-0.5` (distinct from cyan tour dot at `-top-0.5 -right-0.5`). Dropdown header also shows a `✦ Plus` pill next to the user's name. Only shown when `plan === "plus"` (active paid, not trialing).
 
 ### Quick-add sheet
@@ -119,16 +119,16 @@ Uses `bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl` — NOT `.glass` (60% o
 - **Inner div** (`glass rounded-2xl overflow-hidden`): clips image + ribbon. Contains `<Link>` (image area only → group overview).
 - **Top-left badges** are on the OUTER div (`absolute top-3 left-3 z-10`): type pill (`pointer-events-none`) + member count `<Link>` → `/members`.
 - **Balance badge** — wrapped in a `<Link>` → `/settle`. `onTouchStart stopPropagation` prevents triggering card's long-press timer.
-- **Top-right buttons** on outer div: Add, Share — `⋯` always visible (`flex w-10 h-10 md:w-8 md:h-8`).
-- **TripCardNavSheet** is also on outer div.
+- **Top-right buttons** on outer div: Share + `⋯` — `⋯` always visible (`flex w-10 h-10 md:w-8 md:h-8`). (The old standalone `+` quick-add button was removed when `GroupActionHub` was introduced — Zone 1 of the hub handles all three add modes.)
+- **`GroupActionHub`** is also on outer div (rendered as a sibling portal to `document.body`).
 
-`suppressNextClick` ref pattern — long-press sets `true` for 300ms after lift; click handlers on badges check it and call `e.preventDefault()` to prevent navigation after a long-press.
+`suppressNextClick` ref pattern — long-press sets `true` when the 500ms timer fires; click handlers on badges call `e.preventDefault()` to block navigation after a long-press; **`onContextMenu` also checks it** (`onContextMenu={(e) => { if (suppressNextClick.current) e.preventDefault(); }}`) to suppress the browser right-click/hold menu on Windows touchscreen laptops. Do NOT use `touchStartPos.current` for this check — Windows Chrome fires `contextmenu` after `touchend`, at which point `touchStartPos` is already null.
 
 React portals bubble through the React tree, not the DOM — portal-spawning components (QuickAddSheet, InviteQRSheet) must be React-parented outside the `<Link>`. No `e.stopPropagation()` needed.
 
 **Diagonal ribbons** (`absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg]`, `pointer-events-none`): Demo = amber `SAMPLE`, Archived = slate `ARCHIVED`. On the inner div so the ribbon spans image + badge.
 
-**TripCardNavSheet** — portal + AnimatePresence bottom sheet. Opens via `⋯` click (all devices) or 500ms long-press (all). Four destinations: Members, Expenses, Settle Up, Insights.
+**`GroupActionHub`** (`components/trip/group-action-hub.tsx`) — portal + AnimatePresence bottom sheet replacing the old `TripCardNavSheet` + `TripCardQuickAdd`. Opens via `⋯` click or 500ms long-press on both `TripCard` and `CircleCard`, and from `GroupMobileNav` (inner group `⋯`) and `GroupHeroHub` (group overview page hero `⋯`). Three zones: **Log expense** (Scan/Voice/Type tiles, hidden for circles), **Jump to** (4-tile nav for trips/nests; 2-tile Expenses+Members for circles), **Manage** (Edit · Archive · Share, admin-only). `QuickAddSheet` gains `startMode?: "scan" | "voice" | "text"` prop — hub tiles pass it to auto-trigger the correct mode on open.
 
 ### Share / invite pattern — platform-aware Web Share API
 

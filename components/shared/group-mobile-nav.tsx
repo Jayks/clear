@@ -3,12 +3,19 @@
 import { useCallback, useState } from "react";
 import { ArrowLeft, MoreHorizontal, Receipt, Wallet, Users, BarChart2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { TripCardNavSheet } from "@/components/trip/trip-card-nav-sheet";
+import { GroupActionHub } from "@/components/trip/group-action-hub";
 import { usePathname, useRouter } from "next/navigation";
 
 interface Props {
-  groupId: string;
-  groupName: string;
+  groupId:         string;
+  groupName:       string;
+  groupType:       string;  // 'trip' | 'nest' | 'circle'
+  currency:        string;
+  isArchived:      boolean;
+  isAdmin:         boolean;
+  shareToken?:     string | null;
+  groupStartDate?: string | null;
+  groupEndDate?:   string | null;
 }
 
 /** Icon + gradient for each top-level section that has a coloured page header */
@@ -76,16 +83,23 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
   return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined, gradient: undefined };
 }
 
-export function GroupMobileNav({ groupId, groupName }: Props) {
+export function GroupMobileNav({
+  groupId, groupName,
+  groupType, currency, isArchived, isAdmin,
+  shareToken, groupStartDate, groupEndDate,
+}: Props) {
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
   const router   = useRouter();
 
-  // Stable reference — prevents the history useEffect in TripCardNavSheet from
+  // Stable reference — prevents the history useEffect in GroupActionHub from
   // re-running (and re-pushing fake history entries) on every re-render.
   const handleClose = useCallback(() => setNavOpen(false), []);
 
   const { pageTitle, backHref, backLabel, icon: SectionIcon, gradient } = resolveNav(pathname, groupId, groupName);
+
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const joinUrl = shareToken ? `${appUrl}/join/${shareToken}` : undefined;
 
   return (
     <>
@@ -123,17 +137,24 @@ export function GroupMobileNav({ groupId, groupName }: Props) {
           type="button"
           onClick={() => setNavOpen(true)}
           className="relative z-10 flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors shrink-0"
-          aria-label="Quick navigation"
+          aria-label="Group actions"
         >
           <MoreHorizontal className="w-5 h-5" />
         </button>
       </div>
 
-      <TripCardNavSheet
+      <GroupActionHub
         isOpen={navOpen}
         onClose={handleClose}
         groupId={groupId}
         groupName={groupName}
+        groupType={groupType}
+        currency={currency}
+        isArchived={isArchived}
+        isAdmin={isAdmin}
+        joinUrl={joinUrl}
+        groupStartDate={groupStartDate}
+        groupEndDate={groupEndDate}
       />
     </>
   );

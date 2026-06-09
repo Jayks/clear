@@ -37,6 +37,13 @@ interface Props {
   onBack?: () => void;
   /** Whether the current user has Plus (enables receipt scanner). */
   isPlusUser?: boolean;
+  /**
+   * When provided, auto-triggers the named input mode the moment the sheet opens:
+   *   "scan"  → opens the receipt scanner immediately (skips the camera tap)
+   *   "voice" → starts the mic automatically after the sheet animation settles
+   *   "text"  → normal behaviour (focus the text input, no auto-trigger)
+   */
+  startMode?: "text" | "voice" | "scan";
 }
 
 type StickyContext = { paidByMemberId: string; expenseDate: string };
@@ -92,6 +99,7 @@ export function QuickAddSheet({
   onClose,
   onBack,
   isPlusUser = false,
+  startMode,
 }: Props) {
   const [members, setMembers] = useState<GroupMember[] | null>(initialMembers ?? null);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -156,6 +164,7 @@ export function QuickAddSheet({
       setVoiceTrigger(null);
       setSaved(false);
       setScanFilled(false);
+      setScannerOpen(false); // reset scanner so next open starts fresh
       setLastContext(null);
       if (autoCloseTimerRef.current) {
         clearTimeout(autoCloseTimerRef.current);
@@ -163,6 +172,29 @@ export function QuickAddSheet({
       }
     }
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── startMode auto-trigger ────────────────────────────────────────────────
+  // Fires once per open session (keyed on openCount so it's ignored on mount).
+  // Uses a ref for `startMode` so the effect dep list stays minimal — the value
+  // is always current at the time openCount increments.
+  const startModeRef = useRef(startMode);
+  useEffect(() => { startModeRef.current = startMode; }, [startMode]);
+
+  useEffect(() => {
+    if (openCount === 0) return; // skip initial mount; first real open has openCount ≥ 1
+    const mode = startModeRef.current;
+    if (!mode || mode === "text") return; // default text mode: no special trigger needed
+    if (mode === "scan") {
+      setScannerOpen(true);
+      return;
+    }
+    if (mode === "voice" && micSupported) {
+      // Delay so the sheet spring animation finishes before the mic starts,
+      // otherwise the OS mic-permission prompt appears over a half-open sheet.
+      const t = setTimeout(() => start(), 350);
+      return () => clearTimeout(t);
+    }
+  }, [openCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Prevent body scroll on iOS when open, but allow scroll inside the sheet body.
   const preventBodyScroll = useCallback((e: TouchEvent) => {

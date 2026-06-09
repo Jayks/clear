@@ -7,8 +7,7 @@ import { Users, MapPin, Home, MoreHorizontal } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import { formatDate } from "@/lib/utils";
 import { TripCardShareDrawer } from "./trip-card-share-drawer";
-import { TripCardQuickAdd } from "./trip-card-quick-add";
-import { TripCardNavSheet } from "./trip-card-nav-sheet";
+import { GroupActionHub } from "./group-action-hub";
 
 // ── No-cover-photo SVG patterns ──────────────────────────────────────────────
 // Two overlay divs toggled via dark:hidden / hidden dark:block.
@@ -304,37 +303,34 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         )}
       </div>
 
-      {/* Action buttons — positioned on the outer div, outside the Link entirely.
-          onTouchStart stopPropagation prevents touches on these buttons (and their
-          portals — QuickAddSheet, QR Dialog) from bubbling to the outer card div's
-          startLongPress handler, which would otherwise start a 500ms nav-sheet timer. */}
+      {/* Action buttons — on outer div, outside the Link.
+          onTouchStart stopPropagation prevents long-press timer from firing on taps. */}
       <div
         className="absolute top-3 right-3 z-10 flex items-center gap-2 md:gap-1.5"
         onTouchStart={(e) => e.stopPropagation()}
       >
-        <TripCardQuickAdd
-          groupId={group.id}
-          groupName={group.name}
-          groupType={group.groupType}
-          currency={group.defaultCurrency}
-          groupStartDate={group.startDate}
-          groupEndDate={group.endDate}
-        />
         <TripCardShareDrawer url={joinUrl} groupName={group.name} onShareOpenChange={handleShareOpenChange} />
         <button
           onClick={() => { if (!navBlockedRef.current) setIsNavOpen(true); }}
           className={moreBtn}
-          aria-label="Quick navigation"
+          aria-label="Group actions"
         >
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
 
-      <TripCardNavSheet
+      <GroupActionHub
         isOpen={isNavOpen}
         onClose={() => setIsNavOpen(false)}
         groupId={group.id}
         groupName={group.name}
+        groupType={group.groupType}
+        currency={group.defaultCurrency}
+        isArchived={group.isArchived ?? false}
+        isPlusUser={isPlusPlan}
+        joinUrl={joinUrl}
+        groupStartDate={group.startDate}
+        groupEndDate={group.endDate}
       />
     </div>
   );

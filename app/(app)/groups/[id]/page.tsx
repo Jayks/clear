@@ -4,8 +4,8 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
 import { autoLogDueTemplates } from "@/app/actions/expenses";
-import { Users, Receipt, Wallet, BarChart2, Pencil, Sparkles, ArrowRight, Home } from "lucide-react";
-import { TripCardQuickAdd } from "@/components/trip/trip-card-quick-add";
+import { Users, Receipt, Wallet, BarChart2, Sparkles, ArrowRight, Home } from "lucide-react";
+import { GroupHeroHub } from "@/components/trip/group-hero-hub";
 import { CircleDashboard } from "@/components/circle/circle-dashboard";
 import { BackButton } from "@/components/shared/back-button";
 import Link from "next/link";
@@ -120,28 +120,22 @@ export default async function GroupPage({
             </>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
-          {/* Hero action buttons — quick-add for all members, share+edit for admins only */}
+          {/* Hero action buttons — hub for all members, share kept separate for admins */}
           {currentMember && (
             <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
-              <TripCardQuickAdd
+              <GroupHeroHub
                 groupId={group.id}
                 groupName={group.name}
                 groupType={group.groupType}
                 currency={group.defaultCurrency}
+                isArchived={group.isArchived ?? false}
+                isAdmin={isAdmin}
+                joinUrl={inviteUrl}
                 groupStartDate={group.startDate}
                 groupEndDate={group.endDate}
               />
               {isAdmin && (
-                <>
-                  <TripCardShareDrawer url={inviteUrl} groupName={group.name} />
-                  <Link
-                    href={`/groups/${group.id}/edit`}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all"
-                    title={`Edit ${config.labels.singular.toLowerCase()}`}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Link>
-                </>
+                <TripCardShareDrawer url={inviteUrl} groupName={group.name} />
               )}
             </div>
           )}

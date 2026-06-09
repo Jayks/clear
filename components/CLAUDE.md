@@ -425,3 +425,121 @@ Manages its own `createPortal` and `AnimatePresence` internally. Always pass `is
 **Post-save UX** — button turns "✓ Saved!" → "+ Add another →" fades in after 200ms; auto-close 2000ms. "Add another" cancels timer + resets form via `setOpenCount`.
 
 **Sticky context on "Add another"** — payer and date carry forward from the previous expense (stored in `lastPayerId` / `lastDate` refs). Amount, description, category, notes always reset. This lets users log a run of expenses quickly without re-selecting the same payer.
+
+---
+
+## Component Gotchas
+
+### CoverPhotoPicker — no `<form>` inside forms
+
+Two tabs: **Search Unsplash** (default) and **Upload from device**. Search uses `<div>` with `type="button"` to prevent parent form submission. Flow: pick → `URL.createObjectURL` preview → `getSignedUploadUrl` action → browser calls `supabase.storage.uploadToSignedUrl()` directly (raw file, never via Vercel) → `onChange(publicUrl)`. 5 MB limit enforced client-side. Revoke object URL on upload or close. **No base64** — avoids Vercel's 4.5 MB body limit.
+
+### iOS touch & safe-area patterns
+
+**Long-press on TripCard** — 500ms timer, `MOVE_THRESHOLD=8px`. `touchAction:"manipulation"` removes 300ms tap delay.
+
+**iOS body scroll-through** — `position:fixed` overlays don't block scroll on iOS Safari. `TripCardNavSheet` and `QuickAddSheet` use non-passive DOM `touchmove` listeners (React synthetic events can't `preventDefault()`). QuickAddSheet exempts its scrollable div via `scrollBodyRef`.
+
+### `useSheetDismiss` — do NOT use inside portal sheets hosted on form pages
+
+`useSheetDismiss` pushes `{ bottomSheet: true }` to `window.history` on open and calls `window.history.go(-1)` on programmatic close. In Next.js 16, `go(-1)` triggers a `popstate` event — for the **same URL** (e.g. `/groups/[id]/expenses/new`) the App Router interprets this as a navigation and triggers a full RSC refresh of the current page, wiping form state and leaving the history stack confused (back button appears stuck).
+
+**Rule**: Use `useSheetDismiss` only in sheets that sit at the *root nav level* (QuickAddSheet, TripCardNavSheet, MemberProfileSheet, etc.). Do **not** use it in sheets rendered inside a `<form>` page (e.g. `ReceiptScannerSheet`). Instead, add Escape key handling directly:
+
+```typescript
+// ✅ correct — inline Escape only, no history manipulation
+useEffect(() => {
+  if (!isOpen) return;
+  const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+  document.addEventListener("keydown", onKey);
+  return () => document.removeEventListener("keydown", onKey);
+}, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+// ❌ wrong — causes Next.js 16 RSC refresh via go(-1) popstate on a form page
+useSheetDismiss(isOpen, onClose);
+```
+
+### Receipt Scanner — `ReceiptScannerSheet` patterns
+
+`components/expense/receipt-scanner-sheet.tsx` — full-screen portal scanner used in `AddExpenseForm`, `AddCircleExpenseForm`, and `QuickAddSheet`.
+
+**State machine**: `idle → viewfinder → processing → results`
+
+**Critical**: `transitionState(next)` revokes `prev.previewUrl` **only when `next.previewUrl !== prev.previewUrl`**. The `processing → results` transition reuses the same `previewUrl` — revoking it before results renders causes `ERR_FILE_NOT_FOUND` on the results `<img>`.
+
+**Instant scan line**: `handleFileInput` creates a blob URL from the *original* file immediately and transitions to `processing` (showing the scan line at once), then compresses + extracts GPS in parallel. After compression, `setState` swaps `file: compressed, gps` without changing `previewUrl` — so display stays smooth and the AI gets the smaller file.
+
+**`onExtracted(result, keepProof)`** — called when user taps "Fill form →". Passes both the parsed data and whether the proof toggle was on, so the parent form can set `proofPending` state and show the "📎 Receipt proof will attach on save" indicator.
+
+**Background proof upload pattern**:
+```typescript
+// After addExpense returns expenseId — navigate immediately, upload in background:
+const proofFile = pendingProofFileRef.current;
+if (proofFile && result.expenseId) {
+  pendingProofFileRef.current = null;
+  setProofPending(false);
+  uploadReceiptProofInBackground(result.expenseId, group.id, proofFile);
+}
+router.push(`/groups/${group.id}/expenses`);
+```
+
+**`mapToGroupCategory(aiCategory, groupType)`** — `lib/receipt/map-category.ts`. Maps an AI-returned category string to the nearest valid category for the target group type. Fast path: if the category already exists in the target group's category list, return as-is. Fallback: `CROSS_TYPE_MAP` lookup; if no mapping, returns `"other"` (always valid in every group type).
+
+**`isPlusUser` prop chain**: `canUseAI(user.id)` is called in the RSC page (`expenses/new/page.tsx`, `expenses/page.tsx`, `groups/page.tsx`), passed as `isPlusUser` prop through form components down to `ReceiptScannerSheet`. Plus gate shown in scanner's idle state.
+
+**`aiFilledFields: Set<string>` + emerald ring**: after `handleReceiptExtracted`, form fields filled by AI show `ring-1 ring-emerald-400/50`. Ring clears when the user manually edits the field via `clearAiFill(field)` registered in `register("field", { onChange: () => clearAiFill("field") })`. Category grid wrapped in ring when `aiFilledFields.has("category")`.
+
+**Expense `receiptUrl` + detail sheet**: `expenses.receiptUrl` (DB: `receipt_url text`) stores the Supabase Storage public URL. `ExpenseDetailSheet` renders a "Receipt" section (cyan Paperclip header) with thumbnail + "Tap to open full size" link when `expense.receiptUrl` is non-null. `updateExpenseMedia` server action (`app/actions/update-expense-media.ts`) writes the URL after background upload.
+
+### Expense Map View — `expense-map-view.tsx` patterns
+
+`components/expense/expense-map-view.tsx` — fourth expense list mode (trips only): Mapbox GL pins with Supercluster clustering, an animated `line-trim-offset` route path, and a date scrubber that auto-pans the camera day by day. `lib/expense/map-helpers.ts` holds the pure helpers (emoji lookup, truncation, haversine distance, spread-out detection — all unit-tested in `lib/receipt/phase6-map.test.ts`).
+
+**`mapGeneration` counter — required for every effect that touches `mapInstance.current`**: a theme toggle destroys the old `mapboxgl.Map` and recreates it (`setMapReady(false)` → async rebuild → `setMapReady(true)`). If the new map's `"load"` fires fast enough (cached style/tiles) to land in the same React batch, React can collapse `true → false → true` into a perceived no-op — dependent effects never see `mapReady` change and stay bound to the destroyed instance (blank map, esp. visible after a dark-mode switch). `mapInstance.current` is a ref, so mutating it doesn't trigger re-renders either. Fix: bump a `mapGeneration` counter in the `"load"` handler (alongside `setMapReady(true)`) and include it in **every** effect's dependency array that reads `mapInstance.current` (markers/clustering, trip-path setup, reveal-path, pan-toward-day) — a counter increment can never be collapsed away by batching.
+
+**Tear down before recreate — guards React Strict Mode double-invoke**: `initMap`'s body resumes asynchronously after `import("mapbox-gl")` resolves, so a stale call can still be in flight when a fresh one starts (dev-mode StrictMode double-mounts). Without a guard, two live `Map` instances can attach to the same container — the second's internal DOM setup wipes the first's canvas out from under it, orphaning any markers already `.addTo()`'d on it. Always check `if (mapInstance.current) { …remove markers, mapInstance.current.remove(), mapInstance.current = null… }` at the top of `initMap`'s async resolution, before constructing the new `Map`.
+
+**Day-scrub camera always uses `fitBounds`, never `easeTo`-to-centroid**: a plain ease-to-midpoint fails for spread-out same-day pairs (Chennai lunch + Delhi dinner averages to open country) and close pairs (T. Nagar + Marina stay clustered because zoom doesn't change). `fitBounds` frames the day's pins snugly, which for close pairs pushes past Supercluster's clustering radius so chips "bloom". `isSpreadOut(locs)` (50km threshold) only changes `padding`/`maxZoom` — never the choice between `fitBounds` and `easeTo`.
+
+**Duplicate-coordinate marker offset**: two expenses at the exact same lat/lng stack past Supercluster `maxZoom`. `render()` tracks `seenAt: Map<coordKey, count>` and applies diagonal `Marker` `offset` (`[idx * 16, idx * -12]`) to fan them into a readable stagger.
+
+**Mapbox Standard style — custom layer colours need `*-emissive-strength`, not just `slot`**: `slot: "top"` controls draw order only — does NOT exempt layers from Standard's scene-wide lighting/fog colour-grading. Fix: `"line-emissive-strength": 1` makes a layer self-illuminated with its authored colour, independent of scene lighting. **Any custom layer whose colour must render true across `lightPreset`s needs this**, not just `slot`.
+
+**Trip-path traveled vs upcoming**: `trip-path` (solid emerald overlay, `line-trim-offset` growing from start) = "traveled"; `trip-path-bg` (dashed amber full-route background) = "upcoming". The layering IS the contrast — no sync logic needed. Palette is theme-aware: brighter emerald-400→300→200 + amber-300 for dark; deeper emerald-700→600→500 + amber-600 for light.
+
+**Cinema mode**: `ZOOM_CINEMA_CLOSEUP = 16` (vs 13 normal) so 3D buildings are visible; `SUB_STEP_MS_CINEMA = 2600` (vs 1100) for tile load time. **Read cinema state via `cinemaModeRef`** (not `cinemaMode` state dependency) to avoid tearing down the sub-day sequencer mid-walk — depending on state restarts the counter at 0 the instant the mode toggles.
+
+**Seed**: `pnpm seed:panindia` creates "Pan-India Explorer 2026" — 18 located expenses across 7 days covering every map scenario (close pairs, same-city clusters, cross-country same-day spread).
+
+### SVG + Framer Motion `transform` conflict
+
+Never put both an SVG `transform` attribute AND Framer Motion animation props on the same `motion.g` — Framer Motion overrides the SVG transform, collapsing the node to `(0,0)`. Use two wrappers:
+
+```tsx
+// ✅ correct — static <g> for position, motion.g for animation only
+<g transform={`translate(${node.x}, ${node.y})`}>
+  <motion.g style={{ transformOrigin: "0px 0px" }} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+    {/* content at local (0,0) */}
+  </motion.g>
+</g>
+
+// ❌ wrong — motion.g with both transform attr and animation props
+<motion.g transform={`translate(${node.x}, ${node.y})`} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+```
+
+### SVG SMIL animation elements (`animateMotion`, `animate`) — use `React.createElement`
+
+JSX types don't expose `path` on `<animateMotion>`. Use `React.createElement` (requires default `import React from "react"`):
+
+```tsx
+// ✅ correct
+<circle r={2.5} fill="#FDE68A">
+  {React.createElement("animateMotion", { path: arc.d, dur: "2s", repeatCount: "indefinite" })}
+  {React.createElement("animate", { attributeName: "opacity", values: "0;0.9;0.9;0", dur: "2s", repeatCount: "indefinite" })}
+</circle>
+
+// ❌ wrong — TS error: "path" is not a valid prop
+<animateMotion path={arc.d} dur="2s" repeatCount="indefinite" />
+```
+
+Use `gradientUnits="userSpaceOnUse"` with explicit `x1/y1/x2/y2` for arc gradients — `objectBoundingBox` scales incorrectly for non-rectangular paths.

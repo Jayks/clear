@@ -28,6 +28,7 @@ export default async function AllInsightsPage() {
         owedToMe: streamData.totalOwedToMe,
         iOwe:     streamData.totalIOwe,
         currency: streamData.topRecords[0]?.currency ?? "INR",
+        hasMixedCurrencies: streamData.hasMixedCurrencies,
       }
     : undefined;
 

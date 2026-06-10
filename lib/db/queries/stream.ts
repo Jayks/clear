@@ -90,6 +90,9 @@ export type StreamSummaryData = {
   topRecords: PersonSummary[];   // up to 4, sorted by |net| desc
   totalOwedToMe: number;
   totalIOwe: number;
+  /** True when active streams span more than one currency — the owed/owe totals
+   *  then sum across currencies and must not be shown as a single-currency figure. */
+  hasMixedCurrencies: boolean;
   hasMore: boolean;
   moreCount: number;
   /** True when the user has any settled/forgiven streams — used by the homepage
@@ -315,13 +318,19 @@ export async function getStreamSummary(userId: string): Promise<StreamSummaryDat
   const hasAnyHistory = Number(historyRows[0]?.c ?? 0) > 0;
 
   if (allPeople.length === 0) {
-    return { topRecords: [], totalOwedToMe: 0, totalIOwe: 0, hasMore: false, moreCount: 0, hasAnyHistory };
+    return { topRecords: [], totalOwedToMe: 0, totalIOwe: 0, hasMixedCurrencies: false, hasMore: false, moreCount: 0, hasAnyHistory };
   }
+
+  // Mixed when any single person spans currencies, or different people use
+  // different currencies — either way the aggregate totals are not one currency.
+  const hasMixedCurrencies =
+    allPeople.some((p) => p.hasMixedCurrencies) ||
+    new Set(allPeople.map((p) => p.currency)).size > 1;
 
   const topRecords = allPeople.slice(0, 4);
   const moreCount  = Math.max(0, allPeople.length - 4);
 
-  return { topRecords, totalOwedToMe, totalIOwe, hasMore: moreCount > 0, moreCount, hasAnyHistory };
+  return { topRecords, totalOwedToMe, totalIOwe, hasMixedCurrencies, hasMore: moreCount > 0, moreCount, hasAnyHistory };
 }
 
 

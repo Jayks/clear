@@ -24,6 +24,21 @@ function revalidateGroup(groupId: string) {
   revalidateTag(`balances-${groupId}`, "max");
 }
 
+/** Verify an expense exists AND belongs to the given group — guards the
+ *  client-supplied (expenseId, groupId) pair against cross-group IDOR. A
+ *  membership check on groupId alone is not enough: a member of group A could
+ *  otherwise read/write interactions on a group-B expense by pairing their own
+ *  groupId with a group-B expenseId. (addComment/deleteComment already do this
+ *  inline via R12-1/R12-2.) */
+async function expenseBelongsToGroup(expenseId: string, groupId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.groupId, groupId)))
+    .limit(1);
+  return !!row;
+}
+
 /** Fetch the expense payer's userId (null if guest member) */
 async function getPayerUserId(paidByMemberId: string): Promise<string | null> {
   const [row] = await db
@@ -51,6 +66,7 @@ export async function fetchExpenseCommentsAction(expenseId: string, groupId: str
   if (!user) return null;
   const membership = await getMembership(groupId, user.id);
   if (!membership) return null;
+  if (!(await expenseBelongsToGroup(expenseId, groupId))) return null;
 
   try {
     const rows = await db
@@ -86,6 +102,7 @@ export async function fetchExpenseDisputesAction(expenseId: string, groupId: str
   if (!user) return null;
   const membership = await getMembership(groupId, user.id);
   if (!membership) return null;
+  if (!(await expenseBelongsToGroup(expenseId, groupId))) return null;
 
   const rows = await db
     .select({
@@ -140,6 +157,8 @@ export async function addReaction(
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" } as const;
+  if (!(await expenseBelongsToGroup(expenseId, groupId)))
+    return { ok: false, error: "Expense not found in this group" } as const;
 
   const [existing] = await db
     .select({ id: expenseReactions.id, emoji: expenseReactions.emoji })
@@ -186,6 +205,7 @@ export async function markSeenAction(expenseId: string, groupId: string) {
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return;
+  if (!(await expenseBelongsToGroup(expenseId, groupId))) return;
 
   await Promise.all([
     // "seen" reaction — first-time only (read receipt count)
@@ -225,7 +245,10 @@ export async function raiseQuestion(expenseId: string, groupId: string, message:
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" } as const;
 
-  const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
+  // Verify the expense belongs to this group (not just that the caller is a
+  // member of the supplied groupId) — guards cross-group IDOR.
+  const [expense] = await db.select().from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.groupId, groupId)));
   if (!expense) return { ok: false, error: "Expense not found" } as const;
 
   // Prevent self-questioning (payer asking a question about their own expense)
@@ -328,7 +351,9 @@ export async function raiseDispute(
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" } as const;
 
-  const [expense] = await db.select().from(expenses).where(eq(expenses.id, expenseId));
+  // Verify the expense belongs to this group (guards cross-group IDOR).
+  const [expense] = await db.select().from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.groupId, groupId)));
   if (!expense) return { ok: false, error: "Expense not found" } as const;
 
   if (expense.paidByMemberId === membership.id) {

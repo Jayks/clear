@@ -1,5 +1,8 @@
 "use server";
 
+import { getCurrentUser } from "@/lib/db/queries/auth";
+import { checkAiRateLimit } from "@/lib/rate-limit";
+
 // Import the parser directly to bypass pdf-parse's index.js debug-mode
 // check (`isDebugMode = !module.parent`) which fires in Turbopack's server
 // bundle where module.parent is undefined, causing a readFileSync crash.
@@ -11,6 +14,14 @@ export async function parseItineraryFromFile(input: {
   mimeType: "application/pdf" | "text/plain";
   fileName: string;
 }): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  // Auth guard — this runs server-side CPU-heavy PDF parsing, so it must not be
+  // callable unauthenticated. Shares the AI rate-limiter with the other parse
+  // actions (the extracted text feeds the AI itinerary import).
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated." };
+  if (!checkAiRateLimit(user.id))
+    return { ok: false, error: "Too many requests — please wait a moment and try again." };
+
   // Base64 encodes 3 bytes as 4 chars; ×3/4 estimates the original byte size.
   const byteSize = Math.round((input.base64.length * 3) / 4);
   if (byteSize > 10 * 1024 * 1024)

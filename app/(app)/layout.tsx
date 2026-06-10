@@ -26,7 +26,7 @@ export default async function AppLayout({
     getUserPlan(user.id),
   ]);
 
-  after(() => ensureTrialStarted(user.id));
+  after(() => ensureTrialStarted());
 
   return (
     <TourProvider>

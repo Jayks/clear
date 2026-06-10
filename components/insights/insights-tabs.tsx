@@ -23,6 +23,8 @@ export interface StreamNetSummary {
   owedToMe: number;
   iOwe:     number;
   currency: string;
+  /** Active streams span multiple currencies — show a flag, not a single-currency total. */
+  hasMixedCurrencies: boolean;
 }
 
 interface Props {

@@ -5,17 +5,16 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { settlements } from "@/lib/db/schema/settlements";
 import { count, sum, eq, sql, desc, isNotNull, and, inArray } from "drizzle-orm";
 import { subscriptions } from "@/lib/db/schema/subscriptions";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { cache } from "react";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 
-// cache() deduplicates across getAdminStats / getAdminUserList / getAdminGroupList
-// when they run in Promise.all — one getUser() network call instead of three.
-const requirePlatformAdmin = cache(async (): Promise<void> => {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+// Uses the shared getCurrentUser() (itself React-cache()-wrapped) so the admin
+// queries reuse the same validated-session lookup as the rest of the request
+// instead of issuing their own separate supabase.auth.getUser() round-trip.
+const requirePlatformAdmin = async (): Promise<void> => {
+  const user = await getCurrentUser();
   if (!isPlatformAdmin(user?.email)) throw new Error("Forbidden");
-});
+};
 
 // Wraps a block in a transaction and sets a hard server-side statement timeout.
 // When the timeout fires, Postgres cancels the query and rolls back the transaction,

@@ -173,16 +173,23 @@ export function PersonalContent({ data, streamSummary }: Props) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Personal streams</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                {streamSummary.owedToMe > 0.01 && (
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                    {fmtS(streamSummary.owedToMe)} owed to you
-                  </span>
-                )}
-                {streamSummary.owedToMe > 0.01 && streamSummary.iOwe > 0.01 && " · "}
-                {streamSummary.iOwe > 0.01 && (
-                  <span className="text-amber-600 dark:text-amber-400 font-medium">
-                    {fmtS(streamSummary.iOwe)} you owe
-                  </span>
+                {streamSummary.hasMixedCurrencies ? (
+                  // Summing across currencies would be meaningless — flag instead.
+                  <span>Balances span multiple currencies</span>
+                ) : (
+                  <>
+                    {streamSummary.owedToMe > 0.01 && (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                        {fmtS(streamSummary.owedToMe)} owed to you
+                      </span>
+                    )}
+                    {streamSummary.owedToMe > 0.01 && streamSummary.iOwe > 0.01 && " · "}
+                    {streamSummary.iOwe > 0.01 && (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+                        {fmtS(streamSummary.iOwe)} you owe
+                      </span>
+                    )}
+                  </>
                 )}
               </p>
             </div>

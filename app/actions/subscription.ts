@@ -8,7 +8,13 @@ import { revalidatePath } from "next/cache";
 
 // Called fire-and-forget from app/(app)/layout.tsx on every authenticated page load.
 // Creates the subscription row (trialing) on first visit, regardless of entry point.
-export async function ensureTrialStarted(userId: string): Promise<void> {
+export async function ensureTrialStarted(): Promise<void> {
+  // Derive the user from the validated session — never trust a client-supplied
+  // userId (this is an exported server action; an arbitrary caller must not be
+  // able to seed a trial row for someone else's account).
+  const user = await getCurrentUser();
+  if (!user) return;
+
   // R12-8 fix: replaced SELECT-then-INSERT with a single atomic INSERT …
   // ON CONFLICT DO NOTHING. The old pattern had a race window where two
   // concurrent first-page-loads both saw no row and both attempted INSERT;
@@ -18,7 +24,7 @@ export async function ensureTrialStarted(userId: string): Promise<void> {
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 30);
     await db.insert(subscriptions).values({
-      userId,
+      userId: user.id,
       plan: "free",
       status: "trialing",
       trialEndsAt,

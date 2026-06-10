@@ -120,9 +120,11 @@ export default async function GroupPage({
             </>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
-          {/* Hero action buttons — hub for all members, share kept separate for admins */}
+          {/* Hero action buttons — DESKTOP ONLY. On mobile the GroupMobileNav ⋯
+              (sticky top-right header) already exposes the hub + share, so these
+              are redundant; hidden below md to avoid the duplicate controls. */}
           {currentMember && (
-            <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+            <div className="absolute top-3 right-3 hidden md:flex items-center gap-2 z-10">
               <GroupHeroHub
                 groupId={group.id}
                 groupName={group.name}

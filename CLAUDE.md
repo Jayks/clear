@@ -45,7 +45,7 @@
 | Database | Supabase Postgres | Free tier |
 | Auth | Supabase Auth (Google OAuth) | @supabase/ssr v0.6 |
 | Realtime | Supabase Realtime | postgres_changes → router.refresh() |
-| ORM | Drizzle 0.43 / drizzle-kit 0.31 | |
+| ORM | Drizzle 0.45 / drizzle-kit 0.31 | drizzle-orm bumped 0.43→0.45.2 (SQLi-identifier security fix) |
 | Validation | Zod 3 | |
 | Forms | react-hook-form 7 + zodResolver | |
 | Toasts | sonner 2 | |

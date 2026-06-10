@@ -194,15 +194,19 @@ CREATE POLICY "subscriptions_select_own" ON subscriptions
 
 ALTER TABLE user_upi_ids ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "upi: select own" ON user_upi_ids;
 CREATE POLICY "upi: select own" ON user_upi_ids
   FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
 
+DROP POLICY IF EXISTS "upi: insert own" ON user_upi_ids;
 CREATE POLICY "upi: insert own" ON user_upi_ids
   FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
 
+DROP POLICY IF EXISTS "upi: update own" ON user_upi_ids;
 CREATE POLICY "upi: update own" ON user_upi_ids
   FOR UPDATE TO authenticated USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text);
 
+DROP POLICY IF EXISTS "upi: delete own" ON user_upi_ids;
 CREATE POLICY "upi: delete own" ON user_upi_ids
   FOR DELETE TO authenticated USING (user_id = auth.uid()::text);
 
@@ -329,6 +333,9 @@ CREATE POLICY "expense_reads: member access" ON expense_reads
 -- receipt-map-schema.sql) and drop the old public-read policy:
 drop policy if exists "Public can read receipt photos" on storage.objects;
 
+-- drop-then-create so this section is safe to re-run even when the upload/delete
+-- policies were already created during the original bucket setup.
+drop policy if exists "Authenticated users can upload receipt photos" on storage.objects;
 create policy "Authenticated users can upload receipt photos"
   on storage.objects for insert to authenticated
   with check (
@@ -336,6 +343,7 @@ create policy "Authenticated users can upload receipt photos"
     and (storage.foldername(name))[1] = auth.uid()::text
   );
 
+drop policy if exists "Users can delete their own receipt photos" on storage.objects;
 create policy "Users can delete their own receipt photos"
   on storage.objects for delete to authenticated
   using (

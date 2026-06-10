@@ -32,7 +32,7 @@ export function buildExpenseEmail(params: ExpenseEmailParams): { subject: string
           <!-- Logo -->
           <tr>
             <td style="padding-bottom:24px;text-align:center;">
-              <span style="display:inline-block;background:linear-gradient(140deg,#0EA5E9,#0891B2,#0D9488);border-radius:12px;width:40px;height:40px;line-height:40px;text-align:center;font-size:20px;color:#fff;font-weight:700;">C</span>
+              <span style="display:inline-block;background:linear-gradient(140deg,#22D3EE,#0BB6D4,#0E8FA8,#0B5E70);border-radius:12px;width:40px;height:40px;line-height:40px;text-align:center;font-size:20px;color:#fff;font-weight:700;">C</span>
               <span style="display:inline-block;margin-left:8px;font-size:20px;font-weight:700;color:#0F172A;vertical-align:middle;">Clear</span>
             </td>
           </tr>

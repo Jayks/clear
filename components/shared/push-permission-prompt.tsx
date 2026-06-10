@@ -98,7 +98,7 @@ export function PushPermissionPrompt() {
               <div className="flex items-center gap-3">
                 <div
                   className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center shadow-sm shadow-cyan-500/30"
-                  style={{ background: "linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)" }}
+                  style={{ background: "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)" }}
                 >
                   <Bell className="w-4 h-4 text-white" />
                 </div>

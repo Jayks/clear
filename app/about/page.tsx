@@ -1134,7 +1134,7 @@ export default function AboutPage() {
                 { group: "Mumbai Flat", actor: "Anil", desc: "Electricity bill", amount: "₹1,800", ago: "1h ago" },
               ].map((n, i) => (
                 <div key={i} className={`flex items-start gap-3 rounded-2xl p-3.5 mb-2 last:mb-0 ${i === 0 ? "bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/50" : "bg-white/60 dark:bg-slate-800/60"}`}>
-                  <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)" }}>
+                  <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center shadow-sm" style={{ background: "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)" }}>
                     <Bell className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">

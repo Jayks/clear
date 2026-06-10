@@ -80,7 +80,7 @@ function page(title: string, heading: string, sub: string): string {
   <style>
     body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F0FDFA; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     .card { background: #fff; border-radius: 20px; padding: 40px 32px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .logo { display: inline-block; background: linear-gradient(140deg,#0EA5E9,#0891B2,#0D9488); border-radius: 12px; width: 48px; height: 48px; line-height: 48px; font-size: 24px; color: #fff; font-weight: 700; margin-bottom: 20px; }
+    .logo { display: inline-block; background: linear-gradient(140deg,#22D3EE,#0BB6D4,#0E8FA8,#0B5E70); border-radius: 12px; width: 48px; height: 48px; line-height: 48px; font-size: 24px; color: #fff; font-weight: 700; margin-bottom: 20px; }
     h1 { margin: 0 0 8px; font-size: 20px; color: #0F172A; }
     p { margin: 0 0 24px; font-size: 14px; color: #64748B; line-height: 1.6; }
     a { display: inline-block; background: linear-gradient(135deg,#06B6D4,#14B8A6); color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; padding: 12px 28px; border-radius: 10px; }

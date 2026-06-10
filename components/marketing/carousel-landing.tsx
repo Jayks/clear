@@ -764,7 +764,7 @@ export function CarouselLanding() {
               className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-cyan-500/20"
               variants={fadeScale}
               style={{
-                background: "linear-gradient(140deg,#0EA5E9 0%,#0891B2 50%,#0D9488 100%)",
+                background: "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)",
                 boxShadow: "0 0 0 1px rgba(255,255,255,0.15) inset, 0 20px 48px rgba(8,145,178,0.35)",
               }}
             >

@@ -85,11 +85,12 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 - Body: `text-slate-500 dark:text-slate-400`
 - Inputs: `border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60`
 
-### Brand components
-- `ClearLogo` (`components/shared/clear-logo.tsx`) — gradient icon box (C-arc + split-coin SVG mark) + optional wordmark. Props: `iconSize`, `showWordmark`, `wordmarkClassName`, `className`.
-- `ClearIcon` — SVG paths only (no background box), for custom coloured/glass containers.
-- Icon gradient: `linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)` — use inline style (not Tailwind) to maintain exact stops.
-- PWA icons: `app/api/pwa-icon/route.ts` (192+512px, edge). Favicon: `app/icon.tsx` (32px).
+### Brand components — the "B-Converge" mark
+- The mark = a **chamfered boxy C** (= Clear) — flat left side, 45° cut corners, and two 45° lips cupping the node (`d="M73 25 L66 18 L32 18 L18 32 L18 68 L32 82 L66 82 L73 75"`, `stroke-linejoin="miter"`) — with **two inflow strokes** (the L + r) converging into a **split node** (left half bright = e, right half dimmed = a) — every letter of "Clear" is hidden in it. Retired the old C-arc + split-coin (the coin only described "splitting", which is now just 2 of 4 contexts). Geometry lives once in `ClearIcon`; the favicon/PWA/OG/settle-card copies inline the same paths (viewBox `0 0 100 100`).
+- `ClearLogo` (`components/shared/clear-logo.tsx`) — gradient **glass** icon box (specular bloom + rim overlays) + optional wordmark. Props: `iconSize`, `showWordmark`, `wordmarkClassName`, `className`.
+- `ClearIcon` — white SVG paths only (no box), for custom coloured/glass containers. The glyph is intentionally right-shifted (C on the left, node/strokes on the right) — matches the app icon; do not re-center per-call.
+- Icon gradient (richer cyan→teal glass): `linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)` — use inline style (not Tailwind) to keep exact stops.
+- PWA / apple-touch icons: `app/api/pwa-icon/route.ts` (192+512, edge). Favicon: `app/icon.tsx` (32px). Both layer the glass material (gradient base + specular + vignette + rim) since Satori can't do SVG blur/clip. OG images (`app/pay`, `app/summary`) + `app/api/settle-card` inline the same glyph. The split-node seam intentionally vanishes at favicon size.
 
 ### Navigation
 - **Desktop**: sticky top — `ClearLogo` (28px), **Home** · **Streams** · **Insights**, ThemeToggle, avatar dropdown.

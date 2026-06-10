@@ -119,7 +119,7 @@ export function IOSInstallHint() {
             {/* App icon */}
             <div
               className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-sm shadow-cyan-500/30"
-              style={{ background: "linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)" }}
+              style={{ background: "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)" }}
             >
               <ClearIcon size={26} />
             </div>

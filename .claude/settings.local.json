@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(node scripts/find-bad-imports.mjs)"
+      "Bash(node scripts/find-bad-imports.mjs)",
+      "Bash(npx vitest *)"
     ]
   }
 }

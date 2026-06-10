@@ -195,9 +195,9 @@ app/
   (app)/          — authenticated app (groups, expenses, expense thread, insights, settle, upgrade, settings)
   (auth)/         — login page (standalone; used for direct URL access and proxy.ts redirects)
   @modal/         — parallel route slot; (.)login intercepts client-side /login nav as a modal overlay
-  api/pwa-icon/   — PWA icon endpoint (192 + 512 px, edge runtime)
+  api/pwa-icon/   — PWA icon endpoint (192 + 512 px, edge runtime) — "B-Converge" glass mark
   manifest.ts     — PWA manifest
-  icon.tsx        — favicon (32 px)
+  icon.tsx        — favicon (32 px) — "B-Converge" glass mark
   page.tsx        — landing page (redirects authed users → /groups; renders CarouselLanding)
   about/          — full-feature marketing page (/about)
   pricing/        — public pricing page (plan-cards async RSC + faq-section client)
@@ -208,7 +208,7 @@ components/
   settlement/     — debt-flow-graph (interactive SVG), settle-hero-card, settled-celebration
   marketing/      — carousel-landing (9-slide fullscreen carousel with HD phone frames), settle-flow-demo (animated SVG debt-flow, used in /about and inside carousel phone)
   insights/       — charts and insights tabs
-  shared/         — clear-logo, nav, skeletons, animated-list, tour layer, member profile sheet
+  shared/         — clear-logo ("B-Converge" mark: chamfered-C + inflow strokes into a split node, on a cyan→teal glass tile), nav, skeletons, animated-list, tour layer, member profile sheet
   tour/           — tour context and spotlight layer
 lib/
   db/             — Drizzle schema, queries, auth

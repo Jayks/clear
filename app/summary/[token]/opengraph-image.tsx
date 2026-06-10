@@ -85,9 +85,14 @@ export default async function OgImage({
           width: 48, height: 48, borderRadius: 14,
           background: "rgba(255,255,255,0.18)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 28, fontWeight: 800, color: "white",
         }}>
-          C
+          <svg width={35} height={35} viewBox="0 0 100 100">
+            <path d="M73 25 L66 18 L32 18 L18 32 L18 68 L32 82 L66 82 L73 75" fill="none" stroke="white" strokeWidth="10" strokeLinecap="round" strokeLinejoin="miter" strokeOpacity="0.97" />
+            <path d="M96 37 Q88 44 80 49" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.95" />
+            <path d="M96 63 Q88 56 80 51" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.95" />
+            <path d="M76.2 41 A9 9 0 0 0 76.2 59 Z" fill="white" />
+            <path d="M77.8 41 A9 9 0 0 1 77.8 59 Z" fill="white" fillOpacity="0.8" />
+          </svg>
         </div>
         <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>Clear</span>
       </div>

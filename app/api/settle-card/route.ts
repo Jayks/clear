@@ -103,7 +103,7 @@ export function GET(request: NextRequest) {
                   width:          44,
                   height:         44,
                   borderRadius:   11,
-                  background:     "linear-gradient(140deg, #0EA5E9 0%, #0891B2 50%, #0D9488 100%)",
+                  background:     "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)",
                   display:        "flex",
                   alignItems:     "center",
                   justifyContent: "center",
@@ -112,15 +112,12 @@ export function GET(request: NextRequest) {
               React.createElement(
                 "svg",
                 { width: 28, height: 28, viewBox: "0 0 100 100" },
-                React.createElement("path", {
-                  d:             "M 75 75 A 36 36 0 1 1 75 25",
-                  fill:          "none",
-                  stroke:        "white",
-                  strokeWidth:   "11",
-                  strokeLinecap: "round",
-                }),
-                React.createElement("path", { d: "M 47 35 A 15 15 0 0 0 47 65 Z", fill: "white", fillOpacity: "0.88" }),
-                React.createElement("path", { d: "M 53 35 A 15 15 0 0 1 53 65 Z", fill: "white", fillOpacity: "0.88" }),
+                // B-Converge mark — C + two inflow strokes into a split node
+                React.createElement("path", { d: "M73 25 L66 18 L32 18 L18 32 L18 68 L32 82 L66 82 L73 75", fill: "none", stroke: "white", strokeWidth: "10", strokeLinecap: "round", strokeLinejoin: "miter", strokeOpacity: "0.97" }),
+                React.createElement("path", { d: "M96 37 Q88 44 80 49", fill: "none", stroke: "white", strokeWidth: "5", strokeLinecap: "round", strokeOpacity: "0.95" }),
+                React.createElement("path", { d: "M96 63 Q88 56 80 51", fill: "none", stroke: "white", strokeWidth: "5", strokeLinecap: "round", strokeOpacity: "0.95" }),
+                React.createElement("path", { d: "M76.2 41 A9 9 0 0 0 76.2 59 Z", fill: "white" }),
+                React.createElement("path", { d: "M77.8 41 A9 9 0 0 1 77.8 59 Z", fill: "white", fillOpacity: "0.8" }),
               ),
             ),
             React.createElement(

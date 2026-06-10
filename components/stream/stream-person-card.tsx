@@ -77,16 +77,24 @@ export function StreamPersonCard({ person, variant }: Props) {
         </p>
       </div>
 
-      <SplitAmount
-        amount={amount}
-        currency={person.currency}
-        className={cn(
-          "text-base font-bold tabular-nums shrink-0",
-          isOwed
-            ? "text-emerald-600 dark:text-emerald-400"
-            : "text-amber-600  dark:text-amber-400",
-        )}
-      />
+      {person.hasMixedCurrencies ? (
+        // Summing across currencies would be meaningless — flag it instead of
+        // showing a bogus single-currency total (mirrors GroupBalanceBadge).
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 shrink-0 text-right leading-tight max-w-[84px]">
+          Mixed currencies
+        </span>
+      ) : (
+        <SplitAmount
+          amount={amount}
+          currency={person.currency}
+          className={cn(
+            "text-base font-bold tabular-nums shrink-0",
+            isOwed
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-amber-600  dark:text-amber-400",
+          )}
+        />
+      )}
 
       <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 group-hover:text-slate-400 transition-colors" />
     </Link>

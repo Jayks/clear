@@ -14,7 +14,12 @@ export default async function AllInsightsPage() {
     getCurrentUser(),
   ]);
 
-  const streamData = user ? await getStreamSummary(user.id) : null;
+  // streamData and the user's plan both depend only on `user` and are independent
+  // of each other — fetch them together instead of in two sequential round-trips.
+  const [streamData, userPlan] = await Promise.all([
+    user ? getStreamSummary(user.id) : Promise.resolve(null),
+    user ? getUserPlan(user.id) : Promise.resolve<"plus" | "free">("free"),
+  ]);
   // S-4 fix: derive currency from the top stream record instead of hardcoding
   // "INR".  Hardcoding caused non-INR streams (USD, EUR, etc.) to show the
   // wrong currency symbol next to their totals on the Insights page.
@@ -26,7 +31,7 @@ export default async function AllInsightsPage() {
       }
     : undefined;
 
-  const isPlusUser = user ? (await getUserPlan(user.id)) === "plus" : false;
+  const isPlusUser = userPlan === "plus";
 
   const hasAnyData = (tripsData && tripsData.tripCount > 0) || (nestsData && nestsData.nestCount > 0);
 

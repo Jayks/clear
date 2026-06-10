@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenses, getGroupTemplates } from "@/lib/db/queries/expenses";
 import { getGroupName } from "@/lib/db/queries/meta";
-import { getExpenseInteractionCounts } from "@/lib/db/queries/interactions";
+import { getExpenseInteractionCounts, type ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 import { getGroupConfig } from "@/lib/group-config";
 import { formatCurrency } from "@/lib/utils";
 import { db } from "@/lib/db/client";
@@ -31,39 +31,22 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ExpensesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, expenses, templates, expenseNudge, templatesAllowed, user] = await Promise.all([
+  // getCurrentUser() is React-cache()-wrapped, so fetching it up front costs no
+  // extra round-trip and lets canUseAI() join the batch instead of running
+  // sequentially after it.
+  const user = await getCurrentUser();
+  const [data, expenses, templates, expenseNudge, templatesAllowed, aiAllowed] = await Promise.all([
     getGroupWithMembers(id),
     getExpenses(id),
     getGroupTemplates(id),
     getExpenseNudge(id),
     canUseTemplates(id),
-    getCurrentUser(),
+    user ? canUseAI(user.id) : Promise.resolve(false),
   ]);
-  const aiAllowed = user ? await canUseAI(user.id) : false;
   if (!data) notFound();
 
-  // ── hasLocatedExpenses — lean query against ALL group expenses (not the paginated list)
-  // ⚠️  NOT expenses.some() — that only checks the current page (pagination bug).
-  const config   = getGroupConfig(data.group.groupType);
-  const hasLocatedExpenses = config.isCircle
-    ? false
-    : data.group.groupType === "trip"
-      ? await db
-          .select({ id: expensesTable.id })
-          .from(expensesTable)
-          .where(
-            and(
-              eq(expensesTable.groupId, id),
-              isNotNull(expensesTable.location),
-              eq(expensesTable.isTemplate, false),
-            ),
-          )
-          .limit(1)
-          .then((rows) => rows.length > 0)
-      : false;
-
   const { group, members, currentMember, currentUser } = data;
-  // config already declared above (used for hasLocatedExpenses)
+  const config   = getGroupConfig(group.groupType);
   const isAdmin  = currentMember?.role === "admin";
   const isNest   = group.groupType === "nest";
   const isCircle = config.isCircle;
@@ -157,12 +140,30 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  // ── Trip / Nest expenses page (unchanged) ─────────────────────────────────
+  // ── Trip / Nest expenses page ─────────────────────────────────────────────
 
-  // Fetch interaction counts (reactions, comments, disputes) for all expenses on this page
-  const interactionCounts = expenses.length > 0
-    ? await getExpenseInteractionCounts(expenses.map((e) => e.id), currentMemberId)
-    : {};
+  // Parallel: located-expense probe (trips only — lean query against ALL group
+  // expenses, NOT expenses.some() which only sees the current paginated page)
+  // and per-expense interaction counts. Independent, so run them together.
+  const [hasLocatedExpenses, interactionCounts] = await Promise.all([
+    group.groupType === "trip"
+      ? db
+          .select({ id: expensesTable.id })
+          .from(expensesTable)
+          .where(
+            and(
+              eq(expensesTable.groupId, id),
+              isNotNull(expensesTable.location),
+              eq(expensesTable.isTemplate, false),
+            ),
+          )
+          .limit(1)
+          .then((rows) => rows.length > 0)
+      : Promise.resolve(false),
+    expenses.length > 0
+      ? getExpenseInteractionCounts(expenses.map((e) => e.id), currentMemberId)
+      : Promise.resolve<Record<string, ExpenseInteractionCount>>({}),
+  ]);
   const templateList = isNest ? templates : [];
 
   return (

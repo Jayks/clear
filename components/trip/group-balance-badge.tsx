@@ -1,26 +1,28 @@
-import { getBalances } from "@/lib/db/queries/balances";
+import { getHomeBalances } from "@/lib/db/queries/balances";
 import { SplitAmount } from "@/components/shared/split-amount";
 
 interface Props {
   groupId: string;
-  memberId: string;
-  currency: string;
+  userId: string;
 }
 
-export async function GroupBalanceBadge({ groupId, memberId, currency }: Props) {
-  const { balances, hasMixedCurrencies } = await getBalances(groupId, currency);
+export async function GroupBalanceBadge({ groupId, userId }: Props) {
+  // Shared across every badge on the home page — getHomeBalances is React
+  // cache()-wrapped, so the underlying batched query runs once per render.
+  const all = await getHomeBalances(userId);
+  const entry = all[groupId];
 
-  if (hasMixedCurrencies) {
+  if (!entry || entry.hasMixedCurrencies) {
     return (
       <div className="px-4 py-2 border-t border-white/20 dark:border-slate-700/30">
-        <span className="text-xs text-slate-400 dark:text-slate-500">Multi-currency group</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">
+          {entry?.hasMixedCurrencies ? "Multi-currency group" : "No expenses yet"}
+        </span>
       </div>
     );
   }
 
-  const hasExpenses = balances.some((b) => b.totalPaid > 0 || b.totalOwed > 0);
-  const myBalance = balances.find((b) => b.memberId === memberId);
-  const net = myBalance?.net ?? 0;
+  const { net, hasExpenses, currency } = entry;
 
   if (net === 0) {
     return (

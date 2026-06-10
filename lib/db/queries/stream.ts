@@ -39,6 +39,10 @@ export type PersonSummary = {
   hasPending: boolean;       // any stream still in 'pending' state
   hasDisputed: boolean;      // any stream in 'disputed' state — shows amber attention dot
   activeCount: number;       // total open streams
+  /** True when this person has active streams in more than one currency. The net
+   *  then sums raw amounts across currencies, so the UI must flag it (mirrors
+   *  getBalances' hasMixedCurrencies). */
+  hasMixedCurrencies: boolean;
 };
 
 /** A person whose streams are all settled/forgiven — shown in dashboard "Past" section. */
@@ -223,6 +227,7 @@ async function buildPersonSummaries(userId: string): Promise<{
       prev.net += net;
       prev.hasPending  = prev.hasPending  || sr.status === "pending";
       prev.hasDisputed = prev.hasDisputed || sr.status === "disputed";
+      prev.hasMixedCurrencies = prev.hasMixedCurrencies || sr.currency !== prev.currency;
       prev.activeCount++;
       if (new Date(sr.createdAt) > prev.latestAt)       prev.latestAt       = new Date(sr.createdAt);
       if (srUpdatedAt             > prev.latestUpdatedAt) prev.latestUpdatedAt = srUpdatedAt;
@@ -237,6 +242,7 @@ async function buildPersonSummaries(userId: string): Promise<{
         latestUpdatedAt:  srUpdatedAt,
         hasPending:       sr.status === "pending",
         hasDisputed:      sr.status === "disputed",
+        hasMixedCurrencies: false,
         activeCount:      1,
       });
     }
@@ -373,16 +379,27 @@ export async function getStreamDashboard(userId: string): Promise<StreamDashboar
       .limit(5),
   ]);
 
-  // Resolve names for pending-stream counterparts (one batch query)
-  const pendingUserIds = pendingRaw
-    .map((r) => r.stream_records.counterpartId)
-    .filter((id): id is string => !!id);
-  const pendingNameMap = await batchGetUserNames(pendingUserIds);
+  // Resolve all counterpart names for pending + recently-closed + activity in a
+  // SINGLE batch query. These three sections are independent, so collecting their
+  // Clear-user IDs up front avoids three sequential round-trips.
+  const nameIds = new Set<string>();
+  for (const { stream_records: sr } of pendingRaw) {
+    if (sr.counterpartId) nameIds.add(sr.counterpartId);
+  }
+  for (const { stream_records: sr } of closedRaw) {
+    const id = sr.creatorId !== userId ? sr.creatorId : sr.counterpartId;
+    if (id) nameIds.add(id);
+  }
+  for (const { stream_records: sr } of activityRaw) {
+    const id = sr.creatorId !== userId ? sr.creatorId : sr.counterpartId;
+    if (id && id !== userId) nameIds.add(id);
+  }
+  const nameMap = await batchGetUserNames([...nameIds]);
 
   const pending: EnrichedStreamRecord[] = pendingRaw.map(({ stream_records: sr, stream_guests: sg }) => {
     const personId = sr.counterpartId ?? sr.counterpartGuestId ?? "";
     const name     = sr.counterpartId
-      ? (pendingNameMap.get(sr.counterpartId) ?? "Someone")
+      ? (nameMap.get(sr.counterpartId) ?? "Someone")
       : (sg?.name ?? "Guest");
     return {
       ...sr,
@@ -398,14 +415,6 @@ export async function getStreamDashboard(userId: string): Promise<StreamDashboar
   // Exclude people who still have an active balance (they're in owedToMe / iOwe).
   const activePeopleIds = new Set(allPeople.map((p) => p.personId));
 
-  const closedUserIds = closedRaw
-    .map((r) => {
-      const sr = r.stream_records;
-      return sr.creatorId !== userId ? sr.creatorId : sr.counterpartId;
-    })
-    .filter((id): id is string => !!id);
-  const closedNameMap = await batchGetUserNames(closedUserIds);
-
   const closedPersonMap = new Map<string, ClosedPersonSummary>();
   for (const { stream_records: sr, stream_guests: sg } of closedRaw) {
     const isCreator  = sr.creatorId === userId;
@@ -415,7 +424,7 @@ export async function getStreamDashboard(userId: string): Promise<StreamDashboar
     const personType = (isCreator ? (sr.counterpartId ? "user" : "guest") : "user") as "user" | "guest";
     const name       = personType === "guest" && sg
       ? sg.name
-      : (closedNameMap.get(personId) ?? "Someone");
+      : (nameMap.get(personId) ?? "Someone");
 
     if (!personId || activePeopleIds.has(personId)) continue; // skip if still active
 
@@ -441,14 +450,7 @@ export async function getStreamDashboard(userId: string): Promise<StreamDashboar
   const recentlyClosed = [...closedPersonMap.values()]
     .sort((a, b) => b.closedAt.getTime() - a.closedAt.getTime());
 
-  // Resolve names for activity events
-  const activityClearUserIds = activityRaw
-    .map(({ stream_records: sr }) =>
-      sr.creatorId !== userId ? sr.creatorId : sr.counterpartId,
-    )
-    .filter((id): id is string => !!id && id !== userId);
-  const activityNameMap = await batchGetUserNames([...new Set(activityClearUserIds)]);
-
+  // Activity event names come from the same up-front batch (nameMap).
   const recentActivity: StreamActivityEvent[] = activityRaw.map(({ stream_records: sr, stream_guests: sg }) => {
     const isCreator = sr.creatorId === userId;
     const personId  = isCreator
@@ -460,7 +462,7 @@ export async function getStreamDashboard(userId: string): Promise<StreamDashboar
     const name =
       personType === "guest" && sg
         ? sg.name
-        : (activityNameMap.get(personId) ?? "Someone");
+        : (nameMap.get(personId) ?? "Someone");
 
     return {
       id:              sr.id,

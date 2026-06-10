@@ -176,13 +176,9 @@ export default async function GroupsPage() {
                         isPlusPlan={adminPlans[group.id] === "plus"}
                         isAdmin={memberInfo?.role === "admin"}
                         balanceBadge={
-                          memberInfo && !group.isDemo ? (
+                          memberInfo && user && !group.isDemo ? (
                             <Suspense key={group.id} fallback={balanceFallback()}>
-                              <GroupBalanceBadge
-                                groupId={group.id}
-                                memberId={memberInfo.id}
-                                currency={group.defaultCurrency}
-                              />
+                              <GroupBalanceBadge groupId={group.id} userId={user.id} />
                             </Suspense>
                           ) : undefined
                         }
@@ -267,13 +263,9 @@ export default async function GroupsPage() {
                       isPlusPlan={adminPlans[group.id] === "plus"}
                       isAdmin={memberInfo?.role === "admin"}
                       balanceBadge={
-                        memberInfo && !group.isDemo ? (
+                        memberInfo && user && !group.isDemo ? (
                           <Suspense key={group.id} fallback={balanceFallback()}>
-                            <GroupBalanceBadge
-                              groupId={group.id}
-                              memberId={memberInfo.id}
-                              currency={group.defaultCurrency}
-                            />
+                            <GroupBalanceBadge groupId={group.id} userId={user.id} />
                           </Suspense>
                         ) : undefined
                       }

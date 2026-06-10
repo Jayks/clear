@@ -58,10 +58,21 @@ export async function GET(req: NextRequest) {
   });
 }
 
+// Group names are user-controlled and embedded into a hand-built HTML string
+// (not React), so they MUST be escaped to prevent stored XSS.
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function successPage(groupName: string): string {
   return page(
     "Unsubscribed",
-    `You've been unsubscribed from <strong>${groupName}</strong> notifications.`,
+    `You've been unsubscribed from <strong>${escapeHtml(groupName)}</strong> notifications.`,
     "You won't receive any more expense emails for this group."
   );
 }

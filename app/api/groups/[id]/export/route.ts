@@ -8,8 +8,12 @@ import { getCategory } from "@/lib/categories";
 import { canExportCSV } from "@/lib/subscription/gates";
 
 function escapeCSV(value: string | null | undefined): string {
-  const s = value ?? "";
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+  let s = value ?? "";
+  // Neutralise spreadsheet formula injection: cells beginning with = + - @ (or
+  // tab/CR) are executed as formulas by Excel/Sheets. Prefix with a single quote
+  // — but skip plain numbers (e.g. "-50") so legitimate amounts aren't mangled.
+  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d/.test(s)) s = `'${s}`;
+  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;

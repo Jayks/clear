@@ -2,7 +2,7 @@
 
 import { ErrorCard } from "@/components/shared/error-card";
 
-export default function AppError({
+export default function StreamError({
   error,
   reset,
 }: {

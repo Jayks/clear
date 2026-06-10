@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
 import { IOSInstallHint } from "@/components/shared/ios-install-hint";
+import { OfflineBanner } from "@/components/shared/offline-banner";
 import { NavProgress } from "@/components/shared/nav-progress";
 import Script from "next/script";
 import "./globals.css";
@@ -52,6 +53,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <NavProgress />
+          <OfflineBanner />
           <ServiceWorkerRegistration />
           {/* Decorative background blobs */}
           <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">

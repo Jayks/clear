@@ -180,6 +180,17 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 <Script id="ga-init" strategy="afterInteractive">{`...`}</Script>
 ```
 
+> Note: `next-themes` `<ThemeProvider>` renders its own anti-flash `<script>`. React 19 emits the same warning for it **only during a client-side re-render** (e.g. an error boundary recovering). It is **dev-only** (stripped in production), comes from a third-party, and is harmless — leave it.
+
+### Error boundaries & the shared `ErrorCard`
+
+Page-load error handling is centralised so every failure looks the same and retries correctly:
+
+- **`lib/error-utils.ts`** — pure `classifyError(error, isOnline, attemptCount)` → `{ kind: "offline" | "generic" | "persistent", title, message }`. Conservative by design: in production Next.js strips server error messages to a `digest`, and `navigator.onLine` is only trustworthy when `false`, so we do **not** try to distinguish server-vs-bug. `offline` (no network), `persistent` (≥`MAX_QUICK_RETRIES` failed retries), else `generic`. Pure + DI'd online state → fully unit-tested (`lib/error-utils.test.ts`).
+- **`components/shared/error-card.tsx`** — the one error surface used by every `error.tsx`. Retry = `router.refresh()` + `reset()` inside a `useTransition` (`reset()` **alone does not refetch RSC data** — the key gotcha). Auto-retries when connectivity returns after being offline; counts attempts to escalate copy; logs `console.error` (observability seam); shows `digest` greyed. Props: `error`, `reset`, `backHref?`, `backLabel?`.
+- **`components/shared/offline-banner.tsx`** — slim connectivity strip in the root layout; amber when offline, emerald "Back online" flash on reconnect.
+- **Boundary hierarchy**: `app/global-error.tsx` catches **root-layout** failures — it replaces the layout, so it renders its own `<html>/<body>` with **inline styles only** (assume globals.css/Tailwind/fonts all failed). Segment `error.tsx` files (`app/error.tsx`, `app/(app)/error.tsx`, `app/(app)/groups/[id]/`, `stream/`, `insights/`, `app/admin/`) render **inside** their layout, so the nav bars stay visible — they must **not** render `<html>`. `admin/error.tsx` keeps a `Forbidden` special-case (dev-only; message is stripped to a digest in prod).
+
 ---
 
 ## 4. Architecture Principles
@@ -194,6 +205,7 @@ React 19 (used by Next.js 16) warns when a `<script>` tag appears as children in
 8. **Realtime via router.refresh()**: `useGroupRealtime(groupId)` in `hooks/use-trip-realtime.ts` — subscribes to expenses, settlements, group_members, expense_splits. **Disabled in dev** (was consuming 85% of Supabase free-tier CPU). Production only.
 9. **Auth via shared `getCurrentUser()`**: React-`cache()`-wrapped, shared across whole render tree.
 10. **GROUP_CONFIG pattern**: All type differences via `lib/group-config.ts` — never raw `group.type === 'trip'` checks scattered across files.
+11. **Error handling split — boundaries vs toasts**: **Page-load failures** (RSC throws: DB unreachable, query errors) surface through `error.tsx` boundaries rendering the shared `ErrorCard`. **Mutation failures** surface through server actions returning `{ ok: false, error }` + a `sonner` toast. Never mix the two. Critically: a query that fails on page load must **propagate to the boundary** — never `.catch()` it into an empty result, which would render a false "empty state" during an outage (this was the `getAllGroups()` bug on the home page). Only `.catch()`-swallow genuinely optional data (notifications, geocoding, demo seeding, balance badges).
 
 ---
 

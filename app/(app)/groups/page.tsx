@@ -24,8 +24,11 @@ import { BadgePop } from "@/components/shared/badge-pop";
 
 export default async function GroupsPage() {
   await ensureDemoGroup().catch(() => {});
+  // Do NOT swallow a getAllGroups() failure into an empty result — that would
+  // render the "No groups yet" empty state during a DB outage and make the user
+  // think their groups vanished. Let it throw to the error boundary instead.
   const [{ active: groups, archived }, user] = await Promise.all([
-    getAllGroups().catch(() => ({ active: [], archived: [] })),
+    getAllGroups(),
     getCurrentUser(),
   ]);
   const isPlusUser = user ? await canUseAI(user.id) : false;

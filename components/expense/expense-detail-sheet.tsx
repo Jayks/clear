@@ -34,7 +34,7 @@ import { ThreadDiscussion, type OptimisticComment } from "./thread-discussion";
 import { ThreadCommentInput } from "./thread-comment-input";
 import { SeenAvatarStack } from "./seen-avatar-stack";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
-import { clearExpenseReceipt } from "@/app/actions/update-expense-media";
+import { clearExpenseReceipt, getReceiptViewUrl } from "@/app/actions/update-expense-media";
 
 // ── Comment loading skeleton ─────────────────────────────────────────────────
 function CommentSkeleton() {
@@ -104,6 +104,8 @@ export function ExpenseDetailSheet({
 
   // ── Receipt removal ──────────────────────────────────────────────────────
   const [removingReceipt, setRemovingReceipt] = useState(false);
+  // Signed URL for the receipt photo (private bucket — fetched on open, expires)
+  const [receiptSignedUrl, setReceiptSignedUrl] = useState<string | null>(null);
 
   // ── Forms ────────────────────────────────────────────────────────────────
   const [showQuestionForm, setShowQuestionForm] = useState(false);
@@ -165,6 +167,17 @@ export function ExpenseDetailSheet({
       .then((rows) => { if (rows) setAllDisputes(rows); })
       .catch(() => {});
   }, [isOpen, expense.id, expense.groupId]);
+
+  // ── Fetch a signed URL for the receipt photo on open (private bucket) ─────
+  useEffect(() => {
+    if (!isOpen || !expense.receiptUrl) { setReceiptSignedUrl(null); return; }
+    setReceiptSignedUrl(null); // clear any stale URL while the new one loads
+    let cancelled = false;
+    getReceiptViewUrl(expense.id).then((res) => {
+      if (!cancelled) setReceiptSignedUrl(res.ok ? res.url : null);
+    });
+    return () => { cancelled = true; };
+  }, [isOpen, expense.id, expense.receiptUrl]);
 
   // Reset all local state when the expense changes
   useEffect(() => {
@@ -518,22 +531,29 @@ export function ExpenseDetailSheet({
                       <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
                     </div>
                     {expense.receiptUrl && (
-                      <a
-                        href={expense.receiptUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={expense.receiptUrl}
-                          alt="Receipt proof"
-                          className="w-full max-h-52 object-contain"
-                        />
-                        <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 py-1">
-                          Tap to open full size
-                        </p>
-                      </a>
+                      receiptSignedUrl ? (
+                        <a
+                          href={receiptSignedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={receiptSignedUrl}
+                            alt="Receipt proof"
+                            className="w-full max-h-52 object-contain"
+                          />
+                          <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 py-1">
+                            Tap to open full size
+                          </p>
+                        </a>
+                      ) : (
+                        // Signed URL still loading (or unavailable) — placeholder
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 h-32 flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 text-slate-300 dark:text-slate-600 animate-spin" />
+                        </div>
+                      )
                     )}
                     {/* AI scan badge */}
                     {expense.receiptScannedAt && (

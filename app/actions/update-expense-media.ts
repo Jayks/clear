@@ -3,6 +3,7 @@
 import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { eq, and } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
@@ -65,6 +66,49 @@ export async function clearExpenseReceipt(
 
     revalidateTag(`group-${groupId}`, "max");
     return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
+ * Returns a short-lived signed URL for an expense's receipt photo.
+ *
+ * Receipts are financial documents kept in a PRIVATE bucket, so they must not be
+ * served via public URLs. Authorisation is enforced here in the app layer (the
+ * caller must be a member of the receipt's group); the signed URL is then minted
+ * with the service role, which bypasses storage RLS. Works on both a public and a
+ * private bucket, so the code is safe to ship before the bucket is flipped.
+ */
+export async function getReceiptViewUrl(
+  expenseId: string,
+): Promise<{ ok: true; url: string } | { ok: false }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+
+  const [expense] = await db
+    .select({ groupId: expenses.groupId, receiptUrl: expenses.receiptUrl })
+    .from(expenses)
+    .where(eq(expenses.id, expenseId))
+    .limit(1);
+  if (!expense || !expense.receiptUrl) return { ok: false };
+
+  const membership = await getMembership(expense.groupId, user.id);
+  if (!membership) return { ok: false };
+
+  // Stored value is a full public URL (existing data) or a bare in-bucket path —
+  // extract the path after the bucket name either way.
+  const marker = "/receipt-photos/";
+  const idx = expense.receiptUrl.indexOf(marker);
+  const path = idx >= 0 ? expense.receiptUrl.slice(idx + marker.length) : expense.receiptUrl;
+
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.storage
+      .from("receipt-photos")
+      .createSignedUrl(path, 60 * 60); // 1 hour
+    if (error || !data) return { ok: false };
+    return { ok: true, url: data.signedUrl };
   } catch {
     return { ok: false };
   }

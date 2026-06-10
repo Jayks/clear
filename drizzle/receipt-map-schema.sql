@@ -18,8 +18,12 @@ CREATE INDEX IF NOT EXISTS idx_expenses_location_group
   ON expenses (group_id, expense_date)
   WHERE location IS NOT NULL;
 
--- ── receipt-photos storage bucket ─────────────────────────────────────────────
-
+-- ── receipt-photos storage bucket (PRIVATE) ──────────────────────────────────
+-- Receipts are financial documents — the bucket is PRIVATE. The app serves them
+-- via short-lived signed URLs (getReceiptViewUrl) after a group-membership check.
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('receipt-photos', 'receipt-photos', true)
+VALUES ('receipt-photos', 'receipt-photos', false)
 ON CONFLICT (id) DO NOTHING;
+
+-- If the bucket already exists as public, flip it:
+UPDATE storage.buckets SET public = false WHERE id = 'receipt-photos';

@@ -186,6 +186,27 @@ CREATE POLICY "subscriptions_select_own" ON subscriptions
   FOR SELECT TO authenticated USING (user_id = auth.uid());
 
 
+-- ── user_upi_ids ──────────────────────────────────────────────────────────────
+-- Defense-in-depth: every in-app read/write goes through auth-guarded server
+-- actions on the privileged Drizzle connection (which bypasses RLS), but every
+-- other table has RLS enabled, so this one should too. Users may only see/modify
+-- their own UPI handles via any client-path access.
+
+ALTER TABLE user_upi_ids ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "upi: select own" ON user_upi_ids
+  FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
+
+CREATE POLICY "upi: insert own" ON user_upi_ids
+  FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
+
+CREATE POLICY "upi: update own" ON user_upi_ids
+  FOR UPDATE TO authenticated USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text);
+
+CREATE POLICY "upi: delete own" ON user_upi_ids
+  FOR DELETE TO authenticated USING (user_id = auth.uid()::text);
+
+
 -- ── indexes ───────────────────────────────────────────────────────────────────
 -- Applied separately via drizzle/indexes.sql in Supabase SQL Editor.
 -- Not managed by drizzle-kit — run indexes.sql once alongside this file.
@@ -292,10 +313,21 @@ CREATE POLICY "expense_reads: member access" ON expense_reads
   );
 
 
--- ── storage: receipt-photos bucket ───────────────────────────────────────────
+-- ── storage: receipt-photos bucket (PRIVATE) ─────────────────────────────────
 -- Run once after applying drizzle/receipt-map-schema.sql (which creates the bucket).
--- Bucket settings: Name = receipt-photos | Public = Yes | File size limit = 5 MB
+-- Bucket settings: Name = receipt-photos | Public = NO | File size limit = 5 MB
 -- Path pattern: {userId}/{groupId}/{timestamp}-receipt.jpg
+--
+-- Receipts are financial documents, so this bucket is PRIVATE — there is NO
+-- public-read policy. The app serves receipts via short-lived signed URLs minted
+-- server-side (getReceiptViewUrl in app/actions/update-expense-media.ts) AFTER an
+-- app-layer group-membership check. Uploads use signed upload tokens, which work
+-- on a private bucket regardless of these SELECT rules.
+--
+-- MIGRATION: if you previously created this bucket as Public, set it to Private
+-- (Storage → receipt-photos → make private, or run the UPDATE in
+-- receipt-map-schema.sql) and drop the old public-read policy:
+drop policy if exists "Public can read receipt photos" on storage.objects;
 
 create policy "Authenticated users can upload receipt photos"
   on storage.objects for insert to authenticated
@@ -303,10 +335,6 @@ create policy "Authenticated users can upload receipt photos"
     bucket_id = 'receipt-photos'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
-
-create policy "Public can read receipt photos"
-  on storage.objects for select to public
-  using (bucket_id = 'receipt-photos');
 
 create policy "Users can delete their own receipt photos"
   on storage.objects for delete to authenticated

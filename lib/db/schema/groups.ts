@@ -17,6 +17,9 @@ export const groups = pgTable("groups", {
   isArchived: boolean("is_archived").notNull().default(false),
   isDemo: boolean("is_demo").notNull().default(false),
   shareToken: uuid("share_token").notNull().unique().default(sql`gen_random_uuid()`),
+  // Separate from shareToken: the invite/join link (shareToken) must NOT double as
+  // the public read-only summary link. summaryToken gates /summary/[token] only.
+  summaryToken: uuid("summary_token").notNull().unique().default(sql`gen_random_uuid()`),
   createdBy: uuid("created_by").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
 

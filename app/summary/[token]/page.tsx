@@ -19,7 +19,7 @@ import { ArrowLeft, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 
 const getSummaryData = cache(async function getSummaryData(token: string) {
-  const [trip] = await db.select().from(groups).where(eq(groups.shareToken, token));
+  const [trip] = await db.select().from(groups).where(eq(groups.summaryToken, token));
   if (!trip || trip.groupType === "nest") return null;
 
   const [memberRows, categoryRows, [expCount], allExpenseRows] = await Promise.all([

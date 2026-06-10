@@ -266,7 +266,7 @@ export default async function GroupPage({
       {/* Trip summary — deepest feature, retrospective view, earns its place at the bottom */}
       {!isNest && (
         <Link
-          href={`/summary/${group.shareToken}`}
+          href={`/summary/${group.summaryToken}`}
           className="glass rounded-xl p-4 flex items-center gap-3 mb-6 hover:shadow-lg hover:shadow-cyan-500/10 transition-all group"
         >
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shrink-0">

@@ -291,9 +291,9 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
           )}
         </div>
         {/* Share trip summary link — trips only, desktop header */}
-        {!isNest && group.shareToken && (
+        {!isNest && group.summaryToken && (
           <Link
-            href={`/summary/${group.shareToken}`}
+            href={`/summary/${group.summaryToken}`}
             target="_blank"
             rel="noopener noreferrer"
             className="ml-auto flex items-center gap-1.5 min-h-[44px] text-xs text-slate-400 hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors"

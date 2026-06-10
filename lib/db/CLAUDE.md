@@ -19,7 +19,8 @@ itinerary: text                     -- trips only; max 10,000 chars (Zod-only, D
 is_archived: boolean default false
 is_demo: boolean default false      -- seeded sample group; pinned first
 created_by: uuid
-share_token: uuid unique default gen_random_uuid()
+share_token: uuid unique default gen_random_uuid()   -- invite/join link only (/join/[token])
+summary_token: uuid unique default gen_random_uuid() -- public read-only recap link only (/summary/[token]); decoupled from share_token so sharing a recap never grants join access
 created_at: timestamptz
 
 -- Circle-specific columns (null for trip/nest):

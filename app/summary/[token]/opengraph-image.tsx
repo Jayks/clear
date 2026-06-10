@@ -17,7 +17,7 @@ export default async function OgImage({
 }) {
   const { token } = await params;
 
-  const [trip] = await db.select().from(groups).where(eq(groups.shareToken, token));
+  const [trip] = await db.select().from(groups).where(eq(groups.summaryToken, token));
   if (!trip) {
     return new ImageResponse(
       <div style={{ width: "100%", height: "100%", background: "#0891B2", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 32 }}>

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
-import { canUseNonEqualSplit, canUseAI } from "@/lib/subscription/gates";
+import { canUseNonEqualSplit } from "@/lib/subscription/gates";
+import { canUseLoggingAI } from "@/lib/subscription/ai-quota";
 import { getGroupConfig } from "@/lib/group-config";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { Receipt, Coins } from "lucide-react";
@@ -22,7 +23,7 @@ export default async function NewExpensePage({
     canUseNonEqualSplit(id),
     getCurrentUser(),
   ]);
-  const isPlusUser = user ? await canUseAI(user.id) : false;
+  const isPlusUser = user ? await canUseLoggingAI(user.id) : false; // scanner is free
   if (!data) notFound();
 
   const { group, members, currentMember } = data;

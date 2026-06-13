@@ -6,11 +6,11 @@ import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { addGuestSchema } from "@/lib/validations/trip";
-import { eq, and, isNull, sum, desc, count } from "drizzle-orm";
+import { eq, and, isNull, sum, desc } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { canAddMember, getGroupPlan } from "@/lib/subscription/gates";
+import { canAddMember } from "@/lib/subscription/gates";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
   const user = await getCurrentUser();
@@ -69,22 +69,7 @@ export async function importMembersFromGroup(targetGroupId: string, memberNames:
   if (toAdd.length === 0)
     return { ok: false, error: "All selected members are already in this group" } as const;
 
-  // Check member limit — canAddMember checks current count < 8 (free plan)
-  const [row] = await db
-    .select({ total: count() })
-    .from(groupMembers)
-    .where(eq(groupMembers.groupId, targetGroupId));
-  const current = Number(row?.total ?? 0);
-  const plan = await getGroupPlan(targetGroupId);
-  if (plan !== "plus" && current + toAdd.length > 8) {
-    const canAdd = 8 - current;
-    if (canAdd <= 0)
-      return { ok: false, error: "Member limit reached. Upgrade to Clear Plus for unlimited members." } as const;
-    return {
-      ok: false,
-      error: `Can only add ${canAdd} more member${canAdd === 1 ? "" : "s"} on the free plan. Upgrade to Clear Plus for unlimited members.`,
-    } as const;
-  }
+  // Members are unlimited on all plans (June 2026 generous re-cut) — no count cap here.
 
   try {
     await db.insert(groupMembers).values(

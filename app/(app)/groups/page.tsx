@@ -11,7 +11,8 @@ import { ensureDemoGroup } from "@/app/actions/demo";
 import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 import { LongPressHint } from "@/components/shared/long-press-hint";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
-import { getGroupNudge, getGroupsAdminPlans, canUseAI } from "@/lib/subscription/gates";
+import { getGroupNudge, getGroupsAdminPlans } from "@/lib/subscription/gates";
+import { canUseLoggingAI } from "@/lib/subscription/ai-quota";
 import { SectionPillNav } from "@/components/shared/section-pill-nav";
 import type { NavSection, CreatePill } from "@/components/shared/section-pill-nav";
 import { StreamBadgeSync } from "@/components/stream/stream-badge-sync";
@@ -31,7 +32,8 @@ export default async function GroupsPage() {
     getAllGroups(),
     getCurrentUser(),
   ]);
-  const isPlusUser = user ? await canUseAI(user.id) : false;
+  // Logging-AI (scan/NL quick-add) is free — gates the FAB scan/AI UI, not Plus.
+  const isPlusUser = user ? await canUseLoggingAI(user.id) : false;
 
   // ── Split active groups by type ───────────────────────────────────────────
   const trips   = groups.filter((g) => g.group.groupType === "trip");

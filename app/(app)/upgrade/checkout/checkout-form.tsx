@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { activatePlusDemo } from "@/app/actions/subscription";
+import { REGULAR_PRICE } from "@/lib/subscription/prices";
 import { Loader2, Lock } from "lucide-react";
 
 interface CheckoutFormProps {
   initialCycle: "monthly" | "annual";
-  founder: boolean;
+  earlyBird: boolean;
   price: { monthly: number; annual: number };
   annualMonthlyEquiv: number;
   annualSavings: number;
@@ -18,7 +19,7 @@ interface CheckoutFormProps {
 
 export function CheckoutForm({
   initialCycle,
-  founder,
+  earlyBird,
   price,
   annualMonthlyEquiv,
   annualSavings,
@@ -29,9 +30,12 @@ export function CheckoutForm({
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const regularMonthly = 99; // used for strikethrough when founder is active
   const selectedPrice = price[cycle];
-  const annualSavingsPct = Math.round((annualSavings / (regularMonthly * 12)) * 100);
+  // Early Bird's hook = the discount vs the regular price (locked forever).
+  const annualOffRegular = REGULAR_PRICE.annual - price.annual; // ₹200 for Early Bird, 0 for regular
+  const annualSavingsPct = earlyBird
+    ? Math.round((annualOffRegular / REGULAR_PRICE.annual) * 100)   // % off regular annual
+    : Math.round((annualSavings / (price.monthly * 12)) * 100);     // % annual vs monthly
 
   async function handleActivate() {
     setLoading(true);
@@ -56,13 +60,13 @@ export function CheckoutForm({
   return (
     <div className="space-y-3">
 
-      {/* ── Founder notice ──────────────────────────────────────────────── */}
-      {founder && (
+      {/* ── Early Bird notice ───────────────────────────────────────────── */}
+      {earlyBird && (
         <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-700/40 px-4 py-3 flex items-start gap-2.5">
           <span className="text-amber-500 text-sm mt-0.5 shrink-0">🔒</span>
           <div>
             <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-              Founder pricing — {slotsRemaining} of {slotsTotal} slots remaining
+              Early-bird pricing — {slotsRemaining} of {slotsTotal} slots remaining
             </p>
             <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
               This rate is locked in forever and will never increase for you.
@@ -104,12 +108,12 @@ export function CheckoutForm({
                 </p>
                 {c === "annual" && (
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                    ₹{annualMonthlyEquiv}/month · saves ₹{annualSavings} vs monthly billing
+                    ₹{annualMonthlyEquiv}/month · {earlyBird ? `saves ₹${annualOffRegular}/yr vs regular` : `saves ₹${annualSavings} vs monthly billing`}
                   </p>
                 )}
-                {c === "monthly" && founder && (
+                {c === "monthly" && earlyBird && (
                   <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
-                    Founder rate · locked in forever
+                    Early-bird rate · locked in forever
                   </p>
                 )}
               </div>
@@ -117,10 +121,10 @@ export function CheckoutForm({
 
             {/* Price (right-aligned) */}
             <div className="text-right shrink-0">
-              {founder ? (
+              {earlyBird ? (
                 <>
                   <p className="text-xs text-slate-400 dark:text-slate-500 line-through tabular-nums">
-                    ₹{c === "monthly" ? regularMonthly : 799}
+                    ₹{c === "monthly" ? REGULAR_PRICE.monthly : REGULAR_PRICE.annual}
                   </p>
                   <p className="text-sm font-bold text-slate-800 dark:text-slate-100 tabular-nums">
                     ₹{price[c]}
@@ -150,7 +154,7 @@ export function CheckoutForm({
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-600 dark:text-slate-300">
               Clear Plus · {cycle === "monthly" ? "Monthly" : "Annual"}
-              {founder && <span className="ml-1.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-full align-middle">Founder</span>}
+              {earlyBird && <span className="ml-1.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-full align-middle">Early Bird</span>}
             </span>
             <span className="tabular-nums text-slate-400 dark:text-slate-500 line-through">
               ₹{selectedPrice}

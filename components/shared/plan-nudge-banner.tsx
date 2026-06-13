@@ -3,8 +3,8 @@ import Link from "next/link";
 
 const COPY = {
   groups: {
-    near_limit: "You're using 3 of 4 free groups.",
-    at_limit: "You've reached the 4-group free plan limit.",
+    near_limit: "You're using 4 of 5 free groups.",
+    at_limit: "You've reached the 5-group free plan limit.",
   },
   members: {
     near_limit: "This group is using 7 of 8 free member slots.",

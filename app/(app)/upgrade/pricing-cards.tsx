@@ -3,21 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
+import { REGULAR_PRICE } from "@/lib/subscription/prices";
 
 const FEATURES: { label: string; free: string | boolean; plus: string | boolean }[] = [
-  { label: "Groups",              free: "Up to 4",    plus: "Unlimited" },
-  { label: "Members per group",   free: "Up to 8",    plus: "Up to 50" },
-  { label: "Expenses per group",  free: "Up to 50",   plus: "Up to 500" },
-  { label: "Split modes",         free: "Equal only", plus: "All modes" },
-  { label: "Recurring templates", free: false,        plus: true },
-  { label: "AI expense parsing",  free: false,        plus: true },
-  { label: "CSV export",          free: false,        plus: true },
+  { label: "Active groups",       free: "Up to 5",   plus: "Unlimited" },
+  { label: "Members per group",   free: "Unlimited", plus: "Unlimited" },
+  { label: "Expenses per group",  free: "Unlimited", plus: "Unlimited" },
+  { label: "All split modes",     free: true,        plus: true },
+  { label: "Recurring templates", free: false,       plus: true },
+  { label: "AI receipt scan",     free: true,        plus: true },
+  { label: "Receipt photo vault", free: "60 days",   plus: "Permanent" },
+  { label: "CSV export",          free: false,       plus: true },
 ];
 
 interface PricingCardsProps {
   isPlus: boolean;
   isTrialing: boolean;
-  founder: boolean;
+  earlyBird: boolean;
   price: { monthly: number; annual: number };
   annualMonthlyEquiv: number;
   annualSavings: number;
@@ -29,7 +31,7 @@ interface PricingCardsProps {
 export function PricingCards({
   isPlus,
   isTrialing,
-  founder,
+  earlyBird,
   price,
   annualMonthlyEquiv,
   annualSavings,
@@ -39,11 +41,16 @@ export function PricingCards({
 }: PricingCardsProps) {
   const [cycle, setCycle] = useState<"monthly" | "annual">("monthly");
 
-  const regularMonthly = 99;  // shown as strikethrough when founder is active
-  const regularAnnual  = 799; // shown as strikethrough when founder is active
+  const regularMonthly = REGULAR_PRICE.monthly; // shown as strikethrough when early-bird is active
+  const regularAnnual  = REGULAR_PRICE.annual;  // shown as strikethrough when early-bird is active
 
-  // Annual: savings badge text differs by cycle
-  const annualSavingsPct = Math.round((annualSavings / (regularMonthly * 12)) * 100); // % off regular monthly×12
+  // Early Bird's hook is the discount vs the regular price (locked forever),
+  // not the annual-vs-monthly cadence delta (tiny when monthly is already cheap).
+  const annualOffRegular = REGULAR_PRICE.annual - price.annual;     // ₹200 for Early Bird, 0 for regular
+  const monthlyOffRegular = REGULAR_PRICE.monthly - price.monthly;  // ₹30 for Early Bird, 0 for regular
+  const annualSavingsPct = earlyBird
+    ? Math.round((annualOffRegular / REGULAR_PRICE.annual) * 100)   // % off regular annual
+    : Math.round((annualSavings / (price.monthly * 12)) * 100);     // % annual vs monthly
 
   if (isPlus) {
     return (
@@ -66,13 +73,13 @@ export function PricingCards({
   return (
     <div className="space-y-6">
 
-      {/* ── Founder notice (full-width, above cards) ─────────────────────── */}
-      {founder && (
+      {/* ── Early Bird notice (full-width, above cards) ──────────────────── */}
+      {earlyBird && (
         <div className="rounded-2xl overflow-hidden border border-amber-200/60 dark:border-amber-700/40 shadow-sm shadow-amber-500/10">
           <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 pt-3.5 pb-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-bold text-white flex items-center gap-2">
-                🏷 Founder Pricing — locked in forever
+                🐦 Early Bird Pricing — locked in forever
               </p>
               <p className="text-xs font-semibold text-amber-100 tabular-nums">
                 {slotsRemaining} of {slotsTotal} slots left
@@ -86,7 +93,7 @@ export function PricingCards({
             <span className="text-amber-500 text-sm mt-0.5">🔒</span>
             <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
               Sign up now and your price is <strong>locked in forever</strong> — it will never increase,
-              even after founder slots fill up and regular pricing takes effect.
+              even after early-bird slots fill up and regular pricing takes effect.
             </p>
           </div>
         </div>
@@ -163,7 +170,7 @@ export function PricingCards({
             {/* Price — monthly view */}
             {cycle === "monthly" && (
               <>
-                {founder ? (
+                {earlyBird ? (
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm text-slate-400 dark:text-slate-500 line-through tabular-nums">₹{regularMonthly}</span>
                     <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 tabular-nums" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -176,9 +183,9 @@ export function PricingCards({
                   </p>
                 )}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">per month</p>
-                {founder && (
+                {earlyBird && (
                   <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-1.5">
-                    Founder rate — locked in forever
+                    Save ₹{monthlyOffRegular}/mo vs regular — locked forever
                   </p>
                 )}
               </>
@@ -187,7 +194,7 @@ export function PricingCards({
             {/* Price — annual view */}
             {cycle === "annual" && (
               <>
-                {founder ? (
+                {earlyBird ? (
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm text-slate-400 dark:text-slate-500 line-through tabular-nums">₹{regularAnnual}</span>
                     <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 tabular-nums" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -203,18 +210,24 @@ export function PricingCards({
                   per year · ₹{annualMonthlyEquiv}/month
                 </p>
                 {/* Savings callout */}
-                <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 px-3 py-2">
-                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                    Save ₹{annualSavings}/year
-                  </p>
-                  <p className="text-[11px] text-emerald-600/80 dark:text-emerald-500 mt-0.5">
-                    vs paying ₹{regularMonthly}/month · {annualSavingsPct}% off
-                  </p>
-                </div>
-                {founder && (
-                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-2">
-                    Founder rate — locked in forever
-                  </p>
+                {earlyBird ? (
+                  <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 px-3 py-2">
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      Save ₹{annualOffRegular}/year vs regular price
+                    </p>
+                    <p className="text-[11px] text-emerald-600/80 dark:text-emerald-500 mt-0.5">
+                      Locked in forever — your rate never increases
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 px-3 py-2">
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      Save ₹{annualSavings}/year
+                    </p>
+                    <p className="text-[11px] text-emerald-600/80 dark:text-emerald-500 mt-0.5">
+                      vs paying ₹{price.monthly}/month · {annualSavingsPct}% off
+                    </p>
+                  </div>
                 )}
               </>
             )}

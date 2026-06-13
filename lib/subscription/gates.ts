@@ -2,7 +2,6 @@ import { cache } from "react";
 import { db } from "@/lib/db/client";
 import { subscriptions } from "@/lib/db/schema/subscriptions";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { expenses } from "@/lib/db/schema/expenses";
 import { groups } from "@/lib/db/schema/groups";
 import { eq, and, count, inArray } from "drizzle-orm";
 
@@ -48,7 +47,7 @@ export async function canCreateGroup(userId: string): Promise<boolean> {
     if ((await getUserPlan(userId)) === "plus") return true;
     const [row] = await db.select({ total: count() }).from(groups)
       .where(and(eq(groups.createdBy, userId), eq(groups.isArchived, false), eq(groups.isDemo, false)));
-    return Number(row.total) < 4;
+    return Number(row.total) < 5;
   } catch {
     return true;
   }
@@ -64,8 +63,10 @@ export async function canExportCSV(userId: string): Promise<boolean> {
 
 // ── Group-level gates (group admin's plan) ────────────────────────────────────
 
-export async function canUseNonEqualSplit(groupId: string): Promise<boolean> {
-  return (await getGroupPlan(groupId)) === "plus";
+// Ungated June 2026 — all split modes are free (core bill-splitting job; was Plus-only).
+// Kept as an always-true async fn so existing call sites (forms + server guards) still work.
+export async function canUseNonEqualSplit(_groupId: string): Promise<boolean> {
+  return true;
 }
 
 export async function canUseTemplates(groupId: string): Promise<boolean> {
@@ -76,26 +77,14 @@ export async function canUseBudget(groupId: string): Promise<boolean> {
   return (await getGroupPlan(groupId)) === "plus";
 }
 
-export async function canAddMember(groupId: string): Promise<boolean> {
-  try {
-    if ((await getGroupPlan(groupId)) === "plus") return true;
-    const [row] = await db.select({ total: count() }).from(groupMembers)
-      .where(eq(groupMembers.groupId, groupId));
-    return Number(row.total) < 8;
-  } catch {
-    return true;
-  }
+// Ungated June 2026 — unlimited members on all plans (members are viral growth, never capped).
+export async function canAddMember(_groupId: string): Promise<boolean> {
+  return true;
 }
 
-export async function canAddExpense(groupId: string): Promise<boolean> {
-  try {
-    if ((await getGroupPlan(groupId)) === "plus") return true;
-    const [row] = await db.select({ total: count() }).from(expenses)
-      .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)));
-    return Number(row.total) < 50;
-  } catch {
-    return true;
-  }
+// Ungated June 2026 — unlimited expenses on all plans (never paywall mid-trip).
+export async function canAddExpense(_groupId: string): Promise<boolean> {
+  return true;
 }
 
 // ── Soft nudge helpers (used by UI in Phase 3) ────────────────────────────────
@@ -105,28 +94,18 @@ export async function getGroupNudge(userId: string): Promise<"near_limit" | "at_
   const [row] = await db.select({ total: count() }).from(groups)
     .where(and(eq(groups.createdBy, userId), eq(groups.isArchived, false), eq(groups.isDemo, false)));
   const n = Number(row.total);
-  if (n >= 4) return "at_limit";
-  if (n >= 3) return "near_limit";
+  if (n >= 5) return "at_limit";
+  if (n >= 4) return "near_limit";
   return null;
 }
 
-export async function getMemberNudge(groupId: string): Promise<"near_limit" | "at_limit" | null> {
-  if ((await getGroupPlan(groupId)) === "plus") return null;
-  const [row] = await db.select({ total: count() }).from(groupMembers)
-    .where(eq(groupMembers.groupId, groupId));
-  const n = Number(row.total);
-  if (n >= 8) return "at_limit";
-  if (n >= 7) return "near_limit";
+// Member & expense caps removed June 2026 — these nudges never fire now, but the
+// functions are kept (returning null) so call sites and `resource` types stay valid.
+export async function getMemberNudge(_groupId: string): Promise<"near_limit" | "at_limit" | null> {
   return null;
 }
 
-export async function getExpenseNudge(groupId: string): Promise<"near_limit" | "at_limit" | null> {
-  if ((await getGroupPlan(groupId)) === "plus") return null;
-  const [row] = await db.select({ total: count() }).from(expenses)
-    .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)));
-  const n = Number(row.total);
-  if (n >= 50) return "at_limit";
-  if (n >= 40) return "near_limit";
+export async function getExpenseNudge(_groupId: string): Promise<"near_limit" | "at_limit" | null> {
   return null;
 }
 

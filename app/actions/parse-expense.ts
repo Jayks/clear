@@ -6,7 +6,7 @@ import type { ParsedExpense, CategoryValue } from "@/lib/parser/parse-expense";
 import { CATEGORY_VALUES } from "@/lib/categories";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { checkAiRateLimit } from "@/lib/rate-limit";
-import { canUseAI } from "@/lib/subscription/gates";
+import { canUseLoggingAI, incrementLoggingAiUsage } from "@/lib/subscription/ai-quota";
 
 const responseSchema = z.object({
   description: z.string().optional().default(""),
@@ -32,7 +32,8 @@ export async function parseExpenseWithAI(
 ): Promise<ParsedExpense | null> {
   const user = await getCurrentUser();
   if (!user || !checkAiRateLimit(user.id)) return null;
-  if (!(await canUseAI(user.id))) return null;
+  if (!(await canUseLoggingAI(user.id))) return null; // free monthly ceiling (Plus uncapped)
+  await incrementLoggingAiUsage(user.id);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

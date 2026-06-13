@@ -178,35 +178,27 @@ describe("updateExpense / updateTemplate — atomic split update (E-1/E-2)", () 
   });
 });
 
-// ─── E-3 documentation: canAddExpense bypass ─────────────────────────────────
+// ─── E-3: expense cap removed (June 2026 generous re-cut) ────────────────────
 
-describe("expense plan limit enforcement (E-3)", () => {
+describe("expense plan limit enforcement (E-3) — cap removed", () => {
   /**
-   * canAddExpense counts `isTemplate = false` rows and returns false at 50.
-   * Four paths previously bypassed this check; now all call it consistently.
+   * The 50-expense free cap was removed in the June 2026 re-cut: a single active
+   * trip can blow past 50 expenses, so paywalling mid-trip was user-hostile.
+   * canAddExpense now returns true for every plan and count. (The earlier work
+   * making all four template/duplicate paths call canAddExpense still stands —
+   * the guard is just always-true now.)
    */
-
-  function simulateCanAddExpense(nonTemplateCount: number, plan: "free" | "plus"): boolean {
-    if (plan === "plus") return true;
-    return nonTemplateCount < 50;
+  function simulateCanAddExpense(_count: number, _plan: "free" | "plus"): boolean {
+    return true;
   }
 
-  it("free plan: allowed when under 50 non-template expenses", () => {
+  it("free plan: allowed at any expense count (cap removed)", () => {
     expect(simulateCanAddExpense(49, "free")).toBe(true);
+    expect(simulateCanAddExpense(50, "free")).toBe(true);
+    expect(simulateCanAddExpense(500, "free")).toBe(true);
   });
 
-  it("free plan: blocked at exactly 50 expenses", () => {
-    expect(simulateCanAddExpense(50, "free")).toBe(false);
-  });
-
-  it("plus plan: always allowed regardless of count", () => {
+  it("plus plan: always allowed", () => {
     expect(simulateCanAddExpense(999, "plus")).toBe(true);
-  });
-
-  it("[BUG SCENARIO] template-log and duplicate paths reached 51+ on free plan", () => {
-    // Before fix: these four paths had no canAddExpense call.
-    // After fix: each returns the same error as addExpense when at limit.
-    const atLimit = simulateCanAddExpense(50, "free");
-    expect(atLimit).toBe(false); // All four paths now check this and return error
   });
 });

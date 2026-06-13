@@ -15,17 +15,18 @@ const TABLE_SECTIONS: {
   {
     label: "Groups & Members",
     rows: [
-      { feature: "Active groups",      free: "Up to 4",    plus: "Unlimited"  },
-      { feature: "Members per group",  free: "Up to 8",    plus: "Up to 50"   },
-      { feature: "Expenses per group", free: "Up to 50",   plus: "Up to 500"  },
+      { feature: "Active groups",      free: "Up to 5",   plus: "Unlimited" },
+      { feature: "Members per group",  free: "Unlimited", plus: "Unlimited" },
+      { feature: "Expenses per group", free: "Unlimited", plus: "Unlimited" },
     ],
   },
   {
     label: "Splitting",
     rows: [
-      { feature: "Split modes",         free: "Equal only", plus: "Equal, Exact, %, Shares" },
-      { feature: "Recurring templates", free: false,         plus: true },
-      { feature: "AI expense parsing",  free: false,         plus: true },
+      { feature: "Split modes",         free: "Equal, Exact, %, Shares", plus: "Equal, Exact, %, Shares" },
+      { feature: "Recurring templates", free: false,                      plus: true },
+      { feature: "AI receipt scan",     free: true,                       plus: true },
+      { feature: "Receipt photo vault", free: "Kept 60 days",             plus: "Permanent" },
     ],
   },
   {
@@ -109,7 +110,7 @@ export default function PricingPage() {
             Everything in the box
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Free covers the basics. Plus lifts every limit.
+            Free is genuinely generous. Plus adds scale and power features.
           </p>
         </div>
 

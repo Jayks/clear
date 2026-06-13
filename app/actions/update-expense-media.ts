@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { extractReceiptStoragePath } from "@/lib/receipt/storage-path";
 import { eq, and } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
@@ -98,9 +99,7 @@ export async function getReceiptViewUrl(
 
   // Stored value is a full public URL (existing data) or a bare in-bucket path —
   // extract the path after the bucket name either way.
-  const marker = "/receipt-photos/";
-  const idx = expense.receiptUrl.indexOf(marker);
-  const path = idx >= 0 ? expense.receiptUrl.slice(idx + marker.length) : expense.receiptUrl;
+  const path = extractReceiptStoragePath(expense.receiptUrl);
 
   try {
     const supabase = createAdminClient();

@@ -3,8 +3,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getUserSubscription } from "@/lib/subscription/gates";
-import { getFounderSlotsClaimed, isFounderActive } from "@/lib/subscription/founder";
-import { FOUNDER_PRICE, REGULAR_PRICE, FOUNDER_ANNUAL_MONTHLY_EQUIV, REGULAR_ANNUAL_MONTHLY_EQUIV } from "@/lib/subscription/prices";
+import { getEarlyBirdSlotsClaimed, isEarlyBirdActive } from "@/lib/subscription/early-bird";
+import { EARLY_BIRD_PRICE, REGULAR_PRICE, EARLY_BIRD_ANNUAL_MONTHLY_EQUIV, REGULAR_ANNUAL_MONTHLY_EQUIV } from "@/lib/subscription/prices";
 import { redirect } from "next/navigation";
 import { SettingsLayout } from "./settings-layout";
 import { db } from "@/lib/db/client";
@@ -28,17 +28,17 @@ export default async function SettingsPage() {
 
   const currentDisplayName = memberRow?.displayName ?? extractDisplayName(user) ?? "";
 
-  const [sub, upiIds, founderClaimed] = await Promise.all([
+  const [sub, upiIds, earlyBirdClaimed] = await Promise.all([
     getUserSubscription(user.id),
     getUserUpiIds(user.id),
     // BUG-11 fix: compute correct price labels server-side so the client billing
     // section doesn't hardcode stale prices.
-    getFounderSlotsClaimed(),
+    getEarlyBirdSlotsClaimed(),
   ]);
 
-  const founderActive = isFounderActive(founderClaimed);
-  const price = founderActive ? FOUNDER_PRICE : REGULAR_PRICE;
-  const annualEquiv = founderActive ? FOUNDER_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
+  const earlyBirdActive = isEarlyBirdActive(earlyBirdClaimed);
+  const price = earlyBirdActive ? EARLY_BIRD_PRICE : REGULAR_PRICE;
+  const annualEquiv = earlyBirdActive ? EARLY_BIRD_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
   const billingPriceLabels = {
     monthly: `₹${price.monthly}/month`,
     annual:  `₹${price.annual}/year · ₹${annualEquiv}/month`,

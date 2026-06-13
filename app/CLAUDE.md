@@ -238,22 +238,24 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 ## Subscription & Monetization
 
-### Pricing constants — `lib/subscription/founder.ts` (server-only)
+### Pricing constants — `lib/subscription/early-bird.ts` (server-only) + `prices.ts` (client-safe)
 
-Single source of truth for all prices and founder slot logic. `import "server-only"` guards it from client bundles. All RSC pages import from here and pass computed values as serializable props to client components — nothing is hardcoded in UI.
+Price numbers live in `prices.ts` (client-safe, no `server-only`); slot logic + DB queries live in `early-bird.ts` (server-only) which re-exports the price constants. RSC pages import from `early-bird.ts` and pass computed values as serializable props to client components; client components import numbers from `prices.ts`. Nothing is hardcoded in UI.
 
 ```
-FOUNDER_SLOTS_TOTAL = 500
-FOUNDER_PRICE       = { monthly: 79,  annual: 699 }   // ₹79/mo · ₹699/yr
-REGULAR_PRICE       = { monthly: 99,  annual: 799 }   // ₹99/mo · ₹799/yr
-FOUNDER_ANNUAL_MONTHLY_EQUIV = 58   // floor(699 / 12)
-REGULAR_ANNUAL_MONTHLY_EQUIV = 66   // floor(799 / 12)
-FOUNDER_ANNUAL_SAVINGS       = 489  // 99×12 − 699  (savings vs paying regular monthly)
-REGULAR_ANNUAL_SAVINGS       = 389  // 99×12 − 799
+EARLY_BIRD_SLOTS_TOTAL = 300
+EARLY_BIRD_PRICE       = { monthly: 49,  annual: 499 }   // ₹49/mo · ₹499/yr
+REGULAR_PRICE          = { monthly: 79,  annual: 699 }   // ₹79/mo · ₹699/yr
+EARLY_BIRD_ANNUAL_MONTHLY_EQUIV = 41   // floor(499 / 12)
+REGULAR_ANNUAL_MONTHLY_EQUIV    = 58   // floor(699 / 12)
+EARLY_BIRD_ANNUAL_SAVINGS       = 89   // 49×12 − 499  (honest per-tier: vs early-bird's own monthly)
+REGULAR_ANNUAL_SAVINGS          = 249  // 79×12 − 699  (honest per-tier: vs regular's own monthly)
 ```
 
-- `getFounderSlotsClaimed()` — counts `status='active'` subscriptions; **fails open** (returns 0 on DB error so founder pricing always shows rather than blocking upgrade)
-- `isFounderActive(claimed)` — `true` when `claimed < FOUNDER_SLOTS_TOTAL`
+- `getEarlyBirdSlotsClaimed()` — counts `status='active'` subscriptions; **fails open** (returns 0 on DB error so early-bird pricing always shows rather than blocking upgrade)
+- `isEarlyBirdActive(claimed)` — `true` when `claimed < EARLY_BIRD_SLOTS_TOTAL`
+- **Positioning:** "premium-but-fair" — we don't undercut Splitkaro (~₹37.5/mo); Early Bird (first 300) is a deliberate loss-leader for traction. See `[[pricing-roi-strategy]]` memory.
+- **Phases 2–4 pending:** free-tier re-cut (ungate splits, drop member/expense caps → 5-group cap), free logging-AI, /pricing feature-table update.
 
 ### Plan-check logic — `lib/subscription/gates.ts`
 
@@ -265,8 +267,11 @@ REGULAR_ANNUAL_SAVINGS       = 389  // 99×12 − 799
 
 **`isPlus` vs `isTrialing` pattern (upgrade/checkout/settings):** use `getUserSubscription(user.id)` — `isPlus = plan==="plus" && status==="active"`, `isTrialing = status==="trialing"`. Never use `getUserPlan()` here — it masks trial state.
 
-**Free plan limits:** 4 non-demo non-archived groups, 8 members per group, 50 expenses per group.
-**Plus unlocks:** unlimited everything, AI features, CSV export, all split modes, recurring templates, budget tracking. Group admin's plan covers all members.
+**Free plan limits (June 2026 generous re-cut):** **5 active** (non-demo, non-archived) groups — that's the ONLY cap. Members, expenses, and **all split modes are unlimited/free**. `canUseNonEqualSplit`/`canAddMember`/`canAddExpense` are now always-true; `getMemberNudge`/`getExpenseNudge` always return null; `getGroupNudge` fires near=4, at=5.
+**Plus unlocks:** unlimited active groups, recurring templates, budget tracking, CSV export, personal "You" insights, AI narrative/Plan-vs-Reality. Group admin's plan covers all members.
+**Logging-AI is FREE (not Plus):** receipt scan, NL quick-add, chat import. Gated by `canUseLoggingAI(userId)` (`lib/subscription/ai-quota.ts`) — Plus uncapped, Free under a **silent 50/month abuse ceiling** (`FREE_AI_MONTHLY_CEILING`, fails open, never shown in UI). `incrementLoggingAiUsage` counts free-tier calls in the `ai_usage` table. Analytical AI (narrative, trip-adherence) stays Plus via `canUseAI`. UI scan gates open because the pages pass `canUseLoggingAI` as the `isPlusUser`/`aiAllowed` prop; the card `GroupActionHub` scan tile is `plusOnly:false`.
+
+**Receipt-photo retention is a Plus perk (Phase 3b — built):** only the image *bytes* expire — `receiptItems` + `receiptScannedAt` (line-items + "✨ scanned" badge) stay forever. Policy is the pure `isReceiptExpired()` in `lib/subscription/receipt-retention.ts` (`RECEIPT_RETENTION_DAYS = 60`): Plus = permanent vault; Free = prune at 60 days UNLESS the group is a still-active trip (live trips keep proofs regardless of age; nests, circles, ended/archived trips prune). Enforced by the daily cron `app/api/cron/prune-receipts/route.ts` (CRON_SECRET bearer-guarded) — deletes the storage object then nulls `receiptUrl`. The scanner's proof toggle shows a free-tier "Kept 60 days on Free · permanent on Plus" line. Storage-path extraction shared via `lib/receipt/storage-path.ts` (also used by `getReceiptViewUrl`).
 
 ### Actions — `app/actions/subscription.ts`
 
@@ -446,7 +451,13 @@ Login renders as a **modal overlay** (via Next.js parallel routes + intercepting
 
 ### AI action rate limiting
 
-`lib/rate-limit.ts` exports `checkAiRateLimit(userId): boolean` — 20 AI calls/hour per user, shared across all AI features. All five AI actions (`parse-expense.ts`, `narrative.ts`, `parse-chat.ts`, `trip-adherence.ts`, `parse-receipt.ts`) call `getCurrentUser()` then `checkAiRateLimit(user.id)` before invoking Anthropic. In-memory store (best-effort on serverless). `parseExpenseWithAI` returns `null` on rate limit; others return `{ ok: false, error: "Rate limit exceeded..." }`.
+`lib/rate-limit.ts` exports `checkAiRateLimit(userId): boolean` — 20 AI calls/hour per user, shared across all AI features (in-memory, best-effort on serverless). All five AI actions call `getCurrentUser()` then `checkAiRateLimit(user.id)` before invoking Anthropic.
+
+**Two-tier AI gating (June 2026):**
+- **Logging-AI** — `parse-receipt.ts`, `parse-expense.ts`, `parse-chat.ts` gate on `canUseLoggingAI(user.id)` (free for all, silent 50/mo ceiling) and call `incrementLoggingAiUsage(user.id)`. Do NOT use `canUseAI` here.
+- **Analytical AI** — `narrative.ts`, `trip-adherence.ts` stay Plus-only via `canUseAI(user.id)`.
+
+`parseExpenseWithAI`/`parseReceiptWithAI` return `null` on a blocked gate/rate-limit; chat/narrative/adherence return `{ ok: false, error }`.
 
 ### pdf-parse — import from `lib/`, never from `index.js`
 

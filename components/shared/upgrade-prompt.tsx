@@ -5,12 +5,12 @@ import { X, Sparkles, Check } from "lucide-react";
 import Link from "next/link";
 
 const PLUS_FEATURES = [
-  "Unlimited groups (free: 4)",
-  "Up to 50 members per group (free: 8)",
-  "Up to 500 expenses per group (free: 50)",
-  "Exact, % and shares splits",
+  "Unlimited active groups (free: up to 5)",
   "Recurring expense templates",
-  "AI expense parsing from chat",
+  "AI trip narrative & Plan-vs-Reality",
+  "Budget tracking",
+  "Personal You-tab insights",
+  "Permanent receipt vault (free: 60 days)",
   "CSV export",
 ];
 

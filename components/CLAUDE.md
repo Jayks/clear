@@ -403,7 +403,7 @@ Sits `sticky top-14 z-40 -mx-6 px-6 backdrop-blur-sm`. Pill size: `px-4 py-2 tex
 - **Import from a group** — **Plus only**, hidden entirely for free users (teaser covers the upgrade pitch).
 - **Bulk paste** (comma/newline textarea) and **manual typing** → always free.
 
-**Submission:** all paths call `importMembersFromGroup(groupId, names[])` which handles deduplication + free-plan 8-member limit. On success, switches to `share` mode.
+**Submission:** all paths call `importMembersFromGroup(groupId, names[])` which handles deduplication. On success, switches to `share` mode. (Member count is unlimited on all plans since the June 2026 re-cut — no add-count cap. The "Clear network" / "Import from a group" *convenience* features remain Plus-only.)
 
 **Props:** `groupId`, `groupName`, `inviteUrl`, `networkMembers` (from `getNetworkMembers()`), `sourceGroups` (from `getGroupsForImport()`), `existingNames: Set<string>`, `isPlusUser: boolean`. Uses `useSheetDismiss`.
 

@@ -64,19 +64,19 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     ],
   },
   {
-    section: "Founder pricing",
+    section: "Early Bird pricing",
     items: [
       {
-        q: "What is Founder Pricing, and who is it for?",
-        a: "Founder Pricing is a permanently discounted rate reserved for the first 500 subscribers who activate Clear Plus. Monthly: ₹79 instead of ₹99. Annual: ₹699 instead of ₹799 — that's ₹58/month, saving ₹489 compared to paying the regular monthly rate. It's our way of rewarding the people who back Clear early.",
+        q: "What is Early Bird Pricing, and who is it for?",
+        a: "Early Bird Pricing is a permanently discounted rate reserved for the first 300 subscribers who activate Clear Plus. Monthly: ₹49 instead of ₹79. Annual: ₹499 instead of ₹699 (just ₹41/month) — and it's locked in forever, so you save ₹200 a year versus the regular price, every year. It's our way of rewarding the people who back Clear early.",
       },
       {
-        q: "Is the Founder Price really locked in forever?",
-        a: "Yes. If you subscribe during the Founder window, your rate is locked in for the life of your subscription. We will never increase it. The only scenario where this changes is if you voluntarily cancel and resubscribe later — in that case, you'd pay the rate in effect at the time of resubscription.",
+        q: "Is the Early Bird price really locked in forever?",
+        a: "Yes. If you subscribe during the Early Bird window, your rate is locked in for the life of your subscription. We will never increase it. The only scenario where this changes is if you voluntarily cancel and resubscribe later — in that case, you'd pay the rate in effect at the time of resubscription.",
       },
       {
-        q: "How long is Founder Pricing available?",
-        a: "Until 500 subscribers have claimed it, or until we decide to close the window — whichever comes first. The counter on this page shows live availability. Once the slots are gone, new subscribers pay the regular rate of ₹99/month or ₹799/year.",
+        q: "How long is Early Bird Pricing available?",
+        a: "Until 300 subscribers have claimed it, or until we decide to close the window — whichever comes first. The counter on this page shows live availability. Once the slots are gone, new subscribers pay the regular rate of ₹79/month or ₹699/year.",
       },
     ],
   },
@@ -85,7 +85,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "Monthly vs annual — which should I choose?",
-        a: "Monthly gives you flexibility: cancel anytime, no upfront commitment. Annual is billed once for the full year and saves you significantly more — Founder annual at ₹699/year works out to ₹58/month (saving ₹489 vs regular monthly). Regular annual at ₹799/year is ₹66/month (saving ₹389). The features are identical on both cycles. If you plan to use Clear for more than a few months, annual is the better deal.",
+        a: "Monthly gives you flexibility: cancel anytime, no upfront commitment. Annual is billed once for the full year and works out cheaper per month — Early Bird annual at ₹499/year is ₹41/month (saving ₹89 vs early-bird monthly). Regular annual at ₹699/year is ₹58/month (saving ₹249 vs regular monthly). The features are identical on both cycles. If you plan to use Clear for more than a few months, annual is the better deal.",
       },
       {
         q: "When does billing actually start?",

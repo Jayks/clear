@@ -274,6 +274,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=Clear
 ANTHROPIC_API_KEY
 PLATFORM_ADMIN_EMAIL                 # comma-separated; guards /admin dashboard
+CRON_SECRET                          # bearer secret for /api/cron/* routes; Vercel Cron sends it as `Authorization: Bearer`
 
 # Geocoding (receipt scanner location + LocationInput dropdown)
 NEXT_PUBLIC_MAPBOX_TOKEN             # pk.eyJ1... — Mapbox public token; omit to disable geocoding

@@ -4,21 +4,20 @@ import { subscriptions } from "@/lib/db/schema/subscriptions";
 import { count, eq } from "drizzle-orm";
 
 // ── Pricing — imported from client-safe prices.ts (single source of truth) ───
-// BUG-11 fix: constants previously duplicated here; now re-exported from
-// prices.ts so client components (billing-section.tsx) can import them too.
+// Re-exported so client components (billing-section.tsx) can import them too.
 export {
-  FOUNDER_PRICE,
+  EARLY_BIRD_PRICE,
   REGULAR_PRICE,
-  FOUNDER_ANNUAL_MONTHLY_EQUIV,
+  EARLY_BIRD_ANNUAL_MONTHLY_EQUIV,
   REGULAR_ANNUAL_MONTHLY_EQUIV,
-  FOUNDER_ANNUAL_SAVINGS,
+  EARLY_BIRD_ANNUAL_SAVINGS,
   REGULAR_ANNUAL_SAVINGS,
 } from "./prices";
 
-// ── Founder slot configuration ─────────────────────────────────────────────────
+// ── Early-bird slot configuration ────────────────────────────────────────────
 
-/** Maximum number of subscribers who lock in founder pricing. */
-export const FOUNDER_SLOTS_TOTAL = 500;
+/** Maximum number of subscribers who lock in early-bird pricing. */
+export const EARLY_BIRD_SLOTS_TOTAL = 300;
 
 // ── DB query ───────────────────────────────────────────────────────────────────
 
@@ -26,9 +25,9 @@ export const FOUNDER_SLOTS_TOTAL = 500;
  * Count of subscribers with status = 'active'.
  * Trialing users (default state for new sign-ups) are not counted — only those
  * who have explicitly activated Plus (or will have paid after Razorpay goes live).
- * Fails open (returns 0) — better to show founder pricing than to block it on a DB error.
+ * Fails open (returns 0) — better to show early-bird pricing than to block it on a DB error.
  */
-export async function getFounderSlotsClaimed(): Promise<number> {
+export async function getEarlyBirdSlotsClaimed(): Promise<number> {
   try {
     const [row] = await db
       .select({ total: count() })
@@ -40,7 +39,7 @@ export async function getFounderSlotsClaimed(): Promise<number> {
   }
 }
 
-/** Returns true while founder slots are still available. */
-export function isFounderActive(claimed: number): boolean {
-  return claimed < FOUNDER_SLOTS_TOTAL;
+/** Returns true while early-bird slots are still available. */
+export function isEarlyBirdActive(claimed: number): boolean {
+  return claimed < EARLY_BIRD_SLOTS_TOTAL;
 }

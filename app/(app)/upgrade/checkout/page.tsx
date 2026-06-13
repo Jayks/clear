@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { CheckoutForm } from "./checkout-form";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getUserSubscription } from "@/lib/subscription/gates";
-import { getFounderSlotsClaimed, isFounderActive, FOUNDER_PRICE, REGULAR_PRICE, FOUNDER_ANNUAL_MONTHLY_EQUIV, REGULAR_ANNUAL_MONTHLY_EQUIV, FOUNDER_ANNUAL_SAVINGS, REGULAR_ANNUAL_SAVINGS, FOUNDER_SLOTS_TOTAL } from "@/lib/subscription/founder";
+import { getEarlyBirdSlotsClaimed, isEarlyBirdActive, EARLY_BIRD_PRICE, REGULAR_PRICE, EARLY_BIRD_ANNUAL_MONTHLY_EQUIV, REGULAR_ANNUAL_MONTHLY_EQUIV, EARLY_BIRD_ANNUAL_SAVINGS, REGULAR_ANNUAL_SAVINGS, EARLY_BIRD_SLOTS_TOTAL } from "@/lib/subscription/early-bird";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "Checkout — Clear Plus" };
@@ -14,7 +14,7 @@ export default async function CheckoutPage({
 }: {
   searchParams: Promise<{ cycle?: string }>;
 }) {
-  const [user, claimed] = await Promise.all([getCurrentUser(), getFounderSlotsClaimed()]);
+  const [user, claimed] = await Promise.all([getCurrentUser(), getEarlyBirdSlotsClaimed()]);
   if (!user) redirect("/login?returnTo=/upgrade/checkout");
 
   const sub = await getUserSubscription(user.id);
@@ -24,11 +24,11 @@ export default async function CheckoutPage({
   const { cycle } = await searchParams;
   const initialCycle: "monthly" | "annual" = cycle === "annual" ? "annual" : "monthly";
 
-  const founder = isFounderActive(claimed);
-  const price = founder ? FOUNDER_PRICE : REGULAR_PRICE;
-  const annualMonthlyEquiv = founder ? FOUNDER_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
-  const annualSavings = founder ? FOUNDER_ANNUAL_SAVINGS : REGULAR_ANNUAL_SAVINGS;
-  const slotsRemaining = FOUNDER_SLOTS_TOTAL - claimed;
+  const earlyBird = isEarlyBirdActive(claimed);
+  const price = earlyBird ? EARLY_BIRD_PRICE : REGULAR_PRICE;
+  const annualMonthlyEquiv = earlyBird ? EARLY_BIRD_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
+  const annualSavings = earlyBird ? EARLY_BIRD_ANNUAL_SAVINGS : REGULAR_ANNUAL_SAVINGS;
+  const slotsRemaining = EARLY_BIRD_SLOTS_TOTAL - claimed;
 
   return (
     <div className="max-w-md mx-auto w-full flex flex-col flex-1">
@@ -55,12 +55,12 @@ export default async function CheckoutPage({
 
         <CheckoutForm
           initialCycle={initialCycle}
-          founder={founder}
+          earlyBird={earlyBird}
           price={price}
           annualMonthlyEquiv={annualMonthlyEquiv}
           annualSavings={annualSavings}
           slotsRemaining={slotsRemaining}
-          slotsTotal={FOUNDER_SLOTS_TOTAL}
+          slotsTotal={EARLY_BIRD_SLOTS_TOTAL}
         />
       </div>
     </div>

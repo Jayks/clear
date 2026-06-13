@@ -24,6 +24,7 @@ import { compressImage, extractGpsFromImage, fileToBase64 } from "@/lib/image-ut
 import { parseReceiptWithAI } from "@/app/actions/parse-receipt";
 import { hapticSuccess } from "@/lib/haptics";
 import { SCAN_MODE_CONFIG, type ScanMode, type ParsedReceipt } from "@/lib/receipt/types";
+import { RECEIPT_RETENTION_DAYS } from "@/lib/subscription/receipt-retention";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -352,6 +353,7 @@ export function ReceiptScannerSheet({
                 result={state.result}
                 previewUrl={state.previewUrl}
                 keepProof={state.keepProof}
+                isPlusUser={isPlusUser}
                 config={config}
                 onKeepProofChange={(v) =>
                   setState(prev => prev.type === "results" ? { ...prev, keepProof: v } : prev)
@@ -608,6 +610,7 @@ function ResultsState({
   result,
   previewUrl,
   keepProof,
+  isPlusUser,
   config,
   onKeepProofChange,
   onFillForm,
@@ -617,6 +620,7 @@ function ResultsState({
   result:            ParsedReceipt;
   previewUrl:        string;
   keepProof:         boolean;
+  isPlusUser:        boolean;
   config:            (typeof SCAN_MODE_CONFIG)[ScanMode];
   onKeepProofChange: (v: boolean) => void;
   onFillForm:        () => void;
@@ -761,6 +765,11 @@ function ResultsState({
           <div>
             <p className="text-sm font-medium text-slate-200">{config.proofToggleLabel}</p>
             <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{config.proofDisclosure}</p>
+            {!isPlusUser && keepProof && (
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Kept {RECEIPT_RETENTION_DAYS} days on Free · permanent on Plus
+              </p>
+            )}
           </div>
         </label>
       </div>

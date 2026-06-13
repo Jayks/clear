@@ -24,7 +24,7 @@ interface Props {
   userEmail: string;
   userAvatarUrl: string | null;
   upiIds: UserUpiId[];
-  /** BUG-11 fix: price labels computed server-side from founder.ts so the
+  /** BUG-11 fix: price labels computed server-side from early-bird.ts so the
    *  billing section never needs to hardcode or duplicate price constants. */
   billingPriceLabels: { monthly: string; annual: string };
 }

@@ -18,7 +18,8 @@ import { ExpenseQuickAddFab } from "@/components/expense/expense-quick-add-fab";
 import { TemplateSection } from "./template-section";
 import { NestHint } from "@/components/shared/nest-hint";
 import { ExportCsvButton } from "./export-csv-button";
-import { getExpenseNudge, canUseTemplates, canUseAI } from "@/lib/subscription/gates";
+import { getExpenseNudge, canUseTemplates } from "@/lib/subscription/gates";
+import { canUseLoggingAI } from "@/lib/subscription/ai-quota";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { CircleExpenseList } from "@/components/circle/circle-expense-list";
@@ -41,7 +42,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
     getGroupTemplates(id),
     getExpenseNudge(id),
     canUseTemplates(id),
-    user ? canUseAI(user.id) : Promise.resolve(false),
+    user ? canUseLoggingAI(user.id) : Promise.resolve(false), // scan + chat import are free
   ]);
   if (!data) notFound();
 

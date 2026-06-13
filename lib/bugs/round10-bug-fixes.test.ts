@@ -429,7 +429,7 @@ describe("BUG-10 — date range validation uses lexicographic string comparison"
 //   1. Log in and navigate to /settings.
 //   2. Activate Plus demo (if not already on Plus).
 //   3. Check the Billing tab.
-//   4. Monthly price should show ₹79/month (founder) or ₹99/month (regular).
-//   5. Annual price should show ₹699/year or ₹799/year.
-//   BEFORE FIX: ₹49/month and ₹499/year (wrong).
+//   4. Monthly price should show ₹49/month (early bird) or ₹79/month (regular).
+//   5. Annual price should show ₹499/year or ₹699/year.
+//   BEFORE FIX: hardcoded stale prices that didn't match the active model.
 // ─────────────────────────────────────────────────────────────────────────────

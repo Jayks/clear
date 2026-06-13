@@ -53,7 +53,7 @@ const ADD_TILES: {
     sub:      "Receipt",
     gradient: "from-violet-500 to-purple-600",
     shadow:   "shadow-violet-500/30",
-    plusOnly: true,
+    plusOnly: false, // logging-AI (receipt scan) is free for everyone now
   },
   {
     id:       "voice",
@@ -418,7 +418,7 @@ export function GroupActionHub({
         groupStartDate={groupStartDate}
         groupEndDate={groupEndDate}
         members={members}
-        isPlusUser={isPlusUser}
+        isPlusUser={true} /* scan / logging-AI is free for all; server enforces the ceiling */
         onClose={() => setQuickAddOpen(false)}
       />
     </>

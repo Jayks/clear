@@ -2,7 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { getCurrentUser } from "@/lib/db/queries/auth";
-import { canUseAI } from "@/lib/subscription/gates";
+import { canUseLoggingAI, incrementLoggingAiUsage } from "@/lib/subscription/ai-quota";
 import { checkAiRateLimit, checkReceiptScanLimit } from "@/lib/rate-limit";
 import { reverseGeocode } from "@/lib/geocoding";
 import { receiptResponseSchema, computeConfidence, isEmptyReceiptResponse } from "@/lib/receipt/parse-helpers";
@@ -46,8 +46,10 @@ export async function parseReceiptWithAI(
   const user = await getCurrentUser();
   if (!user) return null;
 
-  // Guard order matters — check Plus gate FIRST to skip rate-limit DB ops for free users
-  if (!(await canUseAI(user.id))) return null;             // 1. Plus gate (fast)
+  // Logging-AI is free for everyone; canUseLoggingAI enforces a silent monthly
+  // abuse ceiling on the free tier (Plus is uncapped).
+  if (!(await canUseLoggingAI(user.id))) return null;      // 1. Free monthly ceiling
+  await incrementLoggingAiUsage(user.id);                  //    count this call (no-op for Plus)
   if (!checkAiRateLimit(user.id)) return null;             // 2. Hourly AI limit (20/hr)
   if (!checkReceiptScanLimit(user.id))                     // 3. Daily scan limit (20/day)
     return { ok: false, error: "You've scanned 20 receipts today — limit resets at midnight." };

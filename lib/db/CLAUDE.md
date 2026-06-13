@@ -181,6 +181,17 @@ created_at, updated_at: timestamptz
 ```
 Schema: `lib/db/schema/subscriptions.ts`. **Note:** `pnpm db:push` has a pre-existing drizzle-kit bug with `group_members` CHECK constraint — apply new columns via direct SQL in Supabase SQL Editor.
 
+### ai_usage
+```
+id: uuid PK
+user_id: uuid NOT NULL
+period: text NOT NULL                -- 'YYYY-MM'
+count: integer NOT NULL default 0
+updated_at: timestamptz NOT NULL
+UNIQUE: (user_id, period)
+```
+Per-user monthly logging-AI counter backing the **silent free-tier abuse ceiling** (`FREE_AI_MONTHLY_CEILING = 50` in `lib/subscription/ai-quota.ts`). Schema: `lib/db/schema/ai-usage.ts`. RLS enabled, **no policies** (only the Drizzle direct connection writes it; `canUseLoggingAI` fails open if the table is absent). Apply via `drizzle/ai-usage.sql` in the Supabase SQL Editor.
+
 ### stream_guests
 ```
 id: uuid PK

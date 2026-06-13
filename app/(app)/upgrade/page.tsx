@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getUserSubscription } from "@/lib/subscription/gates";
-import { getFounderSlotsClaimed, isFounderActive, FOUNDER_SLOTS_TOTAL, FOUNDER_PRICE, REGULAR_PRICE, FOUNDER_ANNUAL_MONTHLY_EQUIV, REGULAR_ANNUAL_MONTHLY_EQUIV, FOUNDER_ANNUAL_SAVINGS, REGULAR_ANNUAL_SAVINGS } from "@/lib/subscription/founder";
+import { getEarlyBirdSlotsClaimed, isEarlyBirdActive, EARLY_BIRD_SLOTS_TOTAL, EARLY_BIRD_PRICE, REGULAR_PRICE, EARLY_BIRD_ANNUAL_MONTHLY_EQUIV, REGULAR_ANNUAL_MONTHLY_EQUIV, EARLY_BIRD_ANNUAL_SAVINGS, REGULAR_ANNUAL_SAVINGS } from "@/lib/subscription/early-bird";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -11,18 +11,18 @@ export const metadata: Metadata = { title: "Upgrade to Plus — Clear" };
 export default async function UpgradePage() {
   const [user, claimed] = await Promise.all([
     getCurrentUser(),
-    getFounderSlotsClaimed(),
+    getEarlyBirdSlotsClaimed(),
   ]);
   const sub = user ? await getUserSubscription(user.id) : null;
   // Only treat as Plus if actively paid — trialing users should see the pricing page
   const isPlus = sub?.plan === "plus" && sub?.status === "active";
   const isTrialing = sub?.status === "trialing";
 
-  const founder = isFounderActive(claimed);
-  const price = founder ? FOUNDER_PRICE : REGULAR_PRICE;
-  const annualMonthlyEquiv = founder ? FOUNDER_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
-  const annualSavings = founder ? FOUNDER_ANNUAL_SAVINGS : REGULAR_ANNUAL_SAVINGS;
-  const slotsRemaining = FOUNDER_SLOTS_TOTAL - claimed;
+  const earlyBird = isEarlyBirdActive(claimed);
+  const price = earlyBird ? EARLY_BIRD_PRICE : REGULAR_PRICE;
+  const annualMonthlyEquiv = earlyBird ? EARLY_BIRD_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
+  const annualSavings = earlyBird ? EARLY_BIRD_ANNUAL_SAVINGS : REGULAR_ANNUAL_SAVINGS;
+  const slotsRemaining = EARLY_BIRD_SLOTS_TOTAL - claimed;
 
   return (
     <div className="max-w-5xl mx-auto w-full flex flex-col flex-1">
@@ -57,12 +57,12 @@ export default async function UpgradePage() {
         <PricingCards
           isPlus={isPlus}
           isTrialing={isTrialing}
-          founder={founder}
+          earlyBird={earlyBird}
           price={price}
           annualMonthlyEquiv={annualMonthlyEquiv}
           annualSavings={annualSavings}
           slotsRemaining={slotsRemaining}
-          slotsTotal={FOUNDER_SLOTS_TOTAL}
+          slotsTotal={EARLY_BIRD_SLOTS_TOTAL}
           claimed={claimed}
         />
 

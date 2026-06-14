@@ -54,5 +54,8 @@ next-env.d.ts
 pricing-strategy.md
 ideation.md
 
+# Implementation plan docs — local only, never committed (e.g. RAZORPAY_PLAN.md, REFERRAL_PLAN.md)
+*_PLAN.md
+
 # Development report — local only
 dev-report.md

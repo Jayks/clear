@@ -1,5 +1,7 @@
 "use client";
 
+import { planReceiptTiles } from "@/lib/receipt/tile-plan";
+
 // Browser-only image utilities for the receipt scanner.
 // ⚠️  extractGpsFromImage MUST be called on the ORIGINAL file BEFORE compressImage —
 //     canvas strips EXIF data, so GPS is lost after compression.
@@ -52,6 +54,45 @@ export async function compressImage(file: File): Promise<File> {
         "image/jpeg",
         0.8,
       );
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image load failed")); };
+    img.src = url;
+  });
+}
+
+// ── prepareReceiptImages ──────────────────────────────────────────────────────
+// Turns a captured/uploaded receipt photo into the base64 data URL(s) sent to
+// the AI. Normal photos yield a single ~800px-wide JPEG (same as before). Long
+// receipts (tall aspect ratio) are sliced into overlapping vertical tiles — each
+// kept under the vision API's resolution cap so the line items stay legible —
+// which the model then merges back into one receipt. Geometry: lib/receipt/tile-plan.
+//
+// Pass the ORIGINAL file (not a pre-compressed one) so tiling crops from full
+// resolution. EXIF/GPS is stripped by canvas — extract GPS beforehand.
+
+export async function prepareReceiptImages(file: File): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const tiles = planReceiptTiles(img.width, img.height);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("Canvas not available")); return; }
+
+      const out: string[] = [];
+      for (const t of tiles) {
+        canvas.width  = t.dWidth;
+        canvas.height = t.dHeight;
+        ctx.clearRect(0, 0, t.dWidth, t.dHeight);
+        ctx.drawImage(img, t.sx, t.sy, t.sWidth, t.sHeight, 0, 0, t.dWidth, t.dHeight);
+        out.push(canvas.toDataURL("image/jpeg", 0.8));
+      }
+      resolve(out);
     };
 
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image load failed")); };

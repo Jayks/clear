@@ -41,7 +41,7 @@
 | QR | qrcode.react | |
 | AI | @anthropic-ai/sdk 0.94 | claude-haiku-4-5-20251001 |
 | Geocoding | Mapbox API | `NEXT_PUBLIC_MAPBOX_TOKEN`; `lib/geocoding.ts` (`reverseGeocode` + `forwardGeocode`) |
-| Image utils | `exifr` + Canvas API | `lib/image-utils.ts` — `compressImage`, `extractGpsFromImage`, `fileToBase64` |
+| Image utils | `exifr` + Canvas API | `lib/image-utils.ts` — `compressImage`, `extractGpsFromImage`, `fileToBase64`, `prepareReceiptImages` (long-receipt tiling) |
 | Database | Supabase Postgres | Free tier |
 | Auth | Supabase Auth (Google OAuth) | @supabase/ssr v0.6 |
 | Realtime | Supabase Realtime | postgres_changes → router.refresh() |

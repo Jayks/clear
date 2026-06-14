@@ -9,7 +9,7 @@ import { receiptResponseSchema, computeConfidence, isEmptyReceiptResponse } from
 import type { ParsedReceipt } from "@/lib/receipt/types";
 
 export interface ScanReceiptInput {
-  base64Image: string;            // full data URL ("data:image/jpeg;base64,...")
+  base64Images: string[];         // one full data URL per image; >1 = vertical tiles of one long receipt
   mimeType:    "image/jpeg" | "image/png" | "image/webp";
   gpsCoords?:  { lat: number; lng: number } | null;
   groupType:   string;            // for AI context ("trip" | "nest" | "circle")
@@ -54,21 +54,37 @@ export async function parseReceiptWithAI(
   if (!checkReceiptScanLimit(user.id))                     // 3. Daily scan limit (20/day)
     return { ok: false, error: "You've scanned 20 receipts today — limit resets at midnight." };
 
-  // 4. Server-side size guard: reject if base64 > 2 MB
-  if (input.base64Image.length > 2 * 1024 * 1024) return null;
+  // 4. Server-side size guard: reject if empty or aggregate base64 > 8 MB
+  //    (a long receipt is sent as up to 4 tiles — see prepareReceiptImages)
+  const totalBytes = input.base64Images.reduce((n, b) => n + b.length, 0);
+  if (input.base64Images.length === 0 || totalBytes > 8 * 1024 * 1024) return null;
 
   // Instantiate inside the function — module-level eval before env vars load fails
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   // Strip the data URL prefix — Anthropic API expects raw base64 only
-  const base64Data = input.base64Image.replace(/^data:image\/\w+;base64,/, "");
+  const imageBlocks = input.base64Images.map((b64) => ({
+    type:   "image" as const,
+    source: {
+      type:       "base64" as const,
+      media_type: input.mimeType,
+      data:       b64.replace(/^data:image\/\w+;base64,/, ""),
+    },
+  }));
+
+  // When the receipt was tiled, tell the model the images are one receipt so it
+  // merges items and reads the grand total from the segment that has it.
+  const multiTile = input.base64Images.length > 1;
+  const userText  = multiTile
+    ? `Today is ${input.dateContext.today}. Group type: ${input.groupType}. The ${input.base64Images.length} images are vertical top-to-bottom segments of ONE long receipt (consecutive segments overlap slightly). Treat them as a single receipt: return one description, one amount (the grand total — usually printed in the last segment), one expenseDate, and a single combined receiptItems list. Do NOT double-count line items that appear in the overlap between two segments.`
+    : `Today is ${input.dateContext.today}. Group type: ${input.groupType}.`;
 
   // Run AI vision + reverse geocoding concurrently (GPS is from EXIF, not AI)
   const [response, geoResult] = await Promise.all([
     Promise.race([
       client.messages.create({
         model:      "claude-haiku-4-5-20251001",
-        max_tokens: 1024, // NOT 600 — 10-item bills need ~400 tokens for items alone
+        max_tokens: 3072, // long itemised bills (and merged multi-tile receipts) overflow 1024
         system: [
           {
             type:          "text",
@@ -80,20 +96,17 @@ export async function parseReceiptWithAI(
           {
             role: "user",
             content: [
-              {
-                type:   "image",
-                source: { type: "base64", media_type: input.mimeType, data: base64Data },
-              },
+              ...imageBlocks,
               {
                 type: "text",
-                text: `Today is ${input.dateContext.today}. Group type: ${input.groupType}.`,
+                text: userText,
               },
             ],
           },
         ],
       }),
-      // 9-second race timeout — prevents the action from hanging on slow responses
-      new Promise<null>((r) => setTimeout(() => r(null), 9000)),
+      // Race timeout — prevents the action from hanging; longer for multi-tile receipts
+      new Promise<null>((r) => setTimeout(() => r(null), multiTile ? 18000 : 12000)),
     ]),
     // Reverse geocode GPS coords concurrently — returns null on any error (non-fatal)
     input.gpsCoords

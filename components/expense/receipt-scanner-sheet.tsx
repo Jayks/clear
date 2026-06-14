@@ -20,7 +20,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { compressImage, extractGpsFromImage, fileToBase64 } from "@/lib/image-utils";
+import { compressImage, extractGpsFromImage, prepareReceiptImages } from "@/lib/image-utils";
 import { parseReceiptWithAI } from "@/app/actions/parse-receipt";
 import { hapticSuccess } from "@/lib/haptics";
 import { SCAN_MODE_CONFIG, type ScanMode, type ParsedReceipt } from "@/lib/receipt/types";
@@ -199,9 +199,10 @@ export function ReceiptScannerSheet({
       const file = new File([blob], "receipt.jpg", { type: "image/jpeg" });
       const compressed = await compressImage(file);
       const previewUrl = URL.createObjectURL(compressed);
-      // No GPS from camera — canvas strips EXIF
+      // No GPS from camera — canvas strips EXIF. Tile the original capture for the
+      // AI (full resolution); keep the compressed copy in state for "keep proof".
       transitionState({ type: "processing", file: compressed, previewUrl, gps: null });
-      await startProcessing(compressed, null, previewUrl);
+      await startProcessing(file, compressed, null, previewUrl);
     }, "image/jpeg", 0.92);
   }
 
@@ -228,25 +229,27 @@ export function ReceiptScannerSheet({
       extractGpsFromImage(file),
     ]);
 
-    // Swap to compressed file for AI upload; keep same previewUrl (original quality is fine for display).
+    // Keep the compressed file in state for "keep proof"; keep same previewUrl.
     setState(prev => {
       if (prev.type !== "processing") return prev; // user may have cancelled
       return { ...prev, file: compressed, gps };
     });
 
-    await startProcessing(compressed, gps, previewUrl);
+    // Tile the original file for the AI (full resolution preserved for long receipts).
+    await startProcessing(file, compressed, gps, previewUrl);
   }
 
   // ── Processing ───────────────────────────────────────────────────────────────
   async function startProcessing(
-    file: File,
+    originalFile: File,
+    proofFile: File,
     gps: { lat: number; lng: number } | null,
     previewUrl: string,
   ) {
     try {
-      const base64 = await fileToBase64(file);
+      const base64Images = await prepareReceiptImages(originalFile);
       const result = await parseReceiptWithAI({
-        base64Image:   base64,
+        base64Images,
         mimeType:      "image/jpeg",
         gpsCoords:     gps ?? undefined,
         groupType:     groupType ?? "trip",
@@ -267,7 +270,7 @@ export function ReceiptScannerSheet({
       hapticSuccess();
       transitionState({
         type:      "results",
-        file,
+        file:      proofFile,
         previewUrl,
         result:    result as ParsedReceipt,
         keepProof: false,

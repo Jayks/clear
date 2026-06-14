@@ -6,11 +6,18 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid, BarChart2, ArrowLeftRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { isNavItemActive } from "@/lib/nav/active";
 
+// Each tab lights up in its own identity colour (not a shared cyan): Home = cyan
+// (brand), Streams = indigo (its established accent), Insights = amber (Insights
+// is amber app-wide). Class strings are literals so Tailwind keeps them.
 const NAV_ITEMS = [
-  { href: "/groups",   label: "Home",    icon: LayoutGrid,     tourId: "nav-trips"    },
-  { href: "/stream",   label: "Streams", icon: ArrowLeftRight, tourId: "nav-streams"  },
-  { href: "/insights", label: "Insights", icon: BarChart2,     tourId: "nav-insights" },
+  { href: "/groups",   label: "Home",     icon: LayoutGrid,     tourId: "nav-trips",
+    activeText: "text-cyan-600 dark:text-cyan-400",     pill: "bg-cyan-100 dark:bg-cyan-950/70"   },
+  { href: "/stream",   label: "Streams",  icon: ArrowLeftRight, tourId: "nav-streams",
+    activeText: "text-indigo-600 dark:text-indigo-400", pill: "bg-indigo-100 dark:bg-indigo-950/70" },
+  { href: "/insights", label: "Insights", icon: BarChart2,      tourId: "nav-insights",
+    activeText: "text-amber-600 dark:text-amber-400",   pill: "bg-amber-100 dark:bg-amber-950/70"  },
 ];
 
 export function MobileNav() {
@@ -39,8 +46,8 @@ export function MobileNav() {
                     bg-gradient-to-t from-white/85 to-white/40
                     dark:from-slate-950/85 dark:to-slate-950/40">
       <div className="flex items-center justify-around px-4 h-nav-safe">
-        {NAV_ITEMS.map(({ href, label, icon: Icon, tourId }) => {
-          const active    = pathname === href || pathname.startsWith(href + "/");
+        {NAV_ITEMS.map(({ href, label, icon: Icon, tourId, activeText, pill }) => {
+          const active    = isNavItemActive(pathname, href);
           const isStreams = href === "/stream";
           const badge     = isStreams ? streamBadge : null;
 
@@ -51,16 +58,16 @@ export function MobileNav() {
               data-tour={tourId}
               className={cn(
                 "relative flex flex-col items-center gap-1 px-8 py-2 rounded-xl min-h-[44px] justify-center transition-colors",
-                active
-                  ? "text-cyan-600 dark:text-cyan-400"
-                  : "text-slate-500 dark:text-slate-400",
+                active ? activeText : "text-slate-500 dark:text-slate-400",
               )}
             >
-              {/* Sliding pill — Framer Motion animates this between tabs via layoutId */}
+              {/* Sliding pill — Framer Motion animates this between tabs via layoutId.
+                  The pill is rendered only inside the active link, so it carries that
+                  tab's accent colour for the whole slide (no mid-animation flash). */}
               {active && (
                 <motion.div
                   layoutId="nav-pill"
-                  className="absolute inset-x-1 top-1 bottom-1 rounded-xl bg-cyan-100 dark:bg-cyan-950/70"
+                  className={cn("absolute inset-x-1 top-1 bottom-1 rounded-xl", pill)}
                   transition={{ type: "spring", stiffness: 500, damping: 35 }}
                 />
               )}

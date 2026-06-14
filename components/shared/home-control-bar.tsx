@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { resolveHomeTab, type HomeView } from "@/lib/home/initial-view";
+
+const TAB_KEY = "clear_home_tab";
 
 interface Props {
   activeCount:     number;
   archivedCount:   number;
+  sampleCount:     number;
   /** true when active groups > 5 — controls whether search icon appears */
   showSearch:      boolean;
   activeContent:   React.ReactNode;
   archivedContent: React.ReactNode;
+  sampleContent:   React.ReactNode;
 }
 
 /**
@@ -30,16 +35,48 @@ interface Props {
 export function HomeControlBar({
   activeCount,
   archivedCount,
+  sampleCount,
   showSearch,
   activeContent,
   archivedContent,
+  sampleContent,
 }: Props) {
-  const [view, setView]         = useState<"active" | "archived">("active");
+  const [view, setView]         = useState<HomeView>("active");
   const [searching, setSearching] = useState(false);
   const [query, setQuery]       = useState("");
   const inputRef                = useRef<HTMLInputElement>(null);
 
-  const showTabs = archivedCount > 0;
+  // Restore the last tab on mount (so create→back returns you where you were),
+  // and land on Sample exactly once right after seeding. Read in an effect (not
+  // during render) to stay SSR-safe.
+  useEffect(() => {
+    let justSeeded = false;
+    let storedTab: string | null = null;
+    try {
+      justSeeded = sessionStorage.getItem("clear_sample_just_seeded") === "1";
+      if (justSeeded) sessionStorage.removeItem("clear_sample_just_seeded");
+      storedTab = sessionStorage.getItem(TAB_KEY);
+    } catch {
+      /* private mode */
+    }
+    setView(resolveHomeTab({ justSeeded, storedTab, hasArchived: archivedCount > 0, hasSample: sampleCount > 0 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Guard a now-empty tab (e.g. samples removed while viewing them).
+  const validView: HomeView =
+    view === "sample" && sampleCount === 0 ? "active"
+    : view === "archived" && archivedCount === 0 ? "active"
+    : view;
+
+  // Tabs present beyond Active. Order: Active · Archived · Sample.
+  const tabs: { key: HomeView; label: string; count: number }[] = [
+    { key: "active", label: "Active", count: activeCount },
+    ...(archivedCount > 0 ? [{ key: "archived" as const, label: "Archived", count: archivedCount }] : []),
+    ...(sampleCount   > 0 ? [{ key: "sample"   as const, label: "Sample",   count: sampleCount   }] : []),
+  ];
+
+  const showTabs = tabs.length > 1;
   const showBar  = showTabs || showSearch;
 
   // ── Filter logic ──────────────────────────────────────────────────────────
@@ -65,12 +102,13 @@ export function HomeControlBar({
 
   // ── View switch ───────────────────────────────────────────────────────────
 
-  function switchView(next: "active" | "archived") {
-    if (view === next) return;
+  function switchView(next: HomeView) {
+    if (validView === next) return;
     // Clear any active search/filter when switching tabs
     if (searching) setSearching(false);
     if (query) { setQuery(""); applyFilter(""); }
     setView(next);
+    try { sessionStorage.setItem(TAB_KEY, next); } catch { /* private mode */ }
     document.documentElement.scrollTop = 0;
   }
 
@@ -175,60 +213,36 @@ export function HomeControlBar({
               {/* Underline tabs */}
               {showTabs && (
                 <div className="flex items-center gap-6">
-                  <button
-                    type="button"
-                    onClick={() => switchView("active")}
-                    className="relative flex flex-col pb-1 min-h-[36px] justify-center"
-                  >
-                    <span className={`text-sm leading-none transition-colors ${
-                      view === "active"
-                        ? "font-semibold text-slate-800 dark:text-slate-100"
-                        : "font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
-                    }`}>
-                      Active
-                      <span className="ml-1.5 text-[11px] tabular-nums opacity-50">
-                        {activeCount}
+                  {tabs.map(({ key, label, count }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => switchView(key)}
+                      className="relative flex flex-col pb-1 min-h-[36px] justify-center"
+                    >
+                      <span className={`text-sm leading-none transition-colors ${
+                        validView === key
+                          ? "font-semibold text-slate-800 dark:text-slate-100"
+                          : "font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                      }`}>
+                        {label}
+                        <span className="ml-1.5 text-[11px] tabular-nums opacity-50">{count}</span>
                       </span>
-                    </span>
-                    {view === "active" && (
-                      <motion.div
-                        layoutId="tab-underline"
-                        className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full
-                                   bg-slate-700 dark:bg-slate-200"
-                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                      />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => switchView("archived")}
-                    className="relative flex flex-col pb-1 min-h-[36px] justify-center"
-                  >
-                    <span className={`text-sm leading-none transition-colors ${
-                      view === "archived"
-                        ? "font-semibold text-slate-800 dark:text-slate-100"
-                        : "font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
-                    }`}>
-                      Archived
-                      <span className="ml-1.5 text-[11px] tabular-nums opacity-50">
-                        {archivedCount}
-                      </span>
-                    </span>
-                    {view === "archived" && (
-                      <motion.div
-                        layoutId="tab-underline"
-                        className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full
-                                   bg-slate-700 dark:bg-slate-200"
-                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                      />
-                    )}
-                  </button>
+                      {validView === key && (
+                        <motion.div
+                          layoutId="tab-underline"
+                          className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full
+                                     bg-slate-700 dark:bg-slate-200"
+                          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                        />
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
 
               {/* Right side — search icon or active filter chip */}
-              {view === "active" && showSearch && (
+              {validView === "active" && showSearch && (
                 <div className="ml-auto">
                   {query ? (
                     /* Filter chip — tap left side to refine, tap × to clear */
@@ -279,7 +293,7 @@ export function HomeControlBar({
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
-      {view === "active" ? activeContent : archivedContent}
+      {validView === "active" ? activeContent : validView === "archived" ? archivedContent : sampleContent}
     </>
   );
 }

@@ -16,7 +16,14 @@ import { GROUP_CONFIG } from "@/lib/group-config";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 
-export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType?: "trip" | "nest" }) {
+export function CreateTripForm({
+  defaultGroupType = "trip",
+  lockType = false,
+}: {
+  defaultGroupType?: "trip" | "nest";
+  /** Type was chosen upstream (the home chooser) — hide the redundant in-form picker. */
+  lockType?: boolean;
+}) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -115,7 +122,8 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* Type selector */}
+      {/* Type selector — hidden when the type was already chosen in the chooser */}
+      {!lockType && (
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Group type</label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -166,8 +174,9 @@ export function CreateTripForm({ defaultGroupType = "trip" }: { defaultGroupType
             </div>
           </button>
         </div>
-        <input type="hidden" {...register("groupType")} />
       </div>
+      )}
+      <input type="hidden" {...register("groupType")} />
 
       {/* Cover photo */}
       <div>

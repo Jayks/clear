@@ -19,9 +19,9 @@ function getGreeting(): { text: string; emoji: string } {
 export function HomeGreeting({ firstName }: Props) {
   const { text, emoji } = getGreeting();
   return (
-    <div className="mb-5 pt-1">
+    <div className="mb-3 pt-1">
       <h1
-        className="text-2xl md:text-3xl text-slate-800 dark:text-slate-100 leading-snug"
+        className="text-lg md:text-xl text-slate-700 dark:text-slate-200 leading-snug"
         style={{ fontFamily: "var(--font-fraunces)" }}
       >
         {emoji} {text}{firstName ? `, ${firstName}` : ""}

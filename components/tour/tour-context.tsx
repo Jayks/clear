@@ -56,19 +56,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setIsCompleted(!!localStorage.getItem(DONE_KEY));
   }, []);
 
-  // Auto-launch for first-time users
-  useEffect(() => {
-    if (localStorage.getItem(DONE_KEY)) return;
-    const launch = () => {
-      if (!document.querySelector("[data-tour='new-trip-btn']")) {
-        setTimeout(launch, 250);
-        return;
-      }
-      setActive(true);
-    };
-    const t = setTimeout(launch, 300);
-    return () => clearTimeout(t);
-  }, []);
+  // The tour no longer auto-launches on load. It's started explicitly via
+  // start() — from the post-seed "Want a tour?" prompt or the sample banner —
+  // since it only makes sense once the user has opted into sample data.
 
   // Read demoTripId from the demo-trip card href.
   // The card has multiple <a> tags (member badge, balance badge, main link) — iterate

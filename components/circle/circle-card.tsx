@@ -11,6 +11,7 @@ import { selfReportContribution } from "@/app/actions/circle";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { RecordContributionSheet } from "./record-contribution-sheet";
 import { GroupActionHub } from "@/components/trip/group-action-hub";
+import { CardRibbon } from "@/components/shared/card-ribbon";
 
 interface Props {
   group:    Group;
@@ -200,6 +201,9 @@ export function CircleCard({ group, cardData }: Props) {
       )}
       {/* Inner: glass card with overflow-hidden for content clipping */}
       <div className="glass rounded-2xl overflow-hidden relative h-full flex flex-col">
+        {/* Diagonal sample/archived ribbon (glassy) */}
+        {group.isDemo && <CardRibbon variant="sample" />}
+        {group.isArchived && !group.isDemo && <CardRibbon variant="archived" />}
         {/* Type-matched colour stripe — above the gradient header */}
         <div className={`absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-2xl ${
           isOneTime

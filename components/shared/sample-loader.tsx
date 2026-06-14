@@ -55,7 +55,8 @@ export function SampleLoader() {
         finishedRef.current = true;
         clearInterval(tick);
         try {
-          sessionStorage.setItem("clear_sample_just_seeded", "1");
+          sessionStorage.setItem("clear_sample_just_seeded", "1"); // post-seed tour prompt
+          sessionStorage.setItem("clear_home_tab", "sample");      // land on the Sample tab
         } catch {
           /* private mode — non-fatal */
         }

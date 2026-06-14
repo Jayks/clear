@@ -46,20 +46,17 @@ export function HomeControlBar({
   const [query, setQuery]       = useState("");
   const inputRef                = useRef<HTMLInputElement>(null);
 
-  // Restore the last tab on mount (so create→back returns you where you were),
-  // and land on Sample exactly once right after seeding. Read in an effect (not
-  // during render) to stay SSR-safe.
+  // Restore the last tab on mount (so create→back returns you where you were).
+  // The loader writes "sample" here after seeding so you land on your samples.
+  // Read in an effect (not during render) to stay SSR-safe.
   useEffect(() => {
-    let justSeeded = false;
     let storedTab: string | null = null;
     try {
-      justSeeded = sessionStorage.getItem("clear_sample_just_seeded") === "1";
-      if (justSeeded) sessionStorage.removeItem("clear_sample_just_seeded");
       storedTab = sessionStorage.getItem(TAB_KEY);
     } catch {
       /* private mode */
     }
-    setView(resolveHomeTab({ justSeeded, storedTab, hasArchived: archivedCount > 0, hasSample: sampleCount > 0 }));
+    setView(resolveHomeTab({ storedTab, hasArchived: archivedCount > 0, hasSample: sampleCount > 0 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

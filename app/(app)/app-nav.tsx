@@ -12,8 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
-import { useTour } from "@/components/tour/tour-context";
+import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
@@ -27,7 +26,6 @@ const NAV_LINKS = [
 export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; isAdmin: boolean; plan?: "plus" | "free" }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { start: startTour, isCompleted: tourCompleted } = useTour();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -101,9 +99,6 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
             render={<button className="min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-full" />}
           >
             <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-white shadow-sm relative">
-              {!tourCompleted && (
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-500 ring-2 ring-white dark:ring-slate-900 z-10" />
-              )}
               {plan === "plus" && (
                 <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 ring-2 ring-white dark:ring-slate-900 z-10 flex items-center justify-center">
                   <span className="text-white text-[7px] leading-none">✦</span>
@@ -141,13 +136,6 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
             <DropdownMenuItem render={<Link href="/changelog" />} className="cursor-pointer">
               <Newspaper className="w-4 h-4 mr-2" />
               What&apos;s New
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={startTour}
-              className="cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Take the tour
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/settings" />} className="cursor-pointer">
               <Settings className="w-4 h-4 mr-2" />

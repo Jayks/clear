@@ -5,12 +5,11 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getTourSteps, DEFAULT_STEP_COUNT } from "@/lib/tour/steps";
+import { getTourSteps } from "@/lib/tour/steps";
 import { TourLayer } from "./tour-layer";
 
 const DONE_KEY = "clear_tour_done";
@@ -19,14 +18,12 @@ interface TourContextValue {
   active: boolean;
   step: number;
   totalSteps: number;
-  showExtended: boolean;
   showCelebration: boolean;
   isCompleted: boolean;
-  start: () => void;
+  start: (demoTripId?: string | null) => void;
   next: () => void;
   prev: () => void;
   skip: () => void;
-  showMore: () => void;
   finishCelebration: () => void;
 }
 
@@ -41,7 +38,6 @@ export function useTour() {
 export function TourProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState(false);
   const [step, setStep] = useState(0);
-  const [showExtended, setShowExtended] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [demoTripId, setDemoTripId] = useState<string | null>(null);
@@ -49,20 +45,17 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const steps = getTourSteps(demoTripId);
-  const totalSteps = showExtended ? steps.length : DEFAULT_STEP_COUNT;
+  const totalSteps = steps.length;
 
   // Read completion state from localStorage
   useEffect(() => {
     setIsCompleted(!!localStorage.getItem(DONE_KEY));
   }, []);
 
-  // The tour no longer auto-launches on load. It's started explicitly via
-  // start() — from the post-seed "Want a tour?" prompt or the sample banner —
-  // since it only makes sense once the user has opted into sample data.
+  // The tour is started explicitly via start() (post-seed prompt / sample banner).
+  // It anchors on the sample data, so it only runs once the demo exists.
 
-  // Read demoTripId from the demo-trip card href.
-  // The card has multiple <a> tags (member badge, balance badge, main link) — iterate
-  // all of them and match any /groups/{id} URL (no $ anchor so /groups/{id}/members works too).
+  // Resolve demoTripId from the demo-trip card href (set on the demo TripCard).
   useEffect(() => {
     if (!active || demoTripId) return;
     const tryRead = () => {
@@ -91,65 +84,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, [active, step, pathname, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Prefetch next step's page
+  // Prefetch the next step's page
   useEffect(() => {
     if (!active) return;
     const nextStep = steps[step + 1];
     if (nextStep?.page) router.prefetch(nextStep.page);
   }, [active, step, steps, router]);
 
-  // Prefetch all inner trip pages when demoTripId is known
-  useEffect(() => {
-    if (!active || !demoTripId) return;
-    const base = `/groups/${demoTripId}`;
-    [base, `${base}/expenses`, `${base}/settle`, `${base}/insights`].forEach(
-      (p) => router.prefetch(p)
-    );
-  }, [active, demoTripId, router]);
-
-  // Step 4 (index 3): fire custom event to open demo nav sheet
-  useEffect(() => {
-    if (!active || step !== 3 || !demoTripId) return;
-    const t = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("open-demo-navsheet", { detail: demoTripId }));
-    }, 400);
-    return () => clearTimeout(t);
-  }, [active, step, demoTripId]);
-
-  // Step 5 (index 4, extended): switch ExpenseFilters to full view before showing expense-list-header
-  useEffect(() => {
-    if (!active || !showExtended || step !== 4) return;
-    const t = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("tour-switch-full-view"));
-    }, 400);
-    return () => clearTimeout(t);
-  }, [active, showExtended, step]);
-
-  // Step 6 (index 5, extended): dispatch event so ExpenseFilters auto-switches to timeline view
-  useEffect(() => {
-    if (!active || !showExtended || step !== 5) return;
-    const t = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("tour-switch-timeline-view"));
-    }, 400);
-    return () => clearTimeout(t);
-  }, [active, showExtended, step]);
-
-  // Step 3 (index 2): interactive — auto-advance when quick-add sheet opens
-  const autoAdvancedRef = useRef(false);
-  useEffect(() => {
-    if (!active || step !== 2) { autoAdvancedRef.current = false; return; }
-    const interval = setInterval(() => {
-      if (autoAdvancedRef.current) return;
-      if (document.querySelector("[data-tour='quick-add-open']")) {
-        autoAdvancedRef.current = true;
-        clearInterval(interval);
-        setTimeout(() => setStep(3), 1000);
-      }
-    }, 200);
-    return () => clearInterval(interval);
-  }, [active, step]);
-
-  // Escape key exits tour
+  // Escape key exits the tour
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") skip(); };
@@ -159,7 +101,6 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const finish = useCallback((navigateHome = true) => {
     setActive(false);
-    setShowExtended(false);
     setShowCelebration(false);
     localStorage.setItem(DONE_KEY, "1");
     setIsCompleted(true);
@@ -167,15 +108,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   const next = useCallback(() => {
-    const isLastExtended = showExtended && step + 1 >= steps.length;
-    if (isLastExtended) {
+    if (step + 1 >= steps.length) {
+      // End of the tour → home + celebration
       router.push("/groups");
-      setStep(steps.length - 1); // stay on last step visually
       setTimeout(() => setShowCelebration(true), 400);
       return;
     }
     setStep((s) => s + 1);
-  }, [step, steps.length, showExtended, router]);
+  }, [step, steps.length, router]);
 
   const prev = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
@@ -183,24 +123,16 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const skip = useCallback(() => finish(false), [finish]);
 
-  const showMore = useCallback(() => {
-    // Pre-set full view in localStorage before navigating to /expenses so that
-    // ExpenseFilters mounts in list mode instead of restoring "timeline" from storage.
-    localStorage.setItem("clear_expense_view_mode", "full");
-    setShowExtended(true);
-    setStep(DEFAULT_STEP_COUNT); // advance to first extended step (index 4)
-  }, []);
-
   const finishCelebration = useCallback(() => {
     finish(false);
   }, [finish]);
 
-  const start = useCallback(() => {
+  const start = useCallback((tripId: string | null = null) => {
     localStorage.removeItem(DONE_KEY);
     setIsCompleted(false);
-    setDemoTripId(null);
+    // Prefer the id passed by the caller (robust); fall back to DOM resolution.
+    setDemoTripId(tripId);
     setStep(0);
-    setShowExtended(false);
     setShowCelebration(false);
     setActive(true);
   }, []);
@@ -211,14 +143,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
         active,
         step,
         totalSteps,
-        showExtended,
         showCelebration,
         isCompleted,
         start,
         next,
         prev,
         skip,
-        showMore,
         finishCelebration,
       }}
     >
@@ -228,12 +158,10 @@ export function TourProvider({ children }: { children: ReactNode }) {
           step={steps[step]}
           stepIndex={step}
           totalSteps={totalSteps}
-          showExtended={showExtended}
           showCelebration={showCelebration}
           onNext={next}
           onPrev={prev}
           onSkip={skip}
-          onShowMore={showMore}
           onCelebrationDone={finishCelebration}
         />
       )}

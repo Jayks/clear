@@ -9,6 +9,7 @@ import { GroupBalanceBadge } from "@/components/trip/group-balance-badge";
 import { AnimatedList } from "@/components/shared/animated-list";
 import { EmptyChooser } from "@/components/shared/empty-chooser";
 import { SampleBanner } from "@/components/shared/sample-banner";
+import { SampleTourPrompt } from "@/components/shared/sample-tour-prompt";
 import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 import { LongPressHint } from "@/components/shared/long-press-hint";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
@@ -43,7 +44,15 @@ export default async function GroupsPage() {
   // ── Split active groups: real vs sample (demo) ────────────────────────────
   // Real groups fill the Active tab; demos live in their own Sample tab.
   const realGroups = groups.filter((g) => !g.group.isDemo);
-  const demoGroups = groups.filter((g) => g.group.isDemo);
+  // Sample cards ordered Trip → Nest → Circle (the tour highlights the trip first,
+  // and it reads better than newest-first seeding order).
+  const DEMO_ORDER: Record<string, number> = { trip: 0, nest: 1, circle: 2 };
+  const demoGroups = groups
+    .filter((g) => g.group.isDemo)
+    .sort((a, b) => (DEMO_ORDER[a.group.groupType] ?? 9) - (DEMO_ORDER[b.group.groupType] ?? 9));
+  // The sample trip the tour walks through (passed to start() so it never has to
+  // scrape the DOM for the id).
+  const demoTripId = demoGroups.find((g) => g.group.groupType === "trip")?.group.id ?? null;
 
   const trips   = realGroups.filter((g) => g.group.groupType === "trip");
   const nests   = realGroups.filter((g) => g.group.groupType === "nest");
@@ -384,7 +393,7 @@ export default async function GroupsPage() {
   // ── Sample content — the demo trip/nest/circle, isolated from real groups ──
   const sampleContent = (
     <>
-      <SampleBanner />
+      <SampleBanner demoTripId={demoTripId} />
       <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {demoGroups.map(({ group, memberCount }) => (
           <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
@@ -445,6 +454,9 @@ export default async function GroupsPage() {
 
       {/* ── Global FAB ─────────────────────────────────────────────────────── */}
       {!isEmpty && <GlobalFab trips={trips} nests={nests} circles={circles} isPlusUser={isPlusUser} />}
+
+      {/* Post-seed "want a tour?" prompt (self-gates on the just-seeded flag) */}
+      {demoGroups.length > 0 && <SampleTourPrompt demoTripId={demoTripId} />}
     </div>
   );
 }

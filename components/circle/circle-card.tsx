@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Check, MoreHorizontal, Repeat2, Target } from "lucide-react";
 import { toast } from "sonner";
 import type { Group } from "@/lib/db/schema/groups";
@@ -89,6 +90,15 @@ export function CircleCard({ group, cardData }: Props) {
   const heroGrad = isOneTime
     ? "from-orange-50 to-amber-100 dark:from-slate-800 dark:to-amber-900"
     : "from-slate-100 to-violet-100 dark:from-slate-800 dark:to-violet-900";
+
+  // When a cover photo is set, the header shows the photo (with a dark overlay)
+  // instead of the gradient + pattern — same treatment as trip/nest cards. Text
+  // goes white over the photo; otherwise it keeps the light/dark gradient colours.
+  const hasCover  = !!group.coverPhotoUrl;
+  const nameCls   = hasCover ? "text-white"    : "text-slate-800 dark:text-white";
+  const walletCls = hasCover ? "text-white/75" : "text-slate-600 dark:text-white/75";
+  const targetCls = hasCover ? "text-white/60" : "text-slate-500 dark:text-white/60";
+  const amountCls = hasCover ? "text-white/50" : "text-slate-400 dark:text-white/50";
 
   const progressCls  = theme.gradient;
   const ctaBtnCls    = theme.gradient;
@@ -259,38 +269,54 @@ export function CircleCard({ group, cardData }: Props) {
 
         {/* ── Gradient header (h-44 — matches TripCard) ─────────────────── */}
         <Link href={`/groups/${group.id}`} className="block flex-none">
-          <div className={`h-44 relative bg-gradient-to-br ${heroGrad}`}>
+          <div className={`h-44 relative ${hasCover ? "" : `bg-gradient-to-br ${heroGrad}`}`}>
 
-            {/* Subtle shadow at bottom for text legibility — lighter in light mode */}
-            <div className="absolute inset-0 bg-gradient-to-t
-              from-black/8 via-transparent to-transparent
-              dark:from-black/50 dark:via-black/10 dark:to-transparent" />
+            {hasCover ? (
+              <>
+                {/* Cover photo + dark legibility overlay (matches trip/nest cards) */}
+                <Image
+                  src={group.coverPhotoUrl!}
+                  alt={group.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
+              </>
+            ) : (
+              <>
+                {/* Subtle shadow at bottom for text legibility — lighter in light mode */}
+                <div className="absolute inset-0 bg-gradient-to-t
+                  from-black/8 via-transparent to-transparent
+                  dark:from-black/50 dark:via-black/10 dark:to-transparent" />
 
-            {/* Light mode: coloured pattern */}
-            <div className="absolute inset-0 pointer-events-none dark:hidden"
-                 style={patternLight} />
-            {/* Dark mode: white pattern */}
-            <div className="absolute inset-0 pointer-events-none hidden dark:block"
-                 style={patternDark} />
+                {/* Light mode: coloured pattern */}
+                <div className="absolute inset-0 pointer-events-none dark:hidden"
+                     style={patternLight} />
+                {/* Dark mode: white pattern */}
+                <div className="absolute inset-0 pointer-events-none hidden dark:block"
+                     style={patternDark} />
+              </>
+            )}
 
             {/* Name + wallet balance */}
             <div className="absolute bottom-3 left-4 right-4">
-              <h3 className="text-slate-800 dark:text-white text-xl truncate leading-tight"
+              <h3 className={`${nameCls} text-xl truncate leading-tight`}
                   style={{ fontFamily: "var(--font-fraunces)" }}>
                 {group.name}
               </h3>
               <div className="flex items-center justify-between gap-2 mt-0.5">
                 {/* Left — truncated so it never wraps */}
-                <p className="text-slate-600 dark:text-white/75 text-xs tabular-nums truncate min-w-0">
+                <p className={`${walletCls} text-xs tabular-nums truncate min-w-0`}>
                   Wallet · {formatCurrency(walletBalance, group.defaultCurrency)}
                 </p>
                 {/* Right — one secondary hint, shrink-0 so it never wraps */}
                 {targetNum ? (
-                  <p className="text-slate-500 dark:text-white/60 text-xs tabular-nums shrink-0">
+                  <p className={`${targetCls} text-xs tabular-nums shrink-0`}>
                     of {formatCurrency(targetNum, group.defaultCurrency)}
                   </p>
                 ) : amount ? (
-                  <p className="text-slate-400 dark:text-white/50 text-xs tabular-nums shrink-0">
+                  <p className={`${amountCls} text-xs tabular-nums shrink-0`}>
                     {formatCurrency(amount, group.defaultCurrency)}{isRecurring ? "/mo" : " each"}
                   </p>
                 ) : null}

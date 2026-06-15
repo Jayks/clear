@@ -178,7 +178,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
       */}
       <div data-tour="expense-list-header">
 
-        {/* ── View toggle — own row, icon + label, cyan active highlight ── */}
+        {/* ── View toggle — own row, icon + label, context active highlight ── */}
         <div className="flex items-center justify-end mb-3">
           <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
             {([
@@ -194,7 +194,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                   onClick={() => setAndSaveViewMode(mode)}
                   className={`flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium transition-colors ${
                     viewMode === mode
-                      ? "bg-cyan-50 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300"
+                      ? `${theme.headerBadgeBg} ${theme.accentText}`
                       : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                   }`}
                 >
@@ -217,7 +217,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search expenses…"
-              className="w-full pl-9 pr-8 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className={`w-full pl-9 pr-8 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500`}
             />
             {search && (
               <button
@@ -233,7 +233,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortOption)}
-                className="appearance-none pl-3 pr-7 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-600 dark:text-slate-300 cursor-pointer"
+                className={`appearance-none pl-3 pr-7 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 ${theme.ring} text-slate-600 dark:text-slate-300 cursor-pointer`}
               >
                 <option value="date-desc">Newest</option>
                 <option value="date-asc">Oldest</option>
@@ -251,7 +251,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             onClick={() => setCategory(null)}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               !category
-                ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                ? `bg-gradient-to-br ${theme.gradient} text-white shadow-sm`
                 : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
             }`}
           >
@@ -286,7 +286,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                 onClick={() => setPayerId(null)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                   !payerId
-                    ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                    ? `bg-gradient-to-br ${theme.gradient} text-white shadow-sm`
                     : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                 }`}
               >
@@ -301,7 +301,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                     onClick={() => setPayerId(active ? null : m.id)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                       active
-                        ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-sm"
+                        ? `bg-gradient-to-br ${theme.gradient} text-white shadow-sm`
                         : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                     }`}
                   >
@@ -331,7 +331,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                 <select
                   value={payerId ?? ""}
                   onChange={(e) => setPayerId(e.target.value || null)}
-                  className="appearance-none pl-3 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-600 dark:text-slate-300 cursor-pointer"
+                  className={`appearance-none pl-3 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 ${theme.ring} text-slate-600 dark:text-slate-300 cursor-pointer`}
                 >
                   <option value="">All payers</option>
                   {payers.map((m) => (
@@ -355,7 +355,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             min={groupStartDate ?? undefined}
             max={dateTo || (groupEndDate ?? undefined)}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
+            className={`px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 ${theme.ring} text-slate-500 dark:text-slate-400`}
           />
           <span className="text-slate-400 text-xs">to</span>
           <input
@@ -364,7 +364,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             min={dateFrom || (groupStartDate ?? undefined)}
             max={groupEndDate ?? undefined}
             onChange={(e) => setDateTo(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-slate-500 dark:text-slate-400"
+            className={`px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 ${theme.ring} text-slate-500 dark:text-slate-400`}
           />
           {isFiltered && (
             <button
@@ -450,7 +450,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
 
                 {/* Category */}
                 <div className="flex flex-wrap gap-1.5 mb-4">
-                  <button onClick={() => setCategory(null)} className={`px-3 py-1 rounded-full text-xs font-medium ${!category ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>All</button>
+                  <button onClick={() => setCategory(null)} className={`px-3 py-1 rounded-full text-xs font-medium ${!category ? `bg-gradient-to-br ${theme.gradient} text-white` : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>All</button>
                   {usedCategories.map((cat) => {
                     const cm = getCategory(cat);
                     const active = category === cat;
@@ -466,10 +466,10 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                 {/* Date range */}
                 <div className="flex gap-2 items-center mb-4 flex-wrap">
                   <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                    className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                    className={`px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 ${theme.ring}`} />
                   <span className="text-slate-400 text-xs">to</span>
                   <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                    className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                    className={`px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 ${theme.ring}`} />
                 </div>
 
                 <div className="flex gap-2">
@@ -480,7 +480,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                     </button>
                   )}
                   <button onClick={() => setShowFilterDrawer(false)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-br from-cyan-500 to-teal-500 text-white">
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-br ${theme.gradient} text-white`}>
                     Done
                   </button>
                 </div>
@@ -494,11 +494,11 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           <div>
             {/* Day by day section header */}
             <div className="flex items-center gap-2.5 mb-4 mt-1">
-              <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-                <CalendarDays className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
+              <div className={`w-5 h-5 rounded-md ${theme.headerBadgeBg} flex items-center justify-center shrink-0`}>
+                <CalendarDays className={`w-3 h-3 ${theme.headerIcon}`} />
               </div>
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Day by day</span>
-              <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+              <div className={`animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r ${theme.rule}`} />
             </div>
 
             {/* Results bar */}
@@ -530,7 +530,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                 {isFiltered && (
                   <button
                     onClick={clearAll}
-                    className="text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+                    className={`text-xs font-medium ${theme.accentText} hover:opacity-80 transition-opacity`}
                   >
                     Clear all filters
                   </button>
@@ -588,7 +588,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                 {isFiltered && (
                   <button
                     onClick={clearAll}
-                    className="text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+                    className={`text-xs font-medium ${theme.accentText} hover:opacity-80 transition-opacity`}
                   >
                     Clear all filters
                   </button>
@@ -606,6 +606,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                 onDeleteFail={restoreDelete}
                 interactionCounts={interactionCounts}
                 compact={viewMode === "compact"}
+                theme={theme}
               />
             ) : (
               <>
@@ -1207,7 +1208,7 @@ const MONTH_LABELS: Record<string, string> = {
   "09": "September", "10": "October", "11": "November", "12": "December",
 };
 
-function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, onDelete, onDeleteFail, interactionCounts, compact }: {
+function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, onDelete, onDeleteFail, interactionCounts, compact, theme }: {
   expenses: Expense[];
   members: GroupMember[];
   currentUserId: string;
@@ -1218,6 +1219,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
   onDeleteFail: (id: string) => void;
   interactionCounts?: Record<string, ExpenseInteractionCount>;
   compact?: boolean;
+  theme: ContextTheme;
 }) {
   // Group by YYYY-MM, newest month first
   const groups = useMemo(() => {
@@ -1240,8 +1242,8 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
           <div key={yearMonth}>
             {/* Month header with icon badge + divider */}
             <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-                <CalendarDays className="w-3 h-3 text-cyan-500 dark:text-cyan-400" />
+              <div className={`w-5 h-5 rounded-md ${theme.headerBadgeBg} flex items-center justify-center shrink-0`}>
+                <CalendarDays className={`w-3 h-3 ${theme.headerIcon}`} />
               </div>
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 shrink-0">
                 {label}
@@ -1264,6 +1266,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
                   onDeleteFail={onDeleteFail}
                   interactionCount={interactionCounts?.[expense.id]}
                   compact={compact}
+                  theme={theme}
                 />
               ))}
             </AnimatedList>

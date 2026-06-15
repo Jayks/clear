@@ -195,7 +195,7 @@ export default async function GroupPage({
                 <NestMonthlyBadge groupId={group.id} defaultCurrency={group.defaultCurrency} />
               </Suspense>
             ) : (
-              <p className={`text-xs ${theme.accentText}`}>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {totalSpent > 0
                   ? formatCurrency(totalSpent, group.defaultCurrency)
                   : "No expenses yet"}
@@ -232,7 +232,7 @@ export default async function GroupPage({
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{config.labels.members}</p>
-            <p className={`text-xs ${theme.accentText}`}>{members.length} {members.length === 1 ? "person" : "people"}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{members.length} {members.length === 1 ? "person" : "people"}</p>
           </div>
         </Link>
 

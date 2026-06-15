@@ -6,6 +6,7 @@ import { addExpenseSchema, type AddExpenseInput } from "@/lib/validations/expens
 import { updateExpense } from "@/app/actions/expenses";
 import { SplitEditor } from "@/components/expense/split-editor";
 import { getGroupConfig } from "@/lib/group-config";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -29,6 +30,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
+  const theme = getContextTheme(group.groupType, group.circleMode);
 
   // Reconstruct split mode and raw values from stored splits
   const initialMode = (splits[0]?.splitType ?? "equal") as SplitMode;
@@ -114,7 +116,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
         <input
           {...register("description")}
           placeholder="e.g. Dinner at Thalassa"
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500`}
         />
         {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
       </div>
@@ -135,7 +137,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
               inputMode="decimal"
               min="0"
               step="0.01"
-              className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 tabular"
+              className={`w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} tabular`}
             />
           </div>
           {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
@@ -187,7 +189,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
           <input
             {...register("customCategory")}
             placeholder="e.g. Visa fees, Parking, Tips"
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500`}
           />
           {errors.customCategory && <p className="mt-1 text-xs text-red-500">{errors.customCategory.message}</p>}
         </div>
@@ -202,7 +204,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
           <input
             {...register("expenseDate")}
             type="date"
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 ${theme.ring}`}
           />
           <div className="flex gap-1.5 mt-1.5">
             {[{ label: "Today", value: today }, { label: "Yesterday", value: yesterday }].map((s) => (
@@ -212,7 +214,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
                 onClick={() => setValue("expenseDate", s.value, { shouldValidate: true })}
                 className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all ${
                   currentDate === s.value
-                    ? "bg-cyan-500 text-white"
+                    ? `bg-gradient-to-br ${theme.gradient} text-white`
                     : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
@@ -226,7 +228,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Paid by</label>
           <select
             {...register("paidByMemberId")}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 ${theme.ring}`}
           >
             {members.map((m) => (
               <option key={m.id} value={m.id}>{getMemberName(m)}</option>
@@ -242,7 +244,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
           <input
             {...register("endDate")}
             type="date"
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 ${theme.ring}`}
           />
           {errors.endDate && <p className="mt-1 text-xs text-red-500">{errors.endDate.message}</p>}
         </div>
@@ -261,6 +263,7 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
           initialValues={initialValues}
           initialSelectedIds={initialSelectedIds}
           canUseNonEqual={canUseNonEqual}
+          theme={theme}
         />
         {errors.splits && <p className="mt-1 text-xs text-red-500">Select at least one member.</p>}
       </div>
@@ -271,14 +274,14 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
         <textarea
           {...register("notes")}
           rows={2}
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500`}
         />
       </div>
 
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-3 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60"
+        className={`w-full py-3 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white font-medium rounded-xl shadow-md ${theme.glow} transition-all disabled:opacity-60`}
       >
         {submitting ? "Saving…" : "Update expense"}
       </button>

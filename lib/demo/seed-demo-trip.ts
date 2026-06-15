@@ -40,10 +40,12 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
   const all5 = [userM.id, raj.id, priya.id, ankit.id, meera.id];
 
   // 3. Expenses + splits
+  // Located across North Goa so the Map view has a real spread of pins.
   const [e1] = await db.insert(expenses).values({
     groupId: group.id, paidByMemberId: userM.id,
     description: "Hotel check-in", category: "accommodation",
     amount: "12000", currency: "INR", expenseDate: "2025-03-01", createdByUserId: userId,
+    location: { lat: 15.5439, lng: 73.7553, name: "Calangute Beach Resort" },
   }).returning();
   await db.insert(expenseSplits).values(all5.map((memberId) => ({
     expenseId: e1.id, memberId, shareAmount: "2400", splitType: "equal" as const, splitValue: null,
@@ -53,6 +55,7 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
     groupId: group.id, paidByMemberId: raj.id,
     description: "Airport taxi", category: "transport",
     amount: "2000", currency: "INR", expenseDate: "2025-03-01", createdByUserId: userId,
+    location: { lat: 15.3808, lng: 73.8314, name: "Goa Airport · Dabolim" },
   }).returning();
   await db.insert(expenseSplits).values(all5.map((memberId) => ({
     expenseId: e2.id, memberId, shareAmount: "400", splitType: "equal" as const, splitValue: null,
@@ -62,6 +65,7 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
     groupId: group.id, paidByMemberId: priya.id,
     description: "Welcome dinner", category: "food",
     amount: "4500", currency: "INR", expenseDate: "2025-03-01", createdByUserId: userId,
+    location: { lat: 15.5553, lng: 73.7517, name: "Britto's · Baga" },
   }).returning();
   await db.insert(expenseSplits).values(all5.map((memberId) => ({
     expenseId: e3.id, memberId, shareAmount: "900", splitType: "equal" as const, splitValue: null,
@@ -71,6 +75,7 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
     groupId: group.id, paidByMemberId: userM.id,
     description: "Scuba diving", category: "activities",
     amount: "8000", currency: "INR", expenseDate: "2025-03-02", createdByUserId: userId,
+    location: { lat: 15.3600, lng: 73.7700, name: "Grande Island" },
   }).returning();
   await db.insert(expenseSplits).values(
     [userM.id, raj.id, priya.id, ankit.id].map((memberId) => ({
@@ -82,6 +87,7 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
     groupId: group.id, paidByMemberId: ankit.id,
     description: "Flea market shopping", category: "shopping",
     amount: "3600", currency: "INR", expenseDate: "2025-03-02", createdByUserId: userId,
+    location: { lat: 15.5736, lng: 73.7407, name: "Anjuna Flea Market" },
   }).returning();
   await db.insert(expenseSplits).values([
     { expenseId: e5.id, memberId: userM.id,  shareAmount: "900", splitType: "shares" as const, splitValue: "2" },
@@ -95,6 +101,7 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
     groupId: group.id, paidByMemberId: meera.id,
     description: "Beach shack lunch", category: "food",
     amount: "1800", currency: "INR", expenseDate: "2025-03-03", createdByUserId: userId,
+    location: { lat: 15.5990, lng: 73.7430, name: "Vagator Beach Shack" },
   }).returning();
   await db.insert(expenseSplits).values(all5.map((memberId) => ({
     expenseId: e6.id, memberId, shareAmount: "360", splitType: "equal" as const, splitValue: null,
@@ -104,6 +111,7 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
     groupId: group.id, paidByMemberId: userM.id,
     description: "Jet ski rental", category: "activities",
     amount: "5000", currency: "INR", expenseDate: "2025-03-03", createdByUserId: userId,
+    location: { lat: 15.5550, lng: 73.7540, name: "Baga Water Sports" },
   }).returning();
   await db.insert(expenseSplits).values([
     { expenseId: e7.id, memberId: userM.id,  shareAmount: "1500", splitType: "percentage" as const, splitValue: "30" },
@@ -117,6 +125,7 @@ export async function seedDemoGroup(userId: string, displayName: string | null) 
     groupId: group.id, paidByMemberId: raj.id,
     description: "Grocery run", category: "groceries",
     amount: "650", currency: "INR", expenseDate: "2025-03-04", createdByUserId: userId,
+    location: { lat: 15.5530, lng: 73.7680, name: "Calangute Market" },
   }).returning();
   await db.insert(expenseSplits).values(all5.map((memberId) => ({
     expenseId: e8.id, memberId, shareAmount: "130", splitType: "equal" as const, splitValue: null,

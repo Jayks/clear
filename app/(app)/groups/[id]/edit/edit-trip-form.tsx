@@ -13,6 +13,7 @@ import type { Group } from "@/lib/db/schema/groups";
 import { Upload, Loader2, ChevronDown } from "lucide-react";
 import { parseItineraryFromFile } from "@/app/actions/parse-itinerary";
 import { getGroupConfig } from "@/lib/group-config";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 
 export function EditTripForm({ group }: { group: Group }) {
@@ -25,6 +26,7 @@ export function EditTripForm({ group }: { group: Group }) {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const config = getGroupConfig(group.groupType);
+  const theme = getContextTheme(group.groupType, group.circleMode);
 
   const {
     register,
@@ -113,7 +115,7 @@ export function EditTripForm({ group }: { group: Group }) {
         </label>
         <input
           {...register("name")}
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
+          className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent`}
         />
         {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
       </div>
@@ -128,7 +130,7 @@ export function EditTripForm({ group }: { group: Group }) {
             <input
               {...register("startDate")}
               type="date"
-              className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
+              className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent`}
             />
           </div>
           <div>
@@ -138,7 +140,7 @@ export function EditTripForm({ group }: { group: Group }) {
             <input
               {...register("endDate")}
               type="date"
-              className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
+              className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent`}
             />
           </div>
         </div>
@@ -149,7 +151,7 @@ export function EditTripForm({ group }: { group: Group }) {
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Default currency</label>
         <select
           {...register("defaultCurrency")}
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
+          className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent`}
         >
           {SUPPORTED_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -181,7 +183,7 @@ export function EditTripForm({ group }: { group: Group }) {
             <textarea
               {...register("description")}
               rows={2}
-              className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500`}
             />
           </div>
 
@@ -196,7 +198,7 @@ export function EditTripForm({ group }: { group: Group }) {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingDoc}
-                  className="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 disabled:opacity-50 transition-colors"
+                  className={`inline-flex items-center gap-1 text-xs ${theme.accentText} hover:opacity-80 disabled:opacity-50 transition-opacity`}
                 >
                   {uploadingDoc
                     ? <><Loader2 className="w-3 h-3 animate-spin" />Parsing…</>
@@ -208,7 +210,7 @@ export function EditTripForm({ group }: { group: Group }) {
                 {...register("itinerary")}
                 rows={6}
                 placeholder={"Day 1: Arrive Chennai, check in\nDay 2: Mahabalipuram – Shore Temple\n..."}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
+                className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none`}
               />
               <div className="flex justify-end mt-1">
                 <span className={`text-xs tabular ${itinerary.length > 10000 ? "text-red-500" : "text-slate-400 dark:text-slate-500"}`}>
@@ -231,7 +233,7 @@ export function EditTripForm({ group }: { group: Group }) {
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500`}
               />
             </div>
           )}
@@ -248,7 +250,7 @@ export function EditTripForm({ group }: { group: Group }) {
         <button
           type="submit"
           disabled={submitting}
-          className="flex-1 py-3 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60"
+          className={`flex-1 py-3 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white font-medium rounded-xl shadow-md ${theme.glow} transition-all disabled:opacity-60`}
         >
           {submitting ? "Saving…" : "Save changes"}
         </button>

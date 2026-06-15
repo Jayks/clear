@@ -61,13 +61,18 @@ All four financial contexts use the same pattern:
 
 ### Glass utilities (globals.css)
 ```css
-.glass     { background:rgba(255,255,255,0.6); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.75); }
-.glass-sm  { background:rgba(255,255,255,0.5); backdrop-filter:blur(12px); }
+/* Phase 3 de-white: the old body gradient was ~97% L (near-white), so frosted
+   .glass cards (backdrop-blur reveals the bg) composited to stark white.
+   Fix = deepen the body gradient to ~92% L AND make glass a cool off-white
+   (236,243,250) instead of pure white. Cards now read as soft frosted panels. */
+.glass     { background:rgba(236,243,250,0.55); backdrop-filter:blur(20px); border:1px solid rgba(203,213,225,0.45); box-shadow:0 8px 32px rgba(8,145,178,0.08),0 1px 0 rgba(255,255,255,0.45) inset; }
+.glass-sm  { background:rgba(236,243,250,0.45); backdrop-filter:blur(12px); border:1px solid rgba(203,213,225,0.40); }
 .glass-nav { background:rgba(255,255,255,0.88); backdrop-filter:saturate(180%) blur(20px); border-bottom:1px solid rgba(255,255,255,0.9); }
 .dark .glass     { background:rgba(15,23,42,0.75); border:1px solid rgba(51,65,85,0.6); }
 .dark .glass-sm  { background:rgba(15,23,42,0.65); border:1px solid rgba(51,65,85,0.5); }
 .dark .glass-nav { background:rgba(13,18,30,0.92); backdrop-filter:saturate(150%) blur(20px); }
-.dark body { background:linear-gradient(135deg,#0D1B2A 0%,#091C1A 35%,#0A1F17 70%,#0C1A24 100%); }
+.light body { background:linear-gradient(135deg,#DCEAFE 0%,#D6F5FB 35%,#D5F6EE 70%,#D9F2E6 100%); }
+.dark body  { background:linear-gradient(135deg,#0D1B2A 0%,#091C1A 35%,#0A1F17 70%,#0C1A24 100%); }
 ```
 
 ### Typography

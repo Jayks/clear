@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getTemplateWithSplits } from "@/lib/db/queries/expenses";
 import { canUseTemplates } from "@/lib/subscription/gates";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { ArrowLeft, Receipt } from "lucide-react";
 import Link from "next/link";
 import { EditTemplateForm } from "./edit-template-form";
@@ -22,6 +23,7 @@ export default async function EditTemplatePage({
   const { group, members } = data;
   if (group.groupType !== "nest") notFound();
   if (!templatesAllowed) redirect(`/groups/${id}/expenses`);
+  const theme = getContextTheme(group.groupType, group.circleMode);
 
   return (
     <div>
@@ -35,7 +37,7 @@ export default async function EditTemplatePage({
           Back to expenses
         </Link>
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
             <Receipt className="w-4 h-4 text-white" />
           </div>
           <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>

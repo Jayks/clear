@@ -13,6 +13,7 @@ import { ExpenseDetailSheet } from "./expense-detail-sheet";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseInteractionCount } from "@/lib/db/queries/interactions";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 const SNAP_THRESHOLD = 40;
 const FAST_VELOCITY = 300;
@@ -27,10 +28,12 @@ interface Props {
   onDeleteFail?: (id: string) => void;
   interactionCount?: ExpenseInteractionCount;
   compact?: boolean;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 export function SwipeableExpenseCard(props: Props) {
-  const { expense, onDelete, onDeleteFail, interactionCount, currentMemberId } = props;
+  const { expense, onDelete, onDeleteFail, interactionCount, currentMemberId, theme = CONTEXT_THEME.trip } = props;
   const router = useRouter();
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
@@ -147,6 +150,7 @@ export function SwipeableExpenseCard(props: Props) {
           isOpen={showDetail}
           onClose={() => setShowDetail(false)}
           interactionCount={interactionCount}
+          theme={theme}
         />
       </>
     );
@@ -225,6 +229,7 @@ export function SwipeableExpenseCard(props: Props) {
         isOpen={showDetail}
         onClose={() => setShowDetail(false)}
         interactionCount={interactionCount}
+        theme={theme}
       />
     </div>
   );

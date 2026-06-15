@@ -13,6 +13,7 @@ import Image from "next/image";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { BudgetBar } from "@/components/trip/budget-bar";
 import { getGroupConfig } from "@/lib/group-config";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import type { Metadata } from "next";
 import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 import { GroupActivityFeed, ActivityFeedSkeleton } from "@/components/trip/group-activity-feed";
@@ -52,6 +53,10 @@ export default async function GroupPage({
   const config  = getGroupConfig(group.groupType);
   const isAdmin = currentMember?.role === "admin";
   const isNest  = group.groupType === "nest";
+  // Colour follows the group's context — the four quick-action tiles share one
+  // hue (the section icon differentiates them), resolving the old per-section
+  // colour collision. Circles never reach here (they branch to CircleDashboard).
+  const theme   = getContextTheme(group.groupType, group.circleMode);
 
   // ── Circle groups get their own dedicated dashboard ───────────────────────
   if (config.isCircle) {
@@ -179,8 +184,8 @@ export default async function GroupPage({
       {/* Quick actions — Expenses + Settle up lead on mobile (most-used first row) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="trip-quick-actions">
         {/* 1 — Expenses (most frequent action) */}
-        <Link href={`/groups/${group.id}/expenses`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30">
+        <Link href={`/groups/${group.id}/expenses`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
             <Receipt className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -190,7 +195,7 @@ export default async function GroupPage({
                 <NestMonthlyBadge groupId={group.id} defaultCurrency={group.defaultCurrency} />
               </Suspense>
             ) : (
-              <p className="text-xs text-cyan-600 dark:text-cyan-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {totalSpent > 0
                   ? formatCurrency(totalSpent, group.defaultCurrency)
                   : "No expenses yet"}
@@ -200,8 +205,8 @@ export default async function GroupPage({
         </Link>
 
         {/* 2 — Settle up (most urgent question: what do I owe?) */}
-        <Link href={`/groups/${group.id}/settle`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm shadow-emerald-500/30">
+        <Link href={`/groups/${group.id}/settle`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
             <Wallet className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -221,19 +226,19 @@ export default async function GroupPage({
         </Link>
 
         {/* 3 — Members */}
-        <Link href={`/groups/${group.id}/members`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30">
+        <Link href={`/groups/${group.id}/members`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
             <Users className="w-4 h-4 text-white" />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{config.labels.members}</p>
-            <p className="text-xs text-violet-500 dark:text-violet-400">{members.length} {members.length === 1 ? "person" : "people"}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{members.length} {members.length === 1 ? "person" : "people"}</p>
           </div>
         </Link>
 
         {/* 4 — Insights */}
-        <Link href={`/groups/${group.id}/insights`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:shadow-amber-500/10 hover:-translate-y-0.5 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-sm shadow-amber-500/30">
+        <Link href={`/groups/${group.id}/insights`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
             <BarChart2 className="w-4 h-4 text-white" />
           </div>
           <div>

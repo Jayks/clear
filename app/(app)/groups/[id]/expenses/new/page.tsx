@@ -3,6 +3,7 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { canUseNonEqualSplit } from "@/lib/subscription/gates";
 import { canUseLoggingAI } from "@/lib/subscription/ai-quota";
 import { getGroupConfig } from "@/lib/group-config";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { Receipt, Coins } from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
@@ -28,6 +29,7 @@ export default async function NewExpensePage({
 
   const { group, members, currentMember } = data;
   const config   = getGroupConfig(group.groupType);
+  const theme    = getContextTheme(group.groupType, group.circleMode);
   const backHref = from === "groups" ? "/groups" : `/groups/${id}/expenses`;
   const backLabel = from === "groups" ? "Home" : "Back to expenses";
 
@@ -47,7 +49,7 @@ export default async function NewExpensePage({
             className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
           />
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
               <Coins className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -74,7 +76,7 @@ export default async function NewExpensePage({
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         />
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
             <Receipt className="w-4 h-4 text-white" />
           </div>
           <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>

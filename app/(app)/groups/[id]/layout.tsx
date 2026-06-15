@@ -40,6 +40,7 @@ export default async function TripLayout({
             groupId={id}
             groupName={groupSummary.name}
             groupType={groupSummary.groupType}
+            circleMode={groupSummary.circleMode}
             currency={groupSummary.defaultCurrency}
             isArchived={groupSummary.isArchived ?? false}
             isAdmin={isAdmin}

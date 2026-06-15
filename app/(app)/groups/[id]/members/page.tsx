@@ -7,6 +7,8 @@ import type { Metadata } from "next";
 import { MemberListClient } from "./member-list-client";
 import { AddMembersSheet } from "./add-members-sheet";
 import { getGroupConfig } from "@/lib/group-config";
+import { getContextTheme } from "@/lib/theme/context-theme";
+import { SectionHeader } from "@/components/shared/section-header";
 import { getMemberNudge, getGroupPlan } from "@/lib/subscription/gates";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
 import { InviteSection } from "@/components/trip/invite-section";
@@ -33,6 +35,8 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
   const { group, members, currentMember, currentUser } = data;
   const isAdmin = currentMember?.role === "admin";
   const config  = getGroupConfig(group.groupType);
+  // Colour follows the group's context (the Users icon says "members").
+  const theme   = getContextTheme(group.groupType, group.circleMode);
 
   // Lowercased names already in this group — used by AddMembersSheet for dupe detection
   const existingMemberNames = new Set(
@@ -59,7 +63,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
 
       {/* Page title — desktop only */}
       <div className="hidden md:flex items-center gap-3 mb-6">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
+        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
           <Users className="w-4 h-4 text-white" />
         </div>
         <h1
@@ -71,15 +75,12 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* ── Member list ───────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-          <Users className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
-        </div>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {members.length} {members.length === 1 ? "person" : "people"}
-        </span>
-        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
-      </div>
+      <SectionHeader
+        icon={Users}
+        label={`${members.length} ${members.length === 1 ? "person" : "people"}`}
+        theme={theme}
+        className="mb-3"
+      />
 
       <MemberListClient
         members={members}
@@ -103,6 +104,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
             sourceGroups={sourceGroups}
             existingNames={existingMemberNames}
             isPlusUser={isPlusUser}
+            theme={theme}
           />
           {/* Small secondary link to share the invite link broadly */}
           <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-2.5">
@@ -112,7 +114,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
               // Using the anchor pattern keeps it accessible without client JS here
               onClick={undefined}
               type="button"
-              className="text-violet-500 dark:text-violet-400 underline underline-offset-2 hover:text-violet-600 dark:hover:text-violet-300 transition-colors"
+              className={`${theme.accentText} underline underline-offset-2 hover:opacity-80 transition-opacity`}
               id="scroll-to-invite"
             >
               share the invite link
@@ -137,7 +139,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             Anyone with this link can join.
           </p>
-          <InviteSection url={inviteUrl} groupName={group.name} groupId={group.id} />
+          <InviteSection url={inviteUrl} groupName={group.name} groupId={group.id} theme={theme} />
         </div>
       )}
     </div>

@@ -6,11 +6,14 @@ import { toast } from "sonner";
 import { regenerateShareToken } from "@/app/actions/groups";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { InviteQRSheet } from "@/components/shared/invite-qr-sheet";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 interface Props {
   url: string;
   groupName: string;
   groupId: string;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 function isIOSDevice() {
@@ -22,7 +25,7 @@ function isIOSDevice() {
   );
 }
 
-export function InviteSection({ url: initialUrl, groupName, groupId }: Props) {
+export function InviteSection({ url: initialUrl, groupName, groupId, theme = CONTEXT_THEME.trip }: Props) {
   const [url, setUrl] = useState(initialUrl);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -73,7 +76,7 @@ export function InviteSection({ url: initialUrl, groupName, groupId }: Props) {
           className={`w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-sm shadow-md transition-all active:scale-[0.98] ${
             copied
               ? "bg-emerald-500 shadow-emerald-500/25 text-white"
-              : "bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 shadow-cyan-500/25 text-white"
+              : `bg-gradient-to-br ${theme.gradient} hover:brightness-105 ${theme.glow} text-white`
           }`}
         >
           {copied

@@ -12,22 +12,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Sparkles, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
-import { useTour } from "@/components/tour/tour-context";
+import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
 
+// Each tab lights in its own identity colour (mirrors the mobile bottom nav):
+// Home = cyan, Streams = blue (Stream context), Insights = amber.
 const NAV_LINKS = [
-  { href: "/groups",   label: "Home",    icon: LayoutGrid,     tourId: "nav-trips"    },
-  { href: "/stream",   label: "Streams", icon: ArrowLeftRight, tourId: "nav-streams"  },
-  { href: "/insights", label: "Insights", icon: BarChart2,     tourId: "nav-insights" },
+  { href: "/groups",   label: "Home",    icon: LayoutGrid,     tourId: "nav-trips",
+    activeCls: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400" },
+  { href: "/stream",   label: "Streams", icon: ArrowLeftRight, tourId: "nav-streams",
+    activeCls: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400" },
+  { href: "/insights", label: "Insights", icon: BarChart2,     tourId: "nav-insights",
+    activeCls: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400" },
 ];
 
 export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; isAdmin: boolean; plan?: "plus" | "free" }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { start: startTour, isCompleted: tourCompleted } = useTour();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -72,7 +75,7 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
 
         {/* Nav links — hidden on mobile (bottom nav handles it), icon + label on desktop */}
         <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ href, label, icon: Icon, tourId }) => {
+          {NAV_LINKS.map(({ href, label, icon: Icon, tourId, activeCls }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
@@ -82,7 +85,7 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
                 className={cn(
                   "flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
                   active
-                    ? "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400"
+                    ? activeCls
                     : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800"
                 )}
               >
@@ -101,11 +104,8 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
             render={<button className="min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded-full" />}
           >
             <Avatar className="w-8 h-8 cursor-pointer ring-2 ring-white shadow-sm relative">
-              {!tourCompleted && (
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-500 ring-2 ring-white dark:ring-slate-900 z-10" />
-              )}
               {plan === "plus" && (
-                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 ring-2 ring-white dark:ring-slate-900 z-10 flex items-center justify-center">
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-white dark:ring-slate-900 z-10 flex items-center justify-center">
                   <span className="text-white text-[7px] leading-none">✦</span>
                 </span>
               )}
@@ -141,13 +141,6 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
             <DropdownMenuItem render={<Link href="/changelog" />} className="cursor-pointer">
               <Newspaper className="w-4 h-4 mr-2" />
               What&apos;s New
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={startTour}
-              className="cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Take the tour
             </DropdownMenuItem>
             <DropdownMenuItem render={<Link href="/settings" />} className="cursor-pointer">
               <Settings className="w-4 h-4 mr-2" />

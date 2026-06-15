@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { importMembersFromGroup } from "@/app/actions/members";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import type { ContextTheme } from "@/lib/theme/context-theme";
 import type { getNetworkMembers, getGroupsForImport } from "@/lib/db/queries/groups";
 
 type NetworkMember = Awaited<ReturnType<typeof getNetworkMembers>>[number];
@@ -29,6 +30,8 @@ interface Props {
   sourceGroups: SourceGroup[];
   existingNames: Set<string>; // lowercased names already in the group
   isPlusUser: boolean;
+  /** Context palette — colour follows the group, not the feature. */
+  theme: ContextTheme;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -53,6 +56,7 @@ export function AddMembersSheet({
   sourceGroups,
   existingNames,
   isPlusUser,
+  theme,
 }: Props) {
   const router = useRouter();
 
@@ -242,7 +246,7 @@ export function AddMembersSheet({
       <button
         type="button"
         onClick={handleOpen}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium shadow-md shadow-violet-500/20 transition-all active:scale-[0.98]"
+        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-medium shadow-md ${theme.glow} transition-all active:scale-[0.98]`}
       >
         <UserPlus className="w-4 h-4" />
         Add members
@@ -326,13 +330,13 @@ export function AddMembersSheet({
                         {selections.map((s) => (
                           <span
                             key={s.key}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${theme.headerBadgeBg} ${theme.accentText}`}
                           >
                             {s.name}
                             <button
                               type="button"
                               onClick={() => removeSelection(s.key)}
-                              className="ml-0.5 hover:text-violet-900 dark:hover:text-violet-100 transition-colors"
+                              className="ml-0.5 hover:opacity-70 transition-opacity"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -351,7 +355,7 @@ export function AddMembersSheet({
                           onChange={(e) => setSearch(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter" && searchIsNewName) addTypedName(); }}
                           placeholder="Search or type a name…"
-                          className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                          className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500`}
                         />
                       </div>
                     </div>
@@ -366,13 +370,13 @@ export function AddMembersSheet({
                         <button
                           type="button"
                           onClick={addTypedName}
-                          className="w-full flex items-center gap-3 px-4 py-3 mb-3 rounded-xl border border-dashed border-violet-300 dark:border-violet-700 bg-violet-50/60 dark:bg-violet-900/20 text-left hover:bg-violet-100/60 dark:hover:bg-violet-900/30 transition-colors"
+                          className={`w-full flex items-center gap-3 px-4 py-3 mb-3 rounded-xl border border-dashed ${theme.softBorder} ${theme.tint} text-left hover:brightness-95 dark:hover:brightness-110 transition-all`}
                         >
-                          <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0">
-                            <UserPlus className="w-4 h-4 text-violet-500 dark:text-violet-400" />
+                          <div className={`w-8 h-8 rounded-lg ${theme.headerBadgeBg} flex items-center justify-center shrink-0`}>
+                            <UserPlus className={`w-4 h-4 ${theme.headerIcon}`} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-violet-700 dark:text-violet-300">
+                            <p className={`text-sm font-medium ${theme.accentText}`}>
                               Add &ldquo;{search.trim()}&rdquo; as a guest
                             </p>
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
@@ -405,13 +409,13 @@ export function AddMembersSheet({
                                     isDupe
                                       ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-700 bg-white/40 dark:bg-slate-800/40"
                                       : selected
-                                        ? "border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20"
-                                        : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:border-violet-200 dark:hover:border-violet-800 hover:bg-violet-50/40 dark:hover:bg-violet-900/10"
+                                        ? `${theme.softBorder} ${theme.tint}`
+                                        : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800"
                                   }`}
                                 >
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold ${
                                     selected
-                                      ? "bg-violet-500 text-white"
+                                      ? `bg-gradient-to-br ${theme.gradient} text-white`
                                       : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                                   }`}>
                                     {selected ? <Check className="w-4 h-4" /> : m.name.charAt(0).toUpperCase()}
@@ -475,10 +479,10 @@ export function AddMembersSheet({
 
                             {/* Gradient fade + lock card */}
                             <div className="absolute bottom-0 left-0 right-0 pt-10 bg-gradient-to-t from-white dark:from-slate-900 to-transparent rounded-b-xl">
-                              <div className="mx-0.5 glass rounded-xl border border-violet-200 dark:border-violet-800/60 p-4">
+                              <div className={`mx-0.5 glass rounded-xl border ${theme.softBorder} p-4`}>
                                 <div className="flex items-start gap-3">
-                                  <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0 mt-0.5">
-                                    <Lock className="w-4 h-4 text-violet-500 dark:text-violet-400" />
+                                  <div className={`w-8 h-8 rounded-lg ${theme.headerBadgeBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                                    <Lock className={`w-4 h-4 ${theme.headerIcon}`} />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-0.5">
@@ -490,7 +494,7 @@ export function AddMembersSheet({
                                     <button
                                       type="button"
                                       onClick={() => { handleClose(); router.push("/upgrade"); }}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xs font-semibold shadow-sm shadow-violet-500/20 hover:from-violet-600 hover:to-purple-700 transition-all"
+                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br ${theme.gradient} text-white text-xs font-semibold shadow-sm ${theme.glow} hover:brightness-105 transition-all`}
                                     >
                                       ✦ Upgrade to Plus
                                     </button>
@@ -549,7 +553,7 @@ export function AddMembersSheet({
                                     onChange={(e) => setBulkText(e.target.value)}
                                     placeholder={"Priya\nRohit, Meera\nAditya"}
                                     rows={4}
-                                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none"
+                                    className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none`}
                                   />
                                   {bulkText.trim() && (
                                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 px-1">
@@ -595,7 +599,7 @@ export function AddMembersSheet({
                           type="button"
                           disabled={submitting}
                           onClick={handleMainSubmit}
-                          className="w-full py-3 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl shadow-md shadow-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`w-full py-3 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-medium rounded-xl shadow-md ${theme.glow} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           {submitting
                             ? "Adding…"
@@ -625,10 +629,10 @@ export function AddMembersSheet({
                             key={g.id}
                             type="button"
                             onClick={() => pickSourceGroup(g)}
-                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:border-violet-300 dark:hover:border-violet-700 hover:bg-violet-50/50 dark:hover:bg-violet-900/20 transition-all text-left group"
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center shrink-0 group-hover:from-violet-100 group-hover:to-purple-100 dark:group-hover:from-violet-900/40 dark:group-hover:to-purple-900/40 transition-all">
-                              <Icon className="w-4 h-4 text-slate-500 dark:text-slate-400 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors" />
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center shrink-0 transition-all">
+                              <Icon className="w-4 h-4 text-slate-500 dark:text-slate-400 transition-colors" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{g.name}</p>
@@ -674,7 +678,7 @@ export function AddMembersSheet({
                             setGroupSelections(next);
                             hapticLight();
                           }}
-                          className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium transition-colors"
+                          className={`text-xs ${theme.accentText} hover:opacity-80 font-medium transition-opacity`}
                         >
                           {sourceGroup.members
                             .filter((m) => !existingNames.has(m.name.toLowerCase()))
@@ -698,7 +702,7 @@ export function AddMembersSheet({
                                 isDupe
                                   ? "opacity-35 cursor-not-allowed bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 line-through"
                                   : isChecked
-                                    ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm border-transparent"
+                                    ? `bg-gradient-to-br ${theme.gradient} text-white shadow-sm border-transparent`
                                     : "bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
                               }`}
                             >
@@ -713,7 +717,7 @@ export function AddMembersSheet({
                         type="button"
                         disabled={groupSelectedNames.length === 0 || submitting}
                         onClick={handleGroupSubmit}
-                        className="w-full py-3 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl shadow-md shadow-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`w-full py-3 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-medium rounded-xl shadow-md ${theme.glow} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {submitting
                           ? "Adding…"
@@ -735,7 +739,7 @@ export function AddMembersSheet({
                     transition={{ duration: 0.2 }}
                     className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-violet-500/30">
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center mb-4 shadow-lg ${theme.glow}`}>
                       <Check className="w-8 h-8 text-white" />
                     </div>
                     <h3

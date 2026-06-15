@@ -40,10 +40,10 @@ export function CircleCardSkeleton() {
         <div className="absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-2xl bg-gradient-to-r from-violet-400/80 via-violet-300/50 to-transparent" />
 
         {/* h-44 gradient header */}
-        <div className="h-44 relative bg-gradient-to-br from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900 flex-none">
+        <div className="h-44 relative bg-gradient-to-br from-slate-100 to-violet-100 dark:from-slate-800 dark:to-violet-900 flex-none">
           {/* Mode badge top-left */}
           <div className="absolute top-3 left-3 flex items-center gap-1.5">
-            <div className="h-4.5 w-16 rounded-full bg-indigo-200/70 dark:bg-indigo-700/40" />
+            <div className="h-4.5 w-16 rounded-full bg-violet-200/70 dark:bg-violet-700/40" />
             <div className="h-4 w-10 rounded-full bg-black/10 dark:bg-black/30" />
           </div>
           {/* Hub button top-right */}
@@ -56,7 +56,7 @@ export function CircleCardSkeleton() {
         </div>
 
         {/* Progress bar strip */}
-        <div className="h-[3px] w-1/2 bg-indigo-300 dark:bg-indigo-600" />
+        <div className="h-[3px] w-1/2 bg-violet-300 dark:bg-violet-600" />
 
         {/* Bottom action strip */}
         <div className="flex-1 px-4 py-3 flex items-center justify-between gap-3">

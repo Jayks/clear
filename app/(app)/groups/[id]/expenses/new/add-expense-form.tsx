@@ -11,6 +11,7 @@ import { QuickAddBar } from "@/components/expense/quick-add-bar";
 import { ReceiptScannerSheet } from "@/components/expense/receipt-scanner-sheet";
 import { LocationInput } from "@/components/expense/location-input";
 import { getGroupConfig } from "@/lib/group-config";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { mapToGroupCategory } from "@/lib/receipt/map-category";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
+  const theme = getContextTheme(group.groupType, group.circleMode);
   const isTrip = groupConfig.showDates && !groupConfig.isCircle;
   const [recentCategories, addRecentCategory] = useRecentCategories(group.groupType);
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
@@ -231,19 +233,19 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
         onClick={() => setScannerOpen(true)}
         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
                    bg-white/40 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/40
-                   hover:border-cyan-400/60 dark:hover:border-cyan-600/40 transition-all group"
+                   hover:border-slate-300 dark:hover:border-slate-600 transition-all group"
       >
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500
+        <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${theme.gradient}
                         flex items-center justify-center shrink-0
-                        group-hover:shadow-sm group-hover:shadow-cyan-500/25 transition-shadow">
+                        group-hover:shadow-sm transition-shadow`}>
           <Camera className="w-3.5 h-3.5 text-white" />
         </div>
         <span className="flex-1 text-sm font-medium text-left text-slate-600 dark:text-slate-300">
           Scan receipt
         </span>
         {!isPlusUser ? (
-          <span className="text-xs font-semibold bg-gradient-to-r from-cyan-500 to-teal-500
-                           bg-clip-text text-transparent">Plus</span>
+          <span className={`text-xs font-semibold bg-gradient-to-r ${theme.gradient}
+                           bg-clip-text text-transparent`}>Plus</span>
         ) : wasScanFilled ? (
           <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✨ Filled</span>
         ) : null}
@@ -263,6 +265,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
         groupStartDate={group.startDate}
         groupEndDate={group.endDate}
         onParsed={handleQuickAdd}
+        theme={theme}
       />
 
       {/* Description */}
@@ -273,7 +276,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
         <input
           {...register("description", { onChange: () => clearAiFill("description") })}
           placeholder="e.g. Dinner at Thalassa"
-          className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${
+          className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${
             aiFilledFields.has("description") ? "ring-1 ring-emerald-400/50" : ""
           }`}
         />
@@ -297,7 +300,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
               min="0"
               step="0.01"
               placeholder="0.00"
-              className={`w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 tabular transition-all ${
+              className={`w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500 tabular transition-all ${
                 aiFilledFields.has("amount") ? "ring-1 ring-emerald-400/50" : ""
               }`}
             />
@@ -314,9 +317,9 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
                            bg-slate-100 dark:bg-slate-800
                            text-slate-600 dark:text-slate-300
                            border border-slate-200 dark:border-slate-700
-                           hover:bg-cyan-50 dark:hover:bg-cyan-950/40
-                           hover:text-cyan-700 dark:hover:text-cyan-300
-                           hover:border-cyan-300 dark:hover:border-cyan-700/50
+                           hover:bg-slate-200 dark:hover:bg-slate-700
+                           hover:text-slate-700 dark:hover:text-slate-200
+                           hover:border-slate-300 dark:hover:border-slate-600
                            active:scale-95 transition-all"
               >
                 {formatCurrency(amt, currency)}
@@ -397,7 +400,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
           <input
             {...register("customCategory")}
             placeholder="e.g. Visa fees, Parking, Tips"
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500`}
           />
           {errors.customCategory && <p className="mt-1 text-xs text-red-500">{errors.customCategory.message}</p>}
         </div>
@@ -412,7 +415,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
           <input
             {...register("expenseDate", { onChange: () => clearAiFill("expenseDate") })}
             type="date"
-            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all ${
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 ${theme.ring} transition-all ${
               aiFilledFields.has("expenseDate") ? "ring-1 ring-emerald-400/50" : ""
             }`}
           />
@@ -424,7 +427,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
                 onClick={() => { setValue("expenseDate", s.value, { shouldValidate: true }); clearAiFill("expenseDate"); }}
                 className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all ${
                   currentDate === s.value
-                    ? "bg-cyan-500 text-white"
+                    ? `bg-gradient-to-br ${theme.gradient} text-white`
                     : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                 }`}
               >
@@ -438,7 +441,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Paid by</label>
           <select
             {...register("paidByMemberId")}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 ${theme.ring}`}
           >
             {members.map((m) => (
               <option key={m.id} value={m.id}>{getMemberName(m)}</option>
@@ -454,7 +457,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
           <input
             {...register("endDate")}
             type="date"
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 ${theme.ring}`}
           />
           {errors.endDate && <p className="mt-1 text-xs text-red-500">{errors.endDate.message}</p>}
         </div>
@@ -480,12 +483,11 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl
-                     bg-cyan-50 dark:bg-cyan-950/40
-                     border border-cyan-200/60 dark:border-cyan-800/50"
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl
+                     ${theme.tint} border ${theme.softBorder}`}
         >
-          <Receipt className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
-          <span className="text-xs text-cyan-700 dark:text-cyan-300 flex-1">
+          <Receipt className={`w-3.5 h-3.5 ${theme.headerIcon} shrink-0`} />
+          <span className={`text-xs ${theme.accentText} flex-1`}>
             {receiptItems.length} items detected — item-split coming soon
           </span>
         </motion.div>
@@ -504,6 +506,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
           onSplitsChange={handleSplitsChange}
           initialSelectedIds={initialSplitIds}
           canUseNonEqual={canUseNonEqual}
+          theme={theme}
         />
         {errors.splits && <p className="mt-1 text-xs text-red-500">Select at least one member.</p>}
       </div>
@@ -515,14 +518,14 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
           {...register("notes")}
           rows={2}
           placeholder="Optional note"
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500`}
         />
       </div>
 
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-3 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-md shadow-cyan-500/20 transition-all disabled:opacity-60"
+        className={`w-full py-3 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white font-medium rounded-xl shadow-md ${theme.glow} transition-all disabled:opacity-60`}
       >
         {submitting ? "Saving…" : "Save expense"}
       </button>

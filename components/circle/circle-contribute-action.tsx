@@ -42,7 +42,7 @@ interface Props {
   upiId:               string | null;
   /** "dashboard" = full-size; "card" = compact home-card */
   size:                "dashboard" | "card";
-  /** Controls button/accent colour — indigo for recurring, amber for one_time */
+  /** Controls button/accent colour — violet for recurring, amber for one_time */
   circleMode?:         "recurring" | "one_time";
   contributionDate?:   string | null;
   contributionAmount?: number | null;
@@ -59,14 +59,14 @@ export function CircleContributeAction({
 
   // ── Mode-aware colour tokens ──────────────────────────────────────────────
   const isOneTimeMode   = circleMode === "one_time";
-  const btnGradient     = isOneTimeMode ? "from-amber-500 to-orange-500"    : "from-indigo-500 to-violet-600";
-  const btnShadowCls    = isOneTimeMode ? "shadow-amber-500/20"              : "shadow-indigo-500/20";
+  const btnGradient     = isOneTimeMode ? "from-amber-500 to-orange-500"    : "from-violet-500 to-violet-600";
+  const btnShadowCls    = isOneTimeMode ? "shadow-amber-500/20"              : "shadow-violet-500/20";
   const inputFocusCls   = isOneTimeMode ? "focus:ring-amber-500/20 focus:border-amber-400"
-                                        : "focus:ring-indigo-500/20 focus:border-indigo-400";
-  const moreTextCls     = isOneTimeMode ? "text-amber-600 dark:text-amber-400" : "text-indigo-600 dark:text-indigo-400";
+                                        : "focus:ring-violet-500/20 focus:border-violet-400";
+  const moreTextCls     = isOneTimeMode ? "text-amber-600 dark:text-amber-400" : "text-violet-600 dark:text-violet-400";
   const hoverTextCls    = isOneTimeMode
     ? "hover:text-amber-600 dark:hover:text-amber-400"
-    : "hover:text-indigo-600 dark:hover:text-indigo-400";
+    : "hover:text-violet-600 dark:hover:text-violet-400";
 
   // ── Optimistic state ──────────────────────────────────────────────────────
   const [localPaid,           setLocalPaid]           = useState(isPaid);

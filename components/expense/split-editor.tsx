@@ -7,6 +7,7 @@ import type { GroupMember } from "@/lib/db/schema/group-members";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { Lock } from "lucide-react";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 interface SplitEditorProps {
   members: GroupMember[];
@@ -19,6 +20,8 @@ interface SplitEditorProps {
   initialValues?: Record<string, number>;      // memberId → raw splitValue
   initialSelectedIds?: Set<string>;
   canUseNonEqual?: boolean;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 const MODES: { value: SplitMode; label: string }[] = [
@@ -32,7 +35,7 @@ function memberLabel(m: GroupMember): string {
   return getMemberName(m);
 }
 
-export function SplitEditor({ members, amount, currency, mode, onModeChange, onSplitsChange, error, initialValues, initialSelectedIds, canUseNonEqual = true }: SplitEditorProps) {
+export function SplitEditor({ members, amount, currency, mode, onModeChange, onSplitsChange, error, initialValues, initialSelectedIds, canUseNonEqual = true, theme = CONTEXT_THEME.trip }: SplitEditorProps) {
   const [values, setValues] = useState<Record<string, number>>(initialValues ?? {});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     initialSelectedIds ?? new Set(members.map((m) => m.id))
@@ -84,7 +87,7 @@ export function SplitEditor({ members, amount, currency, mode, onModeChange, onS
               }}
               className={`flex-1 py-2 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1 ${
                 mode === m.value
-                  ? "bg-gradient-to-br from-cyan-500 to-teal-500 text-white"
+                  ? `bg-gradient-to-br ${theme.gradient} text-white`
                   : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60"
               }`}
             >
@@ -102,13 +105,13 @@ export function SplitEditor({ members, amount, currency, mode, onModeChange, onS
           const selected = selectedIds.has(member.id);
           const preview = previewMap[member.id];
           return (
-            <div key={member.id} className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors ${selected ? "border-cyan-200 dark:border-cyan-800/50 bg-cyan-50/50 dark:bg-cyan-950/30" : "border-slate-100 dark:border-slate-700/50 bg-white/40 dark:bg-slate-800/30 opacity-50"}`}>
+            <div key={member.id} className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors ${selected ? `${theme.softBorder} ${theme.tint}` : "border-slate-100 dark:border-slate-700/50 bg-white/40 dark:bg-slate-800/30 opacity-50"}`}>
               {/* Checkbox */}
               <input
                 type="checkbox"
                 checked={selected}
                 onChange={() => toggleMember(member.id)}
-                className="w-4 h-4 accent-cyan-500 shrink-0"
+                className={`w-4 h-4 ${theme.accent} shrink-0`}
               />
 
               {/* Name */}
@@ -124,7 +127,7 @@ export function SplitEditor({ members, amount, currency, mode, onModeChange, onS
                   placeholder={mode === "percentage" ? "%" : mode === "shares" ? "shares" : "0.00"}
                   value={values[member.id] ?? ""}
                   onChange={(e) => setValue(member.id, e.target.value)}
-                  className="w-24 sm:w-28 text-right text-sm px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                  className={`w-24 sm:w-28 text-right text-sm px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring}`}
                 />
               )}
 

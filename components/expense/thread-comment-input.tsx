@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, AtSign } from "lucide-react";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { getMemberName } from "@/lib/utils";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 interface Props {
   members: GroupMember[];
@@ -14,6 +15,8 @@ interface Props {
   compact?: boolean;
   /** Disable send while parent is processing */
   isSubmitting?: boolean;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 const MAX_LENGTH = 500;
@@ -24,6 +27,7 @@ export function ThreadCommentInput({
   onPost,
   compact,
   isSubmitting,
+  theme = CONTEXT_THEME.trip,
 }: Props) {
   const [content, setContent] = useState("");
   const [mentionedMemberIds, setMentionedMemberIds] = useState<string[]>([]);
@@ -184,7 +188,7 @@ export function ThreadCommentInput({
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center shrink-0">
+                <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${theme.gradient} flex items-center justify-center shrink-0`}>
                   <span className="text-xs font-bold text-white">
                     {getMemberName(member).charAt(0).toUpperCase()}
                   </span>
@@ -208,7 +212,7 @@ export function ThreadCommentInput({
             <AtSign className="w-4 h-4" />
           </button>
 
-          <div className="flex-1 glass rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:border-cyan-400 dark:focus-within:border-cyan-500 transition-colors overflow-hidden">
+          <div className="flex-1 glass rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:border-slate-400 dark:focus-within:border-slate-500 transition-colors overflow-hidden">
             <textarea
               ref={textareaRef}
               value={content}
@@ -236,7 +240,7 @@ export function ThreadCommentInput({
             type="button"
             onClick={handleSubmit}
             disabled={!content.trim() || !!isSubmitting}
-            className="p-2.5 shrink-0 rounded-full bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm shadow-cyan-500/25"
+            className={`p-2.5 shrink-0 rounded-full bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm ${theme.glow}`}
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -282,7 +286,7 @@ export function ThreadCommentInput({
       )}
 
       {/* Full textarea */}
-      <div className="glass rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:border-cyan-400 dark:focus-within:border-cyan-500 transition-colors">
+      <div className="glass rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:border-slate-400 dark:focus-within:border-slate-500 transition-colors">
         <textarea
           ref={textareaRef}
           value={content}
@@ -318,7 +322,7 @@ export function ThreadCommentInput({
               type="button"
               onClick={handleSubmit}
               disabled={!content.trim() || !!isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-xs font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm shadow-cyan-500/25"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-xs font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm ${theme.glow}`}
             >
               {isSubmitting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

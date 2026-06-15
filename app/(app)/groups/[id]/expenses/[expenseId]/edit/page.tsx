@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getExpenseWithSplits } from "@/lib/db/queries/expenses";
 import { canUseNonEqualSplit } from "@/lib/subscription/gates";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { Receipt } from "lucide-react";
 import Link from "next/link";
 import { BackButton } from "@/components/shared/back-button";
@@ -27,6 +28,7 @@ export default async function EditExpensePage({
   const { group, members, currentMember } = groupData;
   const { expense, splits } = expenseData;
   const isAdmin = currentMember?.role === "admin";
+  const theme = getContextTheme(group.groupType, group.circleMode);
 
   const resolveName = (userId: string | null | undefined) => {
     if (!userId) return null;
@@ -56,7 +58,7 @@ export default async function EditExpensePage({
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         />
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
             <Receipt className="w-4 h-4 text-white" />
           </div>
           <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>

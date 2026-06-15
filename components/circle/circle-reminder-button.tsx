@@ -25,7 +25,7 @@ export function CircleReminderButton({
 
   const hoverBorder = isOneTime
     ? "hover:border-amber-300 dark:hover:border-amber-600"
-    : "hover:border-indigo-300 dark:hover:border-indigo-600";
+    : "hover:border-violet-300 dark:hover:border-violet-600";
 
   return (
     <>

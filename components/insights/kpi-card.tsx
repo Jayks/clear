@@ -7,12 +7,20 @@ interface KpiCardProps {
   accent?: boolean;
   numericValue?: number;  // if set, animates from 0 → value
   currency?: string;      // paired with numericValue for currency formatting
+  /** Accent-card gradient. Defaults to amber (the global-insights identity). */
+  accentGradient?: string;
+  /** Accent-card drop-shadow. Pairs with accentGradient. */
+  accentGlow?: string;
 }
 
-export function KpiCard({ label, value, sub, accent, numericValue, currency }: KpiCardProps) {
+export function KpiCard({
+  label, value, sub, accent, numericValue, currency,
+  accentGradient = "from-amber-500 to-orange-400",
+  accentGlow = "shadow-amber-500/25",
+}: KpiCardProps) {
   if (accent) {
     return (
-      <div className="h-full rounded-xl px-4 py-4 bg-gradient-to-br from-amber-500 to-orange-400 shadow-md shadow-amber-500/25 overflow-hidden">
+      <div className={`h-full rounded-xl px-4 py-4 bg-gradient-to-br ${accentGradient} shadow-md ${accentGlow} overflow-hidden`}>
         <p className="text-xs font-medium text-white/70 uppercase tracking-wide mb-1">{label}</p>
         {numericValue !== undefined ? (
           <CountUp

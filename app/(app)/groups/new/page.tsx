@@ -45,6 +45,8 @@ export default async function NewGroupPage({ searchParams }: Props) {
   // ── Trip / Nest creation ───────────────────────────────────────────────────
   const defaultGroupType: "trip" | "nest" =
     type === "nest" ? "nest" : "trip";
+  // Type chosen upstream (chooser / section "+" / FAB) → hide the in-form picker.
+  const lockType = type === "trip" || type === "nest";
 
   return (
     <div>
@@ -65,7 +67,7 @@ export default async function NewGroupPage({ searchParams }: Props) {
       </p>
 
       <div className="glass rounded-2xl p-4 sm:p-6">
-        <CreateTripForm defaultGroupType={defaultGroupType} />
+        <CreateTripForm defaultGroupType={defaultGroupType} lockType={lockType} />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { Users, MapPin, Home, MoreHorizontal } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import { formatDate } from "@/lib/utils";
 import { GroupActionHub } from "./group-action-hub";
+import { CardRibbon } from "@/components/shared/card-ribbon";
 
 // ── No-cover-photo SVG patterns ──────────────────────────────────────────────
 // Two overlay divs toggled via dark:hidden / hidden dark:block.
@@ -291,17 +292,9 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
             )}
           </Link>
         ) : null}
-        {/* Diagonal ribbon — now relative to the full card (image + badge), stays consistent */}
-        {group.isDemo && (
-          <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
-            SAMPLE
-          </div>
-        )}
-        {group.isArchived && !group.isDemo && (
-          <div className="absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg] bg-slate-500/80 backdrop-blur-sm text-white text-[10px] font-bold py-1.5 text-center tracking-widest shadow-sm pointer-events-none">
-            ARCHIVED
-          </div>
-        )}
+        {/* Diagonal ribbon — relative to the full card (image + badge), glassy */}
+        {group.isDemo && <CardRibbon variant="sample" />}
+        {group.isArchived && !group.isDemo && <CardRibbon variant="archived" />}
       </div>
 
       {/* Action buttons — on outer div, outside the Link.

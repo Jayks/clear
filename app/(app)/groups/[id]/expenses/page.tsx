@@ -4,6 +4,7 @@ import { getExpenses, getGroupTemplates } from "@/lib/db/queries/expenses";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getExpenseInteractionCounts, type ExpenseInteractionCount } from "@/lib/db/queries/interactions";
 import { getGroupConfig } from "@/lib/group-config";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { formatCurrency } from "@/lib/utils";
 import { db } from "@/lib/db/client";
 import { expenses as expensesTable } from "@/lib/db/schema/expenses";
@@ -52,6 +53,9 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
   const isNest   = group.groupType === "nest";
   const isCircle = config.isCircle;
   const currentMemberId = currentMember?.id ?? "";
+  // Colour follows the group's context — trip cyan / nest emerald / circle
+  // violet (recurring) or amber (one-time). The Receipt/Coins icon names the page.
+  const theme = getContextTheme(group.groupType, group.circleMode);
 
   // ── Circle wallet expenses page ───────────────────────────────────────────
   if (isCircle) {
@@ -67,7 +71,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
           />
           <div className="hidden md:flex items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/30 shrink-0">
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
               <Coins className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -81,7 +85,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             <div className="flex items-center gap-2 shrink-0 ml-auto md:ml-0">
               <Link
                 href={`/groups/${id}/expenses/new`}
-                className="inline-flex items-center gap-1.5 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md shadow-violet-500/25 transition-all"
+                className={`inline-flex items-center gap-1.5 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md ${theme.glow} transition-all`}
               >
                 <Plus className="w-4 h-4" />
                 Log wallet expense
@@ -105,7 +109,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         {/* Expense list */}
         {expenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg shadow-violet-500/25">
+            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center mb-4 shadow-lg ${theme.glow}`}>
               <Coins className="w-7 h-7 text-white" />
             </div>
             <h2 className="text-lg text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -119,7 +123,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             {isAdmin && (
               <Link
                 href={`/groups/${id}/expenses/new`}
-                className="inline-flex items-center gap-1.5 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl px-5 py-2.5 shadow-md shadow-violet-500/25 transition-all"
+                className={`inline-flex items-center gap-1.5 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-medium rounded-xl px-5 py-2.5 shadow-md ${theme.glow} transition-all`}
               >
                 <Plus className="w-4 h-4" />
                 Log first wallet expense
@@ -179,7 +183,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         />
         {/* Icon + title — desktop only; mobile nav carries these */}
         <div className="hidden md:flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-sm shadow-cyan-500/30 shrink-0">
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
             <Receipt className="w-4 h-4 text-white" />
           </div>
           <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -199,7 +203,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
           {expenses.length > 0 && <ExportCsvButton groupId={id} />}
           <Link
             href={`/groups/${id}/expenses/new`}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md shadow-cyan-500/25 transition-all"
+            className={`inline-flex items-center gap-1.5 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-medium rounded-xl px-4 py-2 shadow-md ${theme.glow} transition-all`}
           >
             <Plus className="w-4 h-4" />
             Add
@@ -234,6 +238,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
         groupId={id}
         groupName={group.name}
         groupType={group.groupType}
+        circleMode={group.circleMode}
         currency={group.defaultCurrency}
         members={members}
         groupStartDate={group.startDate}
@@ -243,7 +248,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
 
       {expenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/25">
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center mb-4 shadow-lg ${theme.glow}`}>
             <Receipt className="w-7 h-7 text-white" />
           </div>
           <h2 className="text-lg text-slate-800 dark:text-slate-100 mb-1" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -252,7 +257,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-5">Log your first expense and start tracking.</p>
           <Link
             href={`/groups/${id}/expenses/new`}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium rounded-xl px-5 py-2.5 shadow-md shadow-cyan-500/25 transition-all"
+            className={`inline-flex items-center gap-1.5 bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-medium rounded-xl px-5 py-2.5 shadow-md ${theme.glow} transition-all`}
           >
             <Plus className="w-4 h-4" />
             Add first expense
@@ -272,6 +277,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             groupByMonth={isNest}
             interactionCounts={interactionCounts}
             showMapView={hasLocatedExpenses}
+            theme={theme}
           />
         </>
       )}

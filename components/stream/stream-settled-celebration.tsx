@@ -9,16 +9,16 @@ interface Props {
 
 const SESSION_KEY = (id: string) => `clear_stream_settled_${id}`;
 
-// Indigo + emerald palette to match Stream's accent
+// Blue + emerald palette to match Stream's accent
 const PIECES = Array.from({ length: 28 }, (_, i) => {
   const angle    = (i / 28) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
   const distance = 100 + Math.random() * 160;
   const colors   = [
-    "#6366F1", // indigo-500
-    "#8B5CF6", // violet-500
+    "#3B82F6", // blue-500
+    "#60A5FA", // blue-400
     "#10B981", // emerald-500
     "#34D399", // emerald-400
-    "#A78BFA", // violet-400
+    "#93C5FD", // blue-300
     "#67E8F9", // cyan-300
     "#F59E0B", // amber-500
   ];

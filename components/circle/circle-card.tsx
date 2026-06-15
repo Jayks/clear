@@ -46,16 +46,22 @@ export function CircleCard({ group, cardData }: Props) {
   const [isNavOpen,      setIsNavOpen]      = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const longPressTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Separate timer for the press ring/scale so a quick tap never flashes it.
+  const pressVisualTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressNextClick = useRef(false);
   const touchStartPos   = useRef<{ x: number; y: number } | null>(null);
 
   const LONG_PRESS_MS  = 500;
+  // Delay before the press ring/scale appears — a quick tap ends sooner and so
+  // navigates cleanly without flashing the violet border.
+  const PRESS_RING_DELAY_MS = 200;
   const MOVE_THRESHOLD = 8;
 
   function startLongPress(e: React.TouchEvent) {
     const touch = e.touches[0];
     touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-    setIsLongPressing(true);
+    // Show the press affordance only once the press is held — not on every tap.
+    pressVisualTimer.current = setTimeout(() => setIsLongPressing(true), PRESS_RING_DELAY_MS);
     longPressTimer.current = setTimeout(() => {
       suppressNextClick.current = true;
       setIsLongPressing(false);
@@ -76,6 +82,10 @@ export function CircleCard({ group, cardData }: Props) {
   function cancelLongPress() {
     setIsLongPressing(false);
     touchStartPos.current = null;
+    if (pressVisualTimer.current) {
+      clearTimeout(pressVisualTimer.current);
+      pressVisualTimer.current = null;
+    }
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;

@@ -93,6 +93,10 @@ function computeTripStatus(
 // ─────────────────────────────────────────────────────────────────────────────
 
 const LONG_PRESS_MS = 500;
+// Delay before the long-press ring/scale appears. A quick tap ends before this,
+// so it navigates cleanly without flashing the cyan border; a deliberate hold
+// still gets the affordance well before the 500ms long-press fires.
+const PRESS_RING_DELAY_MS = 200;
 // iOS fingers drift slightly even while holding still; only cancel if truly scrolling.
 const MOVE_THRESHOLD = 8;
 
@@ -112,6 +116,8 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
     : null;
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Separate timer for the press ring/scale so a quick tap never flashes it.
+  const pressVisualTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Long-press fires touchend AND a subsequent click event. This ref lets the
   // Link's onClick block that click so a long-press opens the nav sheet instead
   // of navigating.
@@ -130,7 +136,8 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
   function startLongPress(e: React.TouchEvent) {
     const touch = e.touches[0];
     touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-    setIsLongPressing(true);
+    // Show the press affordance only once the press is held — not on every tap.
+    pressVisualTimer.current = setTimeout(() => setIsLongPressing(true), PRESS_RING_DELAY_MS);
     longPressTimer.current = setTimeout(() => {
       suppressNextClick.current = true;
       setIsLongPressing(false);
@@ -152,6 +159,10 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
   function cancelLongPress() {
     setIsLongPressing(false);
     touchStartPos.current = null;
+    if (pressVisualTimer.current) {
+      clearTimeout(pressVisualTimer.current);
+      pressVisualTimer.current = null;
+    }
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;

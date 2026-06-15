@@ -41,7 +41,7 @@ export function EditTripForm({ group }: { group: Group }) {
       description: group.description ?? "",
       coverPhotoUrl: group.coverPhotoUrl ?? "",
       defaultCurrency: group.defaultCurrency,
-      groupType: group.groupType as "trip" | "nest",
+      groupType: group.groupType as "trip" | "nest" | "circle",
       startDate: group.startDate ?? "",
       endDate: group.endDate ?? "",
       budget: group.budget ? Number(group.budget) : undefined,

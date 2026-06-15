@@ -5,7 +5,7 @@ export const createGroupSchema = z.object({
   description: z.string().max(500).optional(),
   coverPhotoUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
   defaultCurrency: z.string().length(3),
-  groupType: z.enum(["trip", "nest"]).default("trip"),
+  groupType: z.enum(["trip", "nest", "circle"]).default("trip"),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   budget: z.preprocess((v) => (typeof v === "number" && isNaN(v)) ? undefined : v, z.number().positive().optional()),

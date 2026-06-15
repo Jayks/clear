@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Users, Receipt, Pencil, Plus, Check, Clock } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -47,10 +48,13 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   // Every section badge/rule/link/button derives from this; the section icon
   // differentiates the panel. Resolves the old indigo/violet/cyan mix.
   const theme        = getContextTheme("circle", group.circleMode);
-  // Hero stays a soft tinted gradient + pattern (not the solid theme.gradient).
+  // Hero stays a soft tinted gradient + pattern (not the solid theme.gradient)
+  // unless a cover photo is set — then it shows the photo with a dark overlay,
+  // same as trip/nest dashboards.
   const heroGrad     = isOneTime
     ? "from-orange-50 to-amber-100 dark:from-slate-800 dark:to-amber-900"
     : "from-slate-100 to-violet-100 dark:from-slate-800 dark:to-violet-900";
+  const hasCover     = !!group.coverPhotoUrl;
   const progressCls  = theme.gradient;
   const sectionBg    = theme.headerBadgeBg;
   const sectionIcon  = theme.headerIcon;
@@ -113,14 +117,28 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
       {/* ── Hero card ───────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl overflow-hidden mb-6">
         {/* Gradient header */}
-        <div className={`h-44 relative flex items-end px-5 pb-4 bg-gradient-to-br ${heroGrad}`}>
+        <div className={`h-44 relative flex items-end px-5 pb-4 ${hasCover ? "" : `bg-gradient-to-br ${heroGrad}`}`}>
+          {hasCover && (
+            <>
+              {/* Cover photo + dark legibility overlay (matches trip/nest hero) */}
+              <Image
+                src={group.coverPhotoUrl!}
+                alt={group.name}
+                fill
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
+            </>
+          )}
           {/* Legibility overlay — subtle in light mode, stronger in dark */}
-          <div className="absolute inset-0 bg-gradient-to-t
+          {!hasCover && <div className="absolute inset-0 bg-gradient-to-t
             from-black/8 via-transparent to-transparent
-            dark:from-black/50 dark:via-black/10 dark:to-transparent" />
+            dark:from-black/50 dark:via-black/10 dark:to-transparent" />}
 
           {/* Light mode: coloured pattern */}
-          <div
+          {!hasCover && <div
             className="absolute inset-0 pointer-events-none dark:hidden"
             style={isRecurring ? {
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%238b5cf6' stroke-width='0.5' stroke-opacity='0.18' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%238b5cf6' stroke-width='2' stroke-opacity='0.22' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%238b5cf6' fill-opacity='0.22'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%238b5cf6' fill-opacity='0.28'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%238b5cf6' fill-opacity='0.22'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%238b5cf6' fill-opacity='0.28'/%3E%3C/svg%3E")`,
@@ -131,9 +149,9 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
               backgroundSize: "200px 60px",
               backgroundRepeat: "repeat",
             }}
-          />
+          />}
           {/* Dark mode: white pattern */}
-          <div
+          {!hasCover && <div
             className="absolute inset-0 pointer-events-none hidden dark:block"
             style={isRecurring ? {
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%23ffffff' stroke-width='0.5' stroke-opacity='0.07' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%23ffffff' stroke-width='1.5' stroke-opacity='0.10' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%23ffffff' fill-opacity='0.12'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%23ffffff' fill-opacity='0.16'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%23ffffff' fill-opacity='0.12'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%23ffffff' fill-opacity='0.16'/%3E%3C/svg%3E")`,
@@ -144,7 +162,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
               backgroundSize: "200px 60px",
               backgroundRepeat: "repeat",
             }}
-          />
+          />}
 
 
           {/* Admin actions */}
@@ -165,19 +183,20 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           <div className="relative z-10">
             {/* Mode badge */}
             <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide
-                               bg-black/10 dark:bg-white/20 backdrop-blur-sm
-                               text-slate-700 dark:text-white px-2 py-0.5 rounded-full">
+              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide
+                               backdrop-blur-sm px-2 py-0.5 rounded-full ${
+                                 hasCover ? "bg-white/20 text-white" : "bg-black/10 dark:bg-white/20 text-slate-700 dark:text-white"
+                               }`}>
                 {isOneTime ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
                 {isOneTime ? "one-time" : "recurring"}
               </span>
               {isOneTime && daysLeft !== null && (
-                <span className={`text-xs font-medium text-slate-600 dark:text-white/80 ${daysLeft <= 3 ? "!text-red-500 dark:!text-red-300" : ""}`}>
+                <span className={`text-xs font-medium ${hasCover ? "text-white/80" : "text-slate-600 dark:text-white/80"} ${daysLeft <= 3 ? "!text-red-500 dark:!text-red-300" : ""}`}>
                   {daysLeft === 0 ? "deadline today!" : `${daysLeft} days left`}
                 </span>
               )}
             </div>
-            <h1 className="text-slate-800 dark:text-white text-2xl" style={{ fontFamily: "var(--font-fraunces)" }}>
+            <h1 className={`${hasCover ? "text-white" : "text-slate-800 dark:text-white"} text-2xl`} style={{ fontFamily: "var(--font-fraunces)" }}>
               {group.name}
             </h1>
           </div>

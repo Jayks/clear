@@ -169,7 +169,12 @@ html { scroll-behavior: smooth; }
   }
   body {
     @apply text-foreground font-sans antialiased min-h-screen;
-    background: linear-gradient(135deg, #EFF6FF 0%, #ECFEFF 35%, #F0FDFA 70%, #ECFDF5 100%);
+    /* Deepened from the old ~97%-lightness blue-50/cyan-50/teal-50/emerald-50
+       stops. Those were so close to white that the frosted .glass cards (which
+       reveal the background through backdrop-blur) composited to near-white and
+       read as stark floating rectangles. ~92%-lightness stops give the glass
+       real colour to filter, so cards sit *in* the palette instead of on top. */
+    background: linear-gradient(135deg, #DCEAFE 0%, #D6F5FB 35%, #D5F6EE 70%, #D9F2E6 100%);
     background-attachment: fixed;
   }
   .dark body {
@@ -194,17 +199,22 @@ html { scroll-behavior: smooth; }
 /* ─── Glass utilities ────────────────────────────────────────────────────── */
 @layer utilities {
   .glass {
-    background: rgba(255, 255, 255, 0.6);
+    /* Cool off-white instead of pure white — paired with the deepened body
+       gradient this stops cards reading as stark white. The slate-tinted
+       surface (236,243,250) + faint slate border let the card sit as a soft
+       frosted panel in the palette rather than a bright pasted-on rectangle.
+       A subtle white inset highlight is kept for the top-edge "lift". */
+    background: rgba(236, 243, 250, 0.55);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.75);
-    box-shadow: 0 8px 32px rgba(8, 145, 178, 0.08), 0 1px 0 rgba(255,255,255,0.9) inset;
+    border: 1px solid rgba(203, 213, 225, 0.45);
+    box-shadow: 0 8px 32px rgba(8, 145, 178, 0.08), 0 1px 0 rgba(255,255,255,0.45) inset;
   }
   .glass-sm {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(236, 243, 250, 0.45);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(203, 213, 225, 0.40);
   }
   .glass-nav {
     background: rgba(255, 255, 255, 0.88);

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { Suspense } from "react";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
@@ -10,6 +11,8 @@ import { CircleDashboard } from "@/components/circle/circle-dashboard";
 import { BackButton } from "@/components/shared/back-button";
 import Link from "next/link";
 import Image from "next/image";
+import { ImageShimmer } from "@/components/shared/image-shimmer";
+import { CoverGlow } from "@/components/shared/cover-glow";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { BudgetBar } from "@/components/trip/budget-bar";
 import { getGroupConfig } from "@/lib/group-config";
@@ -82,7 +85,11 @@ export default async function GroupPage({
         .filter(Boolean)
     : [];
 
-  if (isNest) await autoLogDueTemplates(group.id).catch(() => {});
+  // Defer recurring-template auto-logging off the render path: on the common
+  // case it's just a few read queries that returned nothing, and it's never
+  // worth blocking the nest hero paint. after() runs it post-response; when
+  // templates are actually due it logs them and revalidates (refreshing shortly).
+  if (isNest) after(() => autoLogDueTemplates(group.id).catch(() => {}));
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
 
@@ -96,17 +103,22 @@ export default async function GroupPage({
       />
 
       {/* Hero */}
-      <div className="glass rounded-2xl overflow-hidden mb-6">
+      <div className="relative">
+        {group.coverPhotoUrl && <CoverGlow src={group.coverPhotoUrl} />}
+        <div className="glass rounded-2xl overflow-hidden mb-6">
         <div className="h-52 relative">
           {group.coverPhotoUrl ? (
-            <Image
-              src={group.coverPhotoUrl}
-              alt={group.name}
-              fill
-              sizes="(max-width: 1280px) 100vw, 1280px"
-              className="object-cover"
-              priority
-            />
+            <>
+              <ImageShimmer />
+              <Image
+                src={group.coverPhotoUrl}
+                alt={group.name}
+                fill
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover"
+                priority
+              />
+            </>
           ) : (
             // No cover photo: identity-coloured gradient + same tree/building
             // pattern as the home-page card for visual continuity card → dashboard.
@@ -179,6 +191,7 @@ export default async function GroupPage({
             <p className="text-slate-600 dark:text-slate-300 text-sm">{group.description}</p>
           </div>
         )}
+        </div>
       </div>
 
       {/* Quick actions — Expenses + Settle up lead on mobile (most-used first row) */}

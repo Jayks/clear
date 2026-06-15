@@ -8,6 +8,7 @@ import type { Group } from "@/lib/db/schema/groups";
 import { formatDate } from "@/lib/utils";
 import { GroupActionHub } from "./group-action-hub";
 import { CardRibbon } from "@/components/shared/card-ribbon";
+import { ImageShimmer } from "@/components/shared/image-shimmer";
 
 // ── No-cover-photo SVG patterns ──────────────────────────────────────────────
 // Two overlay divs toggled via dark:hidden / hidden dark:block.
@@ -215,15 +216,18 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         >
           <div className="h-44 relative">
             {group.coverPhotoUrl ? (
-              <Image
-                src={group.coverPhotoUrl}
-                alt={group.name}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                className={`object-cover transition-opacity duration-500 ${photoLoaded ? "opacity-100" : "opacity-0"}`}
-                onLoad={() => setPhotoLoaded(true)}
-                priority={priority}
-              />
+              <>
+                <ImageShimmer />
+                <Image
+                  src={group.coverPhotoUrl}
+                  alt={group.name}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className={`object-cover transition-opacity duration-500 ${photoLoaded ? "opacity-100" : "opacity-0"}`}
+                  onLoad={() => setPhotoLoaded(true)}
+                  priority={priority}
+                />
+              </>
             ) : (
               <>
                 {/* Vivid identity gradient — matches dashboard hero exactly.

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Sheet } from "@/components/shared/sheet";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { X, ChevronLeft, Plus, Search, Loader2 } from "lucide-react";
@@ -49,8 +49,6 @@ interface Props {
 
 export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
 
   // ── Step state ──────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>("pick-person");
@@ -77,18 +75,6 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
   const [submitting, setSubmitting] = useState(false);
 
   useSheetDismiss(isOpen, onClose);
-
-  // iOS scroll-through prevention
-  useEffect(() => {
-    if (!isOpen) return;
-    const prevent = (e: TouchEvent) => {
-      // Allow scrolling inside the sheet content div (handled via ref below)
-      if (scrollBodyRef.current?.contains(e.target as Node)) return;
-      e.preventDefault();
-    };
-    document.addEventListener("touchmove", prevent, { passive: false });
-    return () => document.removeEventListener("touchmove", prevent);
-  }, [isOpen]);
 
   const scrollBodyRef = useRef<HTMLDivElement>(null);
 
@@ -221,38 +207,16 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  if (!mounted) return null;
-
   const canSubmit = !!selected && parseFloat(amountStr) > 0 && !submitting;
 
-  return createPortal(
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Sheet */}
-          <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl
-                       bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl
-                       flex flex-col max-h-[90vh]"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-            </div>
-
+  return (
+    <Sheet
+      isOpen={isOpen}
+      onClose={onClose}
+      scrollRef={scrollBodyRef}
+      panelClassName="flex flex-col max-h-[90vh]"
+      ariaLabel="New entry"
+    >
             {/* Header */}
             <SheetHeader step={step} selectedName={selected?.name} onBack={() => {
               if (step === "enter-amount") { setStep("pick-person"); setSelected(null); }
@@ -311,11 +275,7 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
                 )}
               </AnimatePresence>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>,
-    document.body,
+    </Sheet>
   );
 }
 

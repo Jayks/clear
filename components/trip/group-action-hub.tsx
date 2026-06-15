@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
+import { Sheet } from "@/components/shared/sheet";
 import Link from "next/link";
 import {
   Archive, ArchiveRestore, AlertTriangle, ArrowLeftRight, BarChart2,
@@ -110,7 +110,6 @@ export function GroupActionHub({
   groupStartDate, groupEndDate,
   members,
 }: Props) {
-  const [mounted, setMounted]               = useState(false);
   const [quickAddOpen, setQuickAddOpen]     = useState(false);
   const [startMode, setStartMode]           = useState<StartMode>("text");
   const [archiveConfirm, setArchiveConfirm] = useState(false);
@@ -123,16 +122,6 @@ export function GroupActionHub({
   const navTiles = isCircle ? CIRCLE_NAV : TRIP_NEST_NAV;
   const theme    = getContextTheme(groupType, circleMode);
 
-  useEffect(() => setMounted(true), []);
-
-  // iOS body scroll lock
-  useEffect(() => {
-    if (!isOpen) return;
-    const prevent = (e: TouchEvent) => e.preventDefault();
-    document.addEventListener("touchmove", prevent, { passive: false });
-    return () => document.removeEventListener("touchmove", prevent);
-  }, [isOpen]);
-
   // Android back-button / browser back closes the sheet
   useEffect(() => {
     if (!isOpen) return;
@@ -143,14 +132,6 @@ export function GroupActionHub({
       window.removeEventListener("popstate", handlePop);
       if (window.history.state?.hubSheet) window.history.go(-1);
     };
-  }, [isOpen]);
-
-  // Escape key
-  useEffect(() => {
-    if (!isOpen) return;
-    const handle = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
-    document.addEventListener("keydown", handle);
-    return () => document.removeEventListener("keydown", handle);
   }, [isOpen]);
 
   // Reset archive confirm when sheet closes
@@ -206,36 +187,9 @@ export function GroupActionHub({
 
   // ── render ────────────────────────────────────────────────────────────────
 
-  if (!mounted) return null;
-
   return (
     <>
-      {createPortal(
-        <AnimatePresence>
-          {isOpen && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm cursor-pointer"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={onClose}
-              />
-
-              {/* Sheet */}
-              <motion.div
-                className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl"
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              >
-                {/* Drag handle */}
-                <div className="flex justify-center pt-3 pb-1">
-                  <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-                </div>
-
+      <Sheet isOpen={isOpen} onClose={onClose} ariaLabel={`${groupName} actions`}>
                 {/* Group name */}
                 <div className="px-5 pt-2 pb-4 border-b border-slate-100 dark:border-slate-800">
                   <p
@@ -405,12 +359,7 @@ export function GroupActionHub({
                     Cancel
                   </button>
                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>,
-        document.body,
-      )}
+      </Sheet>
 
       {/* QuickAddSheet — opened from Zone 1 tiles, renders its own portal */}
       <QuickAddSheet

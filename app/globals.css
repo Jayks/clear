@@ -35,6 +35,28 @@ html { scroll-behavior: smooth; }
   100% { transform: translateY(180px) rotate(720deg) scaleX(0.6); opacity: 0; }
 }
 
+/* ─── Cover-photo loading shimmer ───────────────────────────────────────── */
+/* A sweeping highlight shown behind cover photos until the image paints over
+   it. Used by <ImageShimmer/> behind every cover photo (cards + group hero). */
+@keyframes cover-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.cover-shimmer {
+  background-color: #e6edf5;
+  background-image: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.70) 50%, transparent 65%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: cover-shimmer 1.6s ease-in-out infinite;
+}
+.dark .cover-shimmer {
+  background-color: #1e293b;
+  background-image: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.07) 50%, transparent 65%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover-shimmer { animation: none; }
+}
+
 /* ─── Wayfare design tokens ─────────────────────────────────────────────── */
 @theme inline {
   /* Fonts */

@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { ImageShimmer } from "@/components/shared/image-shimmer";
 import { Check, MoreHorizontal, Repeat2, Target } from "lucide-react";
 import { toast } from "sonner";
 import type { Group } from "@/lib/db/schema/groups";
@@ -274,6 +275,7 @@ export function CircleCard({ group, cardData }: Props) {
             {hasCover ? (
               <>
                 {/* Cover photo + dark legibility overlay (matches trip/nest cards) */}
+                <ImageShimmer />
                 <Image
                   src={group.coverPhotoUrl!}
                   alt={group.name}

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Sheet } from "@/components/shared/sheet";
 import { X, Plus, Loader2, ArrowUpRight, Mic, MicOff, Check, RotateCcw, ChevronLeft, Camera, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -110,7 +110,6 @@ export function QuickAddSheet({
   const [lastContext, setLastContext] = useState<StickyContext | null>(null);
   const [, addRecentCategory] = useRecentCategories(groupType);
   const theme = getContextTheme(groupType);
-  const [mounted, setMounted] = useState(false);
 
   // ── Scanner state ──────────────────────────────────────────────────────────
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -136,10 +135,6 @@ export function QuickAddSheet({
     useSpeechRecognition({
       onFinal: (transcript) => setVoiceTrigger({ text: transcript, id: Date.now() }),
     });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Lazy-fetch members only on first open (skipped when pre-loaded)
   useEffect(() => {
@@ -197,17 +192,6 @@ export function QuickAddSheet({
       return () => clearTimeout(t);
     }
   }, [openCount]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Prevent body scroll on iOS when open, but allow scroll inside the sheet body.
-  const preventBodyScroll = useCallback((e: TouchEvent) => {
-    if (scrollBodyRef.current?.contains(e.target as Node)) return;
-    e.preventDefault();
-  }, []);
-  useEffect(() => {
-    if (!isOpen) return;
-    document.addEventListener("touchmove", preventBodyScroll, { passive: false });
-    return () => document.removeEventListener("touchmove", preventBodyScroll);
-  }, [isOpen, preventBodyScroll]);
 
   // ── Receipt scanner callback ────────────────────────────────────────────
   function handleReceiptExtracted(result: ParsedReceipt) {
@@ -279,42 +263,15 @@ export function QuickAddSheet({
     parsed.amount > 0 &&
     Boolean(parsed.description);
 
-  if (!mounted) return null;
-
-  const portal = createPortal(
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          key="backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 bg-black/40 z-50"
-          onClick={onClose}
-        />
-      )}
-      {isOpen && (
-        <motion.div
-          key="sheet"
-          data-tour="quick-add-open"
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          drag="y"
-          dragConstraints={{ top: 0 }}
-          dragElastic={{ top: 0.05, bottom: 0.3 }}
-          onDragEnd={(_, info) => {
-            if (info.offset.y > 80 || info.velocity.y > 400) onClose();
-          }}
-          className="fixed bottom-0 left-0 right-0 z-[51] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-slate-700/60 rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col cursor-grab active:cursor-grabbing"
-        >
-          {/* Drag handle */}
-          <div className="flex justify-center pt-3 pb-1 shrink-0">
-            <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-          </div>
-
+  const sheet = (
+    <Sheet
+      isOpen={isOpen}
+      onClose={onClose}
+      scrollRef={scrollBodyRef}
+      dataTour="quick-add-open"
+      panelClassName="border-t border-slate-200/80 dark:border-slate-700/60 max-h-[85vh] flex flex-col"
+      ariaLabel={`Add expense to ${groupName}`}
+    >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3 shrink-0 border-b border-slate-100 dark:border-slate-800">
             {onBack ? (
@@ -386,7 +343,6 @@ export function QuickAddSheet({
           <div
             ref={scrollBodyRef}
             className="flex-1 overflow-y-auto px-5 pt-4 pb-6 min-h-0"
-            onPointerDown={(e) => e.stopPropagation()}
           >
             {loadingMembers ? (
               <div className="flex items-center justify-center py-12">
@@ -533,15 +489,12 @@ export function QuickAddSheet({
               </>
             ) : null}
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
-    document.body,
+    </Sheet>
   );
 
   return (
     <>
-      {portal}
+      {sheet}
       {/* Scanner sheet — separate portal so it layers above the quick-add sheet */}
       <ReceiptScannerSheet
         isOpen={scannerOpen}

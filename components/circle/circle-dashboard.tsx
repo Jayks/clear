@@ -15,6 +15,7 @@ import { TripCardShareDrawer } from "@/components/trip/trip-card-share-drawer";
 import { CategoryIcon } from "@/components/expense/category-icon";
 import { Coins, Repeat2, Target } from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
+import { getContextTheme } from "@/lib/theme/context-theme";
 
 interface Props {
   group:          Group;
@@ -41,20 +42,20 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
 
-  // ── Mode-aware colour tokens ─────────────────────────────────────────────
+  // ── Context colour ───────────────────────────────────────────────────────
+  // Circles read in their mode's identity: recurring → violet, one-time → amber.
+  // Every section badge/rule/link/button derives from this; the section icon
+  // differentiates the panel. Resolves the old indigo/violet/cyan mix.
+  const theme        = getContextTheme("circle", group.circleMode);
+  // Hero stays a soft tinted gradient + pattern (not the solid theme.gradient).
   const heroGrad     = isOneTime
     ? "from-orange-50 to-amber-100 dark:from-slate-800 dark:to-amber-900"
-    : "from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900";
-  const progressCls  = isOneTime ? "from-amber-400 to-orange-500"      : "from-indigo-400 to-violet-500";
-  const sectionBg    = isOneTime ? "bg-amber-50 dark:bg-amber-900/30"  : "bg-indigo-50 dark:bg-indigo-900/30";
-  const sectionIcon  = isOneTime ? "text-amber-600 dark:text-amber-400": "text-indigo-600 dark:text-indigo-400";
-  const sectionRule  = isOneTime
-    ? "from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent"
-    : "from-indigo-200/70 to-transparent dark:from-indigo-800/40 dark:to-transparent";
-  const linkCls      = isOneTime ? "text-amber-600 dark:text-amber-400": "text-indigo-600 dark:text-indigo-400";
-  const walletBtnCls = isOneTime
-    ? "from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20"
-    : "from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20";
+    : "from-slate-100 to-violet-100 dark:from-slate-800 dark:to-violet-900";
+  const progressCls  = theme.gradient;
+  const sectionBg    = theme.headerBadgeBg;
+  const sectionIcon  = theme.headerIcon;
+  const sectionRule  = theme.rule;
+  const linkCls      = theme.accentText;
 
   // Runway health signal
   const runwayHealth =
@@ -122,7 +123,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           <div
             className="absolute inset-0 pointer-events-none dark:hidden"
             style={isRecurring ? {
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%236366f1' stroke-width='0.5' stroke-opacity='0.18' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%236366f1' stroke-width='2' stroke-opacity='0.22' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%238b5cf6' stroke-width='0.5' stroke-opacity='0.18' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%238b5cf6' stroke-width='2' stroke-opacity='0.22' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%238b5cf6' fill-opacity='0.22'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%238b5cf6' fill-opacity='0.28'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%238b5cf6' fill-opacity='0.22'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%238b5cf6' fill-opacity='0.28'/%3E%3C/svg%3E")`,
               backgroundSize: "200px 60px",
               backgroundRepeat: "repeat",
             } : {
@@ -395,15 +396,15 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         <div className="glass rounded-2xl p-5 mt-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-                <Receipt className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+              <div className={`w-6 h-6 rounded-md ${sectionBg} flex items-center justify-center shrink-0`}>
+                <Receipt className={`w-3.5 h-3.5 ${sectionIcon}`} />
               </div>
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Wallet expenses</span>
-              <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+              <div className={`flex-1 h-[1.5px] w-12 bg-gradient-to-r ${sectionRule}`} />
             </div>
             <Link
               href={`/groups/${group.id}/expenses`}
-              className="text-xs text-cyan-600 dark:text-cyan-400 font-medium hover:underline"
+              className={`text-xs ${linkCls} font-medium hover:underline`}
             >
               View all →
             </Link>
@@ -450,7 +451,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             <Link
               href={`/groups/${group.id}/expenses/new`}
               className={`mt-4 w-full inline-flex items-center justify-center gap-1.5
-                         bg-gradient-to-br ${walletBtnCls}
+                         bg-gradient-to-br ${theme.gradient} hover:brightness-105 ${theme.glow}
                          text-white text-sm font-medium rounded-xl px-4 py-2.5
                          shadow-sm transition-all`}
             >
@@ -484,18 +485,18 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         {/* Section header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-              <Users className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
+            <div className={`w-6 h-6 rounded-md ${sectionBg} flex items-center justify-center shrink-0`}>
+              <Users className={`w-3.5 h-3.5 ${sectionIcon}`} />
             </div>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               {members.length} {members.length === 1 ? "member" : "members"}
             </span>
-            <div className="flex-1 h-[1.5px] w-12 bg-gradient-to-r from-violet-200/70 to-transparent dark:from-violet-800/40 dark:to-transparent" />
+            <div className={`flex-1 h-[1.5px] w-12 bg-gradient-to-r ${sectionRule}`} />
           </div>
           {isAdmin && (
             <Link
               href={`/groups/${group.id}/members`}
-              className="inline-flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+              className={`inline-flex items-center gap-1 text-xs ${linkCls} font-medium hover:opacity-80 transition-opacity`}
             >
               <Plus className="w-3 h-3" />
               Add / Manage
@@ -515,7 +516,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${
                   isGhost
                     ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 ring-1 ring-dashed ring-slate-300 dark:ring-slate-600"
-                    : "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
+                    : `${sectionBg} ${linkCls}`
                 }`}
               >
                 {name.charAt(0).toUpperCase()}
@@ -545,7 +546,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
         {/* Full-width link button */}
         <Link
           href={`/groups/${group.id}/members`}
-          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-violet-200 dark:border-violet-800/60 text-sm font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+          className={`w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border ${theme.softBorder} text-sm font-medium ${linkCls} ${theme.tint} hover:brightness-95 dark:hover:brightness-110 transition-all`}
         >
           <Users className="w-4 h-4" />
           Members

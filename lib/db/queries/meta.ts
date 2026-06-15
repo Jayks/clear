@@ -20,6 +20,7 @@ export const getGroupSummary = cache(async (groupId: string) => {
     .select({
       name:            groups.name,
       groupType:       groups.groupType,
+      circleMode:      groups.circleMode,
       defaultCurrency: groups.defaultCurrency,
       isArchived:      groups.isArchived,
       startDate:       groups.startDate,

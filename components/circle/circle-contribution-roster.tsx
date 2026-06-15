@@ -41,19 +41,19 @@ export function CircleContributionRoster({
   // Mode-aware colour tokens
   const inputFocusCls = isOneTime
     ? "focus:ring-amber-500/20 focus:border-amber-400 dark:focus:border-amber-600"
-    : "focus:ring-indigo-500/20 focus:border-indigo-400 dark:focus:border-indigo-600";
+    : "focus:ring-violet-500/20 focus:border-violet-400 dark:focus:border-violet-600";
   const rowHoverCls = isOneTime
     ? "hover:bg-amber-50 dark:hover:bg-amber-900/20"
-    : "hover:bg-indigo-50 dark:hover:bg-indigo-900/20";
+    : "hover:bg-violet-50 dark:hover:bg-violet-900/20";
   const youTextCls = isOneTime
     ? "text-amber-600 dark:text-amber-400"
-    : "text-indigo-600 dark:text-indigo-400";
+    : "text-violet-600 dark:text-violet-400";
   const bellHoverCls = isOneTime
     ? "hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-    : "hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20";
+    : "hover:text-violet-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20";
   const plusTextCls = isOneTime
     ? "text-amber-500 dark:text-amber-400"
-    : "text-indigo-500 dark:text-indigo-400";
+    : "text-violet-500 dark:text-violet-400";
 
   const [query,        setQuery]        = useState("");
   const [paidExpanded, setPaidExpanded] = useState(false);

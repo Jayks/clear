@@ -9,6 +9,7 @@ import { parseExpenseText } from "@/lib/parser/parse-expense";
 import { parseExpenseWithAI } from "@/app/actions/parse-expense";
 import { getMemberName, formatCurrency, formatDate } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 type ParseMode = "ai" | "basic";
 
@@ -24,12 +25,14 @@ interface Props {
   interimTranscript?: string;
   // Increments each time the sheet opens; triggers a clear + focus of the input
   resetTrigger?: number;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 export function QuickAddBar({
   members, currency, groupStartDate, groupEndDate, onParsed,
   voiceTrigger, isListening = false, interimTranscript = "",
-  resetTrigger,
+  resetTrigger, theme = CONTEXT_THEME.trip,
 }: Props) {
   const [text, setText] = useState("");
   const [parsed, setParsed] = useState<ParsedExpense | null>(null);
@@ -105,11 +108,11 @@ export function QuickAddBar({
     (parsed.splitCount !== undefined || (parsed.splitMemberIds && parsed.splitMemberIds.length > 0));
 
   return (
-    <div className="mb-4 rounded-2xl border border-cyan-200 dark:border-cyan-900/50 bg-gradient-to-br from-cyan-50/80 to-teal-50/80 dark:from-cyan-950/40 dark:to-teal-950/40 p-4">
+    <div className={`mb-4 rounded-2xl border ${theme.softBorder} ${theme.tint} p-4`}>
       {/* Header row */}
       <div className="flex items-center gap-2 mb-3 min-w-0">
-        <Zap className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-        <span className="text-xs font-semibold text-cyan-700 dark:text-cyan-400 uppercase tracking-wide shrink-0">
+        <Zap className={`w-3.5 h-3.5 ${theme.headerIcon} shrink-0`} />
+        <span className={`text-xs font-semibold ${theme.accentText} uppercase tracking-wide shrink-0`}>
           Quick add
         </span>
         <span className="text-xs text-slate-400 dark:text-slate-500 normal-case font-normal tracking-normal truncate">
@@ -117,7 +120,7 @@ export function QuickAddBar({
         </span>
 
         {parseMode === "ai" && (
-          <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500 text-white text-[10px] font-semibold">
+          <span className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-br ${theme.gradient} text-white text-[10px] font-semibold`}>
             <Sparkles className="w-2.5 h-2.5" />
             AI
           </span>
@@ -139,13 +142,13 @@ export function QuickAddBar({
           onKeyDown={handleKeyDown}
           disabled={loading || isListening}
           placeholder={isListening ? "Listening…" : `Coffee ₹120 paid by ${members[0] ? getMemberName(members[0]).split(" ")[0] : "Rahul"}`}
-          className="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border border-cyan-200 dark:border-cyan-900/50 bg-white/70 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60"
+          className={`flex-1 min-w-0 px-3 py-2 text-sm rounded-xl border ${theme.softBorder} bg-white/70 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-60`}
         />
         <button
           type="button"
           onClick={() => handleFill()}
           disabled={loading || isListening}
-          className="shrink-0 px-4 py-2 text-sm font-medium bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white rounded-xl transition-all disabled:opacity-60 flex items-center gap-1.5 whitespace-nowrap"
+          className={`shrink-0 px-4 py-2 text-sm font-medium bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white rounded-xl transition-all disabled:opacity-60 flex items-center gap-1.5 whitespace-nowrap`}
         >
           {loading ? (
             <>
@@ -192,7 +195,7 @@ export function QuickAddBar({
             </span>
           )}
           {parsed.amount !== null && (
-            <span className="px-2 py-0.5 text-xs rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 font-medium">
+            <span className={`px-2 py-0.5 text-xs rounded-full ${theme.headerBadgeBg} ${theme.accentText} font-medium`}>
               {formatCurrency(parsed.amount, currency)}
             </span>
           )}

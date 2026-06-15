@@ -394,9 +394,9 @@ export function StreamPersonPageClient({
       <div className="fixed bottom-nav-safe right-4 md:hidden z-40">
         <button
           onClick={() => setLogOpen(true)}
-          className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500
-                     hover:from-indigo-600 hover:to-violet-600
-                     shadow-lg shadow-indigo-500/30 flex items-center justify-center
+          className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500
+                     hover:from-blue-600 hover:to-indigo-600
+                     shadow-lg shadow-blue-500/30 flex items-center justify-center
                      transition-all active:scale-95"
         >
           <Plus className="w-6 h-6 text-white" />
@@ -408,9 +408,9 @@ export function StreamPersonPageClient({
         <button
           onClick={() => setLogOpen(true)}
           className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl
-                     border border-indigo-200 dark:border-indigo-800
-                     text-indigo-600 dark:text-indigo-400 text-sm font-medium
-                     hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
+                     border border-blue-200 dark:border-blue-800
+                     text-blue-600 dark:text-blue-400 text-sm font-medium
+                     hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
         >
           <Plus className="w-4 h-4" />
           Log entry

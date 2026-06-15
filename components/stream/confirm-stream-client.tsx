@@ -148,7 +148,7 @@ export function ConfirmStreamClient({
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">{errorMsg}</p>
         <button
           onClick={() => { setState("idle"); setErrorMsg(""); }}
-          className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
           Try again
         </button>
@@ -177,7 +177,7 @@ export function ConfirmStreamClient({
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all",
                 disputeReason === value
-                  ? "border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40"
+                  ? "border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/40"
                   : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
               )}
             >
@@ -185,7 +185,7 @@ export function ConfirmStreamClient({
                 className={cn(
                   "w-4 h-4 rounded-full border-2 shrink-0 transition-colors",
                   disputeReason === value
-                    ? "border-indigo-500 bg-indigo-500"
+                    ? "border-blue-500 bg-blue-500"
                     : "border-slate-300 dark:border-slate-600",
                 )}
               />
@@ -206,7 +206,7 @@ export function ConfirmStreamClient({
           className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700
                      bg-white/60 dark:bg-slate-800/60 text-sm text-slate-800 dark:text-slate-100
                      placeholder:text-slate-400 focus:outline-none focus:ring-2
-                     focus:ring-indigo-400/50 resize-none transition"
+                     focus:ring-blue-400/50 resize-none transition"
         />
 
         {/* Actions */}
@@ -269,11 +269,11 @@ export function ConfirmStreamClient({
       <button
         onClick={handleConfirm}
         disabled={state === "submitting_confirm"}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500
-                   hover:from-indigo-600 hover:to-violet-600
+        className="w-full py-3.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500
+                   hover:from-blue-600 hover:to-indigo-600
                    text-white font-semibold transition-all
                    disabled:opacity-50 flex items-center justify-center gap-2
-                   shadow-md shadow-indigo-500/20"
+                   shadow-md shadow-blue-500/20"
       >
         {state === "submitting_confirm" ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> Confirming…</>

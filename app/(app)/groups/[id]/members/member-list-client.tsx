@@ -115,7 +115,7 @@ export function MemberListClient({
                     type="button"
                     onClick={() => shareInviteFor(member.guestName!)}
                     title="Share invite link"
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-violet-500 dark:hover:text-violet-400 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                   </button>

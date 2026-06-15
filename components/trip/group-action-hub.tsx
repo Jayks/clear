@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { archiveGroup } from "@/app/actions/groups";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -25,6 +26,7 @@ interface Props {
   groupId:         string;
   groupName:       string;
   groupType:       string;      // 'trip' | 'nest' | 'circle'
+  circleMode?:     string | null; // 'recurring' | 'one_time' (circles only)
   currency:        string;
   isArchived:      boolean;
   isAdmin?:        boolean;     // when false, Archive/Edit are hidden
@@ -77,17 +79,19 @@ const ADD_TILES: {
 
 // ─── Zone 2 — navigation tiles ───────────────────────────────────────────────
 
+// Zone 2 "Jump to" tiles share the group's context colour (the icon names the
+// destination) — same principle as the overview quick-action cards.
 const TRIP_NEST_NAV = [
-  { icon: Receipt,        label: "Expenses", path: "expenses", gradient: "from-cyan-500 to-teal-500",    shadow: "shadow-cyan-500/30"    },
-  { icon: Users,          label: "Members",  path: "members",  gradient: "from-violet-500 to-purple-500", shadow: "shadow-violet-500/30" },
-  { icon: BarChart2,      label: "Insights", path: "insights", gradient: "from-amber-500 to-orange-400", shadow: "shadow-amber-500/30"   },
-  { icon: Receipt,        label: "Settle Up",path: "settle",   gradient: "from-emerald-500 to-green-500", shadow: "shadow-emerald-500/30" },
+  { icon: Receipt,   label: "Expenses",  path: "expenses" },
+  { icon: Users,     label: "Members",   path: "members"  },
+  { icon: BarChart2, label: "Insights",  path: "insights" },
+  { icon: Receipt,   label: "Settle Up", path: "settle"   },
 ];
 
 // Circle groups only have expenses + members pages (no settle / insights).
 const CIRCLE_NAV = [
-  { icon: Receipt, label: "Expenses", path: "expenses", gradient: "from-cyan-500 to-teal-500",    shadow: "shadow-cyan-500/30"    },
-  { icon: Users,   label: "Members",  path: "members",  gradient: "from-violet-500 to-purple-500", shadow: "shadow-violet-500/30" },
+  { icon: Receipt, label: "Expenses", path: "expenses" },
+  { icon: Users,   label: "Members",  path: "members"  },
 ];
 
 // Settle Up icon override — ArrowLeftRight fits better than Receipt
@@ -99,7 +103,7 @@ const NAV_ICON_OVERRIDES: Record<string, React.ElementType> = {
 
 export function GroupActionHub({
   isOpen, onClose,
-  groupId, groupName, groupType, currency,
+  groupId, groupName, groupType, circleMode, currency,
   isArchived, isAdmin,
   isPlusUser,
   joinUrl,
@@ -117,6 +121,7 @@ export function GroupActionHub({
 
   const isCircle = groupType === "circle";
   const navTiles = isCircle ? CIRCLE_NAV : TRIP_NEST_NAV;
+  const theme    = getContextTheme(groupType, circleMode);
 
   useEffect(() => setMounted(true), []);
 
@@ -282,7 +287,7 @@ export function GroupActionHub({
                   <section>
                     <SectionLabel>Jump to</SectionLabel>
                     <div className="grid grid-cols-2 gap-2">
-                      {navTiles.map(({ icon: DefaultIcon, label, path, gradient, shadow }) => {
+                      {navTiles.map(({ icon: DefaultIcon, label, path }) => {
                         const Icon = NAV_ICON_OVERRIDES[path] ?? DefaultIcon;
                         return (
                           <Link
@@ -291,7 +296,7 @@ export function GroupActionHub({
                             onClick={handleNavClick}
                             className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-100 dark:active:bg-slate-700 transition-colors"
                           >
-                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm ${shadow}`}>
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shrink-0 shadow-sm ${theme.glow}`}>
                               <Icon className="w-4 h-4 text-white" />
                             </div>
                             <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">

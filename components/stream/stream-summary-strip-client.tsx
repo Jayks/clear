@@ -23,24 +23,24 @@ export function StreamSummaryStripClient({ summary }: Props) {
       <div className="mb-5">
         {/* ── Section header ───────────────────────────────────────────────── */}
         <div className="flex items-center gap-2.5 mb-2.5">
-          <div className="w-6 h-6 rounded-md bg-indigo-50 dark:bg-indigo-900/30
+          <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/30
                           flex items-center justify-center shrink-0">
-            <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <ArrowLeftRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           </div>
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             Streams
           </span>
           <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
-                          from-indigo-200/70 to-transparent
-                          dark:from-indigo-800/40 dark:to-transparent" />
+                          from-blue-300/80 to-transparent
+                          dark:from-blue-700/50 dark:to-transparent" />
 
           {/* + icon — log a new entry */}
           <button
             onClick={() => setLogOpen(true)}
             aria-label="Log entry"
             className="w-6 h-6 rounded-md flex items-center justify-center shrink-0
-                       text-indigo-600 dark:text-indigo-400
-                       hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                       text-blue-600 dark:text-blue-400
+                       hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -50,7 +50,7 @@ export function StreamSummaryStripClient({ summary }: Props) {
             <Link
               href="/stream"
               className="text-xs font-medium text-slate-400 dark:text-slate-500
-                         hover:text-indigo-500 dark:hover:text-indigo-400
+                         hover:text-blue-500 dark:hover:text-blue-400
                          transition-colors pl-1 min-h-[44px] md:min-h-0 flex items-center"
             >
               See all →
@@ -61,7 +61,7 @@ export function StreamSummaryStripClient({ summary }: Props) {
         {/* ── State: fresh (no history at all) ──────────────────────────────── */}
         {!hasActive && !hasHistory && (
           <div className="glass rounded-xl px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500
                             flex items-center justify-center shrink-0">
               <ArrowLeftRight className="w-4 h-4 text-white" />
             </div>
@@ -75,7 +75,7 @@ export function StreamSummaryStripClient({ summary }: Props) {
             </div>
             <button
               onClick={() => setLogOpen(true)}
-              className="shrink-0 text-xs font-semibold text-indigo-600 dark:text-indigo-400
+              className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400
                          hover:underline min-h-[44px] md:min-h-0 flex items-center"
             >
               Try it →
@@ -113,7 +113,7 @@ export function StreamSummaryStripClient({ summary }: Props) {
               <Link
                 href="/stream"
                 className="block text-center text-xs text-slate-400 dark:text-slate-500
-                           hover:text-indigo-500 dark:hover:text-indigo-400
+                           hover:text-blue-500 dark:hover:text-blue-400
                            transition-colors py-1.5"
               >
                 +{summary.moreCount} more
@@ -138,7 +138,7 @@ function CompactPersonRow({ record }: { record: PersonSummary }) {
     <Link
       href={`/stream/${record.personId}`}
       className="flex items-center gap-3 px-3 py-2 rounded-xl
-                 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20
+                 hover:bg-blue-50/50 dark:hover:bg-blue-950/20
                  transition-colors group"
     >
       <MemberAvatar name={record.name} size="sm" className="shrink-0" />
@@ -161,7 +161,7 @@ function CompactPersonRow({ record }: { record: PersonSummary }) {
       </span>
 
       <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0
-                               group-hover:text-indigo-400 dark:group-hover:text-indigo-500
+                               group-hover:text-blue-400 dark:group-hover:text-blue-500
                                transition-colors" />
     </Link>
   );

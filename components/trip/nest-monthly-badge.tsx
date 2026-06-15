@@ -1,5 +1,6 @@
 import { getThisMonthSpent } from "@/lib/db/queries/expenses";
 import { formatCurrency } from "@/lib/utils";
+import { CONTEXT_THEME } from "@/lib/theme/context-theme";
 
 interface Props {
   groupId: string;
@@ -16,7 +17,7 @@ export async function NestMonthlyBadge({ groupId, defaultCurrency }: Props) {
   const total = await getThisMonthSpent(groupId);
 
   return (
-    <p className={`text-xs ${total > 0 ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"}`}>
+    <p className={`text-xs ${total > 0 ? CONTEXT_THEME.nest.accentText : "text-slate-400 dark:text-slate-500"}`}>
       {total > 0
         ? `${formatCurrency(total, defaultCurrency)} this month`
         : "Nothing logged this month"}

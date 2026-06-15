@@ -178,8 +178,8 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
                 key="entry"
                 label="Log entry"
                 icon={<ArrowLeftRight className="w-[18px] h-[18px]" />}
-                gradient="from-indigo-500 to-violet-500"
-                shadow="shadow-indigo-500/30"
+                gradient="from-blue-500 to-indigo-500"
+                shadow="shadow-blue-500/30"
                 delay={0.11}
                 onClick={handleLogEntry}
               />

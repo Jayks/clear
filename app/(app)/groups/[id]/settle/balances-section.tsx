@@ -7,6 +7,8 @@ import { DebtFlowGraph } from "@/components/settlement/debt-flow-graph";
 import { SettleBreakdownSection } from "./settle-breakdown-section";
 import { SuggestionCards } from "./suggestion-cards";
 import { PendingConfirmations } from "./pending-confirmations";
+import { SectionHeader } from "@/components/shared/section-header";
+import type { ContextTheme } from "@/lib/theme/context-theme";
 import {
   ArrowRight, CheckCircle2, AlertTriangle,
   Send, Clock, TrendingUp, TrendingDown, BarChart2,
@@ -28,6 +30,8 @@ interface Props {
   settleUrl:           string;
   inviteUrl:           string;
   isNest:              boolean;
+  /** Context palette — colour identifies the group, the section icon the page. */
+  theme:               ContextTheme;
   /** userId → default VPA string | null */
   upiIdMap:            Record<string, string | null>;
   pendingSettlements:  PendingSettlement[];
@@ -35,27 +39,9 @@ interface Props {
   confirmId?:          string;
 }
 
-function SectionHeader({ icon: Icon, label, subtitle }: { icon: React.ElementType; label: string; subtitle?: string }) {
-  return (
-    <div className="mb-4">
-      <div className="flex items-center gap-2.5">
-        <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0",
-          "bg-emerald-50 dark:bg-emerald-900/30")}>
-          <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-        <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-emerald-200/70 to-transparent dark:from-emerald-800/40 dark:to-transparent" />
-      </div>
-      {subtitle && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 pl-9">{subtitle}</p>
-      )}
-    </div>
-  );
-}
-
 export async function BalancesSection({
   groupId, members, currentMemberId, currentUserId, isAdmin,
-  currency, groupName, settleUrl, inviteUrl, isNest,
+  currency, groupName, settleUrl, inviteUrl, isNest, theme,
   upiIdMap, pendingSettlements, confirmId,
 }: Props) {
   const [{ balances, suggestions, hasMixedCurrencies }, allSettlements, pastSettlementsTotal, monthlySummary] = await Promise.all([
@@ -150,7 +136,7 @@ export async function BalancesSection({
       {/* ── Net balances ───────────────────────────────────────── */}
       {balances.some((b) => b.net !== 0) && (
         <div className="mb-6">
-          <SectionHeader icon={BarChart2} label="Net balances" />
+          <SectionHeader icon={BarChart2} label="Net balances" theme={theme} className="mb-4" />
           <div className="glass rounded-2xl overflow-hidden">
             {balances.map((b, i) => {
               const isPos  = b.net > 0;
@@ -217,6 +203,8 @@ export async function BalancesSection({
           icon={Send}
           label="Minimum payments"
           subtitle="Transfers that zero out all the balances above"
+          theme={theme}
+          className="mb-4"
         />
         <SuggestionCards
           suggestions={suggestions}
@@ -247,7 +235,7 @@ export async function BalancesSection({
       {settlementHistory.length > 0 && (
         <>
           <div className="mt-8">
-            <SectionHeader icon={Clock} label="Payment history" />
+            <SectionHeader icon={Clock} label="Payment history" theme={theme} className="mb-4" />
           </div>
           <div className="space-y-2">
             {settlementHistory.map((s) => (

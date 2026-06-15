@@ -49,13 +49,13 @@ export function RecordContributionSheet({
   // Mode-aware colour tokens
   const amountTextCls = isOneTime
     ? "text-amber-600 dark:text-amber-400"
-    : "text-indigo-600 dark:text-indigo-400";
+    : "text-violet-600 dark:text-violet-400";
   const inputFocusCls = isOneTime
     ? "focus:ring-amber-500/20 focus:border-amber-400 dark:focus:border-amber-600"
-    : "focus:ring-indigo-500/20 focus:border-indigo-400 dark:focus:border-indigo-600";
+    : "focus:ring-violet-500/20 focus:border-violet-400 dark:focus:border-violet-600";
   const btnGradient = isOneTime
     ? "from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/20"
-    : "from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20";
+    : "from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 shadow-violet-500/20";
 
   const [mounted,      setMounted]      = useState(false);
   const [submitting,   setSubmitting]   = useState(false);

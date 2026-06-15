@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { eq, and } from "drizzle-orm";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { getExpenseReactions, getExpenseDisputes } from "@/lib/db/queries/interactions";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { acceptDispute, declineDispute } from "@/app/actions/interactions";
@@ -58,7 +59,8 @@ export default async function ThreadPage({
   if (!groupData || expenseRows.length === 0) notFound();
 
   const expense = expenseRows[0];
-  const { members } = groupData;
+  const { group, members } = groupData;
+  const theme = getContextTheme(group.groupType, group.circleMode);
   const currentMemberId = membership.id;
   const isAdmin = membership.role === "admin";
 
@@ -207,7 +209,7 @@ export default async function ThreadPage({
                 >
                   <button
                     type="submit"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold transition-all"
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-sm font-semibold transition-all`}
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     Accept &amp; update split
@@ -240,6 +242,7 @@ export default async function ThreadPage({
         members={members}
         currentMemberId={currentMemberId}
         isAdmin={isAdmin}
+        theme={theme}
       />
 
       {/* Resolved / historical disputes */}

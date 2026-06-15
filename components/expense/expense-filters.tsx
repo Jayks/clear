@@ -14,6 +14,7 @@ import { CategoryIcon } from "./category-icon";
 import { SwipeHint } from "@/components/shared/swipe-hint";
 import { AnimatedList } from "@/components/shared/animated-list";
 import { ExpenseMapView, MapErrorBoundary } from "./expense-map-view";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
@@ -30,13 +31,15 @@ interface Props {
   interactionCounts?: Record<string, ExpenseInteractionCount>;
   /** When true, shows the "Map" view mode tab (trips only, when located expenses exist). */
   showMapView?: boolean;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 const ITEMS_PER_PAGE = 10;
 // Groups with ≤ this many total expenses skip pagination and show everything.
 const PAGE_ALL_THRESHOLD = 20;
 
-export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts, showMapView }: Props) {
+export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts, showMapView, theme = CONTEXT_THEME.trip }: Props) {
   const [search, setSearch]        = useState("");
   const [category, setCategory]    = useState<string | null>(null);
   const [payerId, setPayerId]       = useState<string | null>(null);
@@ -162,6 +165,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
       onDeleteFail={restoreDelete}
       interactionCount={interactionCounts?.[expense.id]}
       compact={viewMode === "compact"}
+      theme={theme}
     />
   );
 

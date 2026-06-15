@@ -325,7 +325,7 @@ export function StreamSettleSheet({
                       <button
                         type="button"
                         onClick={() => setAmountStr(String(absNet))}
-                        className="text-[10px] text-indigo-500 dark:text-indigo-400 hover:underline shrink-0"
+                        className="text-[10px] text-blue-500 dark:text-blue-400 hover:underline shrink-0"
                       >
                         Full
                       </button>

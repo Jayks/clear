@@ -142,31 +142,31 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
           onClick={() => setValue("isAdvance", false)}
           className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors ${
             !isAdvance
-              ? "bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-200 dark:border-indigo-700/50"
+              ? "bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-700/50"
               : "bg-white/60 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/80"
           }`}
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
             !isAdvance
-              ? "bg-indigo-100 dark:bg-indigo-900/40"
+              ? "bg-violet-100 dark:bg-violet-900/40"
               : "bg-slate-100 dark:bg-slate-800"
           }`}>
             <span className="text-base">🏦</span>
           </div>
           <div>
             <p className={`text-sm font-semibold ${
-              !isAdvance ? "text-indigo-700 dark:text-indigo-300" : "text-slate-600 dark:text-slate-300"
+              !isAdvance ? "text-violet-700 dark:text-violet-300" : "text-slate-600 dark:text-slate-300"
             }`}>
               From wallet
             </p>
             <p className={`text-xs ${
-              !isAdvance ? "text-indigo-500 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"
+              !isAdvance ? "text-violet-500 dark:text-violet-400" : "text-slate-400 dark:text-slate-500"
             }`}>
               Paid directly from the shared wallet
             </p>
           </div>
           {!isAdvance && (
-            <div className="ml-auto w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center shrink-0">
+            <div className="ml-auto w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center shrink-0">
               <div className="w-2 h-2 rounded-full bg-white" />
             </div>
           )}
@@ -215,7 +215,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
         <input
           {...register("description")}
           placeholder="e.g. Ground rental for June"
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
         {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
       </div>
@@ -237,7 +237,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
               min="0"
               step="0.01"
               placeholder="0.00"
-              className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 tabular"
+              className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 tabular"
             />
           </div>
           {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount.message}</p>}
@@ -289,7 +289,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
           <input
             {...register("customCategory")}
             placeholder="e.g. Referee fees, Water, Snacks"
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           {errors.customCategory && <p className="mt-1 text-xs text-red-500">{errors.customCategory.message}</p>}
         </div>
@@ -301,7 +301,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
         <input
           {...register("expenseDate")}
           type="date"
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-violet-400"
         />
         <div className="flex gap-1.5 mt-1.5">
           {[{ label: "Today", value: today }, { label: "Yesterday", value: yesterday }].map((s) => (
@@ -311,7 +311,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
               onClick={() => setValue("expenseDate", s.value, { shouldValidate: true })}
               className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all ${
                 currentDate === s.value
-                  ? "bg-indigo-500 text-white"
+                  ? "bg-violet-500 text-white"
                   : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
               }`}
             >
@@ -329,7 +329,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
           {...register("notes")}
           rows={2}
           placeholder="Optional note"
-          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
       </div>
 
@@ -339,7 +339,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
         className={`w-full py-3 text-white font-medium rounded-xl shadow-md transition-all disabled:opacity-60 ${
           isAdvance
             ? "bg-gradient-to-br from-amber-500 to-orange-400 hover:from-amber-600 hover:to-orange-500 shadow-amber-500/20"
-            : "bg-gradient-to-br from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-500/20"
+            : "bg-gradient-to-br from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 shadow-violet-500/20"
         }`}
       >
         {submitting ? "Saving…" : isAdvance ? "Log advance" : "Log wallet expense"}

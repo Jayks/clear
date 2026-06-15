@@ -21,6 +21,7 @@ import { useRecentCategories } from "@/hooks/use-recent-categories";
 import { getMemberName, formatDate, formatCurrency } from "@/lib/utils";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { mapToGroupCategory } from "@/lib/receipt/map-category";
+import { getContextTheme } from "@/lib/theme/context-theme";
 
 interface Props {
   groupId: string;
@@ -108,6 +109,7 @@ export function QuickAddSheet({
   const [saved, setSaved] = useState(false);
   const [lastContext, setLastContext] = useState<StickyContext | null>(null);
   const [, addRecentCategory] = useRecentCategories(groupType);
+  const theme = getContextTheme(groupType);
   const [mounted, setMounted] = useState(false);
 
   // ── Scanner state ──────────────────────────────────────────────────────────
@@ -356,7 +358,7 @@ export function QuickAddSheet({
                   type="button"
                   onClick={() => setScannerOpen(true)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400
-                             hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 transition-colors"
+                             hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   title="Scan receipt"
                 >
                   <Camera className="w-4 h-4" />
@@ -365,7 +367,7 @@ export function QuickAddSheet({
               <Link
                 href={`/groups/${groupId}/expenses/new?from=groups`}
                 onClick={onClose}
-                className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 Full form
                 <ArrowUpRight className="w-3 h-3" />
@@ -388,15 +390,15 @@ export function QuickAddSheet({
           >
             {loadingMembers ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 text-cyan-500 animate-spin" />
+                <Loader2 className={`w-6 h-6 ${theme.accentText} animate-spin`} />
               </div>
             ) : members ? (
               <>
                 {/* Sticky context chip — shown after "Add another" */}
                 {lastContext && (
-                  <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200/60 dark:border-cyan-900/50">
-                    <RotateCcw className="w-3 h-3 text-cyan-500 shrink-0" />
-                    <span className="text-xs text-cyan-700 dark:text-cyan-300 flex-1 min-w-0 truncate">
+                  <div className={`flex items-center gap-2 mb-3 px-3 py-2 rounded-xl ${theme.tint} border ${theme.softBorder}`}>
+                    <RotateCcw className={`w-3 h-3 ${theme.headerIcon} shrink-0`} />
+                    <span className={`text-xs ${theme.accentText} flex-1 min-w-0 truncate`}>
                       Using{" "}
                       <span className="font-medium">
                         {getMemberName(members.find((m) => m.id === lastContext.paidByMemberId) ?? members[0])}
@@ -408,7 +410,7 @@ export function QuickAddSheet({
                     <button
                       type="button"
                       onClick={() => setLastContext(null)}
-                      className="shrink-0 text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors"
+                      className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                       aria-label="Clear context"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -426,6 +428,7 @@ export function QuickAddSheet({
                   isListening={isListening}
                   interimTranscript={interimTranscript}
                   resetTrigger={openCount}
+                  theme={theme}
                 />
 
                 {/* Prominent mic button */}
@@ -443,7 +446,7 @@ export function QuickAddSheet({
                         className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${
                           isListening
                             ? "bg-red-500 shadow-red-500/30"
-                            : "bg-gradient-to-br from-cyan-500 to-teal-500 shadow-cyan-500/30"
+                            : `bg-gradient-to-br ${theme.gradient} ${theme.glow}`
                         }`}
                       >
                         {isListening
@@ -490,7 +493,7 @@ export function QuickAddSheet({
                     className={`w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-sm shadow-md transition-all active:scale-[0.98] ${
                       saved
                         ? "bg-emerald-500 shadow-emerald-500/25 text-white disabled:opacity-100"
-                        : "bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 shadow-cyan-500/25 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                        : `bg-gradient-to-br ${theme.gradient} hover:brightness-105 ${theme.glow} text-white disabled:opacity-40 disabled:cursor-not-allowed`
                     }`}
                   >
                     {saving ? (
@@ -520,7 +523,7 @@ export function QuickAddSheet({
                         exit={{ opacity: 0, y: -4 }}
                         transition={{ duration: 0.15 }}
                         onClick={handleAddAnother}
-                        className="w-full py-1.5 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors text-center"
+                        className={`w-full py-1.5 text-sm font-medium ${theme.accentText} hover:opacity-80 transition-opacity text-center`}
                       >
                         + Add another expense →
                       </motion.button>

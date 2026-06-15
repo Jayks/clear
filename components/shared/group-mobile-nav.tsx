@@ -4,12 +4,14 @@ import { useCallback, useState } from "react";
 import { ArrowLeft, MoreHorizontal, Receipt, Wallet, Users, BarChart2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { GroupActionHub } from "@/components/trip/group-action-hub";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { usePathname, useRouter } from "next/navigation";
 
 interface Props {
   groupId:         string;
   groupName:       string;
   groupType:       string;  // 'trip' | 'nest' | 'circle'
+  circleMode?:     string | null;  // 'recurring' | 'one_time' (circles only)
   currency:        string;
   isArchived:      boolean;
   isAdmin:         boolean;
@@ -18,12 +20,16 @@ interface Props {
   groupEndDate?:   string | null;
 }
 
-/** Icon + gradient for each top-level section that has a coloured page header */
-const SECTION_META: Record<string, { icon: LucideIcon; gradient: string }> = {
-  expenses: { icon: Receipt,   gradient: "from-cyan-500 to-teal-500"     },
-  members:  { icon: Users,     gradient: "from-violet-500 to-purple-500" },
-  settle:   { icon: Wallet,    gradient: "from-emerald-500 to-green-500" },
-  insights: { icon: BarChart2, gradient: "from-amber-500 to-orange-400"  },
+/**
+ * Section icon for each top-level page. The colour comes from the group's
+ * context (getContextTheme), not the section — the icon differentiates the
+ * sub-page, the colour says which group you're in.
+ */
+const SECTION_ICON: Record<string, LucideIcon> = {
+  expenses: Receipt,
+  members:  Users,
+  settle:   Wallet,
+  insights: BarChart2,
 };
 
 /**
@@ -53,39 +59,39 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
 
   // Group overview
   if (!section) {
-    return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined, gradient: undefined };
+    return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined };
   }
 
   // Edit group
   if (section === "edit") {
-    return { pageTitle: "Edit group", backHref: groupBase, backLabel: groupName, icon: undefined, gradient: undefined };
+    return { pageTitle: "Edit group", backHref: groupBase, backLabel: groupName, icon: undefined };
   }
 
   // Expenses tree — only the index gets the section icon; deep pages don't
   if (section === "expenses") {
-    if (!a) return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, ...SECTION_META.expenses };
-    if (a === "new") return { pageTitle: "Add expense",  backHref: `${groupBase}/expenses`, backLabel: "Expenses", ...SECTION_META.expenses };
+    if (!a) return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, icon: SECTION_ICON.expenses };
+    if (a === "new") return { pageTitle: "Add expense",  backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: SECTION_ICON.expenses };
     if (a === "templates") {
       const title = c === "edit" ? "Edit recurring expense" : "Add recurring expense";
-      return { pageTitle: title, backHref: `${groupBase}/expenses`, backLabel: "Expenses", ...SECTION_META.expenses };
+      return { pageTitle: title, backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: SECTION_ICON.expenses };
     }
-    if (b === "edit")   return { pageTitle: "Edit expense", backHref: `${groupBase}/expenses`, backLabel: "Expenses", ...SECTION_META.expenses };
-    if (b === "thread") return { pageTitle: "Thread",        backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined, gradient: undefined };
-    return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, ...SECTION_META.expenses };
+    if (b === "edit")   return { pageTitle: "Edit expense", backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: SECTION_ICON.expenses };
+    if (b === "thread") return { pageTitle: "Thread",        backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined };
+    return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, icon: SECTION_ICON.expenses };
   }
 
   // Other top-level sections — all get their section icon
   const LABELS: Record<string, string> = { members: "Members", settle: "Settle up", insights: "Insights" };
   if (LABELS[section]) {
-    return { pageTitle: LABELS[section], backHref: groupBase, backLabel: groupName, ...SECTION_META[section] };
+    return { pageTitle: LABELS[section], backHref: groupBase, backLabel: groupName, icon: SECTION_ICON[section] };
   }
 
-  return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined, gradient: undefined };
+  return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined };
 }
 
 export function GroupMobileNav({
   groupId, groupName,
-  groupType, currency, isArchived, isAdmin,
+  groupType, circleMode, currency, isArchived, isAdmin,
   shareToken, groupStartDate, groupEndDate,
 }: Props) {
   const [navOpen, setNavOpen] = useState(false);
@@ -96,40 +102,44 @@ export function GroupMobileNav({
   // re-running (and re-pushing fake history entries) on every re-render.
   const handleClose = useCallback(() => setNavOpen(false), []);
 
-  const { pageTitle, backHref, backLabel, icon: SectionIcon, gradient } = resolveNav(pathname, groupId, groupName);
+  // Colour follows the group's context, not the section — the section icon
+  // differentiates the sub-page.
+  const theme = getContextTheme(groupType, circleMode);
+
+  const { pageTitle, backHref, backLabel, icon: SectionIcon } = resolveNav(pathname, groupId, groupName);
 
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = shareToken ? `${appUrl}/join/${shareToken}` : undefined;
 
   return (
     <>
-      {/* relative so the absolutely-centred title anchors to the bar, not the page */}
-      <div className="h-14 px-4 flex items-center justify-between gap-2 backdrop-blur-sm relative">
+      {/* Three-column flex: back (shrinks) · title (flex-1, centred) · ⋯.
+          The title gets all the room between the two controls so long page
+          names ("Add recurring expense") aren't cramped into a fixed 55%. */}
+      <div className="h-14 px-3 flex items-center gap-1.5 backdrop-blur-sm">
         {/* Back button — router.back() pops the stack so hardware back never loops */}
         <a
           href={backHref}
           onClick={(e) => { e.preventDefault(); router.back(); }}
-          className="relative z-10 flex items-center gap-1 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors py-3 shrink-0 max-w-[30%] min-w-0"
+          className={`flex items-center gap-1 text-xs font-medium ${theme.accentText} hover:opacity-80 transition-opacity py-3 shrink min-w-0 max-w-[34%]`}
         >
           <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{backLabel}</span>
         </a>
 
-        {/* Centre — absolutely anchored, prominent icon + title */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="flex items-center gap-2 max-w-[55%] min-w-0">
-            {SectionIcon && gradient && (
-              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 shadow-sm`}>
-                <SectionIcon className="w-4 h-4 text-white" />
-              </div>
-            )}
-            <p
-              className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate"
-              style={{ fontFamily: "var(--font-fraunces)" }}
-            >
-              {pageTitle ?? groupName}
-            </p>
-          </div>
+        {/* Centre — icon + title, fills the remaining width */}
+        <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+          {SectionIcon && (
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
+              <SectionIcon className="w-4 h-4 text-white" />
+            </div>
+          )}
+          <p
+            className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            {pageTitle ?? groupName}
+          </p>
         </div>
 
         {/* Section navigator */}
@@ -149,6 +159,7 @@ export function GroupMobileNav({
         groupId={groupId}
         groupName={groupName}
         groupType={groupType}
+        circleMode={circleMode}
         currency={currency}
         isArchived={isArchived}
         isAdmin={isAdmin}

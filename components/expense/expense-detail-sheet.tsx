@@ -35,6 +35,7 @@ import { ThreadCommentInput } from "./thread-comment-input";
 import { SeenAvatarStack } from "./seen-avatar-stack";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { clearExpenseReceipt, getReceiptViewUrl } from "@/app/actions/update-expense-media";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 // ── Comment loading skeleton ─────────────────────────────────────────────────
 function CommentSkeleton() {
@@ -67,6 +68,8 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   interactionCount?: ExpenseInteractionCount;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 export function ExpenseDetailSheet({
@@ -78,6 +81,7 @@ export function ExpenseDetailSheet({
   isOpen,
   onClose,
   interactionCount,
+  theme = CONTEXT_THEME.trip,
 }: Props) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -482,8 +486,8 @@ export function ExpenseDetailSheet({
                   const loc = parseExpenseLocation(expense.location);
                   return loc ? (
                     <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
-                      <div className="w-7 h-7 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-                        <MapPin className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                      <div className={`w-7 h-7 rounded-lg ${theme.headerBadgeBg} flex items-center justify-center shrink-0`}>
+                        <MapPin className={`w-3.5 h-3.5 ${theme.headerIcon}`} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{loc.name}</p>
@@ -524,11 +528,11 @@ export function ExpenseDetailSheet({
                 {(expense.receiptUrl || expense.receiptScannedAt) && (
                   <div>
                     <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center shrink-0">
-                        <Paperclip className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                      <div className={`w-6 h-6 rounded-md ${theme.headerBadgeBg} flex items-center justify-center shrink-0`}>
+                        <Paperclip className={`w-3.5 h-3.5 ${theme.headerIcon}`} />
                       </div>
                       <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Receipt</span>
-                      <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-cyan-200/70 to-transparent dark:from-cyan-800/40 dark:to-transparent" />
+                      <div className={`animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r ${theme.rule}`} />
                     </div>
                     {expense.receiptUrl && (
                       receiptSignedUrl ? (
@@ -655,7 +659,7 @@ export function ExpenseDetailSheet({
                         <button
                           onClick={() => handleAcceptDispute(pendingDispute.id)}
                           disabled={isAccepting || isDeclining}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-xs font-semibold transition-all disabled:opacity-50"
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white text-xs font-semibold transition-all disabled:opacity-50`}
                         >
                           {isAccepting ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -728,7 +732,7 @@ export function ExpenseDetailSheet({
                           disabled={isReacting}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all disabled:opacity-60 ${
                             isActive
-                              ? "border-cyan-400 dark:border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300"
+                              ? `${theme.softBorder} ${theme.tint} ${theme.accentText}`
                               : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
                           }`}
                         >
@@ -847,6 +851,7 @@ export function ExpenseDetailSheet({
                   onPost={handlePost}
                   isSubmitting={isPosting}
                   compact
+                  theme={theme}
                 />
               </div>
             </motion.div>

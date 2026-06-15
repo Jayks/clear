@@ -7,6 +7,7 @@ import { getPendingSettlements } from "@/lib/db/queries/settlements";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { Skeleton } from "@/components/shared/skeleton";
 import { BalancesSection } from "./balances-section";
+import { getContextTheme } from "@/lib/theme/context-theme";
 import { Wallet } from "lucide-react";
 import Link from "next/link";
 import { BackButton } from "@/components/shared/back-button";
@@ -54,6 +55,10 @@ export default async function SettlePage({
   const settleUrl = `${appUrl}/groups/${id}/settle`;
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
 
+  // Colour follows the group's context (trip cyan / nest emerald) — the Wallet
+  // icon says "settle", the hue says which group. Circles have no settle page.
+  const theme = getContextTheme(group.groupType, group.circleMode);
+
   return (
     <div>
       <div className="hidden md:flex items-center gap-3 mb-6">
@@ -62,7 +67,7 @@ export default async function SettlePage({
           label="Back"
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         />
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-sm shadow-emerald-500/30 shrink-0">
+        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
           <Wallet className="w-4 h-4 text-white" />
         </div>
         <h1 className="text-2xl text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
@@ -142,6 +147,7 @@ export default async function SettlePage({
           settleUrl={settleUrl}
           inviteUrl={inviteUrl}
           isNest={group.groupType === "nest"}
+          theme={theme}
           upiIdMap={upiIdMap}
           pendingSettlements={pendingSettlements}
           confirmId={confirmId}

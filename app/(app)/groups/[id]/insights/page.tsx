@@ -24,6 +24,8 @@ import { MemberContributions } from "@/components/insights/member-contributions"
 import { AdherenceCard } from "@/components/trip/adherence-card";
 import { BarChart2, PieChart, Users, Share2 } from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
+import { SectionHeader } from "@/components/shared/section-header";
+import { getContextTheme } from "@/lib/theme/context-theme";
 
 export default async function GroupInsightsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,6 +40,9 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
   const { group, members } = tripData;
   const isNest = group.groupType === "nest";
   const currency = group.defaultCurrency;
+  // Colour follows the group's context (trip cyan / nest emerald). The chart icon
+  // says "insights". Circles have no insights page. The global /insights stays amber.
+  const theme = getContextTheme(group.groupType, group.circleMode);
 
   const insights = computeTripInsights({ trip: group, members, expensesWithSplits });
   const groupRoles = computeGroupRoles({ members, expensesWithSplits });
@@ -250,7 +255,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
           className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"
         />
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center mb-5 shadow-lg shadow-amber-500/25">
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center mb-5 shadow-lg ${theme.glow}`}>
             <BarChart2 className="w-7 h-7 text-white" />
           </div>
           <h2
@@ -276,7 +281,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
           label="Back"
           className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium transition-colors"
         />
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-sm shadow-amber-500/30 shrink-0">
+        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow} shrink-0`}>
           <BarChart2 className="w-4 h-4 text-white" />
         </div>
         <div>
@@ -315,8 +320,8 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
       {openingSentence && (
         <FadeIn>
           <div className="relative glass rounded-xl px-4 py-3 mb-5 overflow-hidden">
-            {/* Amber left-edge accent */}
-            <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-gradient-to-b from-amber-400 to-orange-400" />
+            {/* Context-coloured left-edge accent */}
+            <div className={`absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-gradient-to-b ${theme.gradient}`} />
             <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed pl-3">
               {openingSentence}
             </p>
@@ -361,6 +366,8 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
             numericValue={thisMonth?.amount ?? 0}
             currency={currency}
             accent
+            accentGradient={theme.gradient}
+            accentGlow={theme.glow}
             sub={momLabel}
           />,
 
@@ -402,6 +409,8 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
             numericValue={insights.totalSpend}
             currency={currency}
             accent
+            accentGradient={theme.gradient}
+            accentGlow={theme.glow}
           />,
 
           /* Trip KPI 2: Per person */
@@ -435,7 +444,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
             <Link
               key="yourpos"
               href={`/groups/${id}/settle`}
-              className="block h-full rounded-xl ring-1 ring-transparent hover:ring-cyan-500/40 dark:hover:ring-cyan-500/30 transition-shadow"
+              className="block h-full rounded-xl ring-1 ring-transparent hover:ring-slate-300/60 dark:hover:ring-slate-600/40 transition-shadow"
             >
               <KpiCard
                 label="Your position"
@@ -480,13 +489,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
 
       {/* ── Breakdown charts ─────────────────────────────────────────────── */}
       <FadeIn>
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-            <PieChart className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-          </div>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Breakdown</span>
-          <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
-        </div>
+        <SectionHeader icon={PieChart} label="Breakdown" theme={theme} className="mb-4" />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" data-tour="insights-charts">
           <CategoryDonut data={insights.byCategory} currency={currency} />
           {isNest
@@ -507,13 +510,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
       {/* ── Group Dynamics — only meaningful with 2+ members ────────────── */}
       {members.length >= 2 && (
         <FadeIn className="mb-6">
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-              <Users className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-            </div>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Group dynamics</span>
-            <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-amber-200/70 to-transparent dark:from-amber-800/40 dark:to-transparent" />
-          </div>
+          <SectionHeader icon={Users} label="Group dynamics" theme={theme} className="mb-4" />
           <GroupRolesCard data={groupRoles} />
         </FadeIn>
       )}
@@ -525,6 +522,7 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
           <Suspense fallback={<Skeleton className="h-24 rounded-xl" />}>
             <CrossTripSection
               groupId={id}
+              theme={theme}
               totalSpend={insights.totalSpend}
               memberCount={members.length}
               tripDays={insights.tripDays}

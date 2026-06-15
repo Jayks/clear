@@ -16,6 +16,7 @@ import {
   type OptimisticComment,
 } from "@/components/expense/thread-discussion";
 import { ThreadCommentInput } from "@/components/expense/thread-comment-input";
+import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 interface Props {
   initialComments: CommentRow[];
@@ -24,6 +25,8 @@ interface Props {
   members: GroupMember[];
   currentMemberId: string;
   isAdmin: boolean;
+  /** Context palette — colour follows the group. Defaults to trip (cyan). */
+  theme?: ContextTheme;
 }
 
 export function ThreadCommentSection({
@@ -33,6 +36,7 @@ export function ThreadCommentSection({
   members,
   currentMemberId,
   isAdmin,
+  theme = CONTEXT_THEME.trip,
 }: Props) {
   const router = useRouter();
   const [comments, setComments] = useState<OptimisticComment[]>(initialComments);
@@ -102,7 +106,7 @@ export function ThreadCommentSection({
 
         {comments.length === 0 ? (
           <div className="glass rounded-2xl px-5 py-8 flex flex-col items-center text-center">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center mb-3 shadow-sm shadow-cyan-500/25">
+            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center mb-3 shadow-sm ${theme.glow}`}>
               <MessageCircle className="w-6 h-6 text-white" />
             </div>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No comments yet</p>
@@ -128,6 +132,7 @@ export function ThreadCommentSection({
             currentMemberId={currentMemberId}
             onPost={handlePost}
             isSubmitting={isPosting}
+            theme={theme}
           />
         </div>
       </div>

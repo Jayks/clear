@@ -82,9 +82,9 @@ export function StreamDashboardClient({ data }: Props) {
             onClick={() => setLogOpen(true)}
             aria-label="New entry"
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0
-                       bg-gradient-to-br from-indigo-500 to-violet-500
-                       hover:from-indigo-600 hover:to-violet-600
-                       text-white shadow-sm shadow-indigo-500/25 transition-all
+                       bg-gradient-to-br from-blue-500 to-indigo-500
+                       hover:from-blue-600 hover:to-indigo-600
+                       text-white shadow-sm shadow-blue-500/25 transition-all
                        active:scale-95"
           >
             <Plus className="w-4 h-4" />
@@ -95,8 +95,8 @@ export function StreamDashboardClient({ data }: Props) {
       {/* ── Empty state ───────────────────────────────────────────────────── */}
       {isEmpty && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500
-                          flex items-center justify-center mb-5 shadow-lg shadow-indigo-500/25">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500
+                          flex items-center justify-center mb-5 shadow-lg shadow-blue-500/25">
             <StreamIcon className="w-9 h-9 text-white" />
           </div>
           <h2
@@ -111,10 +111,10 @@ export function StreamDashboardClient({ data }: Props) {
           <button
             onClick={() => setLogOpen(true)}
             className="mt-6 inline-flex items-center gap-1.5
-                       bg-gradient-to-br from-indigo-500 to-violet-500
-                       hover:from-indigo-600 hover:to-violet-600
+                       bg-gradient-to-br from-blue-500 to-indigo-500
+                       hover:from-blue-600 hover:to-indigo-600
                        text-white text-sm font-medium rounded-xl px-6 py-2.5
-                       shadow-md shadow-indigo-500/25 transition-all"
+                       shadow-md shadow-blue-500/25 transition-all"
           >
             Log your first entry
           </button>
@@ -199,7 +199,7 @@ export function StreamDashboardClient({ data }: Props) {
                          bg-white/60 dark:bg-slate-800/60
                          text-sm text-slate-800 dark:text-slate-100
                          placeholder:text-slate-400 focus:outline-none
-                         focus:ring-2 focus:ring-indigo-400/50 dark:focus:ring-indigo-600/50
+                         focus:ring-2 focus:ring-blue-400/50 dark:focus:ring-blue-600/50
                          transition"
             />
           </div>

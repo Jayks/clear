@@ -48,8 +48,8 @@ const CHOOSER: {
     title: "Stream",
     desc: "Track what one person owes you — one-on-one, no group needed.",
     icon: ArrowLeftRight,
-    gradient: "from-indigo-500 to-violet-500",
-    hoverArrow: "group-hover:text-indigo-500",
+    gradient: "from-blue-500 to-indigo-500",
+    hoverArrow: "group-hover:text-blue-500",
   },
 ];
 

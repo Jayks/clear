@@ -333,10 +333,10 @@ function SpineCard({
           <div className={cn("flex items-center gap-1.5", side === "left" ? "mr-auto" : "ml-auto")}>
             <button type="button" onClick={handleShare}
               className="inline-flex items-center gap-1 text-[10px] font-semibold
-                         text-indigo-600 dark:text-indigo-400
-                         bg-indigo-50 dark:bg-indigo-950/40
-                         border border-indigo-200 dark:border-indigo-800/60
-                         px-2 py-0.5 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/40
+                         text-blue-600 dark:text-blue-400
+                         bg-blue-50 dark:bg-blue-950/40
+                         border border-blue-200 dark:border-blue-800/60
+                         px-2 py-0.5 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40
                          transition-colors whitespace-nowrap">
               📱 Share ↗
             </button>
@@ -383,7 +383,7 @@ function SpineCard({
             {showShare && (
               <button type="button" onClick={handleShare}
                 className="text-[10px] font-semibold px-2 py-1 rounded-lg
-                           bg-indigo-500 text-white hover:bg-indigo-600 transition-colors">
+                           bg-blue-500 text-white hover:bg-blue-600 transition-colors">
                 Share ↗
               </button>
             )}
@@ -511,8 +511,8 @@ function MobileSpine({ records, runningNets, currentUserName, onConfirmSettlemen
     <div className="relative w-full overflow-hidden">
       <div
         className="absolute top-0 bottom-0 w-0.5 pointer-events-none
-                   bg-gradient-to-b from-transparent via-indigo-300/50 to-transparent
-                   dark:via-indigo-600/40"
+                   bg-gradient-to-b from-transparent via-blue-300/50 to-transparent
+                   dark:via-blue-600/40"
         style={{ left: 54 }}
       />
       {records.map((record, i) => {
@@ -570,8 +570,8 @@ function DesktopSpine({ records, runningNets, currentUserName, onConfirmSettleme
     <div className="relative w-full">
       <div
         className="absolute top-0 bottom-0 w-0.5 -translate-x-px pointer-events-none
-                   bg-gradient-to-b from-transparent via-indigo-300/50 to-transparent
-                   dark:via-indigo-600/40"
+                   bg-gradient-to-b from-transparent via-blue-300/50 to-transparent
+                   dark:via-blue-600/40"
         style={{ left: "50%" }}
       />
       {records.map((record, i) => {

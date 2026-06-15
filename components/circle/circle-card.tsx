@@ -12,6 +12,7 @@ import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { RecordContributionSheet } from "./record-contribution-sheet";
 import { GroupActionHub } from "@/components/trip/group-action-hub";
 import { CardRibbon } from "@/components/shared/card-ribbon";
+import { getContextTheme } from "@/lib/theme/context-theme";
 
 interface Props {
   group:    Group;
@@ -82,12 +83,15 @@ export function CircleCard({ group, cardData }: Props) {
   // ── Mode-aware colours ────────────────────────────────────────────────────
   // Light mode:  very pale tinted gradient so coloured pattern pops
   // Dark mode:   deep dark with slight colour tint so white-ish pattern pops
+  // Recurring → violet, one-time → amber. Progress + CTA gradients use the
+  // shared context theme so the card matches the circle dashboard exactly.
+  const theme        = getContextTheme("circle", group.circleMode);
   const heroGrad = isOneTime
     ? "from-orange-50 to-amber-100 dark:from-slate-800 dark:to-amber-900"
-    : "from-slate-100 to-indigo-100 dark:from-slate-800 dark:to-indigo-900";
+    : "from-slate-100 to-violet-100 dark:from-slate-800 dark:to-violet-900";
 
-  const progressCls  = isOneTime ? "from-amber-400 to-orange-500" : "from-indigo-400 to-violet-500";
-  const ctaBtnCls    = isOneTime ? "from-amber-500 to-orange-500" : "from-indigo-500 to-violet-600";
+  const progressCls  = theme.gradient;
+  const ctaBtnCls    = theme.gradient;
   // Ambient resting shadow in mode colour — matches TripCard Plus opacity levels (/15 rest, /30 hover)
   const cardShadow   = isOneTime
     ? "shadow-md shadow-amber-500/15 hover:shadow-xl hover:shadow-amber-500/30"
@@ -95,18 +99,18 @@ export function CircleCard({ group, cardData }: Props) {
   // Mode badge tinted with mode colour — reinforces gradient + pattern language
   const badgeCls     = isOneTime
     ? "bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200"
-    : "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-200";
+    : "bg-violet-500/15 text-violet-700 dark:bg-violet-400/20 dark:text-violet-200";
   const pendingCls  = isOneTime
     ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-    : "text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50";
+    : "text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50";
 
   // ── Background patterns ────────────────────────────────────────────────────
-  // Light mode:  coloured strokes (indigo / amber) on pale gradient — pops clearly
+  // Light mode:  coloured strokes (violet / amber) on pale gradient — pops clearly
   // Dark mode:   white strokes on deep dark gradient — pops clearly
   // Two overlay divs, toggled via dark:hidden / hidden dark:block
   const patternLight = isRecurring
     ? {
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%236366f1' stroke-width='0.5' stroke-opacity='0.18' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%236366f1' stroke-width='2' stroke-opacity='0.22' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%236366f1' fill-opacity='0.22'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%236366f1' fill-opacity='0.28'/%3E%3C/svg%3E")`,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60'%3E%3Cline x1='0' y1='30' x2='200' y2='30' stroke='%238b5cf6' stroke-width='0.5' stroke-opacity='0.18' stroke-dasharray='4 3'/%3E%3Cpath d='M0,30 C55,2 100,2 100,30 S145,58 200,30' stroke='%238b5cf6' stroke-width='2' stroke-opacity='0.22' fill='none'/%3E%3Ccircle cx='0' cy='30' r='2.5' fill='%238b5cf6' fill-opacity='0.22'/%3E%3Ccircle cx='71' cy='9' r='2.5' fill='%238b5cf6' fill-opacity='0.28'/%3E%3Ccircle cx='100' cy='30' r='2.5' fill='%238b5cf6' fill-opacity='0.22'/%3E%3Ccircle cx='129' cy='51' r='2.5' fill='%238b5cf6' fill-opacity='0.28'/%3E%3C/svg%3E")`,
         backgroundSize: "200px 60px",
         backgroundRepeat: "repeat" as const,
       }
@@ -406,6 +410,7 @@ export function CircleCard({ group, cardData }: Props) {
         groupId={group.id}
         groupName={group.name}
         groupType={group.groupType}
+        circleMode={group.circleMode}
         currency={group.defaultCurrency}
         isArchived={group.isArchived ?? false}
         isAdmin={isAdmin}

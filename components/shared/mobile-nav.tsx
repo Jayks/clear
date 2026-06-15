@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils";
 import { isNavItemActive } from "@/lib/nav/active";
 
 // Each tab lights up in its own identity colour (not a shared cyan): Home = cyan
-// (brand), Streams = indigo (its established accent), Insights = amber (Insights
+// (brand), Streams = blue (the Stream context colour), Insights = amber (Insights
 // is amber app-wide). Class strings are literals so Tailwind keeps them.
 const NAV_ITEMS = [
   { href: "/groups",   label: "Home",     icon: LayoutGrid,     tourId: "nav-trips",
     activeText: "text-cyan-600 dark:text-cyan-400",     pill: "bg-cyan-100 dark:bg-cyan-950/70"   },
   { href: "/stream",   label: "Streams",  icon: ArrowLeftRight, tourId: "nav-streams",
-    activeText: "text-indigo-600 dark:text-indigo-400", pill: "bg-indigo-100 dark:bg-indigo-950/70" },
+    activeText: "text-blue-600 dark:text-blue-400", pill: "bg-blue-100 dark:bg-blue-950/70" },
   { href: "/insights", label: "Insights", icon: BarChart2,      tourId: "nav-insights",
     activeText: "text-amber-600 dark:text-amber-400",   pill: "bg-amber-100 dark:bg-amber-950/70"  },
 ];

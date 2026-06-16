@@ -5,19 +5,20 @@ import { Sheet } from "@/components/shared/sheet";
 import Link from "next/link";
 import {
   Archive, ArchiveRestore, ArrowLeftRight, BarChart2,
-  Camera, Loader2, Mic, PencilLine, Receipt,
-  Share2, Sparkles, Users,
+  Loader2, PencilLine, Receipt,
+  Share2, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { archiveGroup } from "@/app/actions/groups";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
+import { LogExpenseTiles, type StartMode } from "@/components/expense/log-expense-tiles";
 import { getContextTheme } from "@/lib/theme/context-theme";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
-export type StartMode = "text" | "voice" | "scan";
+export type { StartMode };
 
 interface Props {
   isOpen:          boolean;
@@ -37,44 +38,6 @@ interface Props {
 }
 
 // ─── Zone 1 — quick-log tiles ─────────────────────────────────────────────
-
-const ADD_TILES: {
-  id:       StartMode;
-  icon:     React.ElementType;
-  label:    string;
-  sub:      string;
-  gradient: string;
-  shadow:   string;
-  plusOnly: boolean;
-}[] = [
-  {
-    id:       "scan",
-    icon:     Camera,
-    label:    "Scan",
-    sub:      "Receipt",
-    gradient: "from-violet-500 to-purple-600",
-    shadow:   "shadow-violet-500/30",
-    plusOnly: false, // logging-AI (receipt scan) is free for everyone now
-  },
-  {
-    id:       "voice",
-    icon:     Mic,
-    label:    "Voice",
-    sub:      "Speak it",
-    gradient: "from-rose-500 to-pink-500",
-    shadow:   "shadow-rose-500/30",
-    plusOnly: false,
-  },
-  {
-    id:       "text",
-    icon:     Sparkles,
-    label:    "Type",
-    sub:      "AI parses",
-    gradient: "from-cyan-500 to-teal-500",
-    shadow:   "shadow-cyan-500/30",
-    plusOnly: false,
-  },
-];
 
 // ─── Zone 2 — navigation tiles ───────────────────────────────────────────────
 
@@ -211,34 +174,7 @@ export function GroupActionHub({
                   {!isCircle && (
                     <section>
                       <SectionLabel>Log expense</SectionLabel>
-                      <div className="grid grid-cols-3 gap-2.5">
-                        {ADD_TILES.map(({ id, icon: Icon, label, sub, gradient, shadow, plusOnly }) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => openQuickAdd(id)}
-                            className="relative flex flex-col items-center gap-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all text-center"
-                          >
-                            {/* Plus badge — only when we know user is not Plus */}
-                            {plusOnly && isPlusUser === false && (
-                              <span className="absolute top-2 right-2 text-[9px] font-bold text-violet-500 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded-full leading-none">
-                                Plus
-                              </span>
-                            )}
-                            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm ${shadow}`}>
-                              <Icon className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight">
-                                {label}
-                              </p>
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
-                                {sub}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+                      <LogExpenseTiles onPick={openQuickAdd} />
                     </section>
                   )}
 

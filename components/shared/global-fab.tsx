@@ -5,9 +5,11 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus, Receipt, ArrowLeftRight, MapPin, Home, ChevronRight, X, Coins } from "lucide-react";
+import { Plus, Receipt, ArrowLeftRight, MapPin, Home, ChevronLeft, ChevronRight, X, Coins } from "lucide-react";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
+import { LogExpenseTiles, type StartMode } from "@/components/expense/log-expense-tiles";
 import { StreamLogSheet } from "@/components/stream/stream-log-sheet";
+import { Sheet } from "@/components/shared/sheet";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { hapticLight } from "@/lib/haptics";
@@ -40,8 +42,10 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
   const [mounted,        setMounted]        = useState(false);
   const [fabOpen,        setFabOpen]        = useState(false);
   const [pickerOpen,     setPickerOpen]     = useState(false);
+  const [chooserOpen,    setChooserOpen]    = useState(false);
   const [quickAddGroup,  setQuickAddGroup]  = useState<GroupItem | null>(null);
   const [quickAddOpen,   setQuickAddOpen]   = useState(false);
+  const [quickAddMode,   setQuickAddMode]   = useState<StartMode>("text");
   const [streamOpen,     setStreamOpen]     = useState(false);
   const [fabVisible,     setFabVisible]     = useState(true);
   const lastScrollY = useRef(0);
@@ -79,9 +83,9 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
     setFabOpen(false);
     if (!hasGroups) return;
     if (allActive.length === 1) {
-      // Only one group — skip the picker
+      // Only one group — skip the picker, go straight to the mode chooser
       setQuickAddGroup(allActive[0]);
-      requestAnimationFrame(() => setQuickAddOpen(true));
+      requestAnimationFrame(() => setChooserOpen(true));
     } else {
       setPickerOpen(true);
     }
@@ -96,8 +100,27 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
   function handleGroupSelect(item: GroupItem) {
     setPickerOpen(false);
     setQuickAddGroup(item);
-    // Let picker sheet start its exit animation before QuickAdd appears
+    // Let picker sheet start its exit animation before the mode chooser appears
+    setTimeout(() => setChooserOpen(true), 150);
+  }
+
+  // Mode chooser → QuickAddSheet with the picked Scan/Voice/Type mode. Matches
+  // the GroupActionHub + ExpenseQuickAddFab flows (shared LogExpenseTiles).
+  function handleModePick(mode: StartMode) {
+    setQuickAddMode(mode);
+    setChooserOpen(false);
     setTimeout(() => setQuickAddOpen(true), 150);
+  }
+
+  function handleChooserClose() {
+    setChooserOpen(false);
+    setTimeout(() => setQuickAddGroup(null), 350);
+  }
+
+  // "← Change group" from the chooser (only when there's more than one group)
+  function handleChooserBack() {
+    setChooserOpen(false);
+    setTimeout(() => { setQuickAddGroup(null); setPickerOpen(true); }, 150);
   }
 
   const handleQuickAddClose = useCallback(() => {
@@ -199,6 +222,33 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
         circles={circles}
       />
 
+      {/* ── Mode chooser — Scan / Voice / Type tiles (matches GroupActionHub) ── */}
+      <Sheet isOpen={chooserOpen} onClose={handleChooserClose} ariaLabel="Choose how to log">
+        <div className="px-5 pt-2 pb-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Log expense</p>
+            <p
+              className="text-lg font-semibold text-slate-800 dark:text-slate-100 truncate"
+              style={{ fontFamily: "var(--font-fraunces)" }}
+            >
+              {quickAddGroup?.group.name}
+            </p>
+          </div>
+          {allActive.length > 1 && (
+            <button
+              type="button"
+              onClick={handleChooserBack}
+              className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Change group
+            </button>
+          )}
+        </div>
+        <div className="px-4 pt-4 pb-6">
+          <LogExpenseTiles onPick={handleModePick} />
+        </div>
+      </Sheet>
+
       {/* ── QuickAdd sheet — always rendered so exit animation plays cleanly ── */}
       {quickAddGroup && (
         <QuickAddSheet
@@ -209,6 +259,7 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
           isOpen={quickAddOpen}
           onClose={handleQuickAddClose}
           onBack={allActive.length > 1 ? handleBack : undefined}
+          startMode={quickAddMode}
           groupStartDate={quickAddGroup.group.startDate}
           groupEndDate={quickAddGroup.group.endDate}
           isPlusUser={isPlusUser}

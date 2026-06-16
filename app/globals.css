@@ -200,7 +200,7 @@ html { scroll-behavior: smooth; }
     background-attachment: fixed;
   }
   .dark body {
-    background: linear-gradient(135deg, #0D1B2A 0%, #091C1A 35%, #0A1F17 70%, #0C1A24 100%);
+    background: #0F172A;
     background-attachment: fixed;
   }
   h1, h2, h3, h4, h5, h6 {

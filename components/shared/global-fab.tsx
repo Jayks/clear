@@ -5,15 +5,21 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus, Receipt, ArrowLeftRight, MapPin, Building2, ChevronLeft, ChevronRight, X, Coins } from "lucide-react";
+import { Plus, MapPin, Building2, ChevronLeft, ChevronRight, X, Coins, ArrowLeftRight, Loader2 } from "lucide-react";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
 import { LogExpenseTiles, type StartMode } from "@/components/expense/log-expense-tiles";
 import { StreamLogSheet } from "@/components/stream/stream-log-sheet";
+import { MemberAvatar } from "@/components/shared/member-avatar";
 import { Sheet } from "@/components/shared/sheet";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { hapticLight } from "@/lib/haptics";
+import { getRecentStreamCounterpartsAction } from "@/app/actions/stream";
+import { resolvePickerSections } from "@/components/shared/global-fab-logic";
 import type { Group } from "@/lib/db/schema/groups";
+
+// A Stream counterpart (matches StreamLogSheet's preselectedPerson shape)
+type PersonOption = { personId: string; type: "user" | "guest"; name: string };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -27,26 +33,28 @@ interface Props {
   nests:       GroupItem[];
   circles:     GroupItem[];
   isPlusUser?: boolean;
+  /** Whether the user has any Streams — gates the People section in the picker. */
+  hasStreams?: boolean;
 }
 
 // Max tiles shown in "Recent" section
 const RECENT_COUNT = 2;
 
-// FAB uses a warm sunset gradient — pops against the app's cool blue-green background
-const FAB_GRADIENT = "from-orange-400 to-rose-500";
-const FAB_SHADOW   = "shadow-orange-500/35";
+// FAB uses Clear's cyan brand gradient
+const FAB_GRADIENT = "from-cyan-500 to-teal-500";
+const FAB_SHADOW   = "shadow-cyan-500/35";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) {
+export function GlobalFab({ trips, nests, circles, isPlusUser = false, hasStreams = false }: Props) {
   const [mounted,        setMounted]        = useState(false);
-  const [fabOpen,        setFabOpen]        = useState(false);
   const [pickerOpen,     setPickerOpen]     = useState(false);
   const [chooserOpen,    setChooserOpen]    = useState(false);
   const [quickAddGroup,  setQuickAddGroup]  = useState<GroupItem | null>(null);
   const [quickAddOpen,   setQuickAddOpen]   = useState(false);
   const [quickAddMode,   setQuickAddMode]   = useState<StartMode>("text");
   const [streamOpen,     setStreamOpen]     = useState(false);
+  const [streamPerson,   setStreamPerson]   = useState<PersonOption | undefined>(undefined);
   const [fabVisible,     setFabVisible]     = useState(true);
   const lastScrollY = useRef(0);
 
@@ -69,32 +77,13 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
   }, []);
 
   const allActive = [...trips, ...nests, ...circles];
-  const hasGroups = allActive.length > 0;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
+  // FAB now opens the unified "Add to…" picker directly — no type-first fan.
   function handleFabClick() {
     hapticLight();
-    setFabOpen((v) => !v);
-  }
-
-  function handleLogExpense() {
-    hapticLight();
-    setFabOpen(false);
-    if (!hasGroups) return;
-    if (allActive.length === 1) {
-      // Only one group — skip the picker, go straight to the mode chooser
-      setQuickAddGroup(allActive[0]);
-      requestAnimationFrame(() => setChooserOpen(true));
-    } else {
-      setPickerOpen(true);
-    }
-  }
-
-  function handleLogEntry() {
-    hapticLight();
-    setFabOpen(false);
-    setStreamOpen(true);
+    setPickerOpen(true);
   }
 
   function handleGroupSelect(item: GroupItem) {
@@ -102,6 +91,20 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
     setQuickAddGroup(item);
     // Let picker sheet start its exit animation before the mode chooser appears
     setTimeout(() => setChooserOpen(true), 150);
+  }
+
+  // Person picked from the People section → log a Stream entry with them.
+  function handlePersonSelect(person: PersonOption) {
+    setPickerOpen(false);
+    setStreamPerson(person);
+    setTimeout(() => setStreamOpen(true), 150);
+  }
+
+  // "Someone else…" → open the stream sheet on its own pick-person step.
+  function handleNewPerson() {
+    setPickerOpen(false);
+    setStreamPerson(undefined);
+    setTimeout(() => setStreamOpen(true), 150);
   }
 
   // Mode chooser → QuickAddSheet with the picked Scan/Voice/Type mode. Matches
@@ -141,82 +144,36 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
 
   return (
     <>
-      {/* ── Backdrop — closes fan ─────────────────────────────────────────── */}
-      <AnimatePresence>
-        {fabOpen && (
-          <motion.div
-            key="fab-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={() => setFabOpen(false)}
-            className="fixed inset-0 bg-black/20 backdrop-blur-[1.5px] z-40"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── FAB stack ────────────────────────────────────────────────────── */}
-      {/* flex-col-reverse: main FAB is last child → visually at bottom; items stack upward */}
+      {/* ── Main FAB — opens the unified "Add to…" picker ──────────────────── */}
       {/* motion.div handles auto-hide: slides down + fades out on scroll down */}
       <motion.div
         animate={{
-          y:       (fabVisible || fabOpen) ? 0 : 96,
-          opacity: (fabVisible || fabOpen) ? 1 : 0,
+          y:       fabVisible ? 0 : 96,
+          opacity: fabVisible ? 1 : 0,
         }}
         transition={{ type: "spring", stiffness: 300, damping: 28, mass: 0.8 }}
-        className="fixed bottom-nav-safe right-4 z-50 flex flex-col-reverse items-end gap-3 pointer-events-none"
+        className="fixed bottom-nav-safe right-4 z-50 pointer-events-none"
       >
-
-        {/* Main FAB */}
-        <motion.button
+        <button
           onClick={handleFabClick}
-          animate={{ rotate: fabOpen ? 45 : 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          aria-label={fabOpen ? "Close" : "Quick add"}
+          aria-label="Quick add"
           className={`pointer-events-auto w-14 h-14 rounded-full flex items-center justify-center
                      bg-gradient-to-br ${FAB_GRADIENT}
                      shadow-xl ${FAB_SHADOW} text-white
                      hover:opacity-90 active:scale-95 transition-opacity`}
         >
           <Plus className="w-6 h-6" />
-        </motion.button>
-
-        {/* Fan items — render only when open */}
-        <AnimatePresence>
-          {fabOpen && (
-            <>
-              {/* Log expense — closer to main FAB (primary action) */}
-              <FanItem
-                key="expense"
-                label="Log expense"
-                icon={<Receipt className="w-[18px] h-[18px]" />}
-                gradient="from-cyan-500 to-teal-500"
-                shadow="shadow-cyan-500/30"
-                delay={0.05}
-                disabled={!hasGroups}
-                onClick={handleLogExpense}
-              />
-              {/* Log entry — higher in fan (secondary action) */}
-              <FanItem
-                key="entry"
-                label="Log entry"
-                icon={<ArrowLeftRight className="w-[18px] h-[18px]" />}
-                gradient="from-blue-500 to-indigo-500"
-                shadow="shadow-blue-500/30"
-                delay={0.11}
-                onClick={handleLogEntry}
-              />
-            </>
-          )}
-        </AnimatePresence>
+        </button>
       </motion.div>
 
-      {/* ── Group picker sheet ─────────────────────────────────────────────── */}
+      {/* ── Unified "Add to…" picker — groups + people ─────────────────────── */}
       <GroupPickerSheet
         isOpen={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={handleGroupSelect}
+        onSelectPerson={handlePersonSelect}
+        onSelectNewPerson={handleNewPerson}
+        hasStreams={hasStreams}
         trips={trips}
         nests={nests}
         circles={circles}
@@ -269,76 +226,35 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false }: Props) 
       {/* ── Stream log sheet ───────────────────────────────────────────────── */}
       <StreamLogSheet
         isOpen={streamOpen}
-        onClose={() => setStreamOpen(false)}
+        onClose={() => {
+          setStreamOpen(false);
+          // Clear the preselection after the exit animation so the sheet resets
+          // to its pick-person step for the next open.
+          setTimeout(() => setStreamPerson(undefined), 350);
+        }}
+        preselectedPerson={streamPerson}
       />
     </>
-  );
-}
-
-// ── Fan item ──────────────────────────────────────────────────────────────────
-
-interface FanItemProps {
-  label:    string;
-  icon:     React.ReactNode;
-  gradient: string;
-  shadow:   string;
-  delay:    number;
-  disabled?: boolean;
-  onClick:  () => void;
-}
-
-function FanItem({ label, icon, gradient, shadow, delay, disabled, onClick }: FanItemProps) {
-  return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0, y: 18 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      exit={{ scale: 0, opacity: 0, y: 18 }}
-      transition={{ delay, type: "spring", stiffness: 420, damping: 26 }}
-      className="flex items-center gap-3 pointer-events-auto"
-    >
-      {/* Label pill — slides in from right */}
-      <motion.span
-        initial={{ opacity: 0, x: 12 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 12 }}
-        transition={{ delay: delay + 0.07, duration: 0.18 }}
-        className="text-[13px] font-medium text-white
-                   bg-slate-900/78 dark:bg-slate-800/90
-                   backdrop-blur-sm rounded-full px-3 py-1.5
-                   shadow-md whitespace-nowrap select-none"
-      >
-        {label}
-      </motion.span>
-
-      {/* Mini FAB */}
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className={`w-12 h-12 rounded-full flex items-center justify-center
-                    bg-gradient-to-br ${gradient}
-                    shadow-lg ${shadow} text-white
-                    hover:opacity-90 active:scale-95 transition-all
-                    disabled:opacity-40 disabled:cursor-not-allowed`}
-      >
-        {icon}
-      </button>
-    </motion.div>
   );
 }
 
 // ── Group picker sheet ─────────────────────────────────────────────────────────
 
 interface PickerProps {
-  isOpen:   boolean;
-  onClose:  () => void;
-  onSelect: (item: GroupItem) => void;
-  trips:    GroupItem[];
-  nests:    GroupItem[];
-  circles:  GroupItem[];
+  isOpen:            boolean;
+  onClose:           () => void;
+  onSelect:          (item: GroupItem) => void;
+  onSelectPerson:    (person: PersonOption) => void;
+  onSelectNewPerson: () => void;
+  hasStreams:        boolean;
+  trips:             GroupItem[];
+  nests:             GroupItem[];
+  circles:           GroupItem[];
 }
 
-function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: PickerProps) {
+function GroupPickerSheet({
+  isOpen, onClose, onSelect, onSelectPerson, onSelectNewPerson, hasStreams, trips, nests, circles,
+}: PickerProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -347,18 +263,26 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
   const panelRef = useRef<HTMLDivElement>(null);
   useFocusTrap(isOpen, panelRef);
 
-  const allActive  = [...trips, ...nests, ...circles];
-  const nonDemo    = allActive.filter((g) => !g.group.isDemo);
+  // ── Recent stream counterparts — lazy-loaded when the picker opens ──────────
+  const [people, setPeople]         = useState<PersonOption[]>([]);
+  const [peopleLoaded, setLoaded]   = useState(false);
 
-  // "Recent" tiles = first N non-demo groups (already sorted by recency from getAllGroups)
-  const recent     = nonDemo.slice(0, RECENT_COUNT);
-  const recentIds  = new Set(recent.map((r) => r.group.id));
+  useEffect(() => {
+    if (isOpen && hasStreams && !peopleLoaded) {
+      getRecentStreamCounterpartsAction()
+        .then(setPeople)
+        .catch(() => {}) // silent — offline/error just leaves "Someone else…" as the entry
+        .finally(() => setLoaded(true));
+    }
+  }, [isOpen, hasStreams, peopleLoaded]);
 
-  // Remaining groups for the full list (exclude recent, keep demo in the list)
-  const remainingTrips   = trips.filter((g) => !recentIds.has(g.group.id));
-  const remainingNests   = nests.filter((g) => !recentIds.has(g.group.id));
-  const remainingCircles = circles.filter((g) => !recentIds.has(g.group.id));
-  const showFullList     = remainingTrips.length + remainingNests.length + remainingCircles.length > 0;
+  // Section layout is decided by the pure, tested helper.
+  const { recentGroups, remainingTrips, remainingNests, remainingCircles, showFullList, showPeople } =
+    resolvePickerSections({ trips, nests, circles, recentCount: RECENT_COUNT, hasStreams });
+
+  const allActive = [...trips, ...nests, ...circles];
+  const nonDemo   = allActive.filter((g) => !g.group.isDemo);
+  const recent    = recentGroups;
 
   if (!mounted) return null;
 
@@ -383,7 +307,7 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Choose a group"
+            aria-label="Add to a group or person"
             tabIndex={-1}
             style={{ outline: "none" }}
             initial={{ y: "100%" }}
@@ -414,7 +338,7 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
                 className="text-base text-slate-800 dark:text-slate-100"
                 style={{ fontFamily: "var(--font-fraunces)" }}
               >
-                Add expense to…
+                {showPeople ? "Add to…" : "Add expense to…"}
               </h3>
               <button
                 type="button"
@@ -525,7 +449,7 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
               )}
 
               {/* ── Truly empty ───────────────────────────────────────────── */}
-              {allActive.length === 0 && (
+              {allActive.length === 0 && !showPeople && (
                 <div className="text-center py-8">
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
                     No groups yet
@@ -537,6 +461,55 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
                   >
                     Create your first group →
                   </Link>
+                </div>
+              )}
+
+              {/* ── People (Streams) ──────────────────────────────────────── */}
+              {/* Shown only when the user has Streams — pick a person to log a
+                  personal-debt entry, or reach the full stream sheet via
+                  "Someone else…". Groups-only users never see this. */}
+              {showPeople && (
+                <div className={(showFullList || recent.length > 0) ? "mt-5" : ""}>
+                  <ListSectionHeader
+                    label="People"
+                    color="blue"
+                    icon={<ArrowLeftRight className="w-3 h-3 text-blue-600 dark:text-blue-400" />}
+                  />
+                  <div className="space-y-0.5 mt-1.5">
+                    {people.map((person) => (
+                      <PersonListRow
+                        key={person.personId || person.name}
+                        person={person}
+                        onClick={() => onSelectPerson(person)}
+                      />
+                    ))}
+
+                    {/* Someone else / search — opens the stream sheet's pick step */}
+                    <button
+                      type="button"
+                      onClick={onSelectNewPerson}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                                 hover:bg-slate-50 dark:hover:bg-slate-800/60
+                                 active:bg-slate-100 dark:active:bg-slate-800
+                                 transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center
+                                      bg-blue-50 dark:bg-blue-900/30">
+                        <Plus className="w-[18px] h-[18px] text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                        {people.length > 0 ? "Someone else…" : "Log a personal debt"}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
+                    </button>
+
+                    {/* Loading shimmer while recents resolve */}
+                    {!peopleLoaded && (
+                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-400">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading people…
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -679,6 +652,34 @@ function GroupListRow({ item, onClick }: { item: GroupItem; onClick: () => void 
   );
 }
 
+// ── Person list row (Stream counterpart) ───────────────────────────────────────
+
+function PersonListRow({ person, onClick }: { person: PersonOption; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                 hover:bg-slate-50 dark:hover:bg-slate-800/60
+                 active:bg-slate-100 dark:active:bg-slate-800
+                 transition-colors text-left"
+    >
+      <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+        <MemberAvatar name={person.name} size="sm" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
+          {person.name}
+        </p>
+        {person.type === "guest" && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">Guest</p>
+        )}
+      </div>
+      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
+    </button>
+  );
+}
+
 // ── List section header ────────────────────────────────────────────────────────
 
 function ListSectionHeader({
@@ -687,18 +688,22 @@ function ListSectionHeader({
   icon,
 }: {
   label: string;
-  color: "cyan" | "emerald" | "violet";
+  color: "cyan" | "emerald" | "violet" | "blue";
   icon:  React.ReactNode;
 }) {
   const badge = color === "cyan"
     ? "bg-cyan-50 dark:bg-cyan-900/30"
     : color === "emerald"
     ? "bg-emerald-50 dark:bg-emerald-900/30"
+    : color === "blue"
+    ? "bg-blue-50 dark:bg-blue-900/30"
     : "bg-violet-50 dark:bg-violet-900/30";
   const rule = color === "cyan"
     ? "from-cyan-200/70 dark:from-cyan-800/40"
     : color === "emerald"
     ? "from-emerald-200/70 dark:from-emerald-800/40"
+    : color === "blue"
+    ? "from-blue-200/70 dark:from-blue-800/40"
     : "from-violet-200/70 dark:from-violet-800/40";
 
   return (

@@ -98,6 +98,25 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
     }
   }, [isOpen, preselectedPerson]);
 
+  // When the sheet opens with a preselected person, jump directly to the amount
+  // step and fetch the last-context hint. The reset effect (above) handles
+  // restoring this when the sheet next closes.
+  useEffect(() => {
+    if (isOpen && preselectedPerson) {
+      setStep("enter-amount");
+      setSelected(preselectedPerson);
+      if (preselectedPerson.personId) {
+        setContextLoading(true);
+        fetchLastStreamContextAction(preselectedPerson.personId)
+          .then(setLastContext)
+          .catch(() => {})
+          .finally(() => setContextLoading(false));
+      }
+    }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ^ depend only on isOpen — preselectedPerson is stable for the lifetime of an
+  //   open session (set before isOpen becomes true, cleared after it becomes false).
+
   // Load recents when sheet opens on pick-person step
   useEffect(() => {
     if (isOpen && step === "pick-person" && people.length === 0) {

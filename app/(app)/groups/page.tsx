@@ -453,7 +453,15 @@ export default async function GroupsPage() {
       )}
 
       {/* ── Global FAB ─────────────────────────────────────────────────────── */}
-      {!isEmpty && <GlobalFab trips={trips} nests={nests} circles={circles} isPlusUser={isPlusUser} />}
+      {!isEmpty && (
+        <GlobalFab
+          trips={trips}
+          nests={nests}
+          circles={circles}
+          isPlusUser={isPlusUser}
+          hasStreams={streamBadge.latestUpdatedAt !== null}
+        />
+      )}
 
       {/* Post-seed "want a tour?" prompt (self-gates on the just-seeded flag) */}
       {demoGroups.length > 0 && <SampleTourPrompt demoTripId={demoTripId} />}

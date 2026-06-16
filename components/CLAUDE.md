@@ -379,17 +379,18 @@ Sits `sticky top-14 z-40 -mx-6 px-6 backdrop-blur-sm`. Pill size: `px-4 py-2 tex
 **Observer pattern** — keeps a `Set<string>` of all currently-intersecting sections (not just the latest entry). Callback picks the **last section in page order** that is in the Set — this correctly handles tall sections whose bottom still overlaps the trigger band when a shorter section below enters from the bottom. Pills also call `setActiveId(id)` directly `onClick` for instant visual feedback without waiting for the observer.
 
 ### GlobalFab
-`components/shared/global-fab.tsx` — fixed `bottom-nav-safe right-4 z-50` fan-out FAB rendered on the Home page (only when groups exist). Warm sunset gradient `from-orange-400 to-rose-500` + `shadow-orange-500/35`. Main `+` rotates 45° → `×` on open via Framer Motion spring.
+`components/shared/global-fab.tsx` — fixed `bottom-nav-safe right-4 z-50` FAB rendered on the Home page (only when groups exist). Cyan brand gradient `from-cyan-500 to-teal-500` + `shadow-cyan-500/35`, plain `+` glyph. **Destination-first, not type-first**: tapping the FAB opens the unified `GroupPickerSheet` directly — there is no expense/entry fan (that was confusing; "entry" is jargon). The picker disambiguates by *who/where*, and the record type is inferred from the target (group → expense flow; person → stream entry).
 
-**Fan items** — two staggered mini FABs (stagger 0.05s / 0.11s):
-- **Log expense** (cyan, Receipt icon) → `GroupPickerSheet` (unless only 1 group, then opens `QuickAddSheet` directly)
-- **Log entry** (indigo, ArrowLeftRight icon) → `StreamLogSheet`
+**Auto-hide** — `fabVisible` state + passive scroll listener. Hides (`y:96, opacity:0`) when scrolling down >8px delta; shows when scrolling up or `currentY < 80`. Wrapper is a `motion.div` with spring transition.
 
-**Auto-hide** — `fabVisible` state + passive scroll listener. Hides (`y:96, opacity:0`) when scrolling down >8px delta; shows when scrolling up or `currentY < 80`. Always visible when `fabOpen`. Wrapper is a `motion.div` with spring transition.
+**`GroupPickerSheet`** — inline portal component titled "Add to…" (or "Add expense to…" when the user has no Streams). Layout is decided by the pure, unit-tested `resolvePickerSections()` in `global-fab-logic.ts` (recent tiles = top 2 non-demo active groups; remaining trips/nests/circles lists; whether the People section shows). Sections:
+- **Recent** — cover-photo tiles → `GroupTile` → expense flow.
+- **Groups** (Trips/Nests/Circles) — `GroupListRow` → expense flow.
+- **People** — shown only when `hasStreams` (the hybrid rule: groups-only users never see it). Lazy-loads recent stream counterparts via `getRecentStreamCounterpartsAction()` on open; each `PersonListRow` → `StreamLogSheet` with `preselectedPerson` (jumps to the amount step). Always ends with a "Someone else…" / "Log a personal debt" row that opens the stream sheet on its pick-person step.
 
-**`GroupPickerSheet`** — inline portal component. Recent tiles: top 2 non-demo active groups (cover photo, name, member count). Full list: remaining trips + nests sections with mini thumbnails. Empty states handled. Uses `useSheetDismiss(isOpen, onClose)` for Escape key + Android back button (same as all other sheets).
+`hasStreams` is passed from `groups/page.tsx` as `streamBadge.latestUpdatedAt !== null` (reuses the already-fetched badge query — no extra DB call). Picking a **group** → `chooserOpen` (mode chooser: `LogExpenseTiles` Scan/Voice/Type) → `QuickAddSheet` with `startMode`. Picking a **person** → `streamOpen` + `streamPerson`. Uses `useSheetDismiss` + `useFocusTrap`.
 
-**State machine**: `fabOpen` → picker or stream sheet → `quickAddGroup` + `quickAddOpen`. Separate `quickAddGroup`/`quickAddOpen` states ensure exit animation plays cleanly before data is cleared (150ms open delay, 350ms close delay).
+**State machine**: `pickerOpen` → (group) `quickAddGroup` + `chooserOpen`/`quickAddOpen`, or (person) `streamPerson` + `streamOpen`. Separate states + 150ms open / 350ms close delays let exit animations finish before data clears.
 
 **`QuickAddSheet` `onBack` prop** — when provided, the sheet header left side shows `← Change group` (tappable, calls `onBack`). Without it, shows plain "Add expense" label. Backward-compatible (optional prop).
 

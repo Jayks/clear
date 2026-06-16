@@ -169,6 +169,11 @@ React portals bubble through the React tree, not the DOM — portal-spawning com
 - Stagger cap: `Math.min(i, 8)` — items 9+ share item-8 delay so a 30-item list never exceeds 640ms total.
 - `initialDelayMs` — use when a list is visually split across two `AnimatedList` instances (e.g. expense list first-2 inside tour spotlight, rest outside). Set `initialDelayMs={staggerMs * 2}` on the second list so the cascade feels continuous.
 
+#### `CollapsibleList` (`components/shared/collapsible-list.tsx`) — rows resolve, not vanish
+Drop-in replacement for `AnimatedList` (same `className`/`staggerMs`/`initialDelayMs` props) for lists where items are optimistically **removed**. On removal a row **collapses** (`exit={{ height: 0, opacity: 0 }}` via `AnimatePresence`) and siblings slide up (`layout`) instead of snapping out on `router.refresh()`; new rows fade/slide in with the same stagger. Pairs with the optimistic `removedIds` Set — filtering an id out triggers that child's exit animation. Each child MUST carry a stable `key`. `prefers-reduced-motion` → instant swap (no transform/height/`layout`).
+- **In use:** `CircleExpenseList` and the main expense list (`expense-filters.tsx` full/compact + monthly views) — undo-first delete now collapses the row.
+- **NOT used (deliberate):** the timeline view (custom `useInView` scroll-reveal `motion.div`) and the Settle suggestion cards (marking paid recomputes the whole min-payment plan, so there's no clean single-row removal to animate).
+
 ### Category Color System
 
 #### `CategoryIcon` (`components/expense/category-icon.tsx`)

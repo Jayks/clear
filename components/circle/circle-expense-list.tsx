@@ -7,7 +7,7 @@ import { CategoryIcon } from "@/components/expense/category-icon";
 import { DeleteExpenseButton } from "@/components/expense/delete-expense-button";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
-import { AnimatedList } from "@/components/shared/animated-list";
+import { CollapsibleList } from "@/components/shared/collapsible-list";
 import { formatDate } from "@/lib/utils";
 
 interface Props {
@@ -108,7 +108,7 @@ export function CircleExpenseList({ expenses, members, currency, isAdmin, groupI
   if (visible.length === 0) return null;
 
   return (
-    <AnimatedList className="divide-y divide-slate-100 dark:divide-slate-800/60">
+    <CollapsibleList className="divide-y divide-slate-100 dark:divide-slate-800/60">
       {visible.map((expense) => (
         <ExpenseRow
           key={expense.id}
@@ -121,6 +121,6 @@ export function CircleExpenseList({ expenses, members, currency, isAdmin, groupI
           onDeleteFail={handleDeleteFail}
         />
       ))}
-    </AnimatedList>
+    </CollapsibleList>
   );
 }

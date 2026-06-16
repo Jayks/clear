@@ -9,6 +9,29 @@ import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { canCreateGroup } from "@/lib/subscription/gates";
+import { getAllGroups } from "@/lib/db/queries/groups";
+
+/** Lean active-group list for the in-group switcher (lazy-fetched on sheet open). */
+export interface SwitcherGroup {
+  id: string;
+  name: string;
+  groupType: string;
+  circleMode: string | null;
+  coverPhotoUrl: string | null;
+  isDemo: boolean;
+}
+
+export async function getSwitcherGroups(): Promise<SwitcherGroup[]> {
+  const { active } = await getAllGroups(); // handles auth; active = non-archived
+  return active.map(({ group }) => ({
+    id: group.id,
+    name: group.name,
+    groupType: group.groupType,
+    circleMode: group.circleMode ?? null,
+    coverPhotoUrl: group.coverPhotoUrl ?? null,
+    isDemo: group.isDemo ?? false,
+  }));
+}
 
 export async function createGroup(input: CreateGroupInput) {
   const user = await getCurrentUser();

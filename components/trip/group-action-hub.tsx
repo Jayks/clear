@@ -35,6 +35,10 @@ interface Props {
   groupStartDate?: string | null;
   groupEndDate?:   string | null;
   members?:        GroupMember[]; // pre-loaded members (inner group pages)
+  /** "Jump to" nav tiles. Default true (home-page card ⋯ = a useful deep-link
+   *  shortcut). Passed false from inside-group entry points (GroupMobileNav,
+   *  GroupHeroHub) where the bottom nav / overview cards already cover it. */
+  showJumpTo?:     boolean;
 }
 
 // ─── Zone 1 — quick-log tiles ─────────────────────────────────────────────
@@ -71,6 +75,7 @@ export function GroupActionHub({
   joinUrl,
   groupStartDate, groupEndDate,
   members,
+  showJumpTo = true,
 }: Props) {
   const [quickAddOpen, setQuickAddOpen]     = useState(false);
   const [startMode, setStartMode]           = useState<StartMode>("text");
@@ -179,6 +184,10 @@ export function GroupActionHub({
                   )}
 
                   {/* ── Zone 2: Jump to ───────────────────────────────────── */}
+                  {/* Shown from the home-page card ⋯ (deep-link shortcut). Hidden
+                      from inside-group entry points where the contextual bottom
+                      nav / overview cards already provide this navigation. */}
+                  {showJumpTo && (
                   <section>
                     <SectionLabel>Jump to</SectionLabel>
                     <div className="grid grid-cols-2 gap-2">
@@ -202,6 +211,7 @@ export function GroupActionHub({
                       })}
                     </div>
                   </section>
+                  )}
 
                   {/* ── Zone 3: Manage ────────────────────────────────────── */}
                   {/* Admins see Edit · Archive · Share; members see Share only. Hidden entirely when nothing to show. */}

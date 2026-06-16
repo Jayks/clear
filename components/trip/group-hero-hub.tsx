@@ -58,6 +58,7 @@ export function GroupHeroHub({
         joinUrl={joinUrl}
         groupStartDate={groupStartDate}
         groupEndDate={groupEndDate}
+        showJumpTo={false}
       />
     </>
   );

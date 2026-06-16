@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { ArrowLeft, MoreHorizontal, Receipt, Wallet, Users, BarChart2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowLeft, MoreHorizontal, ChevronDown, Receipt, Wallet, Users, BarChart2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { GroupActionHub } from "@/components/trip/group-action-hub";
+import { GroupSwitcherSheet } from "@/components/shared/group-switcher-sheet";
 import { getContextTheme } from "@/lib/theme/context-theme";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -32,23 +33,38 @@ const SECTION_ICON: Record<string, LucideIcon> = {
   insights: BarChart2,
 };
 
+interface NavResolve {
+  /** true → centre shows the group name + ▾ switcher (group-level pages); the
+   *  bottom nav indicates the section. false → centre shows the task title. */
+  switcher: boolean;
+  /** current top-level section key ("" overview) — for the switcher's
+   *  section-preserving target. */
+  section: string;
+  /** task title for deep pages (when !switcher). */
+  pageTitle: string | null;
+  icon?: LucideIcon;
+  backHref: string;
+  backLabel: string;
+}
+
 /**
- * Derive centre label, back-link, and optional section icon from the current pathname.
+ * Derive the header layout from the pathname.
+ *
+ * Group-level pages (overview + the four section indexes) show the group name +
+ * ▾ switcher and climb one level on Back (section → overview → Home) — the
+ * highlighted bottom-nav tab tells you which section you're on. Deep task pages
+ * show their own title + section icon and Back returns to their parent list.
  *
  * URL structure (all under /groups/[groupId]):
- *   /groups/[id]                              → group overview
- *   /groups/[id]/edit                         → Edit group
- *   /groups/[id]/expenses                     → Expenses
- *   /groups/[id]/expenses/new                 → Add expense
- *   /groups/[id]/expenses/[eid]/edit          → Edit expense
- *   /groups/[id]/expenses/[eid]/thread        → Thread
- *   /groups/[id]/expenses/templates/new       → Add template
- *   /groups/[id]/expenses/templates/[tid]/edit→ Edit template
- *   /groups/[id]/members                      → Members
- *   /groups/[id]/settle                       → Settle up
- *   /groups/[id]/insights                     → Insights
+ *   /groups/[id]                                → overview        (switcher · ‹ Home)
+ *   /groups/[id]/expenses|settle|members|insights → section       (switcher · ‹ Overview)
+ *   /groups/[id]/edit                           → Edit group      (‹ Overview)
+ *   /groups/[id]/expenses/new                   → Add expense     (‹ Expenses)
+ *   /groups/[id]/expenses/[eid]/edit            → Edit expense    (‹ Expenses)
+ *   /groups/[id]/expenses/[eid]/thread          → Thread          (‹ Expenses)
+ *   /groups/[id]/expenses/templates/new|[tid]/edit → recurring    (‹ Expenses)
  */
-function resolveNav(pathname: string, groupId: string, groupName: string) {
+function resolveNav(pathname: string, groupId: string): NavResolve {
   const parts = pathname.replace(/^\//, "").split("/");
   const section = parts[2];
   const a       = parts[3];
@@ -57,36 +73,33 @@ function resolveNav(pathname: string, groupId: string, groupName: string) {
 
   const groupBase = `/groups/${groupId}`;
 
-  // Group overview
+  // ── Group-level pages → group-name switcher; Back climbs one level ──
   if (!section) {
-    return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined };
+    return { switcher: true, section: "", pageTitle: null, backHref: "/groups", backLabel: "Home" };
+  }
+  if (section === "members" || section === "settle" || section === "insights") {
+    return { switcher: true, section, pageTitle: null, backHref: groupBase, backLabel: "Overview" };
+  }
+  if (section === "expenses" && !a) {
+    return { switcher: true, section: "expenses", pageTitle: null, backHref: groupBase, backLabel: "Overview" };
   }
 
-  // Edit group
+  // ── Deep task pages → task title + section icon, Back to parent, no switcher ──
   if (section === "edit") {
-    return { pageTitle: "Edit group", backHref: groupBase, backLabel: groupName, icon: undefined };
+    return { switcher: false, section: "", pageTitle: "Edit group", backHref: groupBase, backLabel: "Overview" };
   }
-
-  // Expenses tree — only the index gets the section icon; deep pages don't
   if (section === "expenses") {
-    if (!a) return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, icon: SECTION_ICON.expenses };
-    if (a === "new") return { pageTitle: "Add expense",  backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: SECTION_ICON.expenses };
+    if (a === "new") return { switcher: false, section: "expenses", pageTitle: "Add expense", icon: SECTION_ICON.expenses, backHref: `${groupBase}/expenses`, backLabel: "Expenses" };
     if (a === "templates") {
       const title = c === "edit" ? "Edit recurring expense" : "Add recurring expense";
-      return { pageTitle: title, backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: SECTION_ICON.expenses };
+      return { switcher: false, section: "expenses", pageTitle: title, icon: SECTION_ICON.expenses, backHref: `${groupBase}/expenses`, backLabel: "Expenses" };
     }
-    if (b === "edit")   return { pageTitle: "Edit expense", backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: SECTION_ICON.expenses };
-    if (b === "thread") return { pageTitle: "Thread",        backHref: `${groupBase}/expenses`, backLabel: "Expenses", icon: undefined };
-    return { pageTitle: "Expenses", backHref: groupBase, backLabel: groupName, icon: SECTION_ICON.expenses };
+    if (b === "edit")   return { switcher: false, section: "expenses", pageTitle: "Edit expense", icon: SECTION_ICON.expenses, backHref: `${groupBase}/expenses`, backLabel: "Expenses" };
+    if (b === "thread") return { switcher: false, section: "expenses", pageTitle: "Thread", backHref: `${groupBase}/expenses`, backLabel: "Expenses" };
+    return { switcher: true, section: "expenses", pageTitle: null, backHref: groupBase, backLabel: "Overview" };
   }
 
-  // Other top-level sections — all get their section icon
-  const LABELS: Record<string, string> = { members: "Members", settle: "Settle up", insights: "Insights" };
-  if (LABELS[section]) {
-    return { pageTitle: LABELS[section], backHref: groupBase, backLabel: groupName, icon: SECTION_ICON[section] };
-  }
-
-  return { pageTitle: null, backHref: "/groups", backLabel: "Home", icon: undefined };
+  return { switcher: false, section: "", pageTitle: null, backHref: "/groups", backLabel: "Home" };
 }
 
 export function GroupMobileNav({
@@ -95,6 +108,7 @@ export function GroupMobileNav({
   shareToken, groupStartDate, groupEndDate,
 }: Props) {
   const [navOpen, setNavOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const pathname = usePathname();
   const router   = useRouter();
 
@@ -102,11 +116,14 @@ export function GroupMobileNav({
   // re-running (and re-pushing fake history entries) on every re-render.
   const handleClose = useCallback(() => setNavOpen(false), []);
 
+  // Close the switcher once a switch commits (groupId prop changes).
+  useEffect(() => { setSwitcherOpen(false); }, [groupId]);
+
   // Colour follows the group's context, not the section — the section icon
   // differentiates the sub-page.
   const theme = getContextTheme(groupType, circleMode);
 
-  const { pageTitle, backHref, backLabel, icon: SectionIcon } = resolveNav(pathname, groupId, groupName);
+  const { switcher, section, pageTitle, backHref, backLabel, icon: SectionIcon } = resolveNav(pathname, groupId);
 
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = shareToken ? `${appUrl}/join/${shareToken}` : undefined;
@@ -117,29 +134,55 @@ export function GroupMobileNav({
           The title gets all the room between the two controls so long page
           names ("Add recurring expense") aren't cramped into a fixed 55%. */}
       <div className="h-14 px-3 flex items-center gap-1.5 backdrop-blur-sm">
-        {/* Back button — router.back() pops the stack so hardware back never loops */}
+        {/* Back button — HIERARCHICAL: always goes to the structural parent
+            (`backHref` from resolveNav), never `router.back()`. With the
+            contextual bottom nav letting users hop between sub-pages freely,
+            history-based back felt like going in circles; this always lands on a
+            predictable parent — sub-pages → group overview, deep pages (add/edit/
+            thread/templates) → their list — matching the label shown. */}
         <a
           href={backHref}
-          onClick={(e) => { e.preventDefault(); router.back(); }}
+          onClick={(e) => { e.preventDefault(); router.push(backHref); }}
           className={`flex items-center gap-1 text-xs font-medium ${theme.accentText} hover:opacity-80 transition-opacity py-3 shrink min-w-0 max-w-[34%]`}
         >
           <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">{backLabel}</span>
         </a>
 
-        {/* Centre — icon + title, fills the remaining width */}
-        <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
-          {SectionIcon && (
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
-              <SectionIcon className="w-4 h-4 text-white" />
+        {/* Centre — group-name switcher on group-level pages, task title on deep
+            pages. The bottom nav indicates which section you're on. */}
+        <div className="flex-1 flex items-center justify-center min-w-0">
+          {switcher ? (
+            <button
+              type="button"
+              onClick={() => setSwitcherOpen(true)}
+              className="flex items-center gap-1 min-w-0 rounded-lg px-2 py-1 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors"
+              aria-label={`Switch group — currently ${groupName}`}
+              aria-haspopup="dialog"
+            >
+              <span
+                className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate"
+                style={{ fontFamily: "var(--font-fraunces)" }}
+              >
+                {groupName}
+              </span>
+              <ChevronDown className={`w-4 h-4 shrink-0 ${theme.accentText}`} />
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0">
+              {SectionIcon && (
+                <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
+                  <SectionIcon className="w-4 h-4 text-white" />
+                </div>
+              )}
+              <p
+                className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate"
+                style={{ fontFamily: "var(--font-fraunces)" }}
+              >
+                {pageTitle ?? groupName}
+              </p>
             </div>
           )}
-          <p
-            className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate"
-            style={{ fontFamily: "var(--font-fraunces)" }}
-          >
-            {pageTitle ?? groupName}
-          </p>
         </div>
 
         {/* Section navigator */}
@@ -166,6 +209,14 @@ export function GroupMobileNav({
         joinUrl={joinUrl}
         groupStartDate={groupStartDate}
         groupEndDate={groupEndDate}
+        showJumpTo={false}
+      />
+
+      <GroupSwitcherSheet
+        isOpen={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        currentGroupId={groupId}
+        currentSection={section}
       />
     </>
   );

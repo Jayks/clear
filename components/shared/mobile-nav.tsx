@@ -44,6 +44,13 @@ export function MobileNav() {
     }
   }, [pathname]);
 
+  // Inside a specific group (/groups/[id]/…, but NOT /groups or /groups/new) the
+  // contextual GroupBottomNav takes over — hide the global tab bar so they don't
+  // stack. Computed after the hooks above so hook order stays stable.
+  const seg = pathname.split("/"); // ["", "groups", id, …]
+  const insideGroup = seg[1] === "groups" && !!seg[2] && seg[2] !== "new";
+  if (insideGroup) return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden backdrop-blur-md
                     bg-gradient-to-t from-white/85 to-white/40

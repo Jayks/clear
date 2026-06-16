@@ -34,6 +34,8 @@ export interface ContextTheme {
   softBorder: string;
   /** Native control accent (checkbox / radio). */
   accent: string;
+  /** Active sliding-pill background for the contextual in-group bottom nav. */
+  navPill: string;
 }
 
 export const CONTEXT_THEME: Record<ContextKey, ContextTheme> = {
@@ -49,6 +51,7 @@ export const CONTEXT_THEME: Record<ContextKey, ContextTheme> = {
     ring: "focus:ring-cyan-400",
     softBorder: "border-cyan-300 dark:border-cyan-700",
     accent: "accent-cyan-500",
+    navPill: "bg-cyan-100 dark:bg-cyan-950/70",
   },
   nest: {
     key: "nest",
@@ -62,6 +65,7 @@ export const CONTEXT_THEME: Record<ContextKey, ContextTheme> = {
     ring: "focus:ring-emerald-400",
     softBorder: "border-emerald-300 dark:border-emerald-700",
     accent: "accent-emerald-500",
+    navPill: "bg-emerald-100 dark:bg-emerald-950/70",
   },
   stream: {
     key: "stream",
@@ -75,6 +79,7 @@ export const CONTEXT_THEME: Record<ContextKey, ContextTheme> = {
     ring: "focus:ring-blue-400",
     softBorder: "border-blue-300 dark:border-blue-700",
     accent: "accent-blue-500",
+    navPill: "bg-blue-100 dark:bg-blue-950/70",
   },
   circle_recurring: {
     key: "circle_recurring",
@@ -88,6 +93,7 @@ export const CONTEXT_THEME: Record<ContextKey, ContextTheme> = {
     ring: "focus:ring-violet-400",
     softBorder: "border-violet-300 dark:border-violet-700",
     accent: "accent-violet-500",
+    navPill: "bg-violet-100 dark:bg-violet-950/70",
   },
   circle_onetime: {
     key: "circle_onetime",
@@ -101,6 +107,7 @@ export const CONTEXT_THEME: Record<ContextKey, ContextTheme> = {
     ring: "focus:ring-amber-400",
     softBorder: "border-amber-300 dark:border-amber-700",
     accent: "accent-amber-500",
+    navPill: "bg-amber-100 dark:bg-amber-950/70",
   },
 };
 

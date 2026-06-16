@@ -1,5 +1,7 @@
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { GroupMobileNav } from "@/components/shared/group-mobile-nav";
+import { GroupBottomNav } from "@/components/shared/group-bottom-nav";
+import { GroupDesktopNav } from "@/components/shared/group-desktop-nav";
 import { getGroupSummary } from "@/lib/db/queries/meta";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
@@ -51,7 +53,32 @@ export default async function TripLayout({
         </div>
       )}
 
+      {/* Desktop in-group tab strip — sticky below AppNav (h-14). Breaks out of
+          <main>'s md:p-8 padding to span full width; the nav re-pads its content
+          with px-8 so it aligns with the page. */}
+      {groupSummary && (
+        <div className="hidden md:block sticky top-14 z-30 -mx-8 -mt-8 mb-6">
+          <GroupDesktopNav
+            groupId={id}
+            groupName={groupSummary.name}
+            groupType={groupSummary.groupType}
+            circleMode={groupSummary.circleMode}
+          />
+        </div>
+      )}
+
       {children}
+
+      {/* Contextual in-group bottom nav (mobile only). The global MobileNav
+          hides while inside a group (see mobile-nav.tsx), so this replaces it —
+          one-tap lateral movement between the group's pages. */}
+      {groupSummary && (
+        <GroupBottomNav
+          groupId={id}
+          groupType={groupSummary.groupType}
+          circleMode={groupSummary.circleMode}
+        />
+      )}
     </>
   );
 }

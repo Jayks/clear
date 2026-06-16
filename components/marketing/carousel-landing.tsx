@@ -35,20 +35,21 @@ const stagger = (delayChildren = 0) => ({
 });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// 10 slides: Hero → Overview → AI → Debt Flow → Settle → Insights → Nests → Streams → Circles → CTA
-const SLIDE_COUNT = 10;
+// 11 slides: Hero → Overview → Trips → AI → Settle (Debt Flow merged) → Insights → Stats → Nests → Streams → Circles → CTA
+const SLIDE_COUNT = 11;
 
 const SLIDES = [
-  { label: "Clear",       short: "Home"      },
-  { label: "Overview",    short: "Overview"  },
-  { label: "AI",          short: "AI"        },
-  { label: "Debt Flow",   short: "Debt Flow" },
-  { label: "Settle Up",   short: "Settle"    },
-  { label: "Insights",    short: "Insights"  },
-  { label: "Nests",       short: "Nests"     },
-  { label: "Streams",     short: "Streams"   },
-  { label: "Circles",     short: "Circles"   },
-  { label: "Get started", short: "Start"    },
+  { label: "Clear",       short: "Home",     accent: "#06B6D4" },
+  { label: "Overview",    short: "Overview", accent: "#0891B2" },
+  { label: "Trips",       short: "Trips",    accent: "#06B6D4" },
+  { label: "AI",          short: "AI",       accent: "#7C3AED" },
+  { label: "Settle Up",   short: "Settle",   accent: "#059669" },
+  { label: "Insights",    short: "Insights", accent: "#D97706" },
+  { label: "By the numbers", short: "Stats", accent: "#0891B2" },
+  { label: "Nests",       short: "Nests",    accent: "#0D9488" },
+  { label: "Streams",     short: "Streams",  accent: "#6366F1" },
+  { label: "Circles",     short: "Circles",  accent: "#8B5CF6" },
+  { label: "Get started", short: "Start",    accent: "#0D9488" },
 ];
 
 // ─── HD iPhone 15 Pro–style frame ─────────────────────────────────────────────
@@ -330,12 +331,14 @@ function ResponsivePhone({
   accentGlow?: string; // e.g. "rgba(99,102,241,0.3)"
 }) {
   // Full phone is 290×628. We clip at 78% so the key UI content (which sits in
-  // the upper 2/3 of each screen) is fully visible while the bottom nav bar
-  // is partially hidden — giving an immersive "phone rising from bottom" feel.
-  // 628 × 1.069 × 0.78 ≈ 523px clipped height.
+  // the upper ~60% of each screen) is fully visible while the bottom nav bar
+  // is hidden — giving an immersive "phone rising from bottom" feel. Clipped to
+  // 0.66 (was 0.78) so the header (label + headline + pills, which now sits ABOVE
+  // the phone on mobile) plus the phone fit in one viewport without scrolling.
+  // 628 × 1.069 × 0.66 ≈ 443px clipped height.
   const MOBILE_W = 310;
   const SCALE    = MOBILE_W / 290;           // ~1.069
-  const CLIP_H   = Math.round(628 * SCALE * 0.78); // visible portion
+  const CLIP_H   = Math.round(628 * SCALE * 0.66); // visible portion
 
   return (
     <>
@@ -494,16 +497,51 @@ function Callout({
   );
 }
 
+// ─── Breakout card ────────────────────────────────────────────────────────────
+// Desktop-only "exploded UI": the slide's hero element lifted OUT of the cramped
+// 290-px phone screen and shown large + fully legible in the copy column. Mobile
+// keeps the phone + single Callout (no room to break out). A tinted ring + the
+// next-to-phone placement read it as "this piece, from this app." The accent
+// caption pill ties it to the slide's colour identity.
+function BreakoutCard({
+  children, accentHex = "#0891B2", caption,
+}: {
+  children: React.ReactNode; accentHex?: string; caption?: string;
+}) {
+  return (
+    <motion.div className="hidden md:block w-full max-w-[300px] mt-1" variants={fadeScale}>
+      <div
+        className="relative rounded-2xl p-4 bg-white/85 dark:bg-slate-900/75 backdrop-blur-xl"
+        style={{
+          border: `1px solid ${accentHex}33`,
+          boxShadow: `0 26px 60px ${accentHex}26, 0 4px 16px rgba(0,0,0,0.10)`,
+        }}
+      >
+        {caption && (
+          <div
+            className="absolute -top-2.5 left-4 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide shadow-sm"
+            style={{ background: accentHex, color: "white" }}
+          >
+            {caption}
+          </div>
+        )}
+        {children}
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Feature slide layout ─────────────────────────────────────────────────────
 // Mobile: phone fills top 60 %, copy + feature pills fill bottom 40 %.
-// Desktop: phone + copy side-by-side (phone left or right).
+// Desktop: phone + copy side-by-side (phone left or right). When `breakout` is
+// supplied it takes the bullets' place in the copy column (it IS the evidence).
 function FeatureSlide({
   label, labelColor = "text-cyan-500 dark:text-cyan-400", labelHex,
   headline,
   body, pills, bullets,
   phone, phoneRight = true,
   tilt, accentGlow,
-  callouts,
+  callouts, breakout,
   isActive = false,
 }: {
   label: string; labelColor?: string; labelHex?: string;
@@ -515,20 +553,26 @@ function FeatureSlide({
   tilt?: number;
   accentGlow?: string;
   callouts?: React.ReactNode;
+  breakout?: { caption?: string; accentHex?: string; content: React.ReactNode; mobile?: boolean };
   isActive?: boolean;
 }) {
   const animState = isActive ? "visible" : "hidden";
+  const breakoutAccent = breakout?.accentHex ?? "#0891B2";
   return (
     <div
-      className={`snap-start snap-always flex h-full w-full shrink-0
+      className={`snap-start snap-always flex h-full w-full shrink-0 overflow-hidden
         flex-col md:flex-row items-center justify-start md:justify-center
         md:gap-12 lg:gap-16
         md:px-14 lg:px-20 md:py-0
-        ${phoneRight ? "" : "md:flex-row-reverse"}`}
+        ${phoneRight ? "" : "md:flex-row-reverse"} ${isActive ? "" : "slide-paused"}`}
+      role="group"
+      aria-roledescription="slide"
+      aria-label={label}
     >
-      {/* ── Phone — scales + fades in first ── */}
+      {/* ── Phone — order-2 on mobile (sits BELOW the header so the copy is
+              always visible without scrolling); order-1 on desktop. ── */}
       <motion.div
-        className="shrink-0 order-1 w-full md:w-auto flex justify-center pt-3 md:pt-0 relative"
+        className="shrink-0 order-2 md:order-1 w-full md:w-auto flex justify-center pt-1 md:pt-0 relative"
         variants={fadeScale}
         initial="hidden"
         animate={animState}
@@ -538,12 +582,41 @@ function FeatureSlide({
             {phone}
           </ResponsivePhone>
           {callouts}
+
+          {/* Mobile breakout — floating glass card overlapping the phone's lower
+              third. Absolute, so it never adds column height (no scroll).
+              Opt out with `mobile: false` for slides whose phone visual (e.g. the
+              Debt-Flow graph) can't survive being half-covered. */}
+          {breakout && breakout.mobile !== false && (
+            <div
+              className="md:hidden absolute left-1/2 -translate-x-1/2 z-30"
+              style={{ bottom: 10, width: "92%", maxWidth: 300 }}
+            >
+              <div
+                className="relative rounded-2xl p-3 bg-white/92 dark:bg-slate-900/88 backdrop-blur-xl"
+                style={{
+                  border: `1px solid ${breakoutAccent}38`,
+                  boxShadow: `0 18px 44px ${breakoutAccent}3a, 0 4px 16px rgba(0,0,0,0.22)`,
+                }}
+              >
+                {breakout.caption && (
+                  <div
+                    className="absolute -top-2.5 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide shadow-sm"
+                    style={{ background: breakoutAccent, color: "white" }}
+                  >
+                    {breakout.caption}
+                  </div>
+                )}
+                {breakout.content}
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
 
-      {/* ── Copy — staggered children after 120 ms delay ── */}
+      {/* ── Copy — order-1 on mobile (header on top); order-2 on desktop ── */}
       <motion.div
-        className="flex-1 flex flex-col items-center md:items-start text-center md:text-left order-2 min-w-0 max-w-sm md:max-w-xs lg:max-w-sm px-5 md:px-0 pb-4 md:pb-0"
+        className="flex-1 flex flex-col items-center md:items-start text-center md:text-left order-1 md:order-2 min-w-0 max-w-sm md:max-w-xs lg:max-w-sm px-5 md:px-0 pt-2 pb-2 md:py-0"
         variants={stagger(0.12)}
         initial="hidden"
         animate={animState}
@@ -595,13 +668,22 @@ function FeatureSlide({
           </motion.div>
         )}
 
-        {/* Body — desktop only */}
-        <motion.p className="hidden md:block text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4 max-w-xs" variants={fadeUp}>
+        {/* Body — desktop only, and only when there's no breakout (the breakout
+            is the evidence; dropping body keeps the desktop column inside one
+            viewport on shorter laptops) */}
+        <motion.p className={`${breakout ? "hidden" : "hidden md:block"} text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4 max-w-xs`} variants={fadeUp}>
           {body}
         </motion.p>
 
-        {/* Bullets — stagger individually on desktop */}
-        {bullets && (
+        {/* Breakout card takes the bullets' place when present — it IS the evidence */}
+        {breakout && (
+          <BreakoutCard accentHex={breakout.accentHex} caption={breakout.caption}>
+            {breakout.content}
+          </BreakoutCard>
+        )}
+
+        {/* Bullets — stagger individually on desktop (only when no breakout) */}
+        {bullets && !breakout && (
           <motion.div className="hidden md:block space-y-1.5" variants={stagger(0)}>
             {bullets.map((b) => (
               <motion.div key={b.t} className="flex items-center gap-2" variants={fadeUp}>
@@ -659,12 +741,13 @@ export function CarouselLanding() {
     return () => c.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Auto-advance slides 0→1→2, then pause — cancels immediately on user interaction
+  // No autostart — the slideshow waits for the user. A one-time coach hint +
+  // edge peek invite the first swipe instead.
+  const [showHint, setShowHint] = useState(true);
   useEffect(() => {
-    if (userInteracted || active >= 2) return;
-    const t = setTimeout(() => goTo(active + 1), 8000);
+    const t = setTimeout(() => setShowHint(false), 7000);
     return () => clearTimeout(t);
-  }, [active, userInteracted, goTo]);
+  }, []);
 
   // Keyboard navigation ← →
   useEffect(() => {
@@ -677,7 +760,16 @@ export function CarouselLanding() {
   }, [active, goTo]);
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white dark:bg-slate-950">
+    <div
+      className="clear-carousel fixed inset-0 flex flex-col bg-white dark:bg-slate-950"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Clear feature tour"
+    >
+      {/* Screen-reader announcement of the current slide */}
+      <div aria-live="polite" className="sr-only">
+        {`Slide ${active + 1} of ${SLIDE_COUNT}: ${SLIDES[active]?.label}`}
+      </div>
 
       {/* ── Keyframes for hero mesh, ticker, and slide entrance ── */}
       <style>{`
@@ -689,6 +781,20 @@ export function CarouselLanding() {
         @keyframes waveBar1{0%,100%{transform:scaleY(0.6)}50%{transform:scaleY(1)}}
         @keyframes waveBar2{0%,100%{transform:scaleY(1)}33%{transform:scaleY(0.3)}66%{transform:scaleY(0.8)}}
         @keyframes waveBar3{0%,100%{transform:scaleY(0.5)}50%{transform:scaleY(1)}}
+        @keyframes peekPulse{0%,100%{opacity:0.45;transform:translateX(6px) scaleY(0.94)}50%{opacity:0.85;transform:translateX(0) scaleY(1)}}
+        @keyframes chevNudge{0%,100%{transform:translateX(0);opacity:0.55}50%{transform:translateX(4px);opacity:1}}
+        @keyframes hintFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+        /* Off-screen slides freeze ALL their CSS animations (blobs, ticker,
+           waveform, pulse dots) so the browser isn't repainting 10 invisible
+           slides at 60fps — big battery/CPU win. Framer Motion (JS-driven) is
+           unaffected and already gates on isActive. */
+        .slide-paused, .slide-paused *{animation-play-state:paused !important;}
+        @media (prefers-reduced-motion: reduce){
+          /* Reduced-motion users: kill ALL decorative CSS animation in the
+             carousel (blobs, ticker, waveform, pulse dots, peek, hint). Framer
+             one-shot entrances are JS-driven and short, so they're left alone. */
+          .clear-carousel *{animation:none !important}
+        }
       `}</style>
 
       {/* ── Top nav ── */}
@@ -706,21 +812,55 @@ export function CarouselLanding() {
       {/* ── Carousel wrapper (relative so right-edge overlay can be absolute) ── */}
       <div className="relative flex-1 overflow-hidden">
 
-        {/* Right-edge peek — signals "more slides" on both themes.
-            Light: dark shadow overlay (transparent → 22 % black) is visible against
-                   bright slide content.
-            Dark:  strong opaque fade to page bg (slate-950) cuts the slide off cleanly. */}
+        {/* ── Right-edge peek — "there's a next slide" ──
+            A dimmed/blurred depth-edge tinted with the NEXT slide's accent colour
+            (a faint "reflection" of what's coming) + a pulsing, tappable chevron.
+            The base gradient still cleanly cuts the current slide off against the bg. */}
         {active < SLIDE_COUNT - 1 && (
           <>
+            {/* base fade — theme-aware */}
             <div
               className="absolute right-0 top-0 bottom-0 w-20 pointer-events-none z-20 dark:hidden"
-              style={{ background: "linear-gradient(to right,transparent 0%,rgba(0,0,0,0.06) 45%,rgba(0,0,0,0.22) 100%)" }}
+              style={{ background: "linear-gradient(to right,transparent 0%,rgba(0,0,0,0.05) 45%,rgba(0,0,0,0.16) 100%)" }}
             />
             <div
-              className="absolute right-0 top-0 bottom-0 w-20 pointer-events-none z-20 hidden dark:block"
-              style={{ background: "linear-gradient(to right,transparent 0%,rgba(2,6,23,0.55) 50%,rgba(2,6,23,0.97) 100%)" }}
+              className="absolute right-0 top-0 bottom-0 w-24 pointer-events-none z-20 hidden dark:block"
+              style={{ background: "linear-gradient(to right,transparent 0%,rgba(2,6,23,0.5) 50%,rgba(2,6,23,0.95) 100%)" }}
             />
+            {/* accent "card behind" sliver — tinted by the next slide, gently pulsing */}
+            <div
+              data-peek
+              className="absolute right-0 top-[14%] bottom-[14%] w-2.5 pointer-events-none z-20 rounded-l-2xl"
+              style={{
+                background: `linear-gradient(to bottom, transparent, ${SLIDES[active + 1]?.accent}, transparent)`,
+                filter: "blur(2px)",
+                animation: "peekPulse 2.6s ease-in-out infinite",
+              }}
+            />
+            {/* tappable pulsing chevron — real affordance on mobile (no arrows there) */}
+            <button
+              data-peek-chevron
+              onClick={() => { setUserInteracted(true); goTo(active + 1); }}
+              aria-label="Next slide"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center w-11 h-11 rounded-full"
+              style={{ animation: "chevNudge 1.6s ease-in-out infinite" }}
+            >
+              <ChevronRight className="w-6 h-6" style={{ color: SLIDES[active + 1]?.accent }} />
+            </button>
           </>
+        )}
+
+        {/* ── Left-edge peek — subtle "you can go back" depth cue ── */}
+        {active > 0 && (
+          <div
+            data-peek
+            className="absolute left-0 top-[16%] bottom-[16%] w-2 pointer-events-none z-20 rounded-r-2xl"
+            style={{
+              background: `linear-gradient(to bottom, transparent, ${SLIDES[active - 1]?.accent}, transparent)`,
+              filter: "blur(2px)",
+              opacity: 0.5,
+            }}
+          />
         )}
 
       {/* ── Horizontal scroll container ── */}
@@ -737,7 +877,7 @@ export function CarouselLanding() {
             Gradient mesh background, no phone, centered content.
             Large logo → headline → 4 context pills → CTAs → trust badges → ticker
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden">
+        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden ${active === 0 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Clear">
 
           {/* ── Animated mesh gradient blobs ── */}
           <div className="absolute inset-0 pointer-events-none">
@@ -868,7 +1008,7 @@ export function CarouselLanding() {
             SLIDE 1 — Overview: Trips · Nests · Streams · Circle (2×2 grid)
             Designed for 4 contexts from day 1 — Circle shown as "coming soon".
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-5 sm:px-8 py-6 overflow-hidden">
+        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-5 sm:px-8 py-6 overflow-hidden ${active === 1 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Overview">
           {/* Headline — stagger in when slide 1 is active */}
           <motion.div
             className="text-center mb-5 sm:mb-6"
@@ -993,10 +1133,144 @@ export function CarouselLanding() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 2 — AI Quick-add
+            SLIDE 2 — Trips  (day-by-day timeline in the phone + 3-D map breakout)
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
           isActive={active === 2}
+          label="Trips"
+          labelHex="#0891B2"
+          headline={<>Your trip, <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>day by day.</span></>}
+          body="A living timeline — spend, payers and categories for every day — plus a 3-D map that replays exactly where each rupee went."
+          pills={[
+            { icon:"🗓️", text:"Day-by-day timeline", color:"#0891B2" },
+            { icon:"🗺️", text:"3-D map replay",       color:"#14B8A6" },
+          ]}
+          phoneRight={false}
+          accentGlow="rgba(6,182,212,0.2)"
+          tilt={-5}
+          breakout={{
+            accentHex: "#0891B2",
+            caption: "3-D map view",
+            content: (
+              <div>
+                <div className="relative rounded-xl overflow-hidden" style={{ height:128, background:"linear-gradient(150deg,#0e7490 0%,#0891B2 45%,#155E75 100%)" }}>
+                  {/* faint terrain grid */}
+                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage:"linear-gradient(rgba(255,255,255,0.25) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.25) 1px,transparent 1px)", backgroundSize:"22px 22px" }} />
+                  {/* isometric 3-D buildings + route path drawn over them */}
+                  <svg viewBox="0 0 240 128" className="absolute inset-0 w-full h-full">
+                    {[
+                      { cx:46,  cy:94, h:15 },
+                      { cx:96,  cy:84, h:22 },
+                      { cx:150, cy:72, h:13 },
+                      { cx:122, cy:100, h:28 },
+                      { cx:196, cy:78, h:18 },
+                    ].map((b, i) => {
+                      const tw = 11, th = 5.5;
+                      const top   = `${b.cx},${b.cy-th} ${b.cx+tw},${b.cy} ${b.cx},${b.cy+th} ${b.cx-tw},${b.cy}`;
+                      const left  = `${b.cx-tw},${b.cy} ${b.cx},${b.cy+th} ${b.cx},${b.cy+th+b.h} ${b.cx-tw},${b.cy+b.h}`;
+                      const right = `${b.cx+tw},${b.cy} ${b.cx},${b.cy+th} ${b.cx},${b.cy+th+b.h} ${b.cx+tw},${b.cy+b.h}`;
+                      return (
+                        <g key={i} opacity={0.9}>
+                          <polygon points={left}  fill="#0A4655" />
+                          <polygon points={right} fill="#0E7490" />
+                          <polygon points={top}   fill="#5FD8E8" />
+                        </g>
+                      );
+                    })}
+                    <path d="M28 96 C70 60, 96 104, 132 64 S196 36, 214 52" fill="none" stroke="#FDE68A" strokeWidth="2.5" strokeDasharray="2 6" strokeLinecap="round" opacity="0.95" />
+                  </svg>
+                  {/* pins */}
+                  {[
+                    { x:"10%",  y:"66%", e:"🏨" },
+                    { x:"52%",  y:"44%", e:"🏄" },
+                    { x:"86%",  y:"34%", e:"🍽️" },
+                  ].map((p) => (
+                    <div key={p.e} className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full shadow-md" style={{ left:p.x, top:p.y, width:24, height:24, background:"white", fontSize:12 }}>
+                      {p.e}
+                    </div>
+                  ))}
+                  {/* day chip */}
+                  <div className="absolute top-2 left-2 rounded-full px-2 py-0.5 text-[9px] font-bold text-white" style={{ background:"rgba(0,0,0,0.4)", backdropFilter:"blur(4px)" }}>
+                    Day 2 · Goa
+                  </div>
+                </div>
+                <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                  Pins, route &amp; 3-D buildings — replay the whole trip on the map.
+                </p>
+              </div>
+            ),
+          }}
+          phone={
+            <div className="h-full flex flex-col" style={{ background:"#080C14" }}>
+              <AppBar
+                title="Goa 2025 · Timeline"
+                right={<span className="rounded-full px-2 py-0.5 text-cyan-300 font-bold" style={{ fontSize:9, background:"rgba(6,182,212,0.15)", border:"1px solid rgba(6,182,212,0.3)" }}>3 days</span>}
+              />
+              <div className="flex-1 overflow-hidden px-3 pt-3 pb-14 space-y-2">
+                {[
+                  {
+                    badge:"Day 1/3", date:"Mon, Jun 2", total:"₹6,500", tone:"#22D3EE",
+                    note:null as string | null,
+                    bar:[{ w:"77%", c:"#2563EB" }, { w:"23%", c:"#EA580C" }], barW:"50%",
+                    payers:[{ l:"P", c:"#06B6D4" }, { l:"Y", c:"#8B5CF6" }],
+                    exp:{ e:"🏨", t:"Hotel check-in", by:"Priya", amt:"₹5,000" },
+                  },
+                  {
+                    badge:"Day 2/3", date:"Tue, Jun 3", total:"₹14,200", tone:"#FCD34D",
+                    note:"🔥 busiest day",
+                    bar:[{ w:"56%", c:"#16A34A" }, { w:"23%", c:"#EA580C" }, { w:"21%", c:"#9333EA" }], barW:"100%",
+                    payers:[{ l:"R", c:"#16A34A" }, { l:"Y", c:"#8B5CF6" }, { l:"P", c:"#06B6D4" }],
+                    exp:{ e:"🏄", t:"Water sports", by:"Raj", amt:"₹8,000" },
+                  },
+                  {
+                    badge:"Day 3/3", date:"Wed, Jun 4", total:"₹3,800", tone:"#22D3EE",
+                    note:"light day",
+                    bar:[{ w:"66%", c:"#DB2777" }, { w:"34%", c:"#EA580C" }], barW:"30%",
+                    payers:[{ l:"A", c:"#F59E0B" }, { l:"M", c:"#EC4899" }],
+                    exp:{ e:"🛍️", t:"Souvenirs", by:"Anil", amt:"₹2,500" },
+                  },
+                ].map((d) => (
+                  <div key={d.badge} className="rounded-2xl px-3 pt-2 pb-2" style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="rounded-full px-2 py-0.5 font-semibold" style={{ fontSize:9, background:"rgba(6,182,212,0.18)", color:"#67E8F9" }}>{d.badge}</span>
+                      <span style={{ fontSize:9.5, color:"rgba(148,163,184,0.7)" }}>{d.date}</span>
+                      <span style={{ fontSize:9, color:"rgba(148,163,184,0.4)" }}>·</span>
+                      <span className="font-bold tabular-nums" style={{ fontSize:11, color:d.tone, fontFamily:"var(--font-fraunces)" }}>{d.total}</span>
+                      <div className="flex-1" />
+                      <div className="flex -space-x-1">
+                        {d.payers.map((p, i) => (
+                          <div key={i} className="rounded-full flex items-center justify-center text-white font-bold ring-1 ring-[#080C14]" style={{ width:16, height:16, fontSize:8, background:p.c }}>{p.l}</div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* category bar */}
+                    <div className="relative h-2 rounded-full overflow-hidden mb-1.5" style={{ background:"rgba(255,255,255,0.06)" }}>
+                      <div className="absolute inset-y-0 left-0 flex rounded-full overflow-hidden" style={{ width:d.barW }}>
+                        {d.bar.map((s, i) => (<div key={i} className="h-full" style={{ width:s.w, background:s.c }} />))}
+                      </div>
+                    </div>
+                    {d.note && <p className="text-center font-medium mb-1" style={{ fontSize:8.5, color:d.tone }}>{d.note}</p>}
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontSize:13 }}>{d.exp.e}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate" style={{ fontSize:10, color:"rgba(226,232,240,0.85)" }}>{d.exp.t}</p>
+                        <p style={{ fontSize:8, color:"rgba(148,163,184,0.5)" }}>{d.exp.by}</p>
+                      </div>
+                      <span className="tabular-nums font-semibold" style={{ fontSize:10, color:"rgba(226,232,240,0.8)" }}>{d.exp.amt}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <PhoneNav active={0} />
+            </div>
+          }
+        />
+
+        {/* ══════════════════════════════════════════════════════════════════
+            SLIDE 3 — AI Quick-add
+        ══════════════════════════════════════════════════════════════════ */}
+        <FeatureSlide
+          isActive={active === 3}
           label="AI-powered"
           labelHex="#7C3AED"
           headline={<>Just type — or <span style={{ background:"linear-gradient(135deg,#7C3AED 0%,#0891B2 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>speak.</span></>}
@@ -1013,9 +1287,31 @@ export function CarouselLanding() {
           ]}
           accentGlow="rgba(124,58,237,0.22)"
           tilt={-5}
-          callouts={
-            <Callout text="✨ Parses in &lt;1s" icon="⚡" side="right" top={265} accentColor="rgba(124,58,237,0.22)" textColor="#C4B5FD" />
-          }
+          breakout={{
+            accentHex: "#7C3AED",
+            caption: "Chat import",
+            content: (
+              <div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5">Paste a group chat →</p>
+                <div className="rounded-lg p-2 mb-2 space-y-1" style={{ background:"rgba(124,58,237,0.06)", border:"1px solid rgba(124,58,237,0.16)" }}>
+                  {[
+                    { who:"Priya", msg:"paid 4500 for dinner 🍽️" },
+                    { who:"Raj",   msg:"got the cab — 800" },
+                    { who:"Me",    msg:"hotel was 12k" },
+                  ].map((c) => (
+                    <p key={c.who} className="text-[10px] leading-snug text-slate-600 dark:text-slate-300">
+                      <span className="font-semibold text-violet-600 dark:text-violet-300">{c.who}:</span> {c.msg}
+                    </p>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span style={{ fontSize:12 }}>✨</span>
+                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">3 expenses imported</span>
+                  <span className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background:"rgba(124,58,237,0.14)", color:"#7C3AED" }}>₹17,300</span>
+                </div>
+              </div>
+            ),
+          }}
           phone={
             /* Full-screen layout — avoids the bottom-sheet clip problem.
                All key elements sit in the top 60% of the phone. */
@@ -1043,12 +1339,13 @@ export function CarouselLanding() {
                 <div
                   className="rounded-2xl px-3.5 py-3"
                   style={{
-                    background:"rgba(124,58,237,0.08)",
-                    border:"1.5px solid rgba(124,58,237,0.4)",
-                    boxShadow:"0 0 0 4px rgba(124,58,237,0.07)",
+                    background:"rgba(6,182,212,0.08)",
+                    border:"1.5px solid rgba(34,211,238,0.45)",
+                    boxShadow:"0 0 0 4px rgba(6,182,212,0.08), 0 0 20px rgba(34,211,238,0.12)",
                   }}
                 >
-                  {/* Animated waveform bars — transformOrigin bottom so they pulse from base */}
+                  {/* Animated waveform bars — cyan so the live voice moment pops
+                      against the violet AI theme. transformOrigin bottom = pulse from base. */}
                   <div className="flex items-end justify-center gap-1 mb-2" style={{ height:32 }}>
                     {[0.3,0.6,1,0.8,0.5,0.9,0.4,0.7,1,0.6,0.3,0.8,0.5].map((h, i) => (
                       <div
@@ -1057,7 +1354,9 @@ export function CarouselLanding() {
                           width:3,
                           height:Math.round(h * 30),
                           borderRadius:2,
-                          background:`rgba(167,139,250,${0.45 + h * 0.45})`,
+                          background:"linear-gradient(180deg,#67E8F9,#06B6D4)",
+                          opacity:0.6 + h * 0.4,
+                          boxShadow:h >= 0.8 ? "0 0 6px rgba(34,211,238,0.6)" : undefined,
                           transformOrigin:"center bottom",
                           animation:`waveBar${i % 4} 0.75s ease-in-out infinite`,
                           animationDelay:`${i * 0.06}s`,
@@ -1065,12 +1364,12 @@ export function CarouselLanding() {
                       />
                     ))}
                   </div>
-                  <p style={{ fontSize:11, color:"rgba(167,139,250,0.8)", textAlign:"center", fontWeight:500 }}>
+                  <p style={{ fontSize:11, color:"rgba(103,232,249,0.9)", textAlign:"center", fontWeight:500 }}>
                     "Priya paid dinner at Taj…"
                   </p>
                   <div className="flex items-center justify-center gap-1.5 mt-1.5">
-                    <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-                    <span style={{ fontSize:10, color:"#A78BFA", fontWeight:600 }}>Listening…</span>
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span style={{ fontSize:10, color:"#22D3EE", fontWeight:600 }}>Listening…</span>
                   </div>
                 </div>
 
@@ -1124,27 +1423,50 @@ export function CarouselLanding() {
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 3 — Debt Flow  (SettleFlowDemo rendered inside phone frame)
+            SLIDE 4 — Settle Up  (Debt-Flow graph in the phone + minimum-payment
+            action lifted into the breakout — the old standalone Debt Flow slide
+            is merged in here)
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
-          isActive={active === 3}
-          label="Debt Flow"
-          labelHex="#0891B2"
-          headline={<>See every IOU <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>at a glance.</span></>}
-          body="The Debt Flow graph maps who owes whom with animated arcs and live particles. Tap any arc and the payment card scrolls into view."
+          isActive={active === 4}
+          label="Settle up"
+          labelHex="#059669"
+          headline={<>One payment each. <span style={{ background:"linear-gradient(135deg,#059669 0%,#0891B2 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>No math.</span></>}
+          body="The Debt-Flow graph maps who owes whom with animated arcs; Clear's optimizer collapses the tangle into the fewest transfers. Tap an arc to pay."
           pills={[
-            { icon:"💫", text:"Animated flows",  color:"#0891B2" },
-            { icon:"👆", text:"Tap arc → pay",   color:"#14B8A6" },
-          ]}
-          bullets={[
-            { e:"💫", t:"Real-time animated money flows" },
-            { e:"👆", t:"Tap arc → jump to payment card" },
-            { e:"🖐",  t:"Drag nodes to untangle groups"  },
-            { e:"🧮", t:"Minimum payment algorithm"       },
+            { icon:"💫", text:"Animated Debt Flow", color:"#059669" },
+            { icon:"🧮", text:"Fewest transfers",   color:"#0891B2" },
           ]}
           phoneRight={false}
-          accentGlow="rgba(6,182,212,0.22)"
+          accentGlow="rgba(5,150,105,0.2)"
           tilt={5}
+          breakout={{
+            accentHex: "#059669",
+            caption: "Minimum payment",
+            // Desktop-only: on mobile the Debt-Flow graph fills the phone and an
+            // overlay would cover it. The graph's own footer summary carries mobile.
+            mobile: false,
+            content: (
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Your balance</p>
+                <p className="text-[20px] font-bold text-amber-500 dark:text-amber-400 leading-none mt-0.5" style={{ fontFamily:"var(--font-fraunces)" }}>You owe ₹2,500</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 mb-2.5">You paid ₹5,000 · fair share ₹2,500</p>
+                <div className="flex items-center gap-2.5 rounded-xl px-3 py-2 mb-2" style={{ background:"rgba(5,150,105,0.06)", border:"1px solid rgba(5,150,105,0.18)" }}>
+                  <Av name="Priya" color="#0891B2" size={26} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold text-slate-700 dark:text-slate-200">Pay Priya</p>
+                    <p className="text-[9px] text-slate-400">GPay · PhonePe · UPI</p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-white font-bold text-[11px]" style={{ background:"linear-gradient(135deg,#059669,#0891B2)" }}>
+                    ₹2,500 →
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                  <span>🎉</span> 1 payment clears the whole trip
+                </div>
+              </div>
+            ),
+          }}
           phone={
             <div className="h-full flex flex-col" style={{ background:"#080C14" }}>
               <AppBar
@@ -1156,7 +1478,7 @@ export function CarouselLanding() {
                   </div>
                 }
               />
-              {/* SettleFlowDemo fills the remaining space above the nav.
+              {/* Debt-Flow graph fills the space above the nav.
                   pb-14 (56px) prevents content going behind PhoneNav. */}
               <div className="flex-1 overflow-hidden flex flex-col justify-center pb-14 px-1 pt-1">
                 <SettleFlowDemo dark />
@@ -1167,88 +1489,7 @@ export function CarouselLanding() {
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 3 — Settle Up
-        ══════════════════════════════════════════════════════════════════ */}
-        <FeatureSlide
-          isActive={active === 4}
-          label="Settle up"
-          labelHex="#059669"
-          headline={<>One payment each. <span style={{ background:"linear-gradient(135deg,#059669 0%,#0891B2 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>No math.</span></>}
-          body="Clear's algorithm collapses any IOU tangle into the minimum number of transfers — no matter how many people."
-          pills={[
-            { icon:"🧮", text:"Fewest transfers",  color:"#059669" },
-            { icon:"💸", text:"GPay / PhonePe UPI", color:"#0891B2" },
-          ]}
-          bullets={[
-            { e:"🧮", t:"Minimum payment algorithm" },
-            { e:"💸", t:"UPI deep links — GPay, PhonePe" },
-            { e:"↩️", t:"5-second undo on each settlement" },
-            { e:"📊", t:"Personal math at a glance" },
-          ]}
-          accentGlow="rgba(5,150,105,0.18)"
-          tilt={-5}
-          callouts={
-            <Callout text="GPay / PhonePe" icon="⚡" side="right" top={260} accentColor="rgba(5,150,105,0.25)" textColor="#34D399" />
-          }
-          phone={
-            <div className="h-full flex flex-col" style={{ background:"#080C14" }}>
-              <AppBar title="Settle up · Goa 2025" />
-              <div className="flex-1 overflow-hidden px-3 pt-3 pb-14 space-y-2.5">
-                {/* Hero balance */}
-                <div className="rounded-2xl px-4 py-3.5 text-center" style={{ background:"linear-gradient(135deg,rgba(251,191,36,0.14),rgba(217,119,6,0.08))", border:"1px solid rgba(251,191,36,0.25)", boxShadow:"0 0 20px rgba(251,191,36,0.08)" }}>
-                  <p style={{ fontSize:10, color:"rgba(148,163,184,0.6)", letterSpacing:"0.08em", textTransform:"uppercase" }}>Your balance</p>
-                  <p className="font-bold" style={{ fontSize:26, color:"#FCD34D", fontFamily:"var(--font-fraunces)" }}>₹2,500 owed</p>
-                  <p style={{ fontSize:10, color:"rgba(148,163,184,0.55)", marginTop:3 }}>You paid ₹5,000 · fair share ₹2,500</p>
-                </div>
-                {/* Net balances */}
-                <div className="rounded-2xl px-3.5 py-3" style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)" }}>
-                  <p className="font-semibold mb-2.5" style={{ fontSize:9, color:"rgba(226,232,240,0.45)", textTransform:"uppercase", letterSpacing:"0.09em" }}>Net balances</p>
-                  {[
-                    { name:"Priya", net:"+₹4,000", color:"#34D399" },
-                    { name:"You",   net:"−₹2,500", color:"#FCD34D" },
-                    { name:"Raj",   net:"−₹1,800", color:"#FCD34D" },
-                    { name:"Anil",  net:"+₹1,200", color:"#34D399" },
-                    { name:"Meera", net:"−₹0,900", color:"#FCD34D" },
-                  ].map((b) => (
-                    <div key={b.name} className="flex justify-between py-0.5">
-                      <span style={{ fontSize:11, color:"rgba(226,232,240,0.7)" }}>{b.name}</span>
-                      <span style={{ fontSize:11, color:b.color, fontWeight:700, fontFamily:"var(--font-fraunces)" }}>{b.net}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Minimum payments */}
-                <p className="font-semibold" style={{ fontSize:9, color:"rgba(226,232,240,0.4)", textTransform:"uppercase", letterSpacing:"0.09em" }}>Minimum payments</p>
-                {[
-                  { to:"Priya", amount:"₹2,500", color:"#0891B2" },
-                ].map((p, i) => (
-                  <div key={i} className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5" style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)" }}>
-                    <Av name={p.to} color={p.color} size={28} />
-                    <div className="flex-1 min-w-0">
-                      <p style={{ fontSize:11, color:"rgba(226,232,240,0.9)", fontWeight:600 }}>Pay Priya</p>
-                      <p style={{ fontSize:9, color:"rgba(148,163,184,0.5)" }}>GPay · PhonePe · UPI</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 rounded-xl px-3 py-1.5" style={{ background:"linear-gradient(135deg,#059669,#0891B2)", boxShadow:"0 4px 12px rgba(5,150,105,0.35)" }}>
-                      <span className="text-white font-bold" style={{ fontSize:11 }}>₹2,500</span>
-                      <span className="text-white" style={{ fontSize:11 }}>→</span>
-                    </div>
-                  </div>
-                ))}
-                {/* Settled banner */}
-                <div className="rounded-2xl px-3.5 py-2.5 flex items-center gap-2" style={{ background:"rgba(5,150,105,0.12)", border:"1px solid rgba(5,150,105,0.25)" }}>
-                  <span style={{ fontSize:16 }}>🎉</span>
-                  <div>
-                    <p style={{ fontSize:11, color:"#34D399", fontWeight:600 }}>All settled ✓</p>
-                    <p style={{ fontSize:9, color:"rgba(148,163,184,0.5)" }}>Just 1 payment cleared the whole trip</p>
-                  </div>
-                </div>
-              </div>
-              <PhoneNav active={0} />
-            </div>
-          }
-        />
-
-        {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 4 — Insights
+            SLIDE 5 — Insights
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
           isActive={active === 5}
@@ -1266,6 +1507,41 @@ export function CarouselLanding() {
             { e:"✨", t:"AI-generated trip narrative" },
             { e:"🟣", t:"Personal finance view (You tab)" },
           ]}
+          breakout={{
+            accentHex: "#D97706",
+            caption: "Spend by category",
+            content: (
+              <div className="flex items-center gap-4">
+                {/* Conic donut */}
+                <div className="relative shrink-0" style={{ width:108, height:108 }}>
+                  <div
+                    className="w-full h-full rounded-full"
+                    style={{ background:"conic-gradient(#0891B2 0% 48%, #0D9488 48% 77%, #7C3AED 77% 92%, #D97706 92% 100%)" }}
+                  />
+                  <div className="absolute inset-[17px] rounded-full bg-white dark:bg-slate-900 flex flex-col items-center justify-center">
+                    <span className="text-[15px] font-bold text-slate-800 dark:text-slate-100 leading-none" style={{ fontFamily:"var(--font-fraunces)" }}>₹28.5k</span>
+                    <span className="text-[8.5px] text-slate-400 mt-0.5">5 ppl · 4 days</span>
+                  </div>
+                </div>
+                {/* Legend */}
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  {[
+                    { label:"Accommodation", amount:"₹13,680", pct:"48%", color:"#0891B2" },
+                    { label:"Food & drink",  amount:"₹8,265",  pct:"29%", color:"#0D9488" },
+                    { label:"Activities",    amount:"₹4,275",  pct:"15%", color:"#7C3AED" },
+                    { label:"Transport",     amount:"₹2,280",  pct:"8%",  color:"#D97706" },
+                  ].map((c) => (
+                    <div key={c.label} className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background:c.color }} />
+                      <span className="text-[11px] text-slate-600 dark:text-slate-300 flex-1 min-w-0 truncate">{c.label}</span>
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 tabular-nums shrink-0">{c.amount}</span>
+                      <span className="text-[10px] text-slate-400 tabular-nums shrink-0 w-7 text-right">{c.pct}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ),
+          }}
           phoneRight={false}
           accentGlow="rgba(217,119,6,0.18)"
           tilt={5}
@@ -1286,42 +1562,45 @@ export function CarouselLanding() {
                     <p style={{ fontSize:8, color:"rgba(148,163,184,0.5)" }}>fair share</p>
                   </div>
                 </div>
-                {/* Category bars */}
-                <div className="rounded-2xl px-3 py-2.5" style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)" }}>
-                  <p className="font-semibold mb-2" style={{ fontSize:9, color:"rgba(226,232,240,0.45)", textTransform:"uppercase", letterSpacing:"0.08em" }}>By category</p>
-                  {[
-                    { label:"Accommodation", pct:48, color:"linear-gradient(90deg,#0891B2,#06B6D4)", amount:"₹13,680" },
-                    { label:"Food & drink",  pct:29, color:"linear-gradient(90deg,#0D9488,#14B8A6)", amount:"₹8,265"  },
-                    { label:"Activities",    pct:15, color:"linear-gradient(90deg,#7C3AED,#A78BFA)", amount:"₹4,275"  },
-                    { label:"Transport",     pct:8,  color:"linear-gradient(90deg,#D97706,#F59E0B)", amount:"₹2,280"  },
-                  ].map((c) => (
-                    <div key={c.label} className="mb-2">
-                      <div className="flex justify-between mb-1">
-                        <span style={{ fontSize:10, color:"rgba(148,163,184,0.7)" }}>{c.label}</span>
-                        <span style={{ fontSize:10, color:"rgba(226,232,240,0.8)", fontWeight:600 }}>{c.amount}</span>
-                      </div>
-                      <div className="h-2 rounded-full" style={{ background:"rgba(255,255,255,0.07)" }}>
-                        <div className="h-2 rounded-full" style={{ width:`${c.pct}%`, background:c.color }} />
-                      </div>
-                    </div>
-                  ))}
+                {/* AI trip narrative — distinctive Clear feature, complements the
+                    category donut that's lifted into the breakout card */}
+                <div className="rounded-2xl px-3 py-2.5" style={{ background:"linear-gradient(135deg,rgba(124,58,237,0.14),rgba(217,119,6,0.06))", border:"1px solid rgba(124,58,237,0.25)" }}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span style={{ fontSize:11 }}>✨</span>
+                    <p className="font-semibold" style={{ fontSize:9, color:"#C4B5FD", textTransform:"uppercase", letterSpacing:"0.08em" }}>AI trip story</p>
+                  </div>
+                  <p style={{ fontSize:10.5, lineHeight:1.5, color:"rgba(226,232,240,0.8)" }}>
+                    A food-forward Goa run — <span style={{ color:"#FCD34D", fontWeight:600 }}>Jun 3 was the splurge</span> at ₹14,200. You fronted ₹9,000, so the group owes <span style={{ color:"#34D399", fontWeight:600 }}>you ₹3,300</span>.
+                  </p>
                 </div>
-                {/* Contributions */}
+                {/* Daily spend bars — different chart from the category donut */}
                 <div className="rounded-2xl px-3 py-2.5" style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)" }}>
-                  <p className="font-semibold mb-2" style={{ fontSize:9, color:"rgba(226,232,240,0.45)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Contributions</p>
-                  {[
-                    { name:"Priya", pct:88, amount:"₹12,000" },
-                    { name:"You",   pct:66, amount:"₹9,000"  },
-                    { name:"Raj",   pct:44, amount:"₹6,000"  },
-                  ].map((m) => (
-                    <div key={m.name} className="flex items-center gap-2 mb-1.5">
-                      <span style={{ fontSize:10, color:"rgba(148,163,184,0.7)", width:30, flexShrink:0 }}>{m.name}</span>
-                      <div className="flex-1 h-2 rounded-full" style={{ background:"rgba(255,255,255,0.07)" }}>
-                        <div className="h-2 rounded-full" style={{ width:`${m.pct}%`, background:"linear-gradient(90deg,#0891B2,#14B8A6)" }} />
+                  <div className="flex items-center justify-between mb-2.5">
+                    <p className="font-semibold" style={{ fontSize:9, color:"rgba(226,232,240,0.45)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Daily spend</p>
+                    <span style={{ fontSize:8.5, color:"rgba(148,163,184,0.5)" }}>peak Jun 3</span>
+                  </div>
+                  <div className="flex items-end justify-between gap-2" style={{ height:54 }}>
+                    {[
+                      { day:"1", h:38, amt:"6.5k", peak:false },
+                      { day:"2", h:30, amt:"5.1k", peak:false },
+                      { day:"3", h:54, amt:"14.2k", peak:true  },
+                      { day:"4", h:22, amt:"2.7k", peak:false },
+                    ].map((d) => (
+                      <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
+                        <span style={{ fontSize:7.5, color:d.peak ? "#FCD34D" : "rgba(148,163,184,0.55)", fontWeight:600 }}>{d.amt}</span>
+                        <div
+                          className="w-full rounded-md"
+                          style={{
+                            height:d.h,
+                            background:d.peak
+                              ? "linear-gradient(180deg,#FCD34D,#D97706)"
+                              : "linear-gradient(180deg,#22D3EE,#0891B2)",
+                          }}
+                        />
+                        <span style={{ fontSize:8, color:"rgba(148,163,184,0.5)" }}>D{d.day}</span>
                       </div>
-                      <span style={{ fontSize:10, color:"rgba(226,232,240,0.8)", fontWeight:600, width:48, textAlign:"right", flexShrink:0 }}>{m.amount}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
               <PhoneNav active={2} />
@@ -1330,10 +1609,64 @@ export function CarouselLanding() {
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 5 — Nests
+            SLIDE 6 — Stats interstitial (pattern break — no phone, big numbers)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden ${active === 6 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="By the numbers">
+          {/* Ambient blobs */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div style={{ position:"absolute", top:"-12%", left:"-8%", width:"55%", height:"55%", borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.22) 0%,transparent 70%)", animation:"blob1 15s ease-in-out infinite" }} />
+            <div style={{ position:"absolute", bottom:"-12%", right:"-8%", width:"52%", height:"52%", borderRadius:"50%", background:"radial-gradient(circle,rgba(139,92,246,0.16) 0%,transparent 70%)", animation:"blob2 19s ease-in-out infinite" }} />
+          </div>
+
+          <motion.div
+            className="relative z-10 w-full max-w-2xl text-center"
+            variants={stagger(0)}
+            initial="hidden"
+            animate={active === 6 ? "visible" : "hidden"}
+          >
+            <motion.p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500 mb-2" variants={fadeUp}>By the numbers</motion.p>
+            <motion.h2
+              className="text-3xl sm:text-4xl md:text-5xl font-normal leading-[1.08] text-slate-800 dark:text-slate-100 mb-8"
+              style={{ fontFamily:"var(--font-fraunces)" }}
+              variants={fadeUp}
+            >
+              The tangle,{" "}
+              <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
+                untangled.
+              </span>
+            </motion.h2>
+
+            <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" variants={stagger(0.1)}>
+              {[
+                { big:"₹1.2L",     sub:"split across 12 people",   grad:"linear-gradient(135deg,#0891B2,#14B8A6)" },
+                { big:"3",         sub:"payments cleared the trip", grad:"linear-gradient(135deg,#059669,#0891B2)" },
+                { big:"<1 sec",    sub:"to log by voice or type",   grad:"linear-gradient(135deg,#7C3AED,#0891B2)" },
+                { big:"0",         sub:"accounts needed for guests", grad:"linear-gradient(135deg,#6366F1,#8B5CF6)" },
+              ].map((s) => (
+                <motion.div
+                  key={s.sub}
+                  className="rounded-2xl p-4 sm:p-5 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/50 flex flex-col items-center"
+                  variants={fadeScale}
+                >
+                  <span className="text-2xl sm:text-3xl md:text-4xl font-normal leading-none mb-1.5" style={{ fontFamily:"var(--font-fraunces)", background:s.grad, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
+                    {s.big}
+                  </span>
+                  <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 leading-snug">{s.sub}</span>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <motion.p className="mt-8 text-sm text-slate-500 dark:text-slate-400" variants={fadeUp}>
+              One splitting engine. One settlement optimizer. <span className="text-slate-700 dark:text-slate-200 font-medium">Every context.</span>
+            </motion.p>
+          </motion.div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            SLIDE 7 — Nests
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
-          isActive={active === 6}
+          isActive={active === 7}
           label="Nests"
           labelHex="#0D9488"
           headline={<>Household bills, <span style={{ background:"linear-gradient(135deg,#0D9488 0%,#059669 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>one tap a month.</span></>}
@@ -1351,6 +1684,27 @@ export function CarouselLanding() {
           phoneRight={false}
           accentGlow="rgba(13,148,136,0.2)"
           tilt={5}
+          breakout={{
+            accentHex: "#0D9488",
+            caption: "Monthly pace",
+            content: (
+              <div>
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">Projected May</p>
+                    <p className="text-[20px] font-bold text-teal-600 dark:text-teal-300 leading-none mt-0.5" style={{ fontFamily:"var(--font-fraunces)" }}>₹38,400</p>
+                  </div>
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background:"rgba(16,185,129,0.14)", color:"#059669" }}>On pace 🟢</span>
+                </div>
+                <div className="relative h-2.5 rounded-full overflow-hidden mb-1" style={{ background:"rgba(13,148,136,0.12)" }}>
+                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width:"82%", background:"linear-gradient(90deg,#0D9488,#34D399)" }} />
+                  {/* avg marker */}
+                  <div className="absolute inset-y-0" style={{ left:"88%", width:2, background:"#0891B2" }} />
+                </div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">vs ₹34,200 · 3-month average</p>
+              </div>
+            ),
+          }}
           phone={
             <div className="h-full flex flex-col" style={{ background:"#080C14" }}>
               <AppBar title="Mumbai Flat · May 2026" right={<RefreshCw style={{ width:13, height:13, color:"#2DD4BF" }} />} />
@@ -1407,10 +1761,10 @@ export function CarouselLanding() {
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 6 — Streams
+            SLIDE 8 — Streams
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
-          isActive={active === 7}
+          isActive={active === 8}
           label="Streams"
           labelHex="#6366F1"
           headline={<>Track 1:1 money <span style={{ background:"linear-gradient(135deg,#6366F1 0%,#8B5CF6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>with anyone.</span></>}
@@ -1427,6 +1781,23 @@ export function CarouselLanding() {
           ]}
           accentGlow="rgba(99,102,241,0.2)"
           tilt={-5}
+          breakout={{
+            accentHex: "#6366F1",
+            caption: "Guest confirm",
+            content: (
+              <div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 mb-2">Priya isn&apos;t on Clear yet — share a link, she confirms or disputes. <span className="text-slate-400">No account needed.</span></p>
+                <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 mb-2" style={{ background:"rgba(99,102,241,0.06)", border:"1px solid rgba(99,102,241,0.18)" }}>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 flex-1 min-w-0 truncate">clear.app/confirm/9f2a…</span>
+                  <span className="rounded-md px-2 py-0.5 text-[10px] font-bold text-white shrink-0" style={{ background:"linear-gradient(135deg,#6366F1,#8B5CF6)" }}>Share</span>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1 rounded-lg py-1.5 text-center text-[10.5px] font-semibold" style={{ background:"rgba(16,185,129,0.1)", color:"#10B981", border:"1px solid rgba(16,185,129,0.25)" }}>✓ Confirm</div>
+                  <div className="flex-1 rounded-lg py-1.5 text-center text-[10.5px] font-semibold" style={{ background:"rgba(245,158,11,0.1)", color:"#D97706", border:"1px solid rgba(245,158,11,0.25)" }}>⚠ Dispute</div>
+                </div>
+              </div>
+            ),
+          }}
           phone={
             <div className="h-full flex flex-col" style={{ background:"#080C14" }}>
               <AppBar title="With Priya" right={
@@ -1485,10 +1856,10 @@ export function CarouselLanding() {
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 8 — Circles
+            SLIDE 9 — Circles
         ══════════════════════════════════════════════════════════════════ */}
         <FeatureSlide
-          isActive={active === 8}
+          isActive={active === 9}
           label="Circles"
           labelHex="#8B5CF6"
           headline={<>Shared funds, <span style={{ background:"linear-gradient(135deg,#8B5CF6 0%,#F43F5E 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>everyone accountable.</span></>}
@@ -1506,6 +1877,23 @@ export function CarouselLanding() {
           phoneRight={false}
           accentGlow="rgba(139,92,246,0.2)"
           tilt={5}
+          breakout={{
+            accentHex: "#8B5CF6",
+            caption: "WhatsApp reminder",
+            content: (
+              <div>
+                <div className="rounded-xl p-2.5 mb-2" style={{ background:"rgba(37,211,102,0.08)", border:"1px solid rgba(37,211,102,0.22)" }}>
+                  <p className="text-[10px] font-semibold text-slate-700 dark:text-slate-200 mb-1">🪙 Bali Trip Fund</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug tabular-nums">▓▓▓▓░░░░ 48% · ₹24,000 / ₹50,000</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Pending: <span className="font-medium text-slate-600 dark:text-slate-300">Anil, Meera</span> — pay → clear.app/pay</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span style={{ fontSize:12 }}>📲</span>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400">One tap — sends to your group chat</span>
+                </div>
+              </div>
+            ),
+          }}
           callouts={
             <Callout text="₹26k to go" icon="🏆" side="right" top={108} accentColor="rgba(244,63,94,0.2)" textColor="#FB7185" />
           }
@@ -1581,9 +1969,9 @@ export function CarouselLanding() {
         />
 
         {/* ══════════════════════════════════════════════════════════════════
-            SLIDE 9 — CTA
+            SLIDE 10 — CTA
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-6 relative overflow-hidden">
+        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-6 relative overflow-hidden ${active === 10 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Get started">
           {/* Ambient blobs */}
           <div className="absolute inset-0 pointer-events-none">
             <div style={{ position:"absolute", top:"-20%", left:"-10%", width:"60%", height:"60%", borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.12) 0%,transparent 70%)", animation:"blob1 16s ease-in-out infinite" }} />
@@ -1593,7 +1981,7 @@ export function CarouselLanding() {
             className="relative z-10 w-full max-w-lg text-center"
             variants={fadeScale}
             initial="hidden"
-            animate={active === 9 ? "visible" : "hidden"}
+            animate={active === 10 ? "visible" : "hidden"}
           >
             {/* Glass card */}
             <div
@@ -1636,35 +2024,62 @@ export function CarouselLanding() {
         </div>
 
       </div>{/* end scroll container */}
+
+        {/* ── One-time coach hint — invites the first swipe, fades on interaction ── */}
+        {showHint && !userInteracted && active === 0 && (
+          <button
+            data-coach-hint
+            onClick={() => { setUserInteracted(true); goTo(1); }}
+            className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 rounded-full pl-4 pr-3 py-2 shadow-lg backdrop-blur-md bg-white/80 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60"
+            style={{ animation: "hintFloat 2.4s ease-in-out infinite" }}
+            aria-label="Swipe or tap to explore the next slide"
+          >
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-200">Swipe to explore</span>
+            <ChevronRight className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
+          </button>
+        )}
+
       </div>{/* end carousel wrapper */}
 
       {/* ── Bottom bar ── */}
-      <div className="shrink-0 h-13 flex items-center justify-between px-4 sm:px-6 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-t border-slate-100/80 dark:border-slate-800/60 z-50" style={{ height:52 }}>
-        {/* Dots + slide label */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: SLIDE_COUNT }, (_, i) => (
-              <button
-                key={i}
-                onClick={() => { setUserInteracted(true); goTo(i); }}
-                aria-label={`Go to ${SLIDES[i]?.short}`}
-                className={`rounded-full transition-all duration-250 ${
-                  i === active
-                    ? "w-6 h-2.5 bg-gradient-to-r from-cyan-500 to-teal-500"
-                    : "w-2 h-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600"
-                }`}
-              />
-            ))}
+      <div className="shrink-0 relative h-13 flex items-center justify-between gap-3 px-4 sm:px-6 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-t border-slate-100/80 dark:border-slate-800/60 z-50" style={{ height:52 }}>
+        {/* Progress track + count — replaces the 11-dot row (too wide on mobile).
+            The track is the position indicator; swipe / arrows / chevron navigate. */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div
+            className="relative h-1.5 w-20 sm:w-28 rounded-full bg-slate-200/80 dark:bg-slate-700/70 overflow-hidden shrink-0"
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={SLIDE_COUNT}
+            aria-valuenow={active + 1}
+            aria-label="Carousel progress"
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 transition-[width] duration-300 ease-out"
+              style={{ width: `${((active + 1) / SLIDE_COUNT) * 100}%` }}
+            />
           </div>
-          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 hidden sm:inline pl-1">
-            {SLIDES[active]?.label}
+          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 tabular-nums whitespace-nowrap truncate">
+            <span className="text-slate-600 dark:text-slate-300">{active + 1}</span>/{SLIDE_COUNT}
+            <span className="hidden sm:inline"> · {SLIDES[active]?.label}</span>
           </span>
         </div>
-        {/* Right side: discovery links only (CTA is in top nav + last slide) */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Link href="/about"     className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">About</Link>
-          <Link href="/pricing"   className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Pricing</Link>
-          <Link href="/changelog" className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">What&apos;s New</Link>
+        {/* Right side: discovery links as subtle ghost-chips (What's New lives on
+            the About page now, to de-clutter the bar). CTA is in top nav + last slide. */}
+        <div className="flex items-center gap-2">
+          {[
+            { href: "/about",   label: "About"   },
+            { href: "/pricing", label: "Pricing" },
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="group inline-flex items-center gap-1 rounded-full pl-3 pr-2 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700/50 hover:text-slate-800 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-all"
+            >
+              {l.label}
+              <ChevronRight className="w-3 h-3 opacity-50 group-hover:opacity-90 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+          ))}
         </div>
       </div>
 

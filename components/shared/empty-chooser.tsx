@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Home, Coins, ArrowLeftRight, ArrowRight } from "lucide-react";
+import { MapPin, Building2, Coins, ArrowLeftRight, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SampleLoader } from "@/components/shared/sample-loader";
 
@@ -29,7 +29,7 @@ const CHOOSER: {
     href: "/groups/new?type=nest",
     title: "Nest",
     desc: "Household bills with flatmates or family — month to month.",
-    icon: Home,
+    icon: Building2,
     gradient: "from-emerald-500 to-teal-500",
     hoverArrow: "group-hover:text-emerald-500",
   },

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Home, Coins } from "lucide-react";
+import { MapPin, Building2, Coins } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /**
@@ -37,7 +37,7 @@ const NUDGE: Record<NudgeType, NudgeMeta> = {
       "text-cyan-600 dark:text-cyan-400 group-hover:text-cyan-700 dark:group-hover:text-cyan-300",
   },
   nest: {
-    icon: Home,
+    icon: Building2,
     headline: "Sharing a place?",
     sub: "Rent, bills, and groceries with your mates — squared up every month.",
     cta: "New nest →",

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Compass, ArrowRight, MapPin, Home, Coins, Check } from "lucide-react";
+import { Compass, ArrowRight, MapPin, Building2, Coins, Check } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { seedSampleStep, type SampleStep } from "@/app/actions/demo";
@@ -16,7 +16,7 @@ const TIP_INTERVAL_MS = 2200;
 
 const STEPS: { key: SampleStep; label: string; icon: LucideIcon }[] = [
   { key: "trip", label: "Trip", icon: MapPin },
-  { key: "nest", label: "Nest", icon: Home },
+  { key: "nest", label: "Nest", icon: Building2 },
   { key: "circle", label: "Circle", icon: Coins },
 ];
 

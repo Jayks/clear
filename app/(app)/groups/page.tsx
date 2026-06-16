@@ -1,4 +1,4 @@
-import { Plus, MapPin, Home, Coins } from "lucide-react";
+import { Plus, MapPin, Building2, Coins } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getAllGroups } from "@/lib/db/queries/groups";
@@ -193,7 +193,7 @@ export default async function GroupsPage() {
           <div className="flex items-center gap-2.5 mb-4">
             <BadgePop className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/30
                             flex items-center justify-center shrink-0">
-              <Home className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nests</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
@@ -330,7 +330,7 @@ export default async function GroupsPage() {
           <div className="flex items-center gap-2.5 mb-4">
             <BadgePop className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-900/30
                             flex items-center justify-center shrink-0">
-              <Home className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nests</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r

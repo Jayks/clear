@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, LayoutGrid, LayoutDashboard, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
+import { LogOut, BarChart2, Home, LayoutDashboard, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
@@ -20,7 +20,7 @@ import { ClearLogo } from "@/components/shared/clear-logo";
 // Each tab lights in its own identity colour (mirrors the mobile bottom nav):
 // Home = cyan, Streams = blue (Stream context), Insights = amber.
 const NAV_LINKS = [
-  { href: "/groups",   label: "Home",    icon: LayoutGrid,     tourId: "nav-trips",
+  { href: "/groups",   label: "Home",    icon: Home,           tourId: "nav-trips",
     activeCls: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400" },
   { href: "/stream",   label: "Streams", icon: ArrowLeftRight, tourId: "nav-streams",
     activeCls: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400" },

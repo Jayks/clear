@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  UserPlus, Search, X, ArrowLeft, Home, MapPin,
+  UserPlus, Search, X, ArrowLeft, Building2, MapPin,
   ClipboardList, Share2, Check, Users, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -623,7 +623,7 @@ export function AddMembersSheet({
                   >
                     <div className="space-y-2 pb-4">
                       {sourceGroups.map((g) => {
-                        const Icon = g.groupType === "nest" ? Home : MapPin;
+                        const Icon = g.groupType === "nest" ? Building2 : MapPin;
                         return (
                           <button
                             key={g.id}

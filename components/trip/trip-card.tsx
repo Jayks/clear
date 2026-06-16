@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Users, MapPin, Home, MoreHorizontal } from "lucide-react";
+import { Users, MapPin, Building2, MoreHorizontal } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
 import { formatDate } from "@/lib/utils";
 import { GroupActionHub } from "./group-action-hub";
@@ -193,7 +193,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         onTouchStart={(e) => e.stopPropagation()}
       >
         <span className="inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full pointer-events-none">
-          {isNest ? <Home className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+          {isNest ? <Building2 className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
           {isNest ? "Nest" : "Trip"}
         </span>
         <Link

@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight, ArrowLeft, Users, CheckCircle2, X,
-  MapPin, Home, Receipt, Zap, RefreshCw,
+  MapPin, Building2, Receipt, Zap, RefreshCw,
   LayoutGrid, CalendarCheck, Bell, Sparkles, CalendarDays,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -339,7 +339,7 @@ export default function AboutPage() {
               <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.65) 100%)" }} />
               <div className="absolute bottom-4 left-5">
                 <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-3 py-1 mb-2">
-                  <Home className="w-3.5 h-3.5 text-teal-300" />
+                  <Building2 className="w-3.5 h-3.5 text-teal-300" />
                   <span className="text-xs font-semibold text-white">Nest</span>
                 </div>
                 <p className="text-white text-xl" style={{ fontFamily: "var(--font-fraunces)" }}>For home</p>

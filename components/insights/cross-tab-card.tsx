@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Home, MapPin } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
 import type { AllTripsInsights } from "@/lib/insights/all-trips-insights";
 import type { AllNestsInsights } from "@/lib/insights/all-nests-insights";
 
@@ -47,17 +47,17 @@ export function CrossTabCard({ tripsData, nestsData, currency }: Props) {
       <div className="pointer-events-none absolute -bottom-8 -right-8 w-36 h-36 rounded-full opacity-[0.12] dark:opacity-[0.15] blur-3xl bg-gradient-to-br from-cyan-400 to-teal-500" />
 
       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
-        Home vs Travel
+        Nest vs Travel
       </p>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
-        {/* Home */}
+        {/* Nest */}
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-sm shadow-emerald-500/25 shrink-0">
-            <Home className="w-4 h-4 text-white" />
+            <Building2 className="w-4 h-4 text-white" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">At home</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">At the nest</p>
             {homeDailyRate > 0 ? (
               <>
                 <p className="text-lg font-bold text-slate-800 dark:text-slate-100 tabular-nums leading-tight"
@@ -105,7 +105,7 @@ export function CrossTabCard({ tripsData, nestsData, currency }: Props) {
         {multiplier !== null && multiplier > 1 && (
           <p className="text-sm text-slate-600 dark:text-slate-300">
             <span className="font-semibold text-cyan-600 dark:text-cyan-400">{multiplier}×</span>
-            {" "}more expensive on the road than at home
+            {" "}more expensive on the road than at the nest
           </p>
         )}
         {combinedTotal !== null && combinedTotal > 0 && (

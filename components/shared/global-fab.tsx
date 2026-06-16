@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus, Receipt, ArrowLeftRight, MapPin, Home, ChevronLeft, ChevronRight, X, Coins } from "lucide-react";
+import { Plus, Receipt, ArrowLeftRight, MapPin, Building2, ChevronLeft, ChevronRight, X, Coins } from "lucide-react";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
 import { LogExpenseTiles, type StartMode } from "@/components/expense/log-expense-tiles";
 import { StreamLogSheet } from "@/components/stream/stream-log-sheet";
@@ -490,7 +490,7 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
                       <ListSectionHeader
                         label="Nests"
                         color="emerald"
-                        icon={<Home className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />}
+                        icon={<Building2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />}
                       />
                       <div className="space-y-0.5 mt-1.5">
                         {remainingNests.map((item) => (
@@ -594,7 +594,7 @@ function GroupTile({ item, onClick }: { item: GroupItem; onClick: () => void }) 
             ? <MapPin className="w-3 h-3 text-white" />
             : isCircle
             ? <Coins  className="w-3 h-3 text-white" />
-            : <Home   className="w-3 h-3 text-white" />}
+            : <Building2 className="w-3 h-3 text-white" />}
         </div>
       </div>
 
@@ -656,7 +656,7 @@ function GroupListRow({ item, onClick }: { item: GroupItem; onClick: () => void 
               ? <MapPin className="w-[15px] h-[15px] text-white" />
               : isCircle
               ? <Coins  className="w-[15px] h-[15px] text-white" />
-              : <Home   className="w-[15px] h-[15px] text-white" />}
+              : <Building2 className="w-[15px] h-[15px] text-white" />}
           </div>
         )}
       </div>

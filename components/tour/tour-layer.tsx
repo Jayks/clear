@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, ChevronLeft, ChevronRight,
-  MapPin, Home, Coins, ArrowLeftRight,
+  MapPin, Building2, Coins, ArrowLeftRight,
   Camera, Mic, Keyboard, List, CalendarDays, Map as MapIcon, SlidersHorizontal,
   Plus, PartyPopper,
 } from "lucide-react";
@@ -48,7 +48,7 @@ function quadrants(rect: Rect, vpW: number, vpH: number) {
 function WelcomeVisual() {
   const items = [
     { icon: MapPin,        label: "Trip",   color: "from-cyan-500 to-teal-500",     desc: "Travel & events" },
-    { icon: Home,          label: "Nest",   color: "from-emerald-500 to-teal-500",  desc: "Shared homes" },
+    { icon: Building2,     label: "Nest",   color: "from-emerald-500 to-teal-500",  desc: "Shared homes" },
     { icon: Coins,         label: "Circle", color: "from-violet-500 to-purple-600", desc: "A shared pot" },
     { icon: ArrowLeftRight,label: "Stream", color: "from-indigo-500 to-violet-500", desc: "One-on-one IOUs" },
   ];

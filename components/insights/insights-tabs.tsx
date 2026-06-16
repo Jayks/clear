@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Home, BarChart2, PieChart, Users, User } from "lucide-react";
+import { MapPin, Building2, BarChart2, PieChart, Users, User } from "lucide-react";
 import { parseISO, format, differenceInDays } from "date-fns";
 import { KpiCard } from "./kpi-card";
 import { HighlightsStrip } from "./highlights-strip";
@@ -83,7 +83,7 @@ export function InsightsTabs({ tripsData, nestsData, primaryCurrency, personalDa
       <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
         {([
           hasTrips  && { key: "trips", icon: MapPin, label: "Trips" },
-          hasNests  && { key: "nests", icon: Home,   label: "Nests" },
+          hasNests  && { key: "nests", icon: Building2,   label: "Nests" },
           { key: "you", icon: User, label: "You" },
         ].filter(Boolean) as { key: string; icon: React.ElementType; label: string }[]).map(({ key, icon: Icon, label }) => (
           <button
@@ -479,7 +479,7 @@ function NestsContent({
 
       {/* Per-nest links */}
       <FadeIn>
-        <SectionHeader icon={Home} label="Dive into a nest" />
+        <SectionHeader icon={Building2} label="Dive into a nest" />
         <AnimatedList className="grid grid-cols-1 lg:grid-cols-2 gap-2" staggerMs={60}>
           {data.byNest.map((n, i) => (
             <NestLinkCard key={n.nestId} nest={n} index={i} fmt={fmt} />
@@ -539,7 +539,7 @@ function NestLinkCard({
       <div
         className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform`}
       >
-        <Home className="w-4 h-4 text-white" />
+        <Building2 className="w-4 h-4 text-white" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{nest.name}</p>

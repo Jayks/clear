@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import {
   Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownLeft,
-  Sparkles, PieChart, BarChart2, Home, MapPin, User, ArrowLeftRight,
+  Sparkles, PieChart, BarChart2, Building2, MapPin, User, ArrowLeftRight,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -338,7 +338,7 @@ function NetGroupRow({
     >
       <div className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
         {group.groupType === "nest"
-          ? <Home className="w-3 h-3 text-slate-400" />
+          ? <Building2 className="w-3 h-3 text-slate-400" />
           : <MapPin className="w-3 h-3 text-slate-400" />}
       </div>
       <span className="text-xs text-slate-600 dark:text-slate-300 truncate flex-1">
@@ -517,7 +517,7 @@ function GroupShareBars({
                 )}
               >
                 {g.groupType === "nest"
-                  ? <Home className="w-3 h-3 text-white" />
+                  ? <Building2 className="w-3 h-3 text-white" />
                   : <MapPin className="w-3 h-3 text-white" />}
               </div>
               <span className="text-xs text-slate-700 dark:text-slate-200 truncate flex-1 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">

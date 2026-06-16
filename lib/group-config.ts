@@ -1,4 +1,4 @@
-import { MapPin, Home, Coins } from "lucide-react";
+import { MapPin, Building2, Coins } from "lucide-react";
 import { TRIP_CATEGORIES, NEST_CATEGORIES, CIRCLE_CATEGORIES } from "./categories";
 
 export const GROUP_CONFIG = {
@@ -32,7 +32,7 @@ export const GROUP_CONFIG = {
       noGroupsDesc: "Create a nest and split expenses with your mates.",
       createFirst: "Create your first nest",
     },
-    icon: Home,
+    icon: Building2,
     showDates: false,
     showItinerary: false,
     showNarrative: false,

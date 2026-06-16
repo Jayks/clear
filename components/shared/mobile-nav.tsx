@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, BarChart2, ArrowLeftRight } from "lucide-react";
+import { Home, BarChart2, ArrowLeftRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { isNavItemActive } from "@/lib/nav/active";
@@ -15,7 +15,7 @@ import { isNavItemActive } from "@/lib/nav/active";
 // specific group (which has its own GroupMobileNav). Streams/Insights keep the
 // descendant match so their detail pages stay highlighted.
 const NAV_ITEMS = [
-  { href: "/groups",   label: "Home",     icon: LayoutGrid,     tourId: "nav-trips", exact: true,
+  { href: "/groups",   label: "Home",     icon: Home,           tourId: "nav-trips", exact: true,
     activeText: "text-cyan-600 dark:text-cyan-400",     pill: "bg-cyan-100 dark:bg-cyan-950/70"   },
   { href: "/stream",   label: "Streams",  icon: ArrowLeftRight, tourId: "nav-streams",
     activeText: "text-blue-600 dark:text-blue-400", pill: "bg-blue-100 dark:bg-blue-950/70" },

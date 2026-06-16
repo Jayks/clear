@@ -2,7 +2,7 @@ import { getGroupByToken } from "@/lib/db/queries/groups";
 import { getMembership } from "@/lib/db/queries/auth";
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
-import { Users, MapPin, Home } from "lucide-react";
+import { Users, MapPin, Building2 } from "lucide-react";
 import { JoinButton } from "./join-button";
 import { formatDate } from "@/lib/utils";
 import { getGroupConfig } from "@/lib/group-config";
@@ -46,7 +46,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
             {/* Type badge */}
             <div className="absolute top-3 left-3">
               <span className="inline-flex items-center gap-1 bg-black/30 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                {isNest ? <Home className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+                {isNest ? <Building2 className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
                 {config.labels.singular}
               </span>
             </div>

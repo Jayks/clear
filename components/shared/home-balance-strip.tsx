@@ -10,14 +10,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, Home, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { MapPin, Building2, ChevronDown, ChevronRight, Check } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { HomeBalanceSummary } from "@/lib/home/balance-summary";
 
 const TYPE_BADGE: Record<string, { icon: LucideIcon; gradient: string }> = {
   trip: { icon: MapPin, gradient: "from-cyan-500 to-teal-500" },
-  nest: { icon: Home, gradient: "from-emerald-500 to-teal-500" },
+  nest: { icon: Building2, gradient: "from-emerald-500 to-teal-500" },
 };
 
 export function HomeBalanceStrip({ summary }: { summary: HomeBalanceSummary }) {

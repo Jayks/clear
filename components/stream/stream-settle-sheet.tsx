@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useFocusTrap }    from "@/hooks/use-focus-trap";
 import { useUpiReturn }    from "@/hooks/use-upi-return";
 import { formatCurrency } from "@/lib/utils";
 import { toast }          from "sonner";
@@ -102,6 +103,8 @@ export function StreamSettleSheet({
 
   useEffect(() => setMounted(true), []);
   useSheetDismiss(isOpen, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   // Populate amount + re-evaluate default method on open
   useEffect(() => {
@@ -247,6 +250,12 @@ export function StreamSettleSheet({
 
           {/* Sheet */}
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Settle up"
+            tabIndex={-1}
+            style={{ outline: "none" }}
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl
                        bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl
                        max-h-[90vh] flex flex-col"
@@ -276,6 +285,7 @@ export function StreamSettleSheet({
               </span>
               <button
                 onClick={onClose}
+                aria-label="Close"
                 className="w-8 h-8 rounded-lg flex items-center justify-center
                            text-slate-400 hover:text-slate-600 dark:hover:text-slate-200
                            hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

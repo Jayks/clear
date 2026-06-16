@@ -12,7 +12,7 @@ import { SwipeableExpenseCard } from "./swipeable-expense-card";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { CategoryIcon } from "./category-icon";
 import { SwipeHint } from "@/components/shared/swipe-hint";
-import { AnimatedList } from "@/components/shared/animated-list";
+import { CollapsibleList } from "@/components/shared/collapsible-list";
 import { ExpenseMapView, MapErrorBoundary } from "./expense-map-view";
 import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
@@ -610,9 +610,9 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               />
             ) : (
               <>
-                <AnimatedList className="space-y-2" staggerMs={35}>
+                <CollapsibleList className="space-y-2" staggerMs={35}>
                   {displayItems.slice(0, 2).map(renderCard)}
-                </AnimatedList>
+                </CollapsibleList>
                 {/* One-time swipe-to-delete hint, touch devices only */}
                 <SwipeHint />
               </>
@@ -624,13 +624,13 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
 
       {/* ── Cards 3+ outside spotlight — hidden in map mode ──────────── */}
       {filtered.length > 0 && !groupByMonth && viewMode !== "timeline" && viewMode !== "map" && displayItems.length > 2 && (
-        <AnimatedList
+        <CollapsibleList
           className="space-y-2 mt-2"
           staggerMs={35}
           initialDelayMs={2 * 35}
         >
           {displayItems.slice(2).map(renderCard)}
-        </AnimatedList>
+        </CollapsibleList>
       )}
 
       {/* ── Pagination — hidden while searching, in timeline mode, or map mode ─── */}
@@ -1253,7 +1253,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
                 {formatCurrency(total, currency)}
               </span>
             </div>
-            <AnimatedList className="space-y-2" staggerMs={30}>
+            <CollapsibleList className="space-y-2" staggerMs={30}>
               {group.map((expense) => (
                 <SwipeableExpenseCard
                   key={expense.id}
@@ -1269,7 +1269,7 @@ function MonthGroupedList({ expenses, members, currentUserId, currentMemberId, i
                   theme={theme}
                 />
               ))}
-            </AnimatedList>
+            </CollapsibleList>
           </div>
         );
       })}

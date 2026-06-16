@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { hapticSuccess, hapticLight } from "@/lib/haptics";
-import { forgiveStream, settleStream } from "@/app/actions/stream";
+import { hapticSuccess } from "@/lib/haptics";
+import { settleStream } from "@/app/actions/stream";
 import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
 import type { EnrichedStreamRecord } from "@/lib/db/queries/stream";
 import type { PaymentMethod } from "@/lib/payment/types";
@@ -128,11 +128,13 @@ interface SpineCardProps {
   onConfirmSettlement?:      (id: string) => Promise<void>;
   /** Receives settlement ID + dispute reason from the inline picker */
   onDisputeSettlement?:      (id: string, reason: string) => Promise<void>;
+  /** Opens the parent StreamForgiveSheet for this entry (forgive is a deliberate, confirmed gesture) */
+  onForgive?:                (record: EnrichedStreamRecord) => void;
 }
 
 function SpineCard({
   record, currentUserName, side,
-  onConfirmSettlement, onDisputeSettlement,
+  onConfirmSettlement, onDisputeSettlement, onForgive,
 }: SpineCardProps) {
   const router     = useRouter();
   const cardRef    = useRef<HTMLDivElement>(null);
@@ -140,7 +142,6 @@ function SpineCard({
 
   const [isTouchDevice,   setIsTouchDevice]   = useState(false);
   const [actionsOpen,     setActionsOpen]     = useState(false);
-  const [forgiveLoading,  setForgiveLoading]  = useState(false);
   const [settleLoading,   setSettleLoading]   = useState(false);
   const [confirming,      setConfirming]      = useState(false);
   const [disputing,       setDisputing]       = useState(false);
@@ -205,19 +206,12 @@ function SpineCard({
       : "text-amber-600  dark:text-amber-400";
 
   // ── Actions ─────────────────────────────────────────────────────────────────
-  async function handleForgive() {
-    setForgiveLoading(true);
-    try {
-      const r = await forgiveStream(record.id);
-      if (!r.ok) { toast.error("error" in r ? r.error : "Failed"); return; }
-      hapticLight();
-      toast.success("Entry forgiven 💚");
-      router.refresh();
-      setActionsOpen(false);
-    } catch (err) {
-      console.error("forgiveStream error:", err);
-      toast.error("Couldn't forgive — check your connection and try again.");
-    } finally { setForgiveLoading(false); }
+  // Forgiving writes off a debt and has no UI un-forgive — route through the
+  // parent's StreamForgiveSheet (deliberate confirm + optional note) instead of
+  // firing silently on a single tap. Matches the "forgive all" / person-page flow.
+  function handleForgive() {
+    setActionsOpen(false);
+    onForgive?.(record);
   }
 
   async function handleMarkPaid() {
@@ -396,13 +390,13 @@ function SpineCard({
               </button>
             )}
             {showForgive && (
-              <button type="button" onClick={handleForgive} disabled={forgiveLoading}
+              <button type="button" onClick={handleForgive}
                 className="text-[10px] font-semibold px-2 py-1 rounded-lg
                            bg-white/90 dark:bg-slate-800 border border-slate-200 dark:border-slate-700
                            text-slate-600 dark:text-slate-300 hover:border-emerald-400
                            hover:text-emerald-600 dark:hover:text-emerald-400
-                           transition-colors disabled:opacity-50">
-                {forgiveLoading ? "…" : "Forgive 💚"}
+                           transition-colors">
+                Forgive 💚
               </button>
             )}
           </div>
@@ -444,7 +438,7 @@ function SpineCard({
           >
             {showShare    && <ActionBtn emoji="📱" label="Share"     onClick={handleShare}    />}
             {showMarkPaid && <ActionBtn emoji="✓"  label="Mark Paid" onClick={handleMarkPaid} variant="emerald" loading={settleLoading}  />}
-            {showForgive  && <ActionBtn emoji="💚" label="Forgive"   onClick={handleForgive}  variant="amber"   loading={forgiveLoading} />}
+            {showForgive  && <ActionBtn emoji="💚" label="Forgive"   onClick={handleForgive}  variant="amber" />}
           </motion.div>
         )}
       </AnimatePresence>
@@ -500,12 +494,13 @@ function AnimatedRow({ children, index, className, style }: {
 
 // ── Mobile spine ──────────────────────────────────────────────────────────────
 
-function MobileSpine({ records, runningNets, currentUserName, onConfirmSettlement, onDisputeSettlement }: {
+function MobileSpine({ records, runningNets, currentUserName, onConfirmSettlement, onDisputeSettlement, onForgive }: {
   records:                EnrichedStreamRecord[];
   runningNets:            number[];
   currentUserName?:       string;
   onConfirmSettlement?:   (id: string) => Promise<void>;
   onDisputeSettlement?:   (id: string, reason: string) => Promise<void>;
+  onForgive?:             (record: EnrichedStreamRecord) => void;
 }) {
   return (
     <div className="relative w-full overflow-hidden">
@@ -548,6 +543,7 @@ function MobileSpine({ records, runningNets, currentUserName, onConfirmSettlemen
                 currentUserName={currentUserName}
                 onConfirmSettlement={onConfirmSettlement}
                 onDisputeSettlement={onDisputeSettlement}
+                onForgive={onForgive}
               />
             </div>
           </AnimatedRow>
@@ -559,12 +555,13 @@ function MobileSpine({ records, runningNets, currentUserName, onConfirmSettlemen
 
 // ── Desktop spine ─────────────────────────────────────────────────────────────
 
-function DesktopSpine({ records, runningNets, currentUserName, onConfirmSettlement, onDisputeSettlement }: {
+function DesktopSpine({ records, runningNets, currentUserName, onConfirmSettlement, onDisputeSettlement, onForgive }: {
   records:              EnrichedStreamRecord[];
   runningNets:          number[];
   currentUserName?:     string;
   onConfirmSettlement?: (id: string) => Promise<void>;
   onDisputeSettlement?: (id: string, reason: string) => Promise<void>;
+  onForgive?:           (record: EnrichedStreamRecord) => void;
 }) {
   return (
     <div className="relative w-full">
@@ -594,6 +591,7 @@ function DesktopSpine({ records, runningNets, currentUserName, onConfirmSettleme
                     side="left"
                     onConfirmSettlement={onConfirmSettlement}
                     onDisputeSettlement={onDisputeSettlement}
+                    onForgive={onForgive}
                   />
                 </div>
               )}
@@ -620,6 +618,7 @@ function DesktopSpine({ records, runningNets, currentUserName, onConfirmSettleme
                     side="right"
                     onConfirmSettlement={onConfirmSettlement}
                     onDisputeSettlement={onDisputeSettlement}
+                    onForgive={onForgive}
                   />
                 </div>
               )}
@@ -638,12 +637,15 @@ export function StreamSpineView({
   currentUserName,
   onConfirmSettlement,
   onDisputeSettlement,
+  onForgive,
   confirmId,
 }: {
   records:              EnrichedStreamRecord[];
   currentUserName?:     string;
   onConfirmSettlement?: (id: string) => Promise<void>;
   onDisputeSettlement?: (id: string, reason: string) => Promise<void>;
+  /** Opens the parent StreamForgiveSheet for a single entry */
+  onForgive?:           (record: EnrichedStreamRecord) => void;
   /** Settlement ID from ?confirm= push-notification deep link — auto-scrolls to the pending badge */
   confirmId?:           string;
 }) {
@@ -677,6 +679,7 @@ export function StreamSpineView({
           currentUserName={currentUserName}
           onConfirmSettlement={onConfirmSettlement}
           onDisputeSettlement={onDisputeSettlement}
+          onForgive={onForgive}
         />
       </div>
       <div className="hidden md:block">
@@ -697,6 +700,7 @@ export function StreamSpineView({
           currentUserName={currentUserName}
           onConfirmSettlement={onConfirmSettlement}
           onDisputeSettlement={onDisputeSettlement}
+          onForgive={onForgive}
         />
       </div>
     </>

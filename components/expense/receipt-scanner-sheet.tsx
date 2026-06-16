@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -60,6 +61,8 @@ export function ReceiptScannerSheet({
   const videoRef   = useRef<HTMLVideoElement>(null);
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const panelRef   = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   // ── URL cleanup wrapper ──────────────────────────────────────────────────────
   const transitionState = useCallback((next: ScannerState) => {
@@ -331,6 +334,12 @@ export function ReceiptScannerSheet({
           {/* Sheet */}
           <motion.div
             key="scanner-sheet"
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Scan receipt"
+            tabIndex={-1}
+            style={{ outline: "none" }}
             className={`fixed bottom-0 left-0 right-0 z-[71] bg-slate-950 rounded-t-2xl overflow-hidden flex flex-col ${sheetHeight}`}
             initial={sheetInitial}
             animate={sheetAnimate}
@@ -528,6 +537,7 @@ function ViewfinderState({
       <button
         type="button"
         onClick={onBack}
+        aria-label="Back"
         className="absolute top-3 left-3 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center"
       >
         <ChevronLeft className="w-5 h-5 text-white" />
@@ -537,6 +547,7 @@ function ViewfinderState({
       <button
         type="button"
         onClick={onUpload}
+        aria-label="Upload a photo"
         className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center"
       >
         <Upload className="w-4.5 h-4.5 text-white" />
@@ -601,6 +612,7 @@ function ProcessingState({
       <button
         type="button"
         onClick={onBack}
+        aria-label="Back"
         className="absolute top-3 left-3 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center"
       >
         <ChevronLeft className="w-5 h-5 text-white" />
@@ -643,6 +655,7 @@ function ResultsState({
         <button
           type="button"
           onClick={onBack}
+          aria-label="Back"
           className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center"
         >
           <ChevronLeft className="w-4 h-4 text-slate-300" />
@@ -651,6 +664,7 @@ function ResultsState({
         <button
           type="button"
           onClick={onBack}
+          aria-label="Close"
           className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center"
         >
           <X className="w-4 h-4 text-slate-300" />

@@ -42,6 +42,7 @@ export function UpgradePrompt({ open, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close"
               className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               <X className="w-5 h-5" />

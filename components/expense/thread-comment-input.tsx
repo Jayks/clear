@@ -240,6 +240,7 @@ export function ThreadCommentInput({
             type="button"
             onClick={handleSubmit}
             disabled={!content.trim() || !!isSubmitting}
+            aria-label="Send comment"
             className={`p-2.5 shrink-0 rounded-full bg-gradient-to-br ${theme.gradient} hover:brightness-105 text-white transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm ${theme.glow}`}
           >
             {isSubmitting ? (

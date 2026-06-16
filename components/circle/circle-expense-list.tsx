@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { deleteExpense } from "@/app/actions/expenses";
+import { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
 import { CategoryIcon } from "@/components/expense/category-icon";
-import { toast } from "sonner";
-import { hapticDelete } from "@/lib/haptics";
-import { Trash2 } from "lucide-react";
+import { DeleteExpenseButton } from "@/components/expense/delete-expense-button";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { AnimatedList } from "@/components/shared/animated-list";
+import { CollapsibleList } from "@/components/shared/collapsible-list";
 import { formatDate } from "@/lib/utils";
 
 interface Props {
@@ -28,37 +24,22 @@ function ExpenseRow({
   isAdmin,
   groupId,
   payerName,
+  onDelete,
+  onDeleteFail,
 }: {
-  expense:   Expense;
-  currency:  string;
-  isAdmin:   boolean;
-  groupId:   string;
-  payerName: string;
+  expense:      Expense;
+  currency:     string;
+  isAdmin:      boolean;
+  groupId:      string;
+  payerName:    string;
+  onDelete:     (id: string) => void;
+  onDeleteFail: (id: string) => void;
 }) {
-  const [, startTransition] = useTransition();
-  const [pendingDelete, setPendingDelete] = useState(false);
-
   const cat = getCategory(expense.category);
   const displayName = expense.customCategory || cat.label;
 
-  function handleDelete() {
-    setPendingDelete(true);
-    hapticDelete();
-    startTransition(async () => {
-      const result = await deleteExpense(expense.id, groupId);
-      setPendingDelete(false);
-      if (!result.ok) {
-        toast.error(result.error ?? "Failed to delete");
-        return;
-      }
-      toast.success("Expense removed");
-    });
-  }
-
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl transition-opacity ${
-      pendingDelete ? "opacity-40" : ""
-    } hover:bg-slate-50/80 dark:hover:bg-slate-800/40`}>
+    <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
       <CategoryIcon category={expense.category} size="sm" />
 
       <div className="flex-1 min-w-0">
@@ -92,24 +73,11 @@ function ExpenseRow({
         </span>
 
         {isAdmin && (
-          <ConfirmDialog
-            trigger={
-              <button
-                type="button"
-                disabled={pendingDelete}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 dark:text-slate-500
-                           hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
-                           transition-colors disabled:opacity-40"
-                title="Remove expense"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            }
-            title="Remove wallet expense"
-            description={`Remove "${expense.description}" from the wallet? This will increase the wallet balance.`}
-            confirmLabel="Remove"
-            destructive
-            onConfirm={handleDelete}
+          <DeleteExpenseButton
+            expenseId={expense.id}
+            groupId={groupId}
+            onSuccess={() => onDelete(expense.id)}
+            onFail={() => onDeleteFail(expense.id)}
           />
         )}
       </div>
@@ -118,16 +86,30 @@ function ExpenseRow({
 }
 
 export function CircleExpenseList({ expenses, members, currency, isAdmin, groupId }: Props) {
+  // Optimistic removal — DeleteExpenseButton fires onSuccess immediately and only
+  // commits the server delete after a 5s undo window (matches trip/nest deletes).
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+
+  const handleDelete = (id: string) =>
+    setRemovedIds((prev) => new Set(prev).add(id));
+  const handleDeleteFail = (id: string) =>
+    setRemovedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+
   // Build member ID → name map for advance badge
   const memberNameMap = new Map(
     members.map((m) => [m.id, m.displayName ?? m.guestName ?? "Admin"])
   );
 
-  if (expenses.length === 0) return null;
+  const visible = expenses.filter((e) => !removedIds.has(e.id));
+  if (visible.length === 0) return null;
 
   return (
-    <AnimatedList className="divide-y divide-slate-100 dark:divide-slate-800/60">
-      {expenses.map((expense) => (
+    <CollapsibleList className="divide-y divide-slate-100 dark:divide-slate-800/60">
+      {visible.map((expense) => (
         <ExpenseRow
           key={expense.id}
           expense={expense}
@@ -135,8 +117,10 @@ export function CircleExpenseList({ expenses, members, currency, isAdmin, groupI
           isAdmin={isAdmin}
           groupId={groupId}
           payerName={memberNameMap.get(expense.paidByMemberId) ?? "Admin"}
+          onDelete={handleDelete}
+          onDeleteFail={handleDeleteFail}
         />
       ))}
-    </AnimatedList>
+    </CollapsibleList>
   );
 }

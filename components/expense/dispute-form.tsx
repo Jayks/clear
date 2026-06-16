@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, ChevronRight } from "lucide-react";
@@ -78,12 +79,20 @@ export function DisputeForm({
     }
   }, [isOpen]);
 
-  // Escape key
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
+
+  // Escape key — capture phase + stopPropagation so this nested form swallows the
+  // Escape and the parent sheet's (useSheetDismiss) handler doesn't also fire.
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [isOpen, onClose]);
 
   if (!mounted) return null;
@@ -145,6 +154,12 @@ export function DisputeForm({
             onClick={onClose}
           />
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Dispute expense"
+            tabIndex={-1}
+            style={{ outline: "none" }}
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-[60] rounded-t-2xl bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl shadow-2xl max-h-[90vh] flex flex-col"
@@ -164,7 +179,7 @@ export function DisputeForm({
                   {expenseDescription}
                 </p>
               </div>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+              <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>

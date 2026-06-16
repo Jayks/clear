@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Crown, ArrowRight, Receipt, Loader2 } from "lucide-react";
@@ -12,6 +12,7 @@ import { MemberAvatar } from "./member-avatar";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 interface Props {
   member: GroupMember;
@@ -63,6 +64,8 @@ export function MemberProfileSheet({
 
   // Escape key + Android back-button dismissal
   useSheetDismiss(isOpen, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   if (!mounted) return null;
 
@@ -85,6 +88,12 @@ export function MemberProfileSheet({
             onClick={onClose}
           />
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${getMemberName(member)} profile`}
+            tabIndex={-1}
+            style={{ outline: "none" }}
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[80vh] flex flex-col"
@@ -120,7 +129,7 @@ export function MemberProfileSheet({
                   </p>
                 </div>
               </div>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 shrink-0">
+              <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 shrink-0">
                 <X className="w-5 h-5" />
               </button>
             </div>

@@ -27,7 +27,7 @@ export function DeleteUserButton({ userId, displayName }: Props) {
   return (
     <ConfirmDialog
       trigger={
-        <button className="p-1.5 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+        <button aria-label="Delete user" className="p-1.5 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
           <Trash2 className="w-4 h-4" />
         </button>
       }

@@ -373,6 +373,7 @@ export function StreamPersonPageClient({
             currentUserName={currentUserName}
             onConfirmSettlement={handleConfirmSettlement}
             onDisputeSettlement={handleDisputeSettlement}
+            onForgive={openForgiveEntry}
             confirmId={confirmId}
           />
         </FadeIn>

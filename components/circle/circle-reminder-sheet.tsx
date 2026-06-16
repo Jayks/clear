@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Copy, Check, MessageCircle } from "lucide-react";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 interface Props {
   isOpen:       boolean;
@@ -34,6 +35,8 @@ export function CircleReminderSheet({
 
   useEffect(() => { setMounted(true); }, []);
   useSheetDismiss(isOpen, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   // Build the reminder message
   const bar = makeProgressBar(paidCount, totalCount);
@@ -84,6 +87,12 @@ export function CircleReminderSheet({
           />
           <motion.div
             key="reminder-sheet"
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Send reminder"
+            tabIndex={-1}
+            style={{ outline: "none" }}
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
             className="fixed bottom-0 left-0 right-0 z-[51]
@@ -101,7 +110,7 @@ export function CircleReminderSheet({
               <h3 className="text-base text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
                 Send reminder
               </h3>
-              <button type="button" onClick={onClose}
+              <button type="button" onClick={onClose} aria-label="Close"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <X className="w-4 h-4" />
               </button>

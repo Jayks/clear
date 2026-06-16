@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate } from "framer-motion";
+import { animate, useReducedMotion } from "framer-motion";
+import { resolveCountUp } from "./count-up-logic";
 
 interface CountUpProps {
   value: number;
@@ -14,6 +15,8 @@ interface CountUpProps {
 
 export function CountUp({ value, currency, locale = "en-IN", className, duration = 0.6, maximumFractionDigits }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
+  const prevRef = useRef<number | null>(null);   // last value seen — survives router.refresh() re-renders
+  const reduceMotion = useReducedMotion() ?? false;
 
   const fmt = (n: number) =>
     currency
@@ -23,13 +26,22 @@ export function CountUp({ value, currency, locale = "en-IN", className, duration
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const controls = animate(0, value, {
+
+    const { from, animate: shouldAnimate } = resolveCountUp(prevRef.current, value, reduceMotion);
+    prevRef.current = value;
+
+    if (!shouldAnimate) {
+      el.textContent = fmt(value);
+      return;
+    }
+
+    const controls = animate(from, value, {
       duration,
       ease: "easeOut",
       onUpdate: (v) => { el.textContent = fmt(v); },
     });
     return () => controls.stop();
-  }, [value, currency, duration]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value, currency, duration, reduceMotion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <span ref={ref} className={className}>{fmt(0)}</span>;
 }

@@ -34,6 +34,7 @@ import { ThreadDiscussion, type OptimisticComment } from "./thread-discussion";
 import { ThreadCommentInput } from "./thread-comment-input";
 import { SeenAvatarStack } from "./seen-avatar-stack";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { clearExpenseReceipt, getReceiptViewUrl } from "@/app/actions/update-expense-media";
 import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
@@ -119,6 +120,12 @@ export function ExpenseDetailSheet({
 
   // Escape key + Android back-button dismissal
   useSheetDismiss(isOpen, onClose);
+  // QuestionForm / DisputeForm portal over this sheet with their own focus traps.
+  // useFocusTrap is stack-aware — the inner form's trap goes on top while open and
+  // this one stays registered (so it never prematurely restores focus), then
+  // resumes when the inner form closes. So we keep it active the whole time.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   // ── Mount ────────────────────────────────────────────────────────────────
   useEffect(() => { setMounted(true); }, []);
@@ -402,6 +409,12 @@ export function ExpenseDetailSheet({
 
             {/* Sheet */}
             <motion.div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Expense details"
+              tabIndex={-1}
+              style={{ outline: "none" }}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -444,6 +457,7 @@ export function ExpenseDetailSheet({
                   )}
                   <button
                     onClick={onClose}
+                    aria-label="Close"
                     className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
                     <X className="w-5 h-5" />

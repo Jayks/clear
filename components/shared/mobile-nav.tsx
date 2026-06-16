@@ -11,8 +11,11 @@ import { isNavItemActive } from "@/lib/nav/active";
 // Each tab lights up in its own identity colour (not a shared cyan): Home = cyan
 // (brand), Streams = blue (the Stream context colour), Insights = amber (Insights
 // is amber app-wide). Class strings are literals so Tailwind keeps them.
+// `exact: true` on Home → it lights only on the groups list, not inside a
+// specific group (which has its own GroupMobileNav). Streams/Insights keep the
+// descendant match so their detail pages stay highlighted.
 const NAV_ITEMS = [
-  { href: "/groups",   label: "Home",     icon: LayoutGrid,     tourId: "nav-trips",
+  { href: "/groups",   label: "Home",     icon: LayoutGrid,     tourId: "nav-trips", exact: true,
     activeText: "text-cyan-600 dark:text-cyan-400",     pill: "bg-cyan-100 dark:bg-cyan-950/70"   },
   { href: "/stream",   label: "Streams",  icon: ArrowLeftRight, tourId: "nav-streams",
     activeText: "text-blue-600 dark:text-blue-400", pill: "bg-blue-100 dark:bg-blue-950/70" },
@@ -46,8 +49,8 @@ export function MobileNav() {
                     bg-gradient-to-t from-white/85 to-white/40
                     dark:from-slate-950/85 dark:to-slate-950/40">
       <div className="flex items-center justify-around px-4 h-nav-safe">
-        {NAV_ITEMS.map(({ href, label, icon: Icon, tourId, activeText, pill }) => {
-          const active    = isNavItemActive(pathname, href);
+        {NAV_ITEMS.map(({ href, label, icon: Icon, tourId, activeText, pill, exact }) => {
+          const active    = isNavItemActive(pathname, href, exact);
           const isStreams = href === "/stream";
           const badge     = isStreams ? streamBadge : null;
 

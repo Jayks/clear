@@ -99,7 +99,7 @@ className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover
 
 ### Navigation
 - **Desktop**: sticky top — `ClearLogo` (28px), **Home** · **Streams** · **Insights**, ThemeToggle, avatar dropdown.
-- **Mobile bottom nav**: 3 tabs — **Home** (`/groups`) · **Streams** (`/stream`) · **Insights** (`/insights`). `MobileNav` reads `clear_stream_has_badge` from localStorage and shows a small dot on Streams (amber=disputed, green=new). Clears when pathname is `/stream*`. Active tab rendered with a **sliding Framer Motion spring pill** (`layoutId="nav-pill"`, `bg-cyan-100 dark:bg-cyan-950/70`, spring stiffness 500 / damping 35) — icon + label rendered `relative z-10` on top of the absolute-positioned pill. Do NOT use a static bg class on the nav item; the pill handles the active background.
+- **Mobile bottom nav**: 3 tabs — **Home** (`/groups`) · **Streams** (`/stream`) · **Insights** (`/insights`). `MobileNav` reads `clear_stream_has_badge` from localStorage and shows a small dot on Streams (amber=disputed, green=new). Clears when pathname is `/stream*`. Active tab rendered with a **sliding Framer Motion spring pill** (`layoutId="nav-pill"`, `bg-cyan-100 dark:bg-cyan-950/70`, spring stiffness 500 / damping 35) — icon + label rendered `relative z-10` on top of the absolute-positioned pill. Do NOT use a static bg class on the nav item; the pill handles the active background. **Active logic** = `isNavItemActive(pathname, href, exact?)` (`lib/nav/active.ts`): Streams/Insights use descendant matching (detail pages keep the tab lit), but **Home passes `exact: true`** so it lights only on `/groups` — inside a specific group (`/groups/[id]/…`, a self-contained section with its own `GroupMobileNav`) no bottom tab is highlighted.
 - **Mobile top nav**: icon-only `AppNav` hidden on group detail pages (`isInsideGroup`) AND stream pages (`isInsideStream`). Those pages have their own custom sticky headers.
 - **App nav bars are transparent**: `AppNav`, `MobileNav`, `GroupMobileNav` all use `backdrop-blur-sm` (no background, no border). **Marketing/public pages** (`/`, `/pricing`, `/changelog`, `/admin`) still use `.glass-nav`. Do NOT use `.glass-nav` on in-app navbars.
 - Content uses `.pb-safe-nav`. FAB (`bottom-nav-safe right-4 md:hidden`) on Expenses page (outer container uses `pb-24 md:pb-0` to clear FAB). MobileNav inner div uses `.h-nav-safe`.
@@ -134,7 +134,7 @@ React portals bubble through the React tree, not the DOM — portal-spawning com
 
 **Diagonal ribbons** (`absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg]`, `pointer-events-none`): Demo = amber `SAMPLE`, Archived = slate `ARCHIVED`. On the inner div so the ribbon spans image + badge.
 
-**`GroupActionHub`** (`components/trip/group-action-hub.tsx`) — portal + AnimatePresence bottom sheet replacing the old `TripCardNavSheet` + `TripCardQuickAdd`. Opens via `⋯` click or 500ms long-press on both `TripCard` and `CircleCard`, and from `GroupMobileNav` (inner group `⋯`) and `GroupHeroHub` (group overview page hero `⋯`). Three zones: **Log expense** (Scan/Voice/Type tiles, hidden for circles), **Jump to** (4-tile nav for trips/nests; 2-tile Expenses+Members for circles), **Manage** (Edit · Archive · Share, admin-only). `QuickAddSheet` gains `startMode?: "scan" | "voice" | "text"` prop — hub tiles pass it to auto-trigger the correct mode on open.
+**`GroupActionHub`** (`components/trip/group-action-hub.tsx`) — portal + AnimatePresence bottom sheet replacing the old `TripCardNavSheet` + `TripCardQuickAdd`. Opens via `⋯` click or 500ms long-press on both `TripCard` and `CircleCard`, and from `GroupMobileNav` (inner group `⋯`) and `GroupHeroHub` (group overview page hero `⋯`). Three zones: **Log expense** (Scan/Voice/Type tiles, hidden for circles), **Jump to** (4-tile nav for trips/nests; 2-tile Expenses+Members for circles), **Manage** (Edit · Archive · Share, admin-only). `QuickAddSheet` gains `startMode?: "scan" | "voice" | "text"` prop — hub tiles pass it to auto-trigger the correct mode on open. **Archive is undo-first** (not a confirm): tap → applies immediately + closes hub + Undo toast (Undo = inverse). Same undo-first rule as `archive-button.tsx` on the edit page. The old two-step inline confirm bar was removed.
 
 ### Share / invite pattern — platform-aware Web Share API
 
@@ -168,6 +168,11 @@ React portals bubble through the React tree, not the DOM — portal-spawning com
 - `useReducedMotion()` — when OS `prefers-reduced-motion` is set, renders a plain `<div>` with no animation and no `opacity:0` risk.
 - Stagger cap: `Math.min(i, 8)` — items 9+ share item-8 delay so a 30-item list never exceeds 640ms total.
 - `initialDelayMs` — use when a list is visually split across two `AnimatedList` instances (e.g. expense list first-2 inside tour spotlight, rest outside). Set `initialDelayMs={staggerMs * 2}` on the second list so the cascade feels continuous.
+
+#### `CollapsibleList` (`components/shared/collapsible-list.tsx`) — rows resolve, not vanish
+Drop-in replacement for `AnimatedList` (same `className`/`staggerMs`/`initialDelayMs` props) for lists where items are optimistically **removed**. On removal a row **collapses** (`exit={{ height: 0, opacity: 0 }}` via `AnimatePresence`) and siblings slide up (`layout`) instead of snapping out on `router.refresh()`; new rows fade/slide in with the same stagger. Pairs with the optimistic `removedIds` Set — filtering an id out triggers that child's exit animation. Each child MUST carry a stable `key`. `prefers-reduced-motion` → instant swap (no transform/height/`layout`).
+- **In use:** `CircleExpenseList` and the main expense list (`expense-filters.tsx` full/compact + monthly views) — undo-first delete now collapses the row.
+- **NOT used (deliberate):** the timeline view (custom `useInView` scroll-reveal `motion.div`) and the Settle suggestion cards (marking paid recomputes the whole min-payment plan, so there's no clean single-row removal to animate).
 
 ### Category Color System
 
@@ -343,7 +348,7 @@ Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.i
 `components/expense/swipeable-expense-card.tsx` — wrapper around `ExpenseCard` with two behaviour modes:
 
 - **Desktop** — `group` wrapper; `ExpenseCard` rendered with `hoverRevealActions` prop → Edit/Duplicate/Delete buttons are `opacity-0 group-hover:opacity-100` (invisible at rest, appear on hover). Zero extra taps.
-- **Mobile** — swipe left → card snaps back to 0 → glass overlay fades in (`backdrop-blur-md bg-white/75 dark:bg-slate-800/75`) → 3 large `w-14 h-14` buttons: Edit (cyan), Duplicate (slate), Delete (red). Swipe right or tap outside → overlay dismissed. Delete still goes through `ConfirmDialog`.
+- **Mobile** — swipe left → card snaps back to 0 → glass overlay fades in (`backdrop-blur-md bg-white/75 dark:bg-slate-800/75`) → 3 large `w-14 h-14` buttons: Edit (cyan), Duplicate (slate), Delete (red). Swipe right or tap outside → overlay dismissed. Delete is **undo-first** (optimistic remove + 5s Undo toast, deferred server delete) — same pattern as the desktop `DeleteExpenseButton`. **All expense deletes (trip/nest desktop + mobile swipe, and circle wallet via `CircleExpenseList` → `DeleteExpenseButton`) use undo-first; none use `ConfirmDialog`.**
 
 `ExpenseCard` props for this pattern:
 - `hideActions` — hides the button row entirely (mobile: buttons are in the overlay)
@@ -472,6 +477,23 @@ useEffect(() => {
 // ❌ wrong — causes Next.js 16 RSC refresh via go(-1) popstate on a form page
 useSheetDismiss(isOpen, onClose);
 ```
+
+### `useFocusTrap` — every sheet/dialog must trap + restore focus (WCAG)
+
+`hooks/use-focus-trap.ts` — `useFocusTrap(active, panelRef)`. On open: saves the trigger, moves focus into the panel (respects any inner `autoFocus`, else focuses the `tabIndex={-1}` panel container so the mobile keyboard isn't popped). Traps Tab/Shift+Tab inside the panel; on close/unmount restores focus to the trigger. **History-independent** — unlike `useSheetDismiss` it touches no `window.history`, so it is safe even on form-page sheets where `useSheetDismiss` is banned.
+
+**Pattern for any portal sheet/dialog** (the `Sheet` primitive already does this internally; hand-rolled portals must add it):
+```tsx
+const panelRef = useRef<HTMLDivElement>(null);
+useFocusTrap(isOpen, panelRef);
+// on the panel element:
+<motion.div ref={panelRef} role="dialog" aria-modal="true" aria-label="…" tabIndex={-1} style={{ outline: "none" }} …>
+```
+
+- **Nesting is handled by a module-level trap stack** — when a trapped sheet opens another (e.g. `ExpenseDetailSheet` → `DisputeForm`/`QuestionForm`, which portal OUTSIDE the parent panel), only the **topmost** trap reacts to Tab/focus-in; the lower one stays registered (so it never prematurely restores focus) and resumes when the inner closes. Keep the parent's trap `active` the whole time — do **not** gate it off, which would fire its focus-restore early (focus would jump to the page behind).
+- **Nested-dialog Escape**: a nested form's own Escape handler must use **capture phase + `e.stopPropagation()`** on the Escape key so the parent sheet's `useSheetDismiss` Escape doesn't also fire and close both at once (`QuestionForm`/`DisputeForm` do this).
+- Pure wrap-decision logic lives in `components/shared/sheet-focus.ts` (`resolveFocusTrap`), unit-tested. `getFocusable` uses `getClientRects()` (not `offsetParent`, which is null under a `position:fixed` panel).
+- **Coverage**: the `Sheet` primitive + every hand-rolled sheet (`PaymentSheet`, `MemberProfileSheet`, `StreamSettleSheet`, `StreamForgiveSheet`, `RecordContributionSheet`, `InviteQRSheet`, `CircleReminderSheet`, `QuestionForm`, `DisputeForm`, `ExpenseDetailSheet`, `ReceiptScannerSheet`, `GroupPickerSheet`) now use it. Any **new** sheet must too.
 
 ### Receipt Scanner — `ReceiptScannerSheet` patterns
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { hapticSuccess } from "@/lib/haptics";
 import { recordContribution, confirmContribution, disputeContribution } from "@/app/actions/circle";
 import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
@@ -66,6 +67,8 @@ export function RecordContributionSheet({
 
   useEffect(() => { setMounted(true); }, []);
   useSheetDismiss(isOpen, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   // Resolve final amount: use prop if fixed, otherwise parse custom input
   const hasFixedAmount = amount > 0;
@@ -155,6 +158,12 @@ export function RecordContributionSheet({
           {/* Sheet */}
           <motion.div
             key="rcsheet"
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Record contribution"
+            tabIndex={-1}
+            style={{ outline: "none" }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -180,6 +189,7 @@ export function RecordContributionSheet({
               <button
                 type="button"
                 onClick={onClose}
+                aria-label="Close"
                 className="w-8 h-8 rounded-full flex items-center justify-center
                            text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >

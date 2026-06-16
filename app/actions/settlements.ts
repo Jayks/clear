@@ -8,6 +8,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
+import { resolveSettleNotifyTargets } from "@/lib/settlements/settle-notify-targets";
 import {
   recordSettlementSchema,
   selfReportSettlementSchema,
@@ -74,9 +75,14 @@ export async function selfReportSettlement(input: SelfReportSettlementInput) {
   if (membership.id !== fromMemberId) return { ok: false, error: "Not authorized" } as const;
   if (fromMemberId === toMemberId) return { ok: false, error: "Cannot settle with yourself" } as const;
 
-  // Verify both member IDs belong to this group and fetch toMember's userId for push
+  // Verify both member IDs belong to this group and fetch toMember's identity for push
   const memberRows = await db
-    .select({ id: groupMembers.id, userId: groupMembers.userId })
+    .select({
+      id:          groupMembers.id,
+      userId:      groupMembers.userId,
+      displayName: groupMembers.displayName,
+      guestName:   groupMembers.guestName,
+    })
     .from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), inArray(groupMembers.id, [fromMemberId, toMemberId])));
   if (memberRows.length !== 2) return { ok: false, error: "Invalid members" } as const;
@@ -99,16 +105,46 @@ export async function selfReportSettlement(input: SelfReportSettlementInput) {
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
 
-    // Push-notify the creditor so they can confirm receipt
-    if (toMemberRow?.userId) {
+    // Push-notify whoever can confirm this payment (fire-and-forget).
+    //   • Clear-user creditor → notify them to confirm receipt.
+    //   • Ghost/guest creditor (userId === null) → they can never confirm, so fall
+    //     back to the group admin(s) who proxy-confirm. Without this, a non-admin
+    //     paying a ghost creditor notified nobody and the settlement sat silently
+    //     pending (Phase 3a fix — mirrors Circle's selfReportContribution).
+    const creditorUserId = toMemberRow?.userId ?? null;
+    let adminUserIds: (string | null)[] = [];
+    if (!creditorUserId) {
+      const adminRows = await db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.role, "admin")));
+      adminUserIds = adminRows.map((a) => a.userId);
+    }
+
+    const notify = resolveSettleNotifyTargets({
+      creditorUserId,
+      adminUserIds,
+      reporterUserId: user.id,
+    });
+
+    if (notify.kind !== "none") {
       const actorName = membership.displayName ?? membership.guestName ?? "Someone";
-      sendPushToUser({
-        targetUserId: toMemberRow.userId,
-        groupId,
-        title: "💸 Payment reported",
-        body:  `${actorName} says they paid ${formatCurrency(amount, currency)}. Confirm receipt →`,
-        url:   `/groups/${groupId}/settle?confirm=${row.id}`,
-      }).catch(() => {}); // fire-and-forget
+      const amountStr = formatCurrency(amount, currency);
+      const payeeName = toMemberRow?.displayName ?? toMemberRow?.guestName ?? "a guest member";
+      const body =
+        notify.kind === "creditor"
+          ? `${actorName} says they paid ${amountStr}. Confirm receipt →`
+          : `${actorName} says they paid ${amountStr} to ${payeeName}. Confirm on their behalf →`;
+
+      for (const targetUserId of notify.targetUserIds) {
+        sendPushToUser({
+          targetUserId,
+          groupId,
+          title: "💸 Payment reported",
+          body,
+          url: `/groups/${groupId}/settle?confirm=${row.id}`,
+        }).catch(() => {}); // fire-and-forget
+      }
     }
 
     return { ok: true, settlementId: row.id } as const;

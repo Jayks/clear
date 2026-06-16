@@ -66,6 +66,9 @@ export function GroupDesktopNav({ groupId, groupName, groupType, circleMode }: P
             <Link
               key={section || "overview"}
               href={href}
+              // Same replace logic as GroupBottomNav: section↔section swaps replace so
+              // the back button exits the group rather than cycling sibling pages.
+              replace={actual !== ""}
               onClick={() => setPending(section)}
               aria-current={active ? "page" : undefined}
               className={cn(

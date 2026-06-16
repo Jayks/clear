@@ -56,6 +56,13 @@ export function GroupBottomNav({ groupId, groupType, circleMode }: Props) {
             <Link
               key={section || "overview"}
               href={href}
+              // Lateral tab switches (section → section, or section → overview) use
+              // replace so they don't pile up in browser history — pressing the device
+              // back button from any section should land on the group overview, not
+              // cycle through previously-visited sibling sections.
+              // Exception: overview → section is a push so the overview stays as the
+              // back destination (actual==="" means we're currently on the overview).
+              replace={actual !== ""}
               onClick={() => setPending(section)}
               aria-current={active ? "page" : undefined}
               className={cn(

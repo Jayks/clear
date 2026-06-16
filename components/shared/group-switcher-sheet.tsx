@@ -129,6 +129,10 @@ export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSec
                     <Link
                       key={g.id}
                       href={targetHref(g)}
+                      // Group switching is a lateral move — replace so the back button
+                      // exits the group context entirely instead of cycling through
+                      // previously-visited groups.
+                      replace
                       onClick={() => setSwitchingId(g.id)}
                       className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
                     >

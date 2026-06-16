@@ -129,7 +129,7 @@ export function MemberProfileSheet({
                   </p>
                 </div>
               </div>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 shrink-0">
+              <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 shrink-0">
                 <X className="w-5 h-5" />
               </button>
             </div>

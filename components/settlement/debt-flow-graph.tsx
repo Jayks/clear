@@ -399,9 +399,48 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   const profBal       = profileId   ? balances.find((b) => b.memberId === profileId)?.net : undefined;
   const selSuggestion = selectedArc !== null ? suggestions[selectedArc] ?? null : null;
 
+  // ── Screen-reader summary ──────────────────────────────────────────
+  // The SVG is interactive/visual only (drag + tap, no keyboard affordance), so
+  // it's hidden from AT and this text region is the accessible alternative.
+  const srOwedToMe = suggestions.filter((s) => s.to   === currentMemberId);
+  const srIOwe     = suggestions.filter((s) => s.from === currentMemberId);
+  const srSum      = (arr: Transaction[]) => arr.reduce((a, s) => a + s.amount, 0);
+  const srPeople   = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
+  let srNetLine: string;
+  if (!currentMemberId) {
+    srNetLine = `${suggestions.length} ${suggestions.length === 1 ? "payment" : "payments"} settle the group.`;
+  } else if (srOwedToMe.length && srIOwe.length) {
+    srNetLine = `You're owed ${formatCurrency(srSum(srOwedToMe), currency)} from ${srPeople(srOwedToMe.length)}, and you owe ${formatCurrency(srSum(srIOwe), currency)} to ${srPeople(srIOwe.length)}.`;
+  } else if (srOwedToMe.length) {
+    srNetLine = `You're owed ${formatCurrency(srSum(srOwedToMe), currency)} from ${srPeople(srOwedToMe.length)}.`;
+  } else if (srIOwe.length) {
+    srNetLine = `You owe ${formatCurrency(srSum(srIOwe), currency)} to ${srPeople(srIOwe.length)}.`;
+  } else {
+    srNetLine = "You're settled; other members still have pending payments.";
+  }
+
   // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="glass rounded-2xl overflow-hidden mb-6 relative">
+
+      {/* Screen-reader text alternative for the visual (decorative) debt graph */}
+      <div className="sr-only" role="note">
+        {isSettled ? (
+          "Debt summary: all debts are settled."
+        ) : (
+          <>
+            <p>Debt summary. {srNetLine}</p>
+            <p>Suggested payments to settle the group:</p>
+            <ul>
+              {suggestions.map((s, i) => (
+                <li key={`sr-${i}`}>
+                  {memberName(s.from)} pays {memberName(s.to)} {formatCurrency(s.amount, currency)}.
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
 
       {/* Reset button — only visible after the user has dragged a node */}
       <AnimatePresence>
@@ -427,7 +466,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
         style={{ display: "block", maxHeight: H, touchAction: "pan-y" }}
-        aria-label="Group debt flow"
+        aria-hidden="true"
         onClick={() => { setSelectedId(null); setSelectedArc(null); }}
       >
         <defs>

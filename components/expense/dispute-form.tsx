@@ -179,7 +179,7 @@ export function DisputeForm({
                   {expenseDescription}
                 </p>
               </div>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+              <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>

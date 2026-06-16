@@ -332,6 +332,7 @@ export function QuickAddSheet({
               <button
                 type="button"
                 onClick={onClose}
+                aria-label="Close"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -399,6 +400,7 @@ export function QuickAddSheet({
                       <button
                         type="button"
                         onClick={isListening ? stop : start}
+                        aria-label={isListening ? "Stop voice input" : "Start voice input"}
                         className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${
                           isListening
                             ? "bg-red-500 shadow-red-500/30"

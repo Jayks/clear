@@ -121,6 +121,7 @@ export function CoverPhotoPicker({ value, onChange }: CoverPhotoPickerProps) {
             <button
               type="button"
               onClick={handleClear}
+              aria-label="Remove cover photo"
               className="absolute top-2 right-2 w-6 h-6 rounded-full bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <X className="w-3 h-3" />

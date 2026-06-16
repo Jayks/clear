@@ -84,7 +84,7 @@ export function NestHint() {
             >
               {current.title}
             </h3>
-            <button onClick={dismiss} className="text-slate-400 hover:text-slate-600 shrink-0 p-0.5">
+            <button onClick={dismiss} aria-label="Dismiss" className="text-slate-400 hover:text-slate-600 shrink-0 p-0.5">
               <X className="w-4 h-4" />
             </button>
           </div>

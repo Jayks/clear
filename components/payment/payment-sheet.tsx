@@ -266,6 +266,7 @@ export function PaymentSheet({
               </span>
               <button
                 onClick={onClose}
+                aria-label="Close"
                 className="w-8 h-8 rounded-lg flex items-center justify-center
                            text-slate-400 hover:text-slate-600 dark:hover:text-slate-200
                            hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

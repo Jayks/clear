@@ -537,6 +537,7 @@ function ViewfinderState({
       <button
         type="button"
         onClick={onBack}
+        aria-label="Back"
         className="absolute top-3 left-3 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center"
       >
         <ChevronLeft className="w-5 h-5 text-white" />
@@ -546,6 +547,7 @@ function ViewfinderState({
       <button
         type="button"
         onClick={onUpload}
+        aria-label="Upload a photo"
         className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center"
       >
         <Upload className="w-4.5 h-4.5 text-white" />
@@ -610,6 +612,7 @@ function ProcessingState({
       <button
         type="button"
         onClick={onBack}
+        aria-label="Back"
         className="absolute top-3 left-3 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center"
       >
         <ChevronLeft className="w-5 h-5 text-white" />
@@ -652,6 +655,7 @@ function ResultsState({
         <button
           type="button"
           onClick={onBack}
+          aria-label="Back"
           className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center"
         >
           <ChevronLeft className="w-4 h-4 text-slate-300" />
@@ -660,6 +664,7 @@ function ResultsState({
         <button
           type="button"
           onClick={onBack}
+          aria-label="Close"
           className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center"
         >
           <X className="w-4 h-4 text-slate-300" />

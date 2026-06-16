@@ -198,8 +198,8 @@ export default async function GroupPage({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="trip-quick-actions">
         {/* 1 — Expenses (most frequent action) */}
         <Link href={`/groups/${group.id}/expenses`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
-            <Receipt className="w-4 h-4 text-white" />
+          <div className={`w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
+            <Receipt className="w-5 h-5 text-white" strokeWidth={2.25} />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Expenses</p>
@@ -219,8 +219,8 @@ export default async function GroupPage({
 
         {/* 2 — Settle up (most urgent question: what do I owe?) */}
         <Link href={`/groups/${group.id}/settle`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
-            <Wallet className="w-4 h-4 text-white" />
+          <div className={`w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
+            <Wallet className="w-5 h-5 text-white" strokeWidth={2.25} />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Settle up</p>
@@ -240,8 +240,8 @@ export default async function GroupPage({
 
         {/* 3 — Members */}
         <Link href={`/groups/${group.id}/members`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
-            <Users className="w-4 h-4 text-white" />
+          <div className={`w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
+            <Users className="w-5 h-5 text-white" strokeWidth={2.25} />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{config.labels.members}</p>
@@ -251,8 +251,8 @@ export default async function GroupPage({
 
         {/* 4 — Insights */}
         <Link href={`/groups/${group.id}/insights`} className="glass rounded-xl p-4 flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-          <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
-            <BarChart2 className="w-4 h-4 text-white" />
+          <div className={`w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shadow-sm ${theme.glow}`}>
+            <BarChart2 className="w-5 h-5 text-white" strokeWidth={2.25} />
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Insights</p>

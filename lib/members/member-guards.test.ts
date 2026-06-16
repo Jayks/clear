@@ -8,6 +8,59 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { canRemoveMember, type MemberRoleRow } from "./member-guards";
+
+// ── M-3: removeMember last-admin guard ────────────────────────────────────────
+
+describe("canRemoveMember — last-admin guard (M-3)", () => {
+  const members: MemberRoleRow[] = [
+    { id: "admin-1", role: "admin" },
+    { id: "admin-2", role: "admin" },
+    { id: "member-1", role: "member" },
+    { id: "member-2", role: "member" },
+  ];
+
+  it("removing a plain member is allowed", () => {
+    expect(canRemoveMember(members, "member-1").ok).toBe(true);
+  });
+
+  it("removing an admin while another admin remains is allowed", () => {
+    expect(canRemoveMember(members, "admin-1").ok).toBe(true);
+  });
+
+  it("[BUG] removing the only admin would orphan the group → blocked", () => {
+    const soleAdmin: MemberRoleRow[] = [
+      { id: "admin-1", role: "admin" },
+      { id: "member-1", role: "member" },
+    ];
+    const result = canRemoveMember(soleAdmin, "admin-1");
+    expect(result.ok).toBe(false);
+  });
+
+  it("an admin removing themselves is blocked when they are the last admin", () => {
+    const soleAdmin: MemberRoleRow[] = [{ id: "admin-1", role: "admin" }];
+    expect(canRemoveMember(soleAdmin, "admin-1").ok).toBe(false);
+  });
+
+  it("an admin removing themselves is allowed when a co-admin remains", () => {
+    expect(canRemoveMember(members, "admin-2").ok).toBe(true);
+  });
+
+  it("unknown member id → not found", () => {
+    const result = canRemoveMember(members, "ghost-999");
+    expect(result.ok).toBe(false);
+  });
+
+  it("last admin can be removed once a second admin is added", () => {
+    const before: MemberRoleRow[] = [{ id: "admin-1", role: "admin" }];
+    expect(canRemoveMember(before, "admin-1").ok).toBe(false);
+    const after: MemberRoleRow[] = [
+      { id: "admin-1", role: "admin" },
+      { id: "admin-2", role: "admin" },
+    ];
+    expect(canRemoveMember(after, "admin-1").ok).toBe(true);
+  });
+});
 
 // ── M-1: addGuestMember duplicate name race ───────────────────────────────────
 

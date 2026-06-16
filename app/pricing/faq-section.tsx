@@ -9,7 +9,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "What's included in the free plan?",
-        a: "The free plan gives you up to 4 active groups, 8 members per group, and 50 expenses per group — all with equal-split mode. Group insights, activity feed, UPI pay links, email and push notifications, guest member support, and full settlement tracking are included at no cost. No subscription needed for the basics.",
+        a: "The free plan gives you up to 5 active groups, each with unlimited members and unlimited expenses — and every split mode (equal, exact, percentage, and weighted shares) is free. Group insights, activity feed, UPI pay links, email and push notifications, guest members, full settlement tracking, and AI expense logging (receipt scan, natural-language add, and chat import, within a generous monthly allowance) are all included at no cost. No subscription needed for the everyday job of splitting expenses.",
       },
       {
         q: "Is the 30-day trial really free? Do I need a credit card?",
@@ -17,7 +17,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "What happens when my trial ends?",
-        a: "You drop to the free plan automatically — no charge, no action needed on your part. All your data stays exactly as-is: every group, expense, member, and settlement remains intact. You'll be capped at 4 active groups going forward, but you can upgrade to Plus at any time to restore full access.",
+        a: "You drop to the free plan automatically — no charge, no action needed on your part. All your data stays exactly as-is: every group, expense, member, and settlement remains intact. You'll be capped at 5 active groups going forward — but your members, expenses, splits, and history stay fully usable. Upgrade to Plus any time to lift the group cap and restore the Plus-only extras.",
       },
       {
         q: "Can I get more than one trial, or extend it?",
@@ -30,15 +30,15 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "What exactly does Clear Plus unlock?",
-        a: "Plus removes all free-plan limits and adds power features: unlimited active groups (vs 4 on free), up to 50 members per group (vs 8), up to 500 expenses per group (vs 50), all split modes — exact amounts, percentages, and weighted shares, not just equal — AI expense parsing from plain-text descriptions, recurring expense templates for households, and CSV export for your own records.",
+        a: "Plus is about power features and scale, not unlocking the basics. It gives you unlimited active groups (the free plan caps you at 5), recurring expense templates for households, budget tracking, CSV export of any group, personal cross-group \"You\" insights, and AI trip narratives with Plan-vs-Reality analysis. Members, expenses, all split modes, and AI expense logging are free for everyone — Plus never paywalls the core bill-splitting job.",
       },
       {
         q: "Are insights and settlements also gated behind Plus?",
-        a: "No. Group insights, balance summaries, settlement suggestions, activity feed, and UPI pay links are available on the free plan too. Plus lifts the limits so your groups can grow beyond the free caps — but core functionality is never locked away.",
+        a: "No. Group insights, balance summaries, settlement suggestions, activity feed, and UPI pay links are all free. Plus adds personal cross-group \"You\" insights and AI trip narratives on top — but the core analytics for any single group are never locked away.",
       },
       {
         q: "What is AI expense parsing?",
-        a: "You describe an expense in natural language — \"Paid ₹1,200 for dinner at Thalappakatti, split between Ravi, Priya, and me\" — and Clear structures it into the correct amount, category, members, and split automatically. It's powered by Claude (Anthropic) and is available exclusively on Plus.",
+        a: "You describe an expense in natural language — \"Paid ₹1,200 for dinner at Thalappakatti, split between Ravi, Priya, and me\" — and Clear structures it into the correct amount, category, members, and split automatically. You can also scan a receipt photo or import a chat. It's powered by Claude (Anthropic) and is free for everyone within a generous monthly allowance. The Plus-only AI is the analytical kind — trip narratives and Plan-vs-Reality.",
       },
     ],
   },
@@ -47,11 +47,11 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "Does the group admin's Plus subscription cover all members?",
-        a: "Yes. If the person who created the group has Clear Plus, every member in that group — including guests — gets Plus features automatically: all split modes, AI parsing, templates, higher expense and member limits. Members don't need their own subscription for groups they're part of.",
+        a: "Yes. If the person who created the group has Clear Plus, every member in that group — including guests — gets the group's Plus features automatically: recurring templates, budget tracking, AI trip narratives, and CSV export. Members never need their own subscription for groups they're part of. The everyday basics — all split modes, members, expenses, and AI logging — are free for everyone regardless.",
       },
       {
         q: "I'm a member, not the group creator — do I need Plus?",
-        a: "Only if you want to create your own groups. For groups where someone else is the creator, you get Plus features as long as that creator has a Plus subscription. You'd need your own Plus subscription only to unlock features for groups you personally start.",
+        a: "Only if you want more than 5 active groups of your own, or the Plus extras (templates, budget tracking, CSV export, personal insights, AI narratives) on groups you create. For groups where someone else is the creator, you get that group's Plus features as long as that creator is on Plus — no subscription of your own needed.",
       },
       {
         q: "What if the group has multiple admins — whose plan applies?",
@@ -59,7 +59,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "What if the group admin cancels their Plus subscription?",
-        a: "The whole group reverts to free plan limits. Existing data is unaffected — all expenses, splits, and settlements remain visible. Going forward, new expenses will be limited to equal splits, and new members can't be added if the group is already at 8. The admin can re-subscribe at any time to restore Plus for everyone.",
+        a: "The group reverts to free-plan limits. Existing data is untouched — all expenses, splits, and settlements stay visible and usable. Going forward, Plus-only extras like recurring templates and budget tracking are paused, and the admin can't keep more than 5 active groups. Splitting, members, and expenses keep working normally. The admin can re-subscribe at any time to restore Plus for everyone.",
       },
     ],
   },
@@ -110,11 +110,11 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "What happens to my data when I cancel?",
-        a: "Nothing is ever deleted. Every group, expense, member, settlement, and comment stays in your account forever. You just lose the ability to add new groups beyond 4, or use Plus-only features like non-equal splits on new expenses. Your history is always yours.",
+        a: "Nothing is ever deleted. Every group, expense, member, settlement, and comment stays in your account forever. You just lose the ability to keep more than 5 active groups, and Plus-only extras (templates, budget tracking, CSV export, personal insights, AI narratives) pause on new activity. Your history is always yours.",
       },
       {
         q: "What happens to groups that are over free-plan limits after I downgrade?",
-        a: "You keep access to all of them — nothing is hidden or locked. If you had 8 groups on Plus and drop to free, you can still view and use all 8; you just can't create new groups until you're under 4 active ones. Expenses above 50 in a group stay visible and fully searchable; you can't add new ones until that group is under 50. No data is touched.",
+        a: "You keep access to all of them — nothing is hidden or locked. If you created 8 groups on Plus and drop to free, you can still view and use all 8; you just can't create or unarchive a new one until you're back under 5 active. There are no member or expense caps to worry about — only the active-group count. No data is touched.",
       },
       {
         q: "Is there a refund policy?",

@@ -12,7 +12,7 @@ import { getGroupTemplates } from "@/lib/db/queries/expenses";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sendExpenseNotification } from "@/lib/notifications/send-expense-notification";
 import { sendPushToMembers } from "@/lib/notifications/send-push-notification";
-import { canAddExpense, canUseNonEqualSplit, canUseTemplates } from "@/lib/subscription/gates";
+import { canUseTemplates } from "@/lib/subscription/gates";
 
 async function validateSplitMembers(groupId: string, splits: { memberId: string }[]) {
   const ids = [...new Set(splits.map((s) => s.memberId))];
@@ -45,12 +45,6 @@ export async function addExpense(input: AddExpenseInput) {
   if (!result.ok) return { ok: false, error: result.error } as const;
 
   try {
-    if (!(await canAddExpense(groupId)))
-      return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
-
-    if (splitMode !== "equal" && !(await canUseNonEqualSplit(groupId)))
-      return { ok: false, error: "Advanced splits require Clear Plus. Upgrade to use exact, percentage, or share splits." } as const;
-
     // C-7 fix: wrap expense + splits in a transaction so a failed splits INSERT
     // cannot leave an orphaned expense row with no splits (corrupted balances).
     const expense = await db.transaction(async (tx) => {
@@ -200,15 +194,13 @@ export async function duplicateExpense(expenseId: string) {
   if (!membership) return { ok: false, error: "Not a member" } as const;
   if (membership.role !== "admin") return { ok: false, error: "Not authorized" } as const;
 
-  // E-3a fix: duplicating creates a real (non-template) expense that counts
-  // toward the free-plan 50-expense limit, but the check was missing here.
-  if (!(await canAddExpense(expense.groupId)))
-    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
-
   const originalSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, expenseId));
 
-  const today = new Date().toISOString().split("T")[0];
+  // Local date (not UTC) — toISOString() would roll back a day for IST users before
+  // 05:30, dating the new expense/template "yesterday". Matches logFromTemplate.
+  const _now = new Date();
+  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
   // C-7 fix: wrap both INSERTs in a transaction.
   try {
@@ -306,7 +298,10 @@ export async function createExpenseTemplate(input: AddTemplateInput) {
   const result = computeSplits(splitMode, amount, splits);
   if (!result.ok) return { ok: false, error: result.error } as const;
 
-  const today = new Date().toISOString().split("T")[0];
+  // Local date (not UTC) — toISOString() would roll back a day for IST users before
+  // 05:30, dating the new expense/template "yesterday". Matches logFromTemplate.
+  const _now = new Date();
+  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
   // C-7 fix: wrap both INSERTs in a transaction.
   try {
@@ -359,10 +354,6 @@ export async function logFromTemplate(templateId: string) {
 
   if (!(await canUseTemplates(template.groupId)))
     return { ok: false, error: "Recurring templates require Clear Plus." } as const;
-
-  // E-3b fix: logged instances count toward the free-plan expense limit.
-  if (!(await canAddExpense(template.groupId)))
-    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
 
   const templateSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, templateId));
@@ -506,9 +497,6 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
   if (!membership) return;
 
   if (!(await canUseTemplates(groupId))) return;
-  // E-3c fix: auto-log silently skips when the free-plan limit is reached
-  // rather than pushing past it on every page load.
-  if (!(await canAddExpense(groupId))) return;
 
   const templates = await getGroupTemplates(groupId);
   const due = templates.filter((t) => !t.loggedThisMonth);
@@ -587,10 +575,6 @@ export async function batchLogTemplates(groupId: string) {
 
   if (!(await canUseTemplates(groupId)))
     return { ok: false, error: "Recurring templates require Clear Plus." } as const;
-
-  // E-3d fix: batch log was the last path that could push past the 50-expense limit.
-  if (!(await canAddExpense(groupId)))
-    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
 
   const templates = await getGroupTemplates(groupId);
   const due = templates.filter((t) => !t.loggedThisMonth);

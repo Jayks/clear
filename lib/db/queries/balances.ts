@@ -52,17 +52,21 @@ async function _computeBalances(groupId: string, defaultCurrency: string) {
   // creditor confirms receipt.  Including pending settlements here would
   // prematurely reduce the debtor's net and create a jarring "snap-back" if
   // the creditor disputes.
+  // S-12 fix: filter settlements to the group's defaultCurrency, matching the
+  // paid/owed CTEs above. recordSettlement/selfReportSettlement now reject
+  // non-default currencies on write; this excludes any legacy mismatched rows
+  // from the net rather than miscounting them as default-currency amounts.
   const sentCte = db.$with('sent').as(
     db.select({ memberId: settlements.fromMemberId, sentTotal: sum(settlements.amount).as('sent_total') })
       .from(settlements)
-      .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true)))
+      .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true), eq(settlements.currency, defaultCurrency)))
       .groupBy(settlements.fromMemberId)
   );
 
   const receivedCte = db.$with('received').as(
     db.select({ memberId: settlements.toMemberId, receivedTotal: sum(settlements.amount).as('received_total') })
       .from(settlements)
-      .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true)))
+      .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true), eq(settlements.currency, defaultCurrency)))
       .groupBy(settlements.toMemberId)
   );
 

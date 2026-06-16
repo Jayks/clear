@@ -184,9 +184,9 @@ describe("expense plan limit enforcement (E-3) — cap removed", () => {
   /**
    * The 50-expense free cap was removed in the June 2026 re-cut: a single active
    * trip can blow past 50 expenses, so paywalling mid-trip was user-hostile.
-   * canAddExpense now returns true for every plan and count. (The earlier work
-   * making all four template/duplicate paths call canAddExpense still stands —
-   * the guard is just always-true now.)
+   * canAddExpense now returns true for every plan and count, so the dead expense-cap
+   * checks were removed from the add/duplicate/template/batch action paths entirely
+   * (June 2026 stale-copy cleanup). The gate fn is kept only for the new/edit forms.
    */
   function simulateCanAddExpense(_count: number, _plan: "free" | "plus"): boolean {
     return true;

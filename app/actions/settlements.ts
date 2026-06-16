@@ -3,6 +3,7 @@
 import { db } from "@/lib/db/client";
 import { settlements } from "@/lib/db/schema/settlements";
 import { groupMembers } from "@/lib/db/schema/group-members";
+import { groups } from "@/lib/db/schema/groups";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
@@ -35,6 +36,17 @@ export async function recordSettlement(input: RecordSettlementInput) {
   const memberRows = await db.select({ id: groupMembers.id }).from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), inArray(groupMembers.id, [fromMemberId, toMemberId])));
   if (memberRows.length !== 2) return { ok: false, error: "Invalid members" } as const;
+
+  // S-12 fix: validate the settlement currency matches the group's defaultCurrency.
+  // getBalances() sums settlements with NO currency filter (unlike expenses), so a
+  // settlement in a different currency would be counted into the net as if it were
+  // the default currency — silently corrupting balances. Mirrors the circle R13-1
+  // currency guard, which was never applied to group settlements.
+  const [groupRow] = await db.select({ defaultCurrency: groups.defaultCurrency })
+    .from(groups).where(eq(groups.id, groupId)).limit(1);
+  if (!groupRow) return { ok: false, error: "Group not found" } as const;
+  if (currency !== groupRow.defaultCurrency)
+    return { ok: false, error: `Currency must be ${groupRow.defaultCurrency}` } as const;
 
   try {
     const [row] = await db.insert(settlements).values({
@@ -86,6 +98,15 @@ export async function selfReportSettlement(input: SelfReportSettlementInput) {
     .from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), inArray(groupMembers.id, [fromMemberId, toMemberId])));
   if (memberRows.length !== 2) return { ok: false, error: "Invalid members" } as const;
+
+  // S-12 fix: same currency guard as recordSettlement — balances sum settlements
+  // without a currency filter, so a non-default-currency self-report would corrupt
+  // the net once confirmed.
+  const [groupRow] = await db.select({ defaultCurrency: groups.defaultCurrency })
+    .from(groups).where(eq(groups.id, groupId)).limit(1);
+  if (!groupRow) return { ok: false, error: "Group not found" } as const;
+  if (currency !== groupRow.defaultCurrency)
+    return { ok: false, error: `Currency must be ${groupRow.defaultCurrency}` } as const;
 
   const toMemberRow = memberRows.find((m) => m.id === toMemberId);
 

@@ -10,7 +10,7 @@ import { eq, and, isNull, sum, desc } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { canAddMember } from "@/lib/subscription/gates";
+import { canRemoveMember } from "@/lib/members/member-guards";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
   const user = await getCurrentUser();
@@ -30,9 +30,6 @@ export async function addGuestMember(input: { groupId: string; guestName: string
   if (duplicate) return { ok: false, error: "A guest with this name already exists" } as const;
 
   try {
-    if (!(await canAddMember(groupId)))
-      return { ok: false, error: "Free plan allows up to 8 members per group. Upgrade to Clear Plus for unlimited members." } as const;
-
     const [member] = await db.insert(groupMembers).values({
       groupId,
       guestName,
@@ -42,7 +39,15 @@ export async function addGuestMember(input: { groupId: string; guestName: string
     revalidateTag(`group-${groupId}`, "max");
     revalidatePath(`/groups/${groupId}/members`);
     return { ok: true, member } as const;
-  } catch {
+  } catch (e: unknown) {
+    // M-1 fix: the duplicate-name SELECT above is not atomic with the INSERT, so a
+    // double-tap or two concurrent admin tabs can both pass the read and both insert.
+    // The race-proof guard is the partial UNIQUE index in
+    // drizzle/member-guest-name-unique.sql; when it fires, Postgres raises 23505 —
+    // surface the same friendly message rather than a generic failure.
+    const msg = String(e).toLowerCase();
+    if (msg.includes("23505") || msg.includes("unique") || msg.includes("duplicate"))
+      return { ok: false, error: "A guest with this name already exists" } as const;
     return { ok: false, error: "Failed to add guest" } as const;
   }
 }
@@ -94,6 +99,16 @@ export async function removeMember(groupId: string, memberId: string) {
   const membership = await getMembership(groupId, user.id);
   if (!membership || membership.role !== "admin")
     return { ok: false, error: "Not authorized" } as const;
+
+  // M-3 fix: a group must always retain at least one admin. Without this guard an
+  // admin could remove the last admin (including themselves), orphaning the group
+  // with nobody able to manage members, archive, or edit it.
+  const memberRoles = await db
+    .select({ id: groupMembers.id, role: groupMembers.role })
+    .from(groupMembers)
+    .where(eq(groupMembers.groupId, groupId));
+  const guard = canRemoveMember(memberRoles, memberId);
+  if (!guard.ok) return { ok: false, error: guard.error } as const;
 
   try {
     await db.delete(groupMembers).where(
@@ -169,9 +184,6 @@ export async function joinGroup(token: string) {
   if (existing) return { ok: true, groupId: group.id } as const;
 
   try {
-    if (!(await canAddMember(group.id)))
-      return { ok: false, error: "This group has reached the free plan member limit. The group organiser needs to upgrade to Clear Plus to add more members." } as const;
-
     await db.insert(groupMembers).values({
       groupId: group.id,
       userId: user.id,

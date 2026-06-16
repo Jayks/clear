@@ -10,7 +10,7 @@ import { addCircleExpenseSchema, type AddCircleExpenseInput } from "@/lib/valida
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName, formatCurrency } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { canCreateGroup, canAddExpense } from "@/lib/subscription/gates";
+import { canCreateGroup } from "@/lib/subscription/gates";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 // ── Create circle group ───────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ export async function createCircle(input: CreateCircleActionInput) {
 
   try {
     if (!(await canCreateGroup(user.id)))
-      return { ok: false, error: "Free plan allows up to 4 active groups. Upgrade to Clear Plus for unlimited groups." } as const;
+      return { ok: false, error: "Free plan allows up to 5 active groups. Upgrade to Clear Plus for unlimited groups." } as const;
 
     // B-4 fix: wrap all three inserts in a single transaction so a partial failure
     // (e.g. admin member insert or ghost member insert fails) cannot leave behind a
@@ -696,10 +696,6 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
     return { ok: false, error: "Circle not found" } as const;
   if (currency !== groupCurrencyRow.defaultCurrency)
     return { ok: false, error: `Currency must be ${groupCurrencyRow.defaultCurrency}` } as const;
-
-  // Check expense limit (pool expenses count toward the group's expense limit)
-  if (!(await canAddExpense(groupId)))
-    return { ok: false, error: "Free plan allows up to 50 expenses per group. Upgrade to Clear Plus for unlimited expenses." } as const;
 
   // C-2 fix: wrap the wallet balance check and the expense INSERT in a single
   // transaction so they are atomic.  Previously the two balance SELECTs ran

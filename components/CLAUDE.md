@@ -134,7 +134,7 @@ React portals bubble through the React tree, not the DOM — portal-spawning com
 
 **Diagonal ribbons** (`absolute bottom-[22px] right-[-30px] w-[130px] rotate-[-45deg]`, `pointer-events-none`): Demo = amber `SAMPLE`, Archived = slate `ARCHIVED`. On the inner div so the ribbon spans image + badge.
 
-**`GroupActionHub`** (`components/trip/group-action-hub.tsx`) — portal + AnimatePresence bottom sheet replacing the old `TripCardNavSheet` + `TripCardQuickAdd`. Opens via `⋯` click or 500ms long-press on both `TripCard` and `CircleCard`, and from `GroupMobileNav` (inner group `⋯`) and `GroupHeroHub` (group overview page hero `⋯`). Three zones: **Log expense** (Scan/Voice/Type tiles, hidden for circles), **Jump to** (4-tile nav for trips/nests; 2-tile Expenses+Members for circles), **Manage** (Edit · Archive · Share, admin-only). `QuickAddSheet` gains `startMode?: "scan" | "voice" | "text"` prop — hub tiles pass it to auto-trigger the correct mode on open.
+**`GroupActionHub`** (`components/trip/group-action-hub.tsx`) — portal + AnimatePresence bottom sheet replacing the old `TripCardNavSheet` + `TripCardQuickAdd`. Opens via `⋯` click or 500ms long-press on both `TripCard` and `CircleCard`, and from `GroupMobileNav` (inner group `⋯`) and `GroupHeroHub` (group overview page hero `⋯`). Three zones: **Log expense** (Scan/Voice/Type tiles, hidden for circles), **Jump to** (4-tile nav for trips/nests; 2-tile Expenses+Members for circles), **Manage** (Edit · Archive · Share, admin-only). `QuickAddSheet` gains `startMode?: "scan" | "voice" | "text"` prop — hub tiles pass it to auto-trigger the correct mode on open. **Archive is undo-first** (not a confirm): tap → applies immediately + closes hub + Undo toast (Undo = inverse). Same undo-first rule as `archive-button.tsx` on the edit page. The old two-step inline confirm bar was removed.
 
 ### Share / invite pattern — platform-aware Web Share API
 
@@ -343,7 +343,7 @@ Lazy-loads stats via `fetchMemberStatsAction` on first open; resets on `member.i
 `components/expense/swipeable-expense-card.tsx` — wrapper around `ExpenseCard` with two behaviour modes:
 
 - **Desktop** — `group` wrapper; `ExpenseCard` rendered with `hoverRevealActions` prop → Edit/Duplicate/Delete buttons are `opacity-0 group-hover:opacity-100` (invisible at rest, appear on hover). Zero extra taps.
-- **Mobile** — swipe left → card snaps back to 0 → glass overlay fades in (`backdrop-blur-md bg-white/75 dark:bg-slate-800/75`) → 3 large `w-14 h-14` buttons: Edit (cyan), Duplicate (slate), Delete (red). Swipe right or tap outside → overlay dismissed. Delete still goes through `ConfirmDialog`.
+- **Mobile** — swipe left → card snaps back to 0 → glass overlay fades in (`backdrop-blur-md bg-white/75 dark:bg-slate-800/75`) → 3 large `w-14 h-14` buttons: Edit (cyan), Duplicate (slate), Delete (red). Swipe right or tap outside → overlay dismissed. Delete is **undo-first** (optimistic remove + 5s Undo toast, deferred server delete) — same pattern as the desktop `DeleteExpenseButton`. **All expense deletes (trip/nest desktop + mobile swipe, and circle wallet via `CircleExpenseList` → `DeleteExpenseButton`) use undo-first; none use `ConfirmDialog`.**
 
 `ExpenseCard` props for this pattern:
 - `hideActions` — hides the button row entirely (mobile: buttons are in the overlay)
@@ -472,6 +472,23 @@ useEffect(() => {
 // ❌ wrong — causes Next.js 16 RSC refresh via go(-1) popstate on a form page
 useSheetDismiss(isOpen, onClose);
 ```
+
+### `useFocusTrap` — every sheet/dialog must trap + restore focus (WCAG)
+
+`hooks/use-focus-trap.ts` — `useFocusTrap(active, panelRef)`. On open: saves the trigger, moves focus into the panel (respects any inner `autoFocus`, else focuses the `tabIndex={-1}` panel container so the mobile keyboard isn't popped). Traps Tab/Shift+Tab inside the panel; on close/unmount restores focus to the trigger. **History-independent** — unlike `useSheetDismiss` it touches no `window.history`, so it is safe even on form-page sheets where `useSheetDismiss` is banned.
+
+**Pattern for any portal sheet/dialog** (the `Sheet` primitive already does this internally; hand-rolled portals must add it):
+```tsx
+const panelRef = useRef<HTMLDivElement>(null);
+useFocusTrap(isOpen, panelRef);
+// on the panel element:
+<motion.div ref={panelRef} role="dialog" aria-modal="true" aria-label="…" tabIndex={-1} style={{ outline: "none" }} …>
+```
+
+- **Nesting is handled by a module-level trap stack** — when a trapped sheet opens another (e.g. `ExpenseDetailSheet` → `DisputeForm`/`QuestionForm`, which portal OUTSIDE the parent panel), only the **topmost** trap reacts to Tab/focus-in; the lower one stays registered (so it never prematurely restores focus) and resumes when the inner closes. Keep the parent's trap `active` the whole time — do **not** gate it off, which would fire its focus-restore early (focus would jump to the page behind).
+- **Nested-dialog Escape**: a nested form's own Escape handler must use **capture phase + `e.stopPropagation()`** on the Escape key so the parent sheet's `useSheetDismiss` Escape doesn't also fire and close both at once (`QuestionForm`/`DisputeForm` do this).
+- Pure wrap-decision logic lives in `components/shared/sheet-focus.ts` (`resolveFocusTrap`), unit-tested. `getFocusable` uses `getClientRects()` (not `offsetParent`, which is null under a `position:fixed` panel).
+- **Coverage**: the `Sheet` primitive + every hand-rolled sheet (`PaymentSheet`, `MemberProfileSheet`, `StreamSettleSheet`, `StreamForgiveSheet`, `RecordContributionSheet`, `InviteQRSheet`, `CircleReminderSheet`, `QuestionForm`, `DisputeForm`, `ExpenseDetailSheet`, `ReceiptScannerSheet`, `GroupPickerSheet`) now use it. Any **new** sheet must too.
 
 ### Receipt Scanner — `ReceiptScannerSheet` patterns
 

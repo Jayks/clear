@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -60,6 +61,8 @@ export function ReceiptScannerSheet({
   const videoRef   = useRef<HTMLVideoElement>(null);
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const panelRef   = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   // ── URL cleanup wrapper ──────────────────────────────────────────────────────
   const transitionState = useCallback((next: ScannerState) => {
@@ -331,6 +334,12 @@ export function ReceiptScannerSheet({
           {/* Sheet */}
           <motion.div
             key="scanner-sheet"
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Scan receipt"
+            tabIndex={-1}
+            style={{ outline: "none" }}
             className={`fixed bottom-0 left-0 right-0 z-[71] bg-slate-950 rounded-t-2xl overflow-hidden flex flex-col ${sheetHeight}`}
             initial={sheetInitial}
             animate={sheetAnimate}

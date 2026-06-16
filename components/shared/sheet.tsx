@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue } from "framer-motion";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 // Shared bottom-sheet primitive. Owns the visual shell (backdrop + slide-up
 // panel), the standardized spring, drag-to-dismiss, Escape, and the iOS
@@ -54,7 +55,12 @@ export function Sheet({
   const dragControls          = useDragControls();
   const dragY                 = useMotionValue(0);
   const onCloseRef            = useRef(onClose);
+  const panelRef              = useRef<HTMLDivElement>(null);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  // WCAG focus management — trap Tab inside the open panel + restore focus to the
+  // trigger on close. `isOpen && mounted` so focus-in waits for the portal/panel.
+  useFocusTrap(isOpen && mounted, panelRef);
 
   useEffect(() => setMounted(true), []);
 
@@ -107,11 +113,13 @@ export function Sheet({
           >
             {/* Inner: chrome + drag offset */}
             <motion.div
+              ref={panelRef}
               role="dialog"
               aria-modal="true"
               aria-label={ariaLabel}
+              tabIndex={-1}
               data-tour={dataTour}
-              style={{ y: dragY }}
+              style={{ y: dragY, outline: "none" }}
               className={`rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl ${panelClassName}`}
               drag={draggable ? "y" : false}
               dragControls={dragControls}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 const QRCodeSVG = dynamic(
   () => import("qrcode.react").then((m) => ({ default: m.QRCodeSVG })),
@@ -24,6 +25,8 @@ export function InviteQRSheet({ url, groupName, isOpen, onClose }: Props) {
 
   // Escape key + Android back-button dismissal
   useSheetDismiss(isOpen, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   // Prevent iOS body scroll-through while sheet is open.
   useEffect(() => {
@@ -47,6 +50,12 @@ export function InviteQRSheet({ url, groupName, isOpen, onClose }: Props) {
             onClick={onClose}
           />
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Invite to ${groupName}`}
+            tabIndex={-1}
+            style={{ outline: "none" }}
             className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}

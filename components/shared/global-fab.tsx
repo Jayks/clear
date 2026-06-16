@@ -9,6 +9,7 @@ import { Plus, Receipt, ArrowLeftRight, MapPin, Home, ChevronRight, X, Coins } f
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
 import { StreamLogSheet } from "@/components/stream/stream-log-sheet";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { hapticLight } from "@/lib/haptics";
 import type { Group } from "@/lib/db/schema/groups";
 
@@ -292,6 +293,8 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
 
   // Escape key + Android back-button dismissal (same pattern as all other sheets)
   useSheetDismiss(isOpen, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(isOpen, panelRef);
 
   const allActive  = [...trips, ...nests, ...circles];
   const nonDemo    = allActive.filter((g) => !g.group.isDemo);
@@ -326,6 +329,12 @@ function GroupPickerSheet({ isOpen, onClose, onSelect, trips, nests, circles }: 
           {/* Sheet */}
           <motion.div
             key="picker-sheet"
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose a group"
+            tabIndex={-1}
+            style={{ outline: "none" }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}

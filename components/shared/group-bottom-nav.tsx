@@ -38,7 +38,9 @@ export function GroupBottomNav({ groupId, groupType, circleMode }: Props) {
   // relying on it makes the pill snap after a beat of navigation latency (jumpy).
   // Setting the tapped section immediately slides the pill on tap; once the real
   // path catches up we clear the override (they then agree, no visual change).
+  const [mounted, setMounted] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => { setPending(null); }, [actual]);
   const current = pending ?? actual;
 
@@ -92,7 +94,11 @@ export function GroupBottomNav({ groupId, groupType, circleMode }: Props) {
   // Portal to <body> so the bar escapes the PageTransition wrapper, which is
   // keyed on pathname and replays an opacity/translate animation on every
   // navigation — that animation was flickering the whole bar. Outside that
-  // subtree it stays visually stable across route changes. (SSR renders null;
-  // the bar appears on the client — acceptable for a fixed mobile-only nav.)
-  return typeof document !== "undefined" ? createPortal(nav, document.body) : null;
+  // subtree it stays visually stable across route changes.
+  //
+  // `mounted` guard: server renders null, client first render (hydration) also
+  // renders null — both agree, no hydration mismatch. Portal appears after the
+  // first useEffect (post-hydration), which is fine for a fixed mobile-only bar.
+  if (!mounted) return null;
+  return createPortal(nav, document.body);
 }

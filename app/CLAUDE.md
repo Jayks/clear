@@ -215,6 +215,10 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 5. **`SettleBreakdownSection`** (Suspense, streamed) → **`SettlementBreakdown`** — single accordion "How were expenses split?", expense ledger only. Steps 2 and 3 of the old "How is this calculated?" are now always visible on the page; the accordion's only job is the raw expense + split detail for verification.
 6. **Payment history** — past settlements.
 
+**`SettleActionsClient` — shared optimistic-state boundary** (`settle-actions-client.tsx`): single `"use client"` wrapper that owns `hiddenKeys: Set<string>` (`"fromMemberId:toMemberId"` format) and drives instant UI updates across four surfaces — `SettleHeroCard` (pills), `PendingConfirmations`, `ExternalPaymentsPending`, and `SuggestionCards` — so any confirmed payment disappears from ALL of them simultaneously without waiting for `router.refresh()`. RSC-rendered content (DebtFlowGraph, monthly summary, net balances) is passed as `children` and stays server-rendered. Adapter functions bridge the different callback shapes: `hideFromRequest(req: PaymentRequest)` and `hideFromSettlement(s: PendingSettlement)`. **`PendingConfirmations` is rendered inside `SettleActionsClient`** (not in RSC children) so it participates in the shared `hiddenKeys` state.
+
+**`SuggestionCards` Share button scoping** — `SettleShareButton` only appears for `isYouTo && !isGhostFrom` (you are the creditor, the debtor is a real Clear user). Not shown on debtor cards (broadcasting "I owe" is useless) and not shown when `isGhostFrom` ("Send payment link" already IS the share action for ghost debtors).
+
 **`SectionHeader`** local component in `balances-section.tsx` accepts an optional `subtitle?: string` shown below the icon + label + gradient rule line (padded `pl-9` to align under the label).
 
 **`SettlementBreakdown` props** — simplified to `{ expensesWithSplits, members, currency }`. No longer receives `balances`, `suggestions`, or `pastSettlementsTotal` (those are now rendered directly in `BalancesSection`).

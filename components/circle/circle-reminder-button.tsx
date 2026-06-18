@@ -64,6 +64,7 @@ export function CircleReminderButton({
       const results = await Promise.all(
         ghosts.map((m) =>
           generatePaymentRequest({
+            contextType:   "circle",
             groupId,
             groupName,
             payerMemberId: m.id,

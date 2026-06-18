@@ -15,12 +15,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Link, Loader2 } from "lucide-react";
 import { PaymentSheet }    from "@/components/payment/payment-sheet";
 import { SettledCelebration } from "@/components/settlement/settled-celebration";
 import { SettleShareButton }  from "@/components/settlement/settle-share-button";
 import { MarkPaidButton }     from "./mark-paid-button";
 import { selfReportSettlement, recordSettlement, deleteSettlement } from "@/app/actions/settlements";
+import { generatePaymentRequest } from "@/app/actions/payment-requests";
 import { hapticSuccess } from "@/lib/haptics";
 import { cn, formatCurrency, getMemberName } from "@/lib/utils";
 import type { Transaction } from "@/lib/settle/optimize";
@@ -49,15 +50,22 @@ interface Props {
   inviteUrl:            string;
   pastSettlementsTotal: number;
   settlementCount:      number;
+  /** "trip" | "nest" — passed to generatePaymentRequest when sending a link to a ghost */
+  contextType:          "trip" | "nest";
+  /** App base URL (e.g. "https://clear.app") for building /request/[token] links */
+  appUrl:               string;
 }
 
 export function SuggestionCards({
   suggestions, members, currentMemberId, isAdmin,
   currency, groupId, groupName, upiIdMap,
   settleUrl, inviteUrl, pastSettlementsTotal, settlementCount,
+  contextType, appUrl,
 }: Props) {
   const router = useRouter();
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  // sendingLinkIdx tracks which card's "Send payment link" is loading
+  const [sendingLinkIdx, setSendingLinkIdx] = useState<number | null>(null);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const memberName = (id: string) => {
@@ -120,6 +128,49 @@ export function SuggestionCards({
     router.refresh();
   }
 
+  // ── Ghost-debtor payment link ──────────────────────────────────────────────
+  // Generates (or reuses) a /request/[token] link for a ghost debtor, then
+  // opens a WhatsApp share sheet or copies the link to clipboard as fallback.
+  async function handleSendPaymentLink(idx: number) {
+    const s = suggestions[idx];
+    setSendingLinkIdx(idx);
+    try {
+      const result = await generatePaymentRequest({
+        contextType,
+        groupId,
+        groupName,
+        payerMemberId: s.from,
+        payerName:     memberName(s.from),
+        amount:        s.amount,
+        currency,
+        circlePeriod:  null,
+      });
+      if (!result.ok) { toast.error(result.error); return; }
+
+      const requestUrl  = `${appUrl}/request/${result.token}`;
+      const creditorFn  = memberName(s.to);
+      const debtorFn    = memberName(s.from);
+      const amtStr      = formatCurrency(s.amount, currency);
+      const shareText   = `Hi ${debtorFn}, ${creditorFn} has requested ${amtStr} via Clear. Tap to pay: ${requestUrl}`;
+
+      if (typeof navigator.share === "function") {
+        await navigator.share({ text: shareText, url: requestUrl }).catch(() => {
+          // AbortError = user dismissed; open WhatsApp as fallback
+          window.open(
+            `https://wa.me/?text=${encodeURIComponent(shareText)}`,
+            "_blank",
+            "noopener,noreferrer",
+          );
+        });
+      } else {
+        await navigator.clipboard.writeText(requestUrl);
+        toast.success("Payment link copied to clipboard!");
+      }
+    } finally {
+      setSendingLinkIdx(null);
+    }
+  }
+
   // ── Active suggestion data (for PaymentSheet) ─────────────────────────────
   const activeSuggestion = openIdx !== null ? suggestions[openIdx] : null;
 
@@ -175,9 +226,11 @@ export function SuggestionCards({
 
       <div className="space-y-2 mb-8">
         {suggestions.map((s, i) => {
-          const isYouFrom = currentMemberId === s.from;
-          const isYouTo   = currentMemberId === s.to;
-          const isYours   = isYouFrom || isYouTo;
+          const isYouFrom   = currentMemberId === s.from;
+          const isYouTo     = currentMemberId === s.to;
+          const isYours     = isYouFrom || isYouTo;
+          // Ghost = group member with no Clear account (userId is null)
+          const isGhostFrom = !members.find((m) => m.id === s.from)?.userId;
 
           return (
             <div
@@ -240,7 +293,7 @@ export function SuggestionCards({
                   )}
 
                   {/* CREDITOR: Request button → PaymentSheet(creditor) */}
-                  {isYouTo && (
+                  {isYouTo && !isGhostFrom && (
                     <button
                       type="button"
                       onClick={() => setOpenIdx(i)}
@@ -251,6 +304,27 @@ export function SuggestionCards({
                                  shadow-sm shadow-emerald-500/20"
                     >
                       📤 Request {formatCurrency(s.amount, currency)} →
+                    </button>
+                  )}
+
+                  {/* CREDITOR: Send payment link → ghost debtor gets /request/[token] */}
+                  {isYouTo && isGhostFrom && (
+                    <button
+                      type="button"
+                      onClick={() => handleSendPaymentLink(i)}
+                      disabled={sendingLinkIdx === i}
+                      className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold
+                                 text-white bg-gradient-to-br from-emerald-500 to-teal-500
+                                 hover:from-emerald-600 hover:to-teal-600
+                                 px-3 py-1.5 rounded-lg transition-all
+                                 shadow-sm shadow-emerald-500/20
+                                 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {sendingLinkIdx === i
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Link className="w-3.5 h-3.5" />
+                      }
+                      {sendingLinkIdx === i ? "Preparing…" : "Send payment link →"}
                     </button>
                   )}
 
@@ -268,7 +342,7 @@ export function SuggestionCards({
 
               {/* Action row — admin (neither debtor nor creditor) */}
               {!isYours && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <MarkPaidButton
                     groupId={groupId}
                     fromMemberId={s.from}
@@ -276,6 +350,26 @@ export function SuggestionCards({
                     amount={s.amount}
                     currency={currency}
                   />
+                  {/* Ghost debtor: admin can also send a payment request link */}
+                  {isAdmin && isGhostFrom && (
+                    <button
+                      type="button"
+                      onClick={() => handleSendPaymentLink(i)}
+                      disabled={sendingLinkIdx === i}
+                      className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium
+                                 text-slate-600 dark:text-slate-300
+                                 border border-slate-200 dark:border-slate-700
+                                 hover:bg-slate-50 dark:hover:bg-slate-800/60
+                                 px-3 py-1.5 rounded-lg transition-colors
+                                 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {sendingLinkIdx === i
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <Link className="w-3 h-3" />
+                      }
+                      {sendingLinkIdx === i ? "Preparing…" : "Send link"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

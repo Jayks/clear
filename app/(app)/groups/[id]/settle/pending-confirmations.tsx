@@ -27,13 +27,23 @@ interface Props {
   isAdmin:       boolean;
   /** Auto-scroll to this settlement ID (from ?confirm= push-notification deep link) */
   focusId?:      string;
+  /** Called just before the confirm action so the parent can hide the matching
+   *  suggestion card and hero pill optimistically. */
+  onConfirmOptimistic?: (s: PendingSettlement) => void;
+  /** Called if the confirm action fails — rolls back the parent's optimistic hide. */
+  onConfirmRollback?:   (s: PendingSettlement) => void;
 }
 
-export function PendingConfirmations({ pending, groupId, currentUserId, isAdmin, focusId }: Props) {
+export function PendingConfirmations({
+  pending, groupId, currentUserId, isAdmin, focusId,
+  onConfirmOptimistic, onConfirmRollback,
+}: Props) {
   const router = useRouter();
   // confirmingId / disputingId track which row is loading
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [disputingId,  setDisputingId]  = useState<string | null>(null);
+  // Optimistic removal — rows vanish immediately; rolled back on server error
+  const [removedIds,   setRemovedIds]   = useState<Set<string>>(new Set());
   const focusRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll to the focused settlement (pushed from push notification)
@@ -45,13 +55,21 @@ export function PendingConfirmations({ pending, groupId, currentUserId, isAdmin,
     return () => clearTimeout(t);
   }, [focusId]);
 
-  if (pending.length === 0) return null;
+  const visible = pending.filter((p) => !removedIds.has(p.id));
+  if (visible.length === 0) return null;
 
-  async function handleConfirm(id: string) {
-    setConfirmingId(id);
+  async function handleConfirm(settlement: PendingSettlement) {
+    setConfirmingId(settlement.id);
+    setRemovedIds((prev) => new Set([...prev, settlement.id]));
+    onConfirmOptimistic?.(settlement);
     try {
-      const result = await confirmSettlement(id, groupId);
-      if (!result.ok) { toast.error(result.error); return; }
+      const result = await confirmSettlement(settlement.id, groupId);
+      if (!result.ok) {
+        setRemovedIds((prev) => { const s = new Set(prev); s.delete(settlement.id); return s; });
+        onConfirmRollback?.(settlement);
+        toast.error(result.error);
+        return;
+      }
       hapticSuccess();
       toast.success("Payment confirmed ✓");
       router.refresh();
@@ -90,17 +108,17 @@ export function PendingConfirmations({ pending, groupId, currentUserId, isAdmin,
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full
                            bg-amber-100 dark:bg-amber-900/40
                            text-amber-700 dark:text-amber-300">
-            {pending.length}
+            {visible.length}
           </span>
         </div>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 pl-9">
-          {pending.length === 1 ? "1 payment reported" : `${pending.length} payments reported`} — awaiting your confirmation
+          {visible.length === 1 ? "1 payment reported" : `${visible.length} payments reported`} — awaiting your confirmation
         </p>
       </div>
 
       {/* Badge per pending settlement */}
       <div className="space-y-2">
-        {pending.map((p) => {
+        {visible.map((p) => {
           // Creditor can always confirm. Admin can confirm UNLESS they are the
           // one who self-reported (prevents confirming your own payment).
           const isCreditor  = !!currentUserId && p.toMemberUserId   === currentUserId;
@@ -123,7 +141,7 @@ export function PendingConfirmations({ pending, groupId, currentUserId, isAdmin,
                 canConfirm={canConfirm}
                 confirming={confirmingId === p.id}
                 disputing={disputingId === p.id}
-                onConfirm={() => handleConfirm(p.id)}
+                onConfirm={() => handleConfirm(p)}
                 onDispute={(reason) => handleDispute(p.id, p.fromMemberName, reason)}
               />
             </div>

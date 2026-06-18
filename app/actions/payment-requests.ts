@@ -4,12 +4,14 @@ import { db } from "@/lib/db/client";
 import { paymentRequests } from "@/lib/db/schema/payment-requests";
 import { circleContributions } from "@/lib/db/schema/circle-contributions";
 import { groupMembers } from "@/lib/db/schema/group-members";
+import { groups } from "@/lib/db/schema/groups";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { formatCurrency } from "@/lib/utils";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { getDefaultUpiId } from "@/lib/db/queries/upi";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
+import { recordSettlement } from "@/app/actions/settlements";
 
 // ── selfReportExternalPayment ─────────────────────────────────────────────────
 // Called by the public /request/[token] page — NO auth check.
@@ -212,17 +214,19 @@ export async function selfReportExternalPayment(
 //   5. Unique constraint violation (concurrent first INSERT) → re-fetch winner.
 
 export interface GeneratePaymentRequestInput {
-  groupId:      string;
-  groupName:    string;
+  /** "circle" | "trip" | "nest" — defaults to "circle" for backward compat */
+  contextType:   "circle" | "trip" | "nest";
+  groupId:       string;
+  groupName:     string;
   /** Ghost group_members.id — the person who owes */
   payerMemberId: string;
-  payerName:    string;
-  /** Fixed amount per person; null for Flexi one-time circles */
-  amount:       number | null;
-  currency:     string;
-  /** "2026-06" for recurring circles; null for one-time */
-  circlePeriod: string | null;
-  description?: string;
+  payerName:     string;
+  /** Fixed amount; null only for Flexi one-time circles */
+  amount:        number | null;
+  currency:      string;
+  /** "2026-06" for recurring circles; null for one-time circles and trip/nest */
+  circlePeriod:  string | null;
+  description?:  string;
 }
 
 export async function generatePaymentRequest(
@@ -241,7 +245,11 @@ export async function generatePaymentRequest(
   const upiRow  = await getDefaultUpiId(user.id);
   const payeeUpiId = upiRow?.upiId ?? null;
 
-  // ── Dedup: look for a live token for this payer+period ───────────────────────
+  // ── Dedup: look for a live token for this payer+payee+period ────────────────
+  // Must match the partial unique index columns exactly:
+  //   (group_id, COALESCE(payer_member_id,''), COALESCE(payee_member_id,''), COALESCE(circle_period,''))
+  // Including payeeMemberId ensures separate creditors can each have a live token
+  // for the same ghost debtor in a Trip/Nest with multiple creditors.
   const [existing] = await db
     .select()
     .from(paymentRequests)
@@ -249,6 +257,7 @@ export async function generatePaymentRequest(
       and(
         eq(paymentRequests.groupId, input.groupId),
         eq(paymentRequests.payerMemberId, input.payerMemberId),
+        sql`COALESCE(${paymentRequests.payeeMemberId}::text, '') = COALESCE(${membership.id}::text, '')`,
         sql`COALESCE(${paymentRequests.circlePeriod}, '') = COALESCE(${input.circlePeriod ?? null}, '')`,
         inArray(paymentRequests.status, ["pending", "self_reported"]),
       ),
@@ -289,7 +298,7 @@ export async function generatePaymentRequest(
     const [row] = await db
       .insert(paymentRequests)
       .values({
-        contextType:     "circle",
+        contextType:     input.contextType,
         groupId:         input.groupId,
         groupName:       input.groupName,
         amount:          input.amount !== null ? String(input.amount) : null,
@@ -320,6 +329,7 @@ export async function generatePaymentRequest(
           and(
             eq(paymentRequests.groupId, input.groupId),
             eq(paymentRequests.payerMemberId, input.payerMemberId),
+            sql`COALESCE(${paymentRequests.payeeMemberId}::text, '') = COALESCE(${membership.id}::text, '')`,
             sql`COALESCE(${paymentRequests.circlePeriod}, '') = COALESCE(${input.circlePeriod ?? null}, '')`,
             inArray(paymentRequests.status, ["pending", "self_reported"]),
           ),
@@ -472,7 +482,157 @@ export async function confirmExternalPayment(
     return { ok: true } as const;
   }
 
-  // ── Trip / Nest — M3 ─────────────────────────────────────────────────────
-  // recordSettlement path not yet implemented; will be added in M3.
-  return { ok: false, error: "Trip/Nest confirmation not yet implemented" } as const;
+  // ── Trip / Nest ───────────────────────────────────────────────────────────
+  if (request.contextType === "trip" || request.contextType === "nest") {
+    if (!request.payerMemberId) {
+      return { ok: false, error: "Missing payer member reference" } as const;
+    }
+    if (!request.payeeMemberId) {
+      return { ok: false, error: "Missing payee member reference" } as const;
+    }
+    if (request.amount === null) {
+      return { ok: false, error: "Amount is required for trip/nest settlement" } as const;
+    }
+
+    // Claim with 'confirming' to prevent concurrent double-confirm
+    const [claimed] = await db
+      .update(paymentRequests)
+      .set({ status: "confirming" })
+      .where(
+        and(
+          eq(paymentRequests.id, requestId),
+          eq(paymentRequests.status, "self_reported"),
+        ),
+      )
+      .returning({ id: paymentRequests.id });
+
+    if (!claimed) return { ok: true } as const; // concurrent confirm won
+
+    // Fetch group's current defaultCurrency — recordSettlement validates it
+    // matches (S-12 guard) so we must pass the live value, not the stored one.
+    const [groupRow] = await db
+      .select({ defaultCurrency: groups.defaultCurrency })
+      .from(groups)
+      .where(eq(groups.id, groupId))
+      .limit(1);
+
+    if (!groupRow) {
+      await db
+        .update(paymentRequests)
+        .set({ status: "self_reported" })
+        .where(eq(paymentRequests.id, requestId));
+      return { ok: false, error: "Group not found" } as const;
+    }
+
+    // Map paymentMethod: payment_requests stores "bank", settlements expect "bank_transfer".
+    const settlementMethod = (() => {
+      if (request.paymentMethod === "bank") return "bank_transfer" as const;
+      if (request.paymentMethod === "upi")  return "upi" as const;
+      if (request.paymentMethod === "cash") return "cash" as const;
+      return undefined;
+    })();
+
+    // recordSettlement: admin-only action that writes a confirmed settlement row.
+    // Auth passes because confirmExternalPayment already verified admin role, and
+    // getCurrentUser() + getMembership() are React-cache deduped within this request.
+    const settlementResult = await recordSettlement({
+      groupId,
+      fromMemberId:  request.payerMemberId,
+      toMemberId:    request.payeeMemberId,
+      amount:        Number(request.amount),
+      currency:      groupRow.defaultCurrency,
+      paymentMethod: settlementMethod,
+      utrReference:  request.utrReference ?? undefined,
+      note:          request.description ?? undefined,
+    });
+
+    if (!settlementResult.ok) {
+      // Roll back the confirming claim so the admin can retry
+      await db
+        .update(paymentRequests)
+        .set({ status: "self_reported" })
+        .where(eq(paymentRequests.id, requestId));
+      return { ok: false, error: settlementResult.error } as const;
+    }
+
+    // Mark confirmed + back-ref to settlement row
+    await db
+      .update(paymentRequests)
+      .set({
+        status:       "confirmed",
+        confirmedAt:  new Date(),
+        settlementId: settlementResult.settlementId,
+      })
+      .where(eq(paymentRequests.id, requestId));
+
+    // revalidatePath/revalidateTag already called by recordSettlement
+    return { ok: true } as const;
+  }
+
+  return { ok: false, error: "Unknown context type" } as const;
+}
+
+// ── disputeExternalPayment ────────────────────────────────────────────────────
+// Admin-only: reject a ghost's self-reported payment.
+//
+// Circle path: deletes the unconfirmed circle_contributions row then marks
+//   the request 'disputed' (so the admin can re-generate a fresh link).
+// Trip/Nest path: just marks 'disputed' — no financial row to roll back.
+
+export async function disputeExternalPayment(
+  requestId: string,
+  groupId:   string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Only admins can dispute payments" } as const;
+
+  const [request] = await db
+    .select()
+    .from(paymentRequests)
+    .where(and(eq(paymentRequests.id, requestId), eq(paymentRequests.groupId, groupId)))
+    .limit(1);
+
+  if (!request) return { ok: false, error: "Payment request not found" } as const;
+
+  // Idempotent: already resolved
+  if (request.status === "confirmed" || request.status === "disputed") {
+    return { ok: true } as const;
+  }
+
+  if (request.status !== "self_reported") {
+    return { ok: false, error: "Payment has not been self-reported yet" } as const;
+  }
+
+  // Circle: delete the unconfirmed contribution so the member appears unpaid again
+  if (request.contextType === "circle" && request.contributionId) {
+    await db
+      .delete(circleContributions)
+      .where(
+        and(
+          eq(circleContributions.id, request.contributionId),
+          eq(circleContributions.groupId, groupId),
+          eq(circleContributions.isConfirmed, false),
+        ),
+      );
+  }
+
+  // Mark disputed (atomic guard: only if still self_reported)
+  await db
+    .update(paymentRequests)
+    .set({ status: "disputed" })
+    .where(
+      and(
+        eq(paymentRequests.id, requestId),
+        eq(paymentRequests.status, "self_reported"),
+      ),
+    );
+
+  revalidatePath(`/groups/${groupId}`, "layout");
+  revalidateTag(`balances-${groupId}`, "max");
+
+  return { ok: true } as const;
 }

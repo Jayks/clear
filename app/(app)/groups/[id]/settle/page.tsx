@@ -4,6 +4,7 @@ import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getMemberDefaultUpiIds } from "@/lib/db/queries/upi";
 import { getPendingSettlements } from "@/lib/db/queries/settlements";
+import { getPendingRequestsForGroup } from "@/lib/db/queries/payment-requests";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { Skeleton } from "@/components/shared/skeleton";
 import { BalancesSection } from "./balances-section";
@@ -37,11 +38,12 @@ export default async function SettlePage({
   // Collect Clear-account userIds so we can batch-fetch their default UPI IDs
   const memberUserIds = members.map((m) => m.userId).filter((uid): uid is string => !!uid);
 
-  // Parallel: current user identity + UPI map + pending settlements
-  const [user, rawUpiMap, pendingSettlements] = await Promise.all([
+  // Parallel: current user identity + UPI map + pending settlements + external payment requests
+  const [user, rawUpiMap, pendingSettlements, pendingExternalPayments] = await Promise.all([
     getCurrentUser(),
     getMemberDefaultUpiIds(memberUserIds),
     getPendingSettlements(id),
+    getPendingRequestsForGroup(id),
   ]);
 
   if (!user) redirect("/login");
@@ -147,9 +149,12 @@ export default async function SettlePage({
           settleUrl={settleUrl}
           inviteUrl={inviteUrl}
           isNest={group.groupType === "nest"}
+          contextType={group.groupType as "trip" | "nest"}
           theme={theme}
           upiIdMap={upiIdMap}
           pendingSettlements={pendingSettlements}
+          pendingExternalPayments={pendingExternalPayments}
+          appUrl={appUrl}
           confirmId={confirmId}
         />
       </Suspense>

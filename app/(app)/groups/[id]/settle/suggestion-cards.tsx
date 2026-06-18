@@ -328,15 +328,20 @@ export function SuggestionCards({
                     </button>
                   )}
 
-                  <SettleShareButton
-                    fromName={memberName(s.from)}
-                    toName={memberName(s.to)}
-                    amount={s.amount}
-                    currency={currency}
-                    direction={isYouFrom ? "owe" : "owed"}
-                    groupName={groupName}
-                    settleUrl={inviteUrl}
-                  />
+                  {/* Share: only for creditor with a real Clear-user debtor.
+                      - Not shown when debtor is a ghost (Send payment link covers it).
+                      - Not shown when current user is the debtor (broadcasting your debt is odd). */}
+                  {isYouTo && !isGhostFrom && (
+                    <SettleShareButton
+                      fromName={memberName(s.from)}
+                      toName={memberName(s.to)}
+                      amount={s.amount}
+                      currency={currency}
+                      direction="owed"
+                      groupName={groupName}
+                      settleUrl={inviteUrl}
+                    />
+                  )}
                 </div>
               )}
 

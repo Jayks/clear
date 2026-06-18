@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Building2, Coins, ChevronRight, Loader2, LayoutGrid } from "lucide-react";
@@ -36,6 +37,7 @@ function typeLabel(g: SwitcherGroup): string {
 }
 
 export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSection }: Props) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [groups, setGroups] = useState<SwitcherGroup[] | null>(null);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
@@ -129,11 +131,26 @@ export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSec
                     <Link
                       key={g.id}
                       href={targetHref(g)}
-                      // Group switching is a lateral move — replace so the back button
-                      // exits the group context entirely instead of cycling through
-                      // previously-visited groups.
-                      replace
-                      onClick={() => setSwitchingId(g.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSwitchingId(g.id);
+                        const sectionHref  = targetHref(g);
+                        const overviewHref = `/groups/${g.id}`;
+
+                        if (sectionHref !== overviewHref) {
+                          // Switching to a section page (expenses/settle/members/insights).
+                          // Silently replace the current history entry (e.g. /groups/A/expenses)
+                          // with the target group's overview URL — no fetch, no re-render.
+                          // Then push the section on top so the browser back button goes to
+                          // /groups/B (target overview) instead of /groups/A/expenses.
+                          window.history.replaceState(null, "", overviewHref);
+                          router.push(sectionHref);
+                        } else {
+                          // Switching directly to the target overview: just replace so back
+                          // exits to wherever the user came from before this group.
+                          router.replace(overviewHref);
+                        }
+                      }}
                       className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
                     >
                       <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${theme.gradient} flex items-center justify-center shrink-0 shadow-sm`}>

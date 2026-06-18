@@ -138,16 +138,20 @@ export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSec
                         const overviewHref = `/groups/${g.id}`;
 
                         if (sectionHref !== overviewHref) {
-                          // Switching to a section page (expenses/settle/members/insights).
-                          // Silently replace the current history entry (e.g. /groups/A/expenses)
-                          // with the target group's overview URL — no fetch, no re-render.
-                          // Then push the section on top so the browser back button goes to
-                          // /groups/B (target overview) instead of /groups/A/expenses.
-                          window.history.replaceState(null, "", overviewHref);
-                          router.push(sectionHref);
+                          // Two-step App Router navigation:
+                          //   1. replace → inserts /groups/B overview as a proper RSC entry
+                          //   2. push    → adds /groups/B/section on top
+                          // Result history: [..., /groups/A, /groups/B, /groups/B/section]
+                          // Browser back → /groups/B overview ✓
+                          //
+                          // setTimeout(0) puts the push in a separate task so the router
+                          // dispatches both as independent navigations rather than collapsing
+                          // them into one.
+                          router.replace(overviewHref);
+                          setTimeout(() => router.push(sectionHref), 0);
                         } else {
-                          // Switching directly to the target overview: just replace so back
-                          // exits to wherever the user came from before this group.
+                          // Switching directly to overview: single replace so back exits
+                          // to wherever the user was before entering the previous group.
                           router.replace(overviewHref);
                         }
                       }}

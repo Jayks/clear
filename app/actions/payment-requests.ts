@@ -473,8 +473,8 @@ export async function confirmExternalPayment(
       await sendPushToUser({
         targetUserId: memberRow.userId,
         groupId,
-        title:        "✅ Payment confirmed",
-        body:         `Your ${contrib.currency} ${amtStr} contribution was confirmed.`,
+        title:        `✓ Payment confirmed — ${request.groupName}`,
+        body:         `Your ${amtStr} contribution was confirmed.`,
         url:          `/groups/${groupId}`,
       }).catch(() => { /* push failure must never block the confirm */ });
     }

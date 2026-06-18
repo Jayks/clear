@@ -32,8 +32,16 @@ self.addEventListener("notificationclick", (event) => {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
+        // Focus any existing app window and navigate it to the exact notification URL.
+        // The old `client.url.includes(url)` was too loose — a tab open on a deeper
+        // page (e.g. /groups/abc/expenses/thread) would be focused for a notification
+        // targeting /groups/abc, silently landing the user in the wrong place.
         for (const client of clientList) {
-          if (client.url.includes(url) && "focus" in client) return client.focus();
+          if (client.url.startsWith(self.location.origin) && "focus" in client) {
+            return client.focus().then((focused) => {
+              if (focused && "navigate" in focused) return focused.navigate(url);
+            });
+          }
         }
         return clients.openWindow(url);
       })

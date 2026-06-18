@@ -199,7 +199,7 @@ export async function disputeStream(input: DisputeStreamInput) {
     // subject, making it read as "you disputed your own entry."  The disputer is
     // the anonymous guest so we can't name them — use neutral copy instead.
     sendStreamPush(record.creatorId, {
-      title: "⚠ Disputed",
+      title: "⚠️ Entry disputed",
       body:  `Your entry for ${amountStr}${noteClause} was disputed`,
       // Deep-link to the creator's view of this relationship
       url:   `/stream/${record.counterpartGuestId ?? record.counterpartId ?? ""}`,
@@ -311,9 +311,10 @@ export async function settleStream(input: SettleStreamInput) {
       record.creatorId === user.id ? record.counterpartId : record.creatorId;
     if (otherUserId) {
       const amountStr = formatCurrency(amount, record.currency);
+      const actorName = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
       sendStreamPush(otherUserId, {
         title: "Settled ✓",
-        body:  `${amountStr} marked as settled`,
+        body:  `${actorName} marked ${amountStr} as settled`,
         // From the receiver's perspective, the current user IS the person — link to their page
         url:   `/stream/${user.id}`,
       }).catch(() => {});

@@ -894,8 +894,8 @@ export async function sendContributionReminder(groupId: string, memberId: string
     const body = fixedAmount && periodLabel
       ? `Your ${formatCurrency(fixedAmount, currency)} contribution for ${periodLabel} is still pending.`
       : fixedAmount
-      ? `Your ${formatCurrency(fixedAmount, currency)} contribution to ${groupRow.name} is still pending.`
-      : `Your contribution to ${groupRow.name} is still pending.`;
+      ? `Your ${formatCurrency(fixedAmount, currency)} contribution is still pending.`
+      : "Your contribution is still pending.";
 
     const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
     sendPushToUser({

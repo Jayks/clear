@@ -186,9 +186,12 @@ export async function confirmSettlement(settlementId: string, groupId: string) {
   // Fetch the settlement so we can verify the permission
   const [settlement] = await db
     .select({
-      id:          settlements.id,
-      isConfirmed: settlements.isConfirmed,
-      toMemberId:  settlements.toMemberId,
+      id:           settlements.id,
+      isConfirmed:  settlements.isConfirmed,
+      toMemberId:   settlements.toMemberId,
+      fromMemberId: settlements.fromMemberId,
+      amount:       settlements.amount,
+      currency:     settlements.currency,
     })
     .from(settlements)
     .where(and(eq(settlements.id, settlementId), eq(settlements.groupId, groupId)));
@@ -217,6 +220,28 @@ export async function confirmSettlement(settlementId: string, groupId: string) {
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
+
+    // Notify the payer that the creditor confirmed their self-reported payment.
+    // Mirrors the confirmStreamSettle path in stream.ts — the debtor reported "I paid"
+    // and deserves to hear back when accepted (previously they heard nothing on accept,
+    // only on dispute).
+    const [fromMember] = await db
+      .select({ userId: groupMembers.userId })
+      .from(groupMembers)
+      .where(eq(groupMembers.id, settlement.fromMemberId));
+
+    if (fromMember?.userId && fromMember.userId !== user.id) {
+      const amountStr     = formatCurrency(Number(settlement.amount), settlement.currency);
+      const confirmerName = membership.displayName ?? membership.guestName ?? "Someone";
+      sendPushToUser({
+        targetUserId: fromMember.userId,
+        groupId,
+        title: "✓ Payment confirmed",
+        body:  `${confirmerName} confirmed your ${amountStr} payment.`,
+        url:   `/groups/${groupId}/settle`,
+      }).catch(() => {});
+    }
+
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to confirm settlement" } as const;

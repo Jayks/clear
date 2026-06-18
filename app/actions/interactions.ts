@@ -310,13 +310,13 @@ export async function raiseQuestion(expenseId: string, groupId: string, message:
   if (payerUserId && payerUserId !== user.id) {
     const groupName = await getGroupName(groupId);
     const actorName = membership.displayName ?? membership.guestName ?? "Someone";
-    await sendPushToUser({
+    sendPushToUser({
       targetUserId: payerUserId,
       groupId,
       title: groupName,
       body: `${actorName} has a question about "${expense.description}": ${parsed.data.message}`,
       url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-    });
+    }).catch(() => {});
   }
 
   return { ok: true } as const;
@@ -428,13 +428,13 @@ export async function raiseDispute(
       question:     `${actorName} has a question about "${expense.description}"`,
     };
 
-    await sendPushToUser({
+    sendPushToUser({
       targetUserId: payerUserId,
       groupId,
       title: `${groupName} · Dispute`,
       body: bodyMap[disputeType],
       url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-    });
+    }).catch(() => {});
   }
 
   return { ok: true } as const;
@@ -586,13 +586,13 @@ export async function acceptDispute(disputeId: string) {
 
   if (requesterRow?.userId && requesterRow.userId !== user.id) {
     const groupName = await getGroupName(groupId);
-    await sendPushToUser({
+    sendPushToUser({
       targetUserId: requesterRow.userId,
       groupId,
       title: `${groupName} · Split updated ✓`,
       body: `Your request on "${expense.description}" was accepted`,
       url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-    });
+    }).catch(() => {});
   }
 
   return { ok: true } as const;
@@ -658,13 +658,13 @@ export async function declineDispute(disputeId: string) {
 
   if (requesterRow?.userId && requesterRow.userId !== user.id) {
     const groupName = await getGroupName(groupId);
-    await sendPushToUser({
+    sendPushToUser({
       targetUserId: requesterRow.userId,
       groupId,
-      title: groupName,
+      title: `${groupName} · Not accepted`,
       body: `Your request on "${expense.description}" was not accepted`,
       url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-    });
+    }).catch(() => {});
   }
 
   return { ok: true } as const;
@@ -757,7 +757,7 @@ export async function addComment(
           title: `${groupName} · @mention`,
           body: `${actorName} mentioned you on "${expenseName}"`,
           url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-        })
+        }).catch(() => {})
       )
     );
     mentionTargets.forEach((m) => mentionedUserIds.add(m.userId!));
@@ -798,7 +798,7 @@ export async function addComment(
           title: `${groupName} · New comment`,
           body: `${actorName} commented on "${expenseName}"`,
           url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-        })
+        }).catch(() => {})
       )
     );
   }

@@ -35,7 +35,9 @@ export function StreamDashboardClient({ data }: Props) {
     data.owedToMe.length === 0 &&
     data.iOwe.length === 0 &&
     data.pending.length === 0;
-  const isEmpty = hasNoActive && data.recentlyClosed.length === 0;
+  // isEmpty = truly no history at all; recentActivity has no 30-day window so it
+  // catches settled streams older than recentlyClosed's cutoff.
+  const isEmpty = hasNoActive && data.recentlyClosed.length === 0 && data.recentActivity.length === 0;
 
   const totalPeople = data.owedToMe.length + data.iOwe.length;
   const showSearch  = totalPeople > SEARCH_THRESHOLD;
@@ -114,15 +116,17 @@ export function StreamDashboardClient({ data }: Props) {
                        bg-gradient-to-br from-blue-500 to-indigo-500
                        hover:from-blue-600 hover:to-indigo-600
                        text-white text-sm font-medium rounded-xl px-6 py-2.5
-                       shadow-md shadow-blue-500/25 transition-all"
+                       shadow-md shadow-blue-500/25 transition-all active:scale-95"
           >
+            <Plus className="w-4 h-4" />
             Log your first entry
           </button>
         </div>
       )}
 
       {/* ── "All square" banner ────────────────────────────────────────────── */}
-      {hasNoActive && data.recentlyClosed.length > 0 && (
+      {/* Show whenever there's any history (recentlyClosed OR old activity) but no open balances */}
+      {hasNoActive && !isEmpty && (
         <FadeIn className="mb-6">
           <div className="glass rounded-2xl px-5 py-4 flex items-center gap-3">
             <span className="text-2xl">🎉</span>

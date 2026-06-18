@@ -172,8 +172,9 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
   return (
     // Outer div: positioning context for action buttons, hover effects, touch handlers.
     // No overflow-hidden here — that lives on the inner glass div so buttons aren't clipped.
+    // rounded-2xl here so box-shadow follows the rounded shape (no overflow-hidden = shadow paints cleanly).
     <div
-      className={`group/card relative select-none transition-all ${isNest ? "shadow-md shadow-emerald-500/15 hover:shadow-xl hover:shadow-emerald-500/30" : "shadow-md shadow-cyan-500/15 hover:shadow-xl hover:shadow-cyan-500/30"} hover:-translate-y-0.5 ${isLongPressing ? "scale-[0.97] duration-500" : "duration-200"}`}
+      className={`group/card relative select-none transition-all rounded-2xl ${isNest ? "shadow-md shadow-emerald-500/15 hover:shadow-xl hover:shadow-emerald-500/30" : "shadow-md shadow-cyan-500/15 hover:shadow-xl hover:shadow-cyan-500/30"} hover:-translate-y-0.5 ${isLongPressing ? "scale-[0.97] duration-500" : "duration-200"}`}
       data-tour={group.isDemo ? (isNest ? "demo-nest" : "demo-trip") : undefined}
       onTouchStart={startLongPress}
       onTouchEnd={cancelLongPress}

@@ -210,9 +210,10 @@ export function CircleCard({ group, cardData }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Outer wrapper: shadow + hover lift + long-press — NO overflow-hidden so shadow paints cleanly */}
+      {/* Outer wrapper: shadow + hover lift + long-press — NO overflow-hidden so shadow paints cleanly.
+          rounded-2xl here so box-shadow follows the rounded shape. */}
       <div
-        className={`relative h-full select-none ${cardShadow} hover:-translate-y-0.5 transition-all duration-200 ${isLongPressing ? "scale-[0.97] duration-500" : ""}`}
+        className={`relative h-full select-none rounded-2xl ${cardShadow} hover:-translate-y-0.5 transition-all duration-200 ${isLongPressing ? "scale-[0.97] duration-500" : ""}`}
         onTouchStart={startLongPress}
         onTouchEnd={cancelLongPress}
         onTouchMove={handleTouchMove}

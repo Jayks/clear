@@ -87,12 +87,13 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   // Goal-hit detection
   const goalHit = isOneTime && targetNum !== null && dash.allTimeCollected >= targetNum;
 
-  // BUG-08 fix: pendingNames for the WhatsApp reminder should only include
+  // BUG-08 fix: pendingMembers for the WhatsApp reminder should only include
   // members who genuinely haven't paid yet — exclude those who self-reported
   // (isPendingConfirm=true) since they've already indicated payment.
-  const pendingNames = dash.memberStatuses
+  // M2: pass { id, name, isGuest } so CircleReminderButton can generate per-ghost tokens.
+  const pendingMembers = dash.memberStatuses
     .filter((m) => !m.isPaid && !m.isPendingConfirm)
-    .map((m) => m.name);
+    .map((m) => ({ id: m.id, name: m.name, isGuest: m.isGuest }));
 
   // Current member's pending-confirm status (shown in hero action zone)
   const myMemberStatus = dash.currentMemberId
@@ -383,15 +384,18 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
           is hidden when every unconfirmed member has already self-reported. */}
       {isAdmin && dash.unpaidCount > 0 && (
         <CircleReminderButton
+          groupId={group.id}
+          groupName={group.name}
           circleName={group.name}
           periodLabel={isRecurring ? dash.selectedPeriodLabel : null}
           paidCount={dash.paidCount}
           totalCount={dash.memberStatuses.length}
-          pendingNames={pendingNames}
+          pendingMembers={pendingMembers}
           amount={amount}
           currency={group.defaultCurrency}
           upiId={group.upiId ?? null}
           joinUrl={joinUrl}
+          circlePeriod={isRecurring ? dash.selectedPeriod : null}
           isOneTime={isOneTime}
         />
       )}

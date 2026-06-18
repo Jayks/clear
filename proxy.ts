@@ -76,5 +76,7 @@ export const config = {
     "/stream/:path*",
     "/login",
     "/",
+    // Public payment-request pages — included for cookie forwarding; NOT in isProtected
+    "/request/:path*",
   ],
 };

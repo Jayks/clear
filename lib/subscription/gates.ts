@@ -6,13 +6,20 @@ import { groups } from "@/lib/db/schema/groups";
 import { eq, and, count, inArray } from "drizzle-orm";
 
 // React cache() deduplicates across the RSC tree — one DB hit per user per request
+//
+// Timestamp-driven (Razorpay M1 refactor, RAZORPAY_PLAN.md §5): plan is "plus" purely
+// because currentPeriodEnd (== plusUntil) is still in the future — NOT because
+// status==='active'. This collapses the status dependency so lazy expiry needs no
+// downgrade cron: a lapsed pass just stops satisfying the timestamp check on its own.
+// `status` stays around for historical/early-bird-slot-counting purposes only.
 export const getUserPlan = cache(async (userId: string): Promise<"plus" | "free"> => {
   try {
     const [sub] = await db.select().from(subscriptions)
       .where(eq(subscriptions.userId, userId)).limit(1);
     if (!sub) return "free";
-    if (sub.plan === "plus" && sub.status === "active") return "plus";
-    if (sub.status === "trialing" && sub.trialEndsAt && sub.trialEndsAt > new Date()) return "plus";
+    const now = new Date();
+    if (sub.currentPeriodEnd && sub.currentPeriodEnd > now) return "plus"; // paid entitlement window
+    if (sub.status === "trialing" && sub.trialEndsAt && sub.trialEndsAt > now) return "plus"; // trial
     return "free";
   } catch {
     // Table may not exist yet or DB unreachable — fail open (free plan)
@@ -119,7 +126,7 @@ export async function getGroupsAdminPlans(
   const rows = await db
     .select({
       groupId: groupMembers.groupId,
-      plan: subscriptions.plan,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
       status: subscriptions.status,
       trialEndsAt: subscriptions.trialEndsAt,
     })
@@ -130,8 +137,9 @@ export async function getGroupsAdminPlans(
   const result: Record<string, "plus" | "free"> = {};
   for (const r of rows) {
     if (result[r.groupId] === "plus") continue;
+    // Timestamp-driven — mirrors getUserPlan (see note there).
     const isPlus =
-      (r.plan === "plus" && r.status === "active") ||
+      (r.currentPeriodEnd !== null && r.currentPeriodEnd > now) ||
       (r.status === "trialing" && r.trialEndsAt !== null && r.trialEndsAt > now);
     result[r.groupId] = isPlus ? "plus" : "free";
   }

@@ -14,6 +14,7 @@ import { GroupsBackGuard } from "@/components/shared/groups-back-guard";
 import { LongPressHint } from "@/components/shared/long-press-hint";
 import { PlanNudgeBanner } from "@/components/shared/plan-nudge-banner";
 import { getGroupNudge, getGroupsAdminPlans } from "@/lib/subscription/gates";
+import { getMyLockedGroupIds } from "@/lib/subscription/degradation-queries";
 import { canUseLoggingAI } from "@/lib/subscription/ai-quota";
 import { SectionPillNav } from "@/components/shared/section-pill-nav";
 import type { NavSection } from "@/components/shared/section-pill-nav";
@@ -74,7 +75,7 @@ export default async function GroupsPage() {
 
   const allIds    = [...groups, ...archived].map((g) => g.group.id);
   const activeIds = groups.map((g) => g.group.id);
-  const [memberIds, groupNudge, adminPlans, streamBadge] = await Promise.all([
+  const [memberIds, groupNudge, adminPlans, streamBadge, lockedGroupIds] = await Promise.all([
     user && allIds.length > 0
       ? getUserMemberIds(allIds, user.id)
       : Promise.resolve<Record<string, { id: string; role: string }>>({}),
@@ -83,6 +84,7 @@ export default async function GroupsPage() {
       ? getGroupsAdminPlans(activeIds)
       : Promise.resolve<Record<string, "plus" | "free">>({}),
     user ? getStreamBadgeData(user.id) : Promise.resolve({ latestUpdatedAt: null, hasDisputed: false }),
+    user ? getMyLockedGroupIds(user.id) : Promise.resolve(new Set<string>()),
   ]);
 
   const isEmpty   = groups.length === 0 && archived.length === 0;
@@ -168,6 +170,7 @@ export default async function GroupsPage() {
                         priority={index < 2}
                         isPlusPlan={adminPlans[group.id] === "plus"}
                         isAdmin={memberInfo?.role === "admin"}
+                        isLocked={lockedGroupIds.has(group.id)}
                         balanceBadge={
                           memberInfo && user && !group.isDemo ? (
                             <Suspense key={group.id} fallback={balanceFallback()}>
@@ -228,6 +231,7 @@ export default async function GroupsPage() {
                       priority={index < 2 && trips.length === 0}
                       isPlusPlan={adminPlans[group.id] === "plus"}
                       isAdmin={memberInfo?.role === "admin"}
+                      isLocked={lockedGroupIds.has(group.id)}
                       balanceBadge={
                         memberInfo && user && !group.isDemo ? (
                           <Suspense key={group.id} fallback={balanceFallback()}>
@@ -279,7 +283,7 @@ export default async function GroupsPage() {
               {circles.map(({ group }) => (
                 <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
                   <Suspense fallback={<CircleCardSkeleton />}>
-                    <CircleCardServer group={group} />
+                    <CircleCardServer group={group} isLocked={lockedGroupIds.has(group.id)} />
                   </Suspense>
                 </div>
               ))}

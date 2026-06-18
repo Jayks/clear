@@ -13,6 +13,8 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { sendExpenseNotification } from "@/lib/notifications/send-expense-notification";
 import { sendPushToMembers } from "@/lib/notifications/send-push-notification";
 import { canUseTemplates } from "@/lib/subscription/gates";
+import { isGroupLocked } from "@/lib/subscription/degradation-queries";
+import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
 
 async function validateSplitMembers(groupId: string, splits: { memberId: string }[]) {
   const ids = [...new Set(splits.map((s) => s.memberId))];
@@ -33,6 +35,8 @@ export async function addExpense(input: AddExpenseInput) {
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member" } as const;
+
+  if (await isGroupLocked(groupId)) return { ok: false, error: LOCKED_GROUP_ERROR } as const;
 
   const [paidByMember] = await db.select({ id: groupMembers.id }).from(groupMembers)
     .where(and(eq(groupMembers.id, paidByMemberId), eq(groupMembers.groupId, groupId)));
@@ -120,6 +124,8 @@ export async function updateExpense(expenseId: string, input: AddExpenseInput) {
   if (!membership) return { ok: false, error: "Not a member" } as const;
   if (expense.createdByUserId !== user.id && membership.role !== "admin")
     return { ok: false, error: "Not authorized" } as const;
+
+  if (await isGroupLocked(groupId)) return { ok: false, error: LOCKED_GROUP_ERROR } as const;
 
   const [paidByMember] = await db.select({ id: groupMembers.id }).from(groupMembers)
     .where(and(eq(groupMembers.id, paidByMemberId), eq(groupMembers.groupId, groupId)));
@@ -352,6 +358,9 @@ export async function logFromTemplate(templateId: string) {
   const membership = await getMembership(template.groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member" } as const;
 
+  // No separate isGroupLocked check needed here: templates are a flow benefit
+  // gated entirely by canUseTemplates (Plus-only, full stop) — strictly stronger
+  // than the overflow-lock, which only ever fires for an already-free admin.
   if (!(await canUseTemplates(template.groupId)))
     return { ok: false, error: "Recurring templates require Clear Plus." } as const;
 

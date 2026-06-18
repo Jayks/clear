@@ -11,6 +11,8 @@ import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName, formatCurrency } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { canCreateGroup } from "@/lib/subscription/gates";
+import { isGroupLocked } from "@/lib/subscription/degradation-queries";
+import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 // ── Create circle group ───────────────────────────────────────────────────────
@@ -92,6 +94,11 @@ export async function createCircle(input: CreateCircleActionInput) {
 }
 
 // ── Record contribution (admin) ───────────────────────────────────────────────
+// Deliberately NOT gated by isGroupLocked — same allowlist principle as
+// settlements (RAZORPAY_PLAN.md §9): a contribution closes out a member's
+// existing obligation to the pool rather than adding new financial content, so
+// it shouldn't require the admin to be on Plus. Applies to both this and
+// selfReportContribution below.
 
 export async function recordContribution(input: {
   groupId:  string;
@@ -682,6 +689,8 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
   const membership = await getMembership(groupId, user.id);
   if (!membership || membership.role !== "admin")
     return { ok: false, error: "Only circle admins can log wallet expenses" } as const;
+
+  if (await isGroupLocked(groupId)) return { ok: false, error: LOCKED_GROUP_ERROR } as const;
 
   // R13-2 fix: validate currency matches the circle's defaultCurrency.
   // The overdraw check and the pool balance queries both use SUM(amount) with

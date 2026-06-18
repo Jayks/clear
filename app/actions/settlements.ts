@@ -18,6 +18,9 @@ import {
 } from "@/lib/validations/settlement";
 
 // ── recordSettlement (admin only — marks confirmed immediately) ────────────────
+// Deliberately NOT gated by isGroupLocked (RAZORPAY_PLAN.md §9 allowlist):
+// closing out an existing debt shouldn't require the admin to be on Plus — only
+// *new* financial content (expenses, members) is gated. Same for deleteSettlement.
 
 export async function recordSettlement(input: RecordSettlementInput) {
   const user = await getCurrentUser();

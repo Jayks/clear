@@ -41,6 +41,11 @@ interface TripCardProps {
   /** Whether the current user is an admin of this group. Passed to GroupActionHub
    *  so Edit/Archive are only shown to admins. Defaults to false (safe default). */
   isAdmin?: boolean;
+  /** Overflow read-only lock (RAZORPAY_PLAN.md §9) — true when this group is
+   *  beyond its free-plan admin's 5-most-recently-active cap. Only ever passed
+   *  for groups the current user admins (see getMyLockedGroupIds) — the
+   *  "Reactivate" CTA only makes sense for the admin who can buy a pass. */
+  isLocked?: boolean;
 }
 
 // ── Trip alive status ─────────────────────────────────────────────────────────
@@ -104,7 +109,7 @@ const MOVE_THRESHOLD = 8;
 const moreBtn =
   "flex w-10 h-10 md:w-8 md:h-8 rounded-xl items-center justify-center text-white bg-black/30 hover:bg-black/50 backdrop-blur-md shadow-sm shadow-black/20 active:scale-95 transition-all";
 
-export function TripCard({ group, memberCount, balanceBadge, priority = false, isPlusPlan = false, isAdmin = false }: TripCardProps) {
+export function TripCard({ group, memberCount, balanceBadge, priority = false, isPlusPlan = false, isAdmin = false, isLocked = false }: TripCardProps) {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [photoLoaded, setPhotoLoaded] = useState(false);
@@ -205,6 +210,15 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
           <Users className="w-3 h-3" />
           {memberCount}
         </Link>
+        {isLocked && (
+          <Link
+            href="/upgrade"
+            className="inline-flex items-center gap-1 bg-violet-500/70 backdrop-blur-sm text-white text-xs font-medium px-2 py-0.5 rounded-full hover:bg-violet-500/90 active:scale-95 transition-all"
+            onClick={(e) => { e.stopPropagation(); if (suppressNextClick.current) e.preventDefault(); }}
+          >
+            🔒 Reactivate
+          </Link>
+        )}
       </div>
 
       {/* Inner div: glass surface + overflow-hidden for image clipping and ribbon */}
@@ -311,6 +325,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         {/* Diagonal ribbon — relative to the full card (image + badge), glassy */}
         {group.isDemo && <CardRibbon variant="sample" />}
         {group.isArchived && !group.isDemo && <CardRibbon variant="archived" />}
+        {isLocked && !group.isDemo && !group.isArchived && <CardRibbon variant="locked" />}
       </div>
 
       {/* Action buttons — on outer div, outside the Link.

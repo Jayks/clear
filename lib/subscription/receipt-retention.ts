@@ -14,6 +14,17 @@ import { format } from "date-fns";
  *    UNLESS the owning group is a still-active trip. A live trip keeps its
  *    proofs regardless of age (the settle-up window hasn't opened yet); nests,
  *    circles, and ended/archived trips prune at the window.
+ *
+ * KNOWN GAP (M1, deferred to M2 — RAZORPAY_PLAN.md §9 "Receipt vault — grandfather"):
+ * `plan` here is always the admin's CURRENT plan (from `getGroupsAdminPlans` at
+ * prune-time). A receipt captured while Plus, on a group whose admin has since
+ * lapsed to Free, is therefore NOT grandfathered today — it prunes at the normal
+ * window like any free-tier receipt. `subscriptions` only stores the latest
+ * `currentPeriodEnd`, with no history of past Plus windows, so there's nothing to
+ * check it against yet. Planned fix once M2's payment ledger exists: a sticky
+ * `expenses.receipt_permanent` flag set at capture time (was the admin Plus right
+ * then?), checked here in addition to the live `plan`. Do not invent a throwaway
+ * heuristic in the meantime — this needs that schema column to be correct.
  */
 export const RECEIPT_RETENTION_DAYS = 60;
 

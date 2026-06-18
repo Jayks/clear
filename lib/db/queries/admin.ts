@@ -113,7 +113,7 @@ export async function getAdminUserList() {
     const subRows = userIds.length > 0
       ? await tx.select({
           userId: subscriptions.userId,
-          plan: subscriptions.plan,
+          currentPeriodEnd: subscriptions.currentPeriodEnd,
           status: subscriptions.status,
           trialEndsAt: subscriptions.trialEndsAt,
         }).from(subscriptions).where(inArray(subscriptions.userId, userIds))
@@ -123,8 +123,9 @@ export async function getAdminUserList() {
 
     return Array.from(userMap.entries()).map(([id, u]) => {
       const sub = subMap.get(id);
+      // Timestamp-driven (Razorpay M1 refactor) — see gates.ts getUserPlan note.
       const isPlus = sub && (
-        (sub.plan === "plus" && sub.status === "active") ||
+        (sub.currentPeriodEnd !== null && sub.currentPeriodEnd > now) ||
         (sub.status === "trialing" && sub.trialEndsAt !== null && sub.trialEndsAt > now)
       );
       const isPlatformAdmin = platformAdminIds.has(id);

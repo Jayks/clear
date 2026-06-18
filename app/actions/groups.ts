@@ -113,6 +113,9 @@ export async function updateGroup(groupId: string, input: CreateGroupInput) {
   }
 }
 
+// Deliberately NOT gated by isGroupLocked — this IS one of the two stated unlock
+// paths (RAZORPAY_PLAN.md §9: "buy a pass, or archive/delete down to 5"). Gating
+// it would trap a user who's over cap with no way to dig out without paying.
 export async function archiveGroup(groupId: string, archive: boolean) {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;
@@ -132,6 +135,7 @@ export async function archiveGroup(groupId: string, archive: boolean) {
   }
 }
 
+// Deliberately NOT gated by isGroupLocked — same unlock-path reasoning as archiveGroup.
 export async function deleteGroup(groupId: string) {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;

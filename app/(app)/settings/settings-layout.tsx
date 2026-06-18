@@ -24,12 +24,9 @@ interface Props {
   userEmail: string;
   userAvatarUrl: string | null;
   upiIds: UserUpiId[];
-  /** BUG-11 fix: price labels computed server-side from early-bird.ts so the
-   *  billing section never needs to hardcode or duplicate price constants. */
-  billingPriceLabels: { monthly: string; annual: string };
 }
 
-export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds, billingPriceLabels }: Props) {
+export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds }: Props) {
   const [active, setActive] = useState<Section>("profile");
 
   return (
@@ -108,7 +105,7 @@ export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarU
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Billing</span>
               <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
             </div>
-            <BillingSection sub={sub} priceLabels={billingPriceLabels} />
+            <BillingSection sub={sub} />
           </div>
         </section>
 

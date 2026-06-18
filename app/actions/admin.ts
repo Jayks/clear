@@ -111,17 +111,26 @@ export async function adminSetUserPlan(userId: string, plan: "free" | "plus") {
     return { ok: false, error: "Forbidden" } as const;
   }
 
+  // Timestamp-driven (Razorpay M1 refactor): getUserPlan reads currentPeriodEnd, not
+  // plan/status — an admin override MUST also set it, or this toggle silently does
+  // nothing. Far-future date = "permanent" comp; adminOverride flag still marks it
+  // as not a real purchase (for support/reporting, never read by the plan gate).
+  const FAR_FUTURE = new Date("9999-01-01T00:00:00Z");
+  const currentPeriodEnd = plan === "plus" ? FAR_FUTURE : null;
+
   try {
     await db.insert(subscriptions).values({
       userId,
       plan: plan === "plus" ? "plus" : "free",
       status: plan === "plus" ? "active" : "cancelled",
+      currentPeriodEnd,
       adminOverride: true,
     }).onConflictDoUpdate({
       target: subscriptions.userId,
       set: {
         plan: plan === "plus" ? "plus" : "free",
         status: plan === "plus" ? "active" : "cancelled",
+        currentPeriodEnd,
         adminOverride: true,
         updatedAt: sql`now()`,
       },

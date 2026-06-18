@@ -17,15 +17,18 @@ import { CategoryIcon } from "@/components/expense/category-icon";
 import { Coins, Repeat2, Target } from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
 import { getContextTheme } from "@/lib/theme/context-theme";
+import { Lock } from "lucide-react";
 
 interface Props {
   group:          Group;
   members:        GroupMember[];
   currentMember:  GroupMember | null | undefined;
   selectedPeriod: string | undefined;
+  /** Overflow read-only lock (RAZORPAY_PLAN.md §9) — see TripCard's isLocked doc. */
+  isLocked?: boolean;
 }
 
-export async function CircleDashboard({ group, members, currentMember, selectedPeriod }: Props) {
+export async function CircleDashboard({ group, members, currentMember, selectedPeriod, isLocked = false }: Props) {
   const isRecurring = group.circleMode === "recurring";
   const isOneTime   = group.circleMode === "one_time";
   const isFixed     = isOneTime && group.contributionAmount !== null;
@@ -114,6 +117,26 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
                    text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200
                    text-sm font-medium mb-6 transition-colors"
       />
+
+      {/* Overflow-locked banner (RAZORPAY_PLAN.md §9) — read-only until reactivated */}
+      {isLocked && (
+        <div className="rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200/70 dark:border-violet-800/40 px-4 py-3 mb-6 flex items-start gap-2.5">
+          <Lock className="w-4 h-4 text-violet-500 dark:text-violet-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-violet-800 dark:text-violet-300">
+              This circle is read-only
+            </p>
+            <p className="text-xs text-violet-700/80 dark:text-violet-400/80 mt-0.5">
+              It&apos;s beyond the free plan&apos;s 5-active-group limit. Everything is still visible — new contributions and wallet expenses are paused until {isAdmin ? "you reactivate Plus or archive down to 5." : "the admin reactivates Plus or archives down to 5."}
+            </p>
+            {isAdmin && (
+              <Link href="/upgrade" className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 mt-1.5">
+                Reactivate with Plus →
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Hero card ───────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl overflow-hidden mb-6">

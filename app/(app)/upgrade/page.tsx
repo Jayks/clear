@@ -14,8 +14,11 @@ export default async function UpgradePage() {
     getEarlyBirdSlotsClaimed(),
   ]);
   const sub = user ? await getUserSubscription(user.id) : null;
-  // Only treat as Plus if actively paid — trialing users should see the pricing page
-  const isPlus = sub?.plan === "plus" && sub?.status === "active";
+  // Timestamp-driven (Razorpay M1 refactor) — only treat as Plus if the paid
+  // entitlement window is still open, NOT status==='active' (that flag is never
+  // cleared on lapse under lazy expiry, so it would stay stuck "Plus" forever).
+  // Trialing users should see the pricing page, not the "you're on Plus" panel.
+  const isPlus = !!(sub?.currentPeriodEnd && sub.currentPeriodEnd > new Date());
   const isTrialing = sub?.status === "trialing";
 
   const earlyBird = isEarlyBirdActive(claimed);

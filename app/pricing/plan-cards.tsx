@@ -114,16 +114,16 @@ export async function PlanCards() {
                   </span>
                   <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 tabular-nums" style={{ fontFamily: "var(--font-fraunces)" }}>
                     ₹{price.monthly}
-                    <span className="text-base font-normal text-slate-400 dark:text-slate-500">/mo</span>
+                    <span className="text-base font-normal text-slate-400 dark:text-slate-500"> · 30-day pass</span>
                   </p>
                 </div>
                 {/* Annual option */}
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    or ₹{price.annual}/year · ₹{annualMonthlyEquiv}/mo
+                    or ₹{price.annual} annual pass · ₹{annualMonthlyEquiv}/mo equivalent
                   </span>
                   <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full">
-                    ₹{annualOffRegular}/yr off regular
+                    ₹{annualOffRegular} off regular
                   </span>
                 </div>
                 {/* Early-bird lock-in assurance */}
@@ -136,11 +136,11 @@ export async function PlanCards() {
                 {/* Regular pricing */}
                 <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 tabular-nums" style={{ fontFamily: "var(--font-fraunces)" }}>
                   ₹{price.monthly}
-                  <span className="text-base font-normal text-slate-400 dark:text-slate-500">/mo</span>
+                  <span className="text-base font-normal text-slate-400 dark:text-slate-500"> · 30-day pass</span>
                 </p>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    or ₹{price.annual}/year · ₹{annualMonthlyEquiv}/mo
+                    or ₹{price.annual} annual pass · ₹{annualMonthlyEquiv}/mo equivalent
                   </span>
                   <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full">
                     saves ₹{annualSavings}

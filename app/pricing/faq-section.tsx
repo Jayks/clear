@@ -17,7 +17,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "What happens when my trial ends?",
-        a: "You drop to the free plan automatically — no charge, no action needed on your part. All your data stays exactly as-is: every group, expense, member, and settlement remains intact. You'll be capped at 5 active groups going forward — but your members, expenses, splits, and history stay fully usable. Upgrade to Plus any time to lift the group cap and restore the Plus-only extras.",
+        a: "You drop to the free plan automatically — no charge, no action needed on your part. Nothing is ever deleted: every group, expense, member, and settlement stays intact. If you have more than 5 active groups, the 5 you've used most recently stay fully editable — the rest switch to read-only (you can still see everything, just can't add new expenses or members) until you buy a pass or archive down to 5.",
       },
       {
         q: "Can I get more than one trial, or extend it?",
@@ -58,8 +58,8 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
         a: "The plan check uses the original group creator's subscription. Co-admins added later don't affect group plan status. If the creator has Plus, everyone benefits. If the creator is on free, the group is on free regardless of what other admins hold.",
       },
       {
-        q: "What if the group admin cancels their Plus subscription?",
-        a: "The group reverts to free-plan limits. Existing data is untouched — all expenses, splits, and settlements stay visible and usable. Going forward, Plus-only extras like recurring templates and budget tracking are paused, and the admin can't keep more than 5 active groups. Splitting, members, and expenses keep working normally. The admin can re-subscribe at any time to restore Plus for everyone.",
+        q: "What if the group admin's pass expires?",
+        a: "The group reverts to free-plan limits. Existing data is untouched — all expenses, splits, and settlements stay visible and usable. Plus-only extras like recurring templates and budget tracking pause, and if the admin has more than 5 active groups, the rest switch to read-only. Splitting, members, and expenses keep working normally. The admin can buy another pass any time to restore Plus for everyone.",
       },
     ],
   },
@@ -68,15 +68,15 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "What is Early Bird Pricing, and who is it for?",
-        a: "Early Bird Pricing is a permanently discounted rate reserved for the first 300 subscribers who activate Clear Plus. Monthly: ₹49 instead of ₹79. Annual: ₹499 instead of ₹699 (just ₹41/month) — and it's locked in forever, so you save ₹200 a year versus the regular price, every year. It's our way of rewarding the people who back Clear early.",
+        a: "Early Bird Pricing is a permanently discounted rate reserved for the first 300 people who buy a Clear Plus pass. 30-day pass: ₹49 instead of ₹79. Annual pass: ₹499 instead of ₹699 (just ₹41/month equivalent) — and it's locked in forever, so every pass you buy afterward keeps the same discount. It's our way of rewarding the people who back Clear early.",
       },
       {
         q: "Is the Early Bird price really locked in forever?",
-        a: "Yes. If you subscribe during the Early Bird window, your rate is locked in for the life of your subscription. We will never increase it. The only scenario where this changes is if you voluntarily cancel and resubscribe later — in that case, you'd pay the rate in effect at the time of resubscription.",
+        a: "Yes. Once you've bought a pass during the Early Bird window, every future pass you buy — 30-day or annual, this year or five years from now — is priced at your locked-in Early Bird rate. It never increases for you.",
       },
       {
         q: "How long is Early Bird Pricing available?",
-        a: "Until 300 subscribers have claimed it, or until we decide to close the window — whichever comes first. The counter on this page shows live availability. Once the slots are gone, new subscribers pay the regular rate of ₹79/month or ₹699/year.",
+        a: "Until 300 people have bought a pass at Early Bird pricing, or until we decide to close the window — whichever comes first. The counter on this page shows live availability. Once the slots are gone, new buyers pay the regular rate of ₹79 (30-day) or ₹699 (annual).",
       },
     ],
   },
@@ -84,41 +84,41 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     section: "Billing & payment",
     items: [
       {
-        q: "Monthly vs annual — which should I choose?",
-        a: "Monthly gives you flexibility: cancel anytime, no upfront commitment. Annual is billed once for the full year and works out cheaper per month — Early Bird annual at ₹499/year is ₹41/month (saving ₹89 vs early-bird monthly). Regular annual at ₹699/year is ₹58/month (saving ₹249 vs regular monthly). The features are identical on both cycles. If you plan to use Clear for more than a few months, annual is the better deal.",
+        q: "30-day pass vs annual pass — which should I choose?",
+        a: "Clear Plus is sold as one-time passes, not a recurring subscription. The 30-day pass suits a single trip or a month of heavy use; the annual pass covers a full year and works out cheaper per month — Early Bird annual at ₹499 is ₹41/month equivalent (saving ₹89 vs buying the 30-day pass twelve times over). Regular annual at ₹699 is ₹58/month equivalent (saving ₹249). Features are identical either way. If you'll use Clear for more than a few months a year, the annual pass is the better deal.",
       },
       {
         q: "When does billing actually start?",
-        a: "Billing is not live yet — Clear is in beta. When you activate Plus today, you get full access for free. Before the first charge ever happens, we'll email you well in advance with the exact date, the amount, and a clear link to cancel or change your plan. There will be no surprise charges.",
+        a: "Billing is live. There's no recurring charge to schedule — you pay once via Razorpay (UPI, cards, or net banking) for a 30-day or annual pass, and your Plus access runs for that long. We never store your card and never auto-renew; when the pass's time is up, you simply drop back to Free until you buy another.",
       },
       {
-        q: "Can I switch between monthly and annual billing?",
-        a: "Yes. Go to Settings → Billing to change your billing cycle. Switching to annual takes effect at your next renewal date, and you'll only pay the annual rate from that point forward. Switching back to monthly also takes effect at renewal — you won't lose prepaid time.",
+        q: "Can I switch from a 30-day pass to an annual pass?",
+        a: "There's no billing cycle to switch — each pass is a separate one-time purchase. If you buy an annual pass while a 30-day pass still has time left, the remaining days stack on top rather than being lost, so you never lose prepaid time.",
       },
       {
-        q: "What payment methods will you accept?",
-        a: "When billing goes live, we'll support UPI, debit cards, credit cards, and net banking through Razorpay — all major Indian payment methods. At checkout you'll see the full list of options before entering any details.",
+        q: "What payment methods do you accept?",
+        a: "UPI, debit cards, credit cards, and net banking — all through Razorpay, all major Indian payment methods. You'll see the full list of options at checkout before entering any details.",
       },
     ],
   },
   {
-    section: "Cancellation & your data",
+    section: "Pass expiry & your data",
     items: [
       {
         q: "Can I cancel or downgrade anytime?",
-        a: "Yes, anytime. Go to Settings → Billing → Downgrade to Free. It takes effect immediately — no waiting for a renewal date, no forms, no dark patterns. If you've already paid for a period, you keep Plus access until that period ends, then drop to free. You won't be charged again.",
+        a: "There's nothing to cancel — passes are one-time purchases with no auto-renewal. You keep Plus until your pass's time runs out, then you automatically drop to Free. No forms, no dark patterns, and you're never charged again without buying another pass yourself.",
       },
       {
-        q: "What happens to my data when I cancel?",
-        a: "Nothing is ever deleted. Every group, expense, member, settlement, and comment stays in your account forever. You just lose the ability to keep more than 5 active groups, and Plus-only extras (templates, budget tracking, CSV export, personal insights, AI narratives) pause on new activity. Your history is always yours.",
+        q: "What happens to my data when my pass expires?",
+        a: "Nothing is ever deleted. Every group, expense, member, settlement, and comment stays in your account forever. If you have more than 5 active groups, the extras switch to read-only until you buy another pass or archive down to 5. Plus-only extras (templates, budget tracking, CSV export, personal insights, AI narratives) pause until then. Your history is always yours.",
       },
       {
         q: "What happens to groups that are over free-plan limits after I downgrade?",
-        a: "You keep access to all of them — nothing is hidden or locked. If you created 8 groups on Plus and drop to free, you can still view and use all 8; you just can't create or unarchive a new one until you're back under 5 active. There are no member or expense caps to worry about — only the active-group count. No data is touched.",
+        a: "Nothing is deleted or hidden. If you created 8 groups on Plus and drop to free, your 5 most-recently-active groups stay fully editable; the other 3 switch to read-only — you can still view every expense, settlement, and member, just can't log new expenses or add members in them until you reactivate Plus or archive/delete down to 5. There are no member or expense caps — only the active-group count matters.",
       },
       {
         q: "Is there a refund policy?",
-        a: "Since billing isn't live yet, there's nothing to refund today. When billing launches, we'll publish a clear refund policy before the first charge goes out. Our intent is to be fair: if something goes wrong on our end, we'll make it right.",
+        a: "Email support@useclear.in if something's wrong — a failed activation, a duplicate charge, anything. We review refund requests case by case and process approved ones through Razorpay; your Plus access is cleared as soon as the refund goes through.",
       },
       {
         q: "I still have questions — how do I reach you?",

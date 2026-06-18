@@ -19,9 +19,11 @@ import { getContextTheme } from "@/lib/theme/context-theme";
 interface Props {
   group:    Group;
   cardData: CircleCardData;
+  /** Overflow read-only lock (RAZORPAY_PLAN.md §9) — see TripCard's isLocked doc. */
+  isLocked?: boolean;
 }
 
-export function CircleCard({ group, cardData }: Props) {
+export function CircleCard({ group, cardData, isLocked = false }: Props) {
   const {
     totalMembers, paidThisCycle, totalContributed,
     walletBalance,
@@ -227,9 +229,10 @@ export function CircleCard({ group, cardData }: Props) {
       )}
       {/* Inner: glass card with overflow-hidden for content clipping */}
       <div className="glass rounded-2xl overflow-hidden relative h-full flex flex-col">
-        {/* Diagonal sample/archived ribbon (glassy) */}
+        {/* Diagonal sample/archived/locked ribbon (glassy) */}
         {group.isDemo && <CardRibbon variant="sample" />}
         {group.isArchived && !group.isDemo && <CardRibbon variant="archived" />}
+        {isLocked && !group.isDemo && !group.isArchived && <CardRibbon variant="locked" />}
         {/* Type-matched colour stripe — above the gradient header */}
         <div className={`absolute top-0 left-0 right-0 h-[3px] z-20 rounded-t-2xl ${
           isOneTime
@@ -238,12 +241,24 @@ export function CircleCard({ group, cardData }: Props) {
         }`} />
 
         {/* ── Top-left: mode badge + deadline / month pill ──────────────── */}
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+        <div
+          className="absolute top-3 left-3 z-10 flex items-center gap-1.5"
+          onTouchStart={(e) => e.stopPropagation()}
+        >
           <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide
                            ${badgeCls} backdrop-blur-sm px-2 py-0.5 rounded-full`}>
             {isOneTime ? <Target className="w-2.5 h-2.5" /> : <Repeat2 className="w-2.5 h-2.5" />}
             {isOneTime ? (isFlexi ? "Flexi" : "One-time") : "Monthly"}
           </span>
+          {isLocked && (
+            <Link
+              href="/upgrade"
+              className="inline-flex items-center gap-1 bg-violet-500/70 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full hover:bg-violet-500/90 active:scale-95 transition-all"
+              onClick={(e) => { e.stopPropagation(); if (suppressNextClick.current) e.preventDefault(); }}
+            >
+              🔒 Reactivate
+            </Link>
+          )}
           {isOneTime && daysLeft !== null && (
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full
               bg-black/10 dark:bg-black/40 backdrop-blur-sm ${

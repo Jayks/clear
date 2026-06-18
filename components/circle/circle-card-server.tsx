@@ -5,13 +5,14 @@ import { ArrowUpRight } from "lucide-react";
 
 interface Props {
   group: Group;
+  isLocked?: boolean;
 }
 
 /** RSC — fetches contribution data and renders the interactive CircleCard. */
-export async function CircleCardServer({ group }: Props) {
+export async function CircleCardServer({ group, isLocked = false }: Props) {
   try {
     const cardData = await getCircleCardData(group.id, group.circleMode);
-    return <CircleCard group={group} cardData={cardData} />;
+    return <CircleCard group={group} cardData={cardData} isLocked={isLocked} />;
   } catch {
     // Graceful fallback if query fails — never break the home page
     return (

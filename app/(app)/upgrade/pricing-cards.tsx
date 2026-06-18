@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 import { REGULAR_PRICE } from "@/lib/subscription/prices";
+import type { PassType } from "@/lib/subscription/entitlement";
 
 const FEATURES: { label: string; free: string | boolean; plus: string | boolean }[] = [
   { label: "Active groups",       free: "Up to 5",   plus: "Unlimited" },
@@ -39,7 +40,7 @@ export function PricingCards({
   slotsTotal,
   claimed,
 }: PricingCardsProps) {
-  const [cycle, setCycle] = useState<"monthly" | "annual">("monthly");
+  const [passType, setPassType] = useState<PassType>("pass_30d");
 
   const regularMonthly = REGULAR_PRICE.monthly; // shown as strikethrough when early-bird is active
   const regularAnnual  = REGULAR_PRICE.annual;  // shown as strikethrough when early-bird is active
@@ -99,23 +100,23 @@ export function PricingCards({
         </div>
       )}
 
-      {/* ── Billing cycle toggle ─────────────────────────────────────────── */}
+      {/* ── Pass type toggle ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-center">
         <div className="flex items-center gap-1 p-1 glass rounded-xl">
-          {(["monthly", "annual"] as const).map((c) => (
+          {(["pass_30d", "annual"] as const).map((t) => (
             <button
-              key={c}
+              key={t}
               type="button"
-              onClick={() => setCycle(c)}
+              onClick={() => setPassType(t)}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                cycle === c
+                passType === t
                   ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
             >
-              {c === "monthly" ? "Monthly" : (
+              {t === "pass_30d" ? "30-day pass" : (
                 <>
-                  Annual{" "}
+                  Annual pass{" "}
                   <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 ml-1">
                     Save {annualSavingsPct}%
                   </span>
@@ -167,8 +168,8 @@ export function PricingCards({
               <span className="text-[10px] text-violet-500 dark:text-violet-400">✦</span>
             </div>
 
-            {/* Price — monthly view */}
-            {cycle === "monthly" && (
+            {/* Price — 30-day pass view */}
+            {passType === "pass_30d" && (
               <>
                 {earlyBird ? (
                   <div className="flex items-baseline gap-2">
@@ -182,17 +183,17 @@ export function PricingCards({
                     ₹{price.monthly}
                   </p>
                 )}
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">per month</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">one-time · 30 days of Plus</p>
                 {earlyBird && (
                   <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-1.5">
-                    Save ₹{monthlyOffRegular}/mo vs regular — locked forever
+                    Save ₹{monthlyOffRegular} vs regular — locked forever
                   </p>
                 )}
               </>
             )}
 
-            {/* Price — annual view */}
-            {cycle === "annual" && (
+            {/* Price — annual pass view */}
+            {passType === "annual" && (
               <>
                 {earlyBird ? (
                   <div className="flex items-baseline gap-2">
@@ -207,13 +208,13 @@ export function PricingCards({
                   </p>
                 )}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  per year · ₹{annualMonthlyEquiv}/month
+                  one-time · 1 year of Plus · ₹{annualMonthlyEquiv}/month equivalent
                 </p>
                 {/* Savings callout */}
                 {earlyBird ? (
                   <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 px-3 py-2">
                     <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      Save ₹{annualOffRegular}/year vs regular price
+                      Save ₹{annualOffRegular} vs regular price
                     </p>
                     <p className="text-[11px] text-emerald-600/80 dark:text-emerald-500 mt-0.5">
                       Locked in forever — your rate never increases
@@ -222,10 +223,10 @@ export function PricingCards({
                 ) : (
                   <div className="mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 px-3 py-2">
                     <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      Save ₹{annualSavings}/year
+                      Save ₹{annualSavings}
                     </p>
                     <p className="text-[11px] text-emerald-600/80 dark:text-emerald-500 mt-0.5">
-                      vs paying ₹{price.monthly}/month · {annualSavingsPct}% off
+                      vs buying the 30-day pass 12× · {annualSavingsPct}% off
                     </p>
                   </div>
                 )}
@@ -247,14 +248,14 @@ export function PricingCards({
           </ul>
 
           <Link
-            href={`/upgrade/checkout?cycle=${cycle}`}
+            href={`/upgrade/checkout?passType=${passType}`}
             className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-gradient-to-br from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-medium rounded-xl shadow-md shadow-violet-500/20 transition-all text-sm"
           >
             <span>✦</span>
-            {isTrialing ? "Upgrade to Plus" : "Start 30-day trial"}
+            Choose this pass →
           </Link>
           <p className="text-xs text-center text-violet-400/70 dark:text-violet-500/70 mt-2">
-            No credit card required
+            One-time payment · no auto-renewal
           </p>
         </div>
       </div>

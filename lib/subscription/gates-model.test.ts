@@ -64,3 +64,63 @@ describe("free-tier model — June 2026 generous re-cut", () => {
     expect(getExpenseNudge()).toBeNull();
   });
 });
+
+describe("getUserPlan — timestamp-driven model (Razorpay M1 refactor)", () => {
+  const NOW = new Date("2026-06-18T12:00:00Z");
+
+  // Mirrors gates.ts getUserPlan: isPlus = currentPeriodEnd > now, OR trialing with
+  // trialEndsAt > now. Deliberately does NOT consult `status==='active'` — a lapsed
+  // pass must stop counting as Plus on its own (lazy expiry, no downgrade cron).
+  function getUserPlanModel(sub: {
+    currentPeriodEnd: Date | null;
+    status: "trialing" | "active" | "cancelled";
+    trialEndsAt: Date | null;
+  } | null): "plus" | "free" {
+    if (!sub) return "free";
+    if (sub.currentPeriodEnd && sub.currentPeriodEnd > NOW) return "plus";
+    if (sub.status === "trialing" && sub.trialEndsAt && sub.trialEndsAt > NOW) return "plus";
+    return "free";
+  }
+
+  it("no subscription row → free", () => {
+    expect(getUserPlanModel(null)).toBe("free");
+  });
+
+  it("paid entitlement window still open → plus, regardless of status", () => {
+    const future = new Date(NOW);
+    future.setDate(future.getDate() + 10);
+    expect(
+      getUserPlanModel({ currentPeriodEnd: future, status: "cancelled", trialEndsAt: null }),
+    ).toBe("plus");
+  });
+
+  it("lapsed entitlement with a stale status='active' row → free (lazy expiry, no cron needed)", () => {
+    const past = new Date(NOW);
+    past.setDate(past.getDate() - 1);
+    expect(
+      getUserPlanModel({ currentPeriodEnd: past, status: "active", trialEndsAt: null }),
+    ).toBe("free");
+  });
+
+  it("trialing with trialEndsAt in the future → plus", () => {
+    const future = new Date(NOW);
+    future.setDate(future.getDate() + 5);
+    expect(
+      getUserPlanModel({ currentPeriodEnd: null, status: "trialing", trialEndsAt: future }),
+    ).toBe("plus");
+  });
+
+  it("trialing but trialEndsAt has passed → free", () => {
+    const past = new Date(NOW);
+    past.setDate(past.getDate() - 1);
+    expect(
+      getUserPlanModel({ currentPeriodEnd: null, status: "trialing", trialEndsAt: past }),
+    ).toBe("free");
+  });
+
+  it("no entitlement window and not trialing → free", () => {
+    expect(
+      getUserPlanModel({ currentPeriodEnd: null, status: "cancelled", trialEndsAt: null }),
+    ).toBe("free");
+  });
+});

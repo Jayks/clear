@@ -11,6 +11,8 @@ import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { canRemoveMember } from "@/lib/members/member-guards";
+import { isGroupLocked } from "@/lib/subscription/degradation-queries";
+import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
   const user = await getCurrentUser();
@@ -24,6 +26,8 @@ export async function addGuestMember(input: { groupId: string; guestName: string
   const membership = await getMembership(groupId, user.id);
   if (!membership || membership.role !== "admin")
     return { ok: false, error: "Not authorized" } as const;
+
+  if (await isGroupLocked(groupId)) return { ok: false, error: LOCKED_GROUP_ERROR } as const;
 
   const [duplicate] = await db.select({ id: groupMembers.id }).from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.guestName, guestName)));
@@ -169,6 +173,10 @@ export async function claimGuestMember(token: string, guestMemberId: string) {
   }
 }
 
+// Deliberately NOT gated by isGroupLocked: accepting an invite link you already
+// hold is participation, not new financial content (unlike addGuestMember, where
+// an admin is actively growing the group). Blocking it would strand an invited
+// guest with no way to ask the lapsed admin to upgrade on their behalf.
 export async function joinGroup(token: string) {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" } as const;

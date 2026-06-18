@@ -401,6 +401,15 @@ html { scroll-behavior: smooth; }
    it was getting lost against bright map tiles (water, light terrain) bleeding
    through the chip's translucency at the edges. The shadow adds just enough
    definition without looking heavy. */
+/* Pin pop-in — fires on DOM insertion (the clustering effect tears down and
+   recreates every marker on each render() call), so a freshly-revealed cinema
+   stop's pin visibly "pops" into place rather than silently appearing. */
+@keyframes pin-pop {
+  0%   { transform: scale(0) translateY(8px); opacity: 0; }
+  70%  { transform: scale(1.12) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
 .expense-chip-pin {
   display: flex;
   align-items: center;
@@ -417,6 +426,7 @@ html { scroll-behavior: smooth; }
   white-space: nowrap;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: pin-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
 }
 .expense-chip-pin:hover, .expense-chip-pin.selected {
@@ -608,4 +618,36 @@ html { scroll-behavior: smooth; }
 }
 .dark .route-lead-marker-pulse {
   background: rgba(34,211,238,0.4);
+}
+
+/* Active day segment shimmer — the CinemaPlayerBar's segmented day bar marks
+   the currently-revealing (not-yet-dayComplete) day with a moving cyan→white
+   shimmer rather than a static fill, so "this day is mid-reveal" reads as
+   active/in-progress at a glance against the flanking "done" (solid emerald)
+   and "upcoming" (dim white/20) segments. */
+@keyframes segment-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.cinema-day-segment-active {
+  background: linear-gradient(90deg, #06B6D4 0%, #A5F3FC 50%, #06B6D4 100%);
+  background-size: 200% 100%;
+  animation: segment-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Cinema container — the SAME map element flips between the rounded card
+   launcher and the full-screen player (see `expense-map-view.tsx`'s
+   `cinemaOpen` ternary); a transitioned border-radius keeps that flip from
+   reading as a hard corner-snap. Declared on both states so the radius
+   animates smoothly in EITHER direction (opening AND closing) — per the CSS
+   transitions spec, the TARGET state's `transition` property is what governs
+   an animated change, so only declaring this on one side would animate just
+   that one direction. */
+.map-cinema-container-card {
+  border-radius: 22px;
+  transition: border-radius 220ms ease;
+}
+.map-cinema-container-cinema {
+  border-radius: 0;
+  transition: border-radius 220ms ease;
 }

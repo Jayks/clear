@@ -6,6 +6,8 @@
 import { parseISO, eachDayOfInterval, format } from "date-fns";
 import { parseExpenseLocation } from "../db/schema/expenses";
 import type { Expense } from "../db/schema/expenses";
+import type { GroupMember } from "../db/schema/group-members";
+import { getMemberName } from "../utils";
 
 // ── Active trip detection ─────────────────────────────────────────────────────
 
@@ -184,6 +186,101 @@ export function groupLocationsIntoStops<T extends { lat: number; lng: number }>(
     }
   }
   return order.map((key) => groups.get(key)!);
+}
+
+// ── Cinema player: all-day stops, flat scrub positions, payer captions ───────
+// The cinema player scrubs at STOP granularity, not day granularity — dragging
+// the scrubber or autoplaying needs to know every distinct stop across the
+// ENTIRE trip upfront (not just the currently-scrubbed day, which is all the
+// pre-cinema component ever computed). `buildAllDayStops` is that upfront
+// computation; `buildScrubPositions` flattens it into the linear index the
+// drag-scrubber and ◀ ▶ chevrons walk.
+
+export interface LocatedStop {
+  lat: number;
+  lng: number;
+  expense: Expense;
+}
+
+export interface DayStops {
+  date: string;
+  stops: LocatedStop[][];
+}
+
+export interface ScrubPosition {
+  date: string;
+  stopIdx: number;
+}
+
+/**
+ * Computes every day's distinct stops upfront, for the whole trip — not just
+ * whichever day happens to be scrubbed right now. Reuses `groupLocationsIntoStops`
+ * per day (same exact-coordinate grouping the camera/caption sequencer relies on)
+ * so a day with zero located expenses simply gets an empty `stops` array rather
+ * than being omitted — every `scrubDates` entry has a corresponding row here,
+ * 1:1, which is what lets the segmented day bar render one segment per
+ * `scrubDates` entry without a lookup miss.
+ */
+export function buildAllDayStops(
+  scrubDates: string[],
+  chronologicalLocated: Expense[],
+): DayStops[] {
+  return scrubDates.map((date) => ({
+    date,
+    stops: groupLocationsIntoStops(
+      chronologicalLocated
+        .filter((e) => e.expenseDate === date)
+        .map((e) => ({ ...parseExpenseLocation(e.location)!, expense: e })),
+    ),
+  }));
+}
+
+/**
+ * Flattens `buildAllDayStops`'s per-day stop groups into the single linear
+ * sequence the drag-scrubber and autoplay step through — "position 7" might be
+ * "Day 3, stop 2", and this is the lookup that resolves that.
+ *
+ * Days with NO located stops still contribute exactly one position (`stopIdx:
+ * 0`) rather than being skipped — otherwise dragging the scrubber could never
+ * land on a gap day at all, and the linear index would silently desync from
+ * "how many days are there" for trips with rest days. The pan-toward-day effect
+ * already knows how to handle `stopIdx: 0` on a stop-less day (it holds on the
+ * most recent prior location — see the day-scrub pan effect), so this is a
+ * faithful "nothing to step through, but still a place to stop" position.
+ */
+export function buildScrubPositions(allDayStops: DayStops[]): ScrubPosition[] {
+  const positions: ScrubPosition[] = [];
+  for (const { date, stops } of allDayStops) {
+    const count = Math.max(stops.length, 1);
+    for (let i = 0; i < count; i++) positions.push({ date, stopIdx: i });
+  }
+  return positions;
+}
+
+/**
+ * Builds the cinema caption's payer line — "Rahul paid" / "Rahul, Priya paid" /
+ * "Rahul +2 paid" — from the expenses bundled into one stop. Dedupes by
+ * resolved display name (two expenses logged by the same member at one stop
+ * should read as one payer, not "Rahul, Rahul paid"). Falls back to "Someone"
+ * for an expense whose `paidByMemberId` no longer resolves (removed member) —
+ * better than silently dropping the payer from the line.
+ */
+export function getPayerNames(
+  stopExpenses: Expense[],
+  members: GroupMember[],
+): string {
+  const names = [
+    ...new Set(
+      stopExpenses.map((e) => {
+        const member = members.find((m) => m.id === e.paidByMemberId);
+        return member ? getMemberName(member) : "Someone";
+      }),
+    ),
+  ];
+  if (names.length === 0) return "";
+  if (names.length === 1) return `${names[0]} paid`;
+  if (names.length === 2) return `${names[0]}, ${names[1]} paid`;
+  return `${names[0]} +${names.length - 1} paid`;
 }
 
 // ── Located-expense filter ────────────────────────────────────────────────────

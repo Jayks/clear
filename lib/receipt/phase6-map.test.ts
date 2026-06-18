@@ -20,6 +20,9 @@ import {
   computeDistanceRevealFraction,
   computeDistanceRevealFractionThroughIndex,
   groupLocationsIntoStops,
+  buildAllDayStops,
+  buildScrubPositions,
+  getPayerNames,
   getLocatedExpenses,
   CATEGORY_EMOJI,
   CATEGORY_EMOJI_FALLBACK,
@@ -34,6 +37,7 @@ import {
 } from "../expense/map-helpers";
 import { CATEGORY_VALUES } from "../categories";
 import type { Expense } from "../db/schema/expenses";
+import type { GroupMember } from "../db/schema/group-members";
 
 // ── isTripActive ──────────────────────────────────────────────────────────────
 
@@ -358,6 +362,125 @@ describe("getLocatedExpenses", () => {
       makeExpense("e1", { lat: "13.7", lng: 100.5, name: "Place" }), // lat is string
     ];
     expect(getLocatedExpenses(expenses)).toHaveLength(0);
+  });
+});
+
+// ── buildAllDayStops ──────────────────────────────────────────────────────────
+
+describe("buildAllDayStops", () => {
+  const chennai = { lat: 13.0827, lng: 80.2707, name: "Chennai" };
+  const delhi   = { lat: 28.7041, lng: 77.1025, name: "Delhi" };
+
+  it("groups located expenses by day, into distinct stops by coordinate", () => {
+    const e1 = { ...makeExpense("e1", chennai), expenseDate: "2026-06-01" } as Expense;
+    const e2 = { ...makeExpense("e2", chennai), expenseDate: "2026-06-01" } as Expense; // same stop as e1
+    const e3 = { ...makeExpense("e3", delhi),   expenseDate: "2026-06-01" } as Expense; // distinct stop
+    const allDayStops = buildAllDayStops(["2026-06-01"], [e1, e2, e3]);
+
+    expect(allDayStops).toHaveLength(1);
+    expect(allDayStops[0].date).toBe("2026-06-01");
+    expect(allDayStops[0].stops).toHaveLength(2);
+    expect(allDayStops[0].stops[0].map((s) => s.expense.id)).toEqual(["e1", "e2"]);
+    expect(allDayStops[0].stops[1].map((s) => s.expense.id)).toEqual(["e3"]);
+  });
+
+  it("produces one row per scrubDate, in the given order — even across non-contiguous expense dates", () => {
+    const e1 = { ...makeExpense("e1", chennai), expenseDate: "2026-06-01" } as Expense;
+    const e3 = { ...makeExpense("e3", delhi),   expenseDate: "2026-06-03" } as Expense;
+    const allDayStops = buildAllDayStops(["2026-06-01", "2026-06-02", "2026-06-03"], [e1, e3]);
+    expect(allDayStops.map((d) => d.date)).toEqual(["2026-06-01", "2026-06-02", "2026-06-03"]);
+  });
+
+  it("returns an empty stops array (not a missing row) for a gap day with no located expenses", () => {
+    const allDayStops = buildAllDayStops(["2026-06-01", "2026-06-02"], []);
+    expect(allDayStops).toEqual([
+      { date: "2026-06-01", stops: [] },
+      { date: "2026-06-02", stops: [] },
+    ]);
+  });
+});
+
+// ── buildScrubPositions ───────────────────────────────────────────────────────
+
+describe("buildScrubPositions", () => {
+  const stub = (lat: number, lng: number) => ({ lat, lng, expense: {} as Expense });
+
+  it("flattens a multi-stop day into one position per stop, stopIdx ascending", () => {
+    const allDayStops = [{ date: "2026-06-01", stops: [[stub(1, 1)], [stub(2, 2)]] }];
+    expect(buildScrubPositions(allDayStops)).toEqual([
+      { date: "2026-06-01", stopIdx: 0 },
+      { date: "2026-06-01", stopIdx: 1 },
+    ]);
+  });
+
+  it("gives a single-stop day exactly one position", () => {
+    const allDayStops = [{ date: "2026-06-01", stops: [[stub(1, 1)]] }];
+    expect(buildScrubPositions(allDayStops)).toEqual([{ date: "2026-06-01", stopIdx: 0 }]);
+  });
+
+  it("gives a zero-stop (gap) day exactly one position, not zero — must stay reachable by drag", () => {
+    const allDayStops = [{ date: "2026-06-01", stops: [] }];
+    expect(buildScrubPositions(allDayStops)).toEqual([{ date: "2026-06-01", stopIdx: 0 }]);
+  });
+
+  it("preserves day order across a mix of gap, single-, and multi-stop days", () => {
+    const allDayStops = [
+      { date: "2026-06-01", stops: [[stub(1, 1)]] },
+      { date: "2026-06-02", stops: [] },
+      { date: "2026-06-03", stops: [[stub(1, 1)], [stub(2, 2)]] },
+    ];
+    expect(buildScrubPositions(allDayStops)).toEqual([
+      { date: "2026-06-01", stopIdx: 0 },
+      { date: "2026-06-02", stopIdx: 0 },
+      { date: "2026-06-03", stopIdx: 0 },
+      { date: "2026-06-03", stopIdx: 1 },
+    ]);
+  });
+});
+
+// ── getPayerNames ─────────────────────────────────────────────────────────────
+
+describe("getPayerNames", () => {
+  const makeMember = (id: string, name: string): GroupMember =>
+    ({ id, displayName: name, guestName: null }) as unknown as GroupMember;
+
+  const rahul = makeMember("m1", "Rahul");
+  const priya = makeMember("m2", "Priya");
+  const amit  = makeMember("m3", "Amit");
+  const members = [rahul, priya, amit];
+  const loc = { lat: 1, lng: 1, name: "x" };
+
+  it("returns an empty string for no expenses", () => {
+    expect(getPayerNames([], members)).toBe("");
+  });
+
+  it("formats a single payer", () => {
+    const e = { ...makeExpense("e1", loc), paidByMemberId: "m1" } as Expense;
+    expect(getPayerNames([e], members)).toBe("Rahul paid");
+  });
+
+  it("formats two distinct payers", () => {
+    const e1 = { ...makeExpense("e1", loc), paidByMemberId: "m1" } as Expense;
+    const e2 = { ...makeExpense("e2", loc), paidByMemberId: "m2" } as Expense;
+    expect(getPayerNames([e1, e2], members)).toBe("Rahul, Priya paid");
+  });
+
+  it("overflows to '+N' for three or more distinct payers", () => {
+    const e1 = { ...makeExpense("e1", loc), paidByMemberId: "m1" } as Expense;
+    const e2 = { ...makeExpense("e2", loc), paidByMemberId: "m2" } as Expense;
+    const e3 = { ...makeExpense("e3", loc), paidByMemberId: "m3" } as Expense;
+    expect(getPayerNames([e1, e2, e3], members)).toBe("Rahul +2 paid");
+  });
+
+  it("dedupes repeat expenses logged by the same payer at one stop", () => {
+    const e1 = { ...makeExpense("e1", loc), paidByMemberId: "m1" } as Expense;
+    const e2 = { ...makeExpense("e2", loc), paidByMemberId: "m1" } as Expense;
+    expect(getPayerNames([e1, e2], members)).toBe("Rahul paid");
+  });
+
+  it("falls back to 'Someone' when the payer's member record no longer resolves", () => {
+    const e = { ...makeExpense("e1", loc), paidByMemberId: "ghost-id" } as Expense;
+    expect(getPayerNames([e], members)).toBe("Someone paid");
   });
 });
 

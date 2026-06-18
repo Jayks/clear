@@ -278,6 +278,8 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             interactionCounts={interactionCounts}
             showMapView={hasLocatedExpenses}
             theme={theme}
+            groupId={group.id}
+            groupName={group.name}
           />
         </>
       )}

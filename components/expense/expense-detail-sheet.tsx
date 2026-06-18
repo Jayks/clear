@@ -71,6 +71,12 @@ interface Props {
   interactionCount?: ExpenseInteractionCount;
   /** Context palette — colour follows the group. Defaults to trip (cyan). */
   theme?: ContextTheme;
+  /** Overrides the default `z-50` backdrop/panel stacking — needed when this
+   *  sheet is opened from inside `ExpenseMapView`'s cinema player, which sits
+   *  at `z-[100]` (a deliberately high value so the full-screen takeover
+   *  reliably covers nav bars regardless of DOM order). Leave unset for every
+   *  other call site. */
+  zIndexClass?: string;
 }
 
 export function ExpenseDetailSheet({
@@ -83,6 +89,7 @@ export function ExpenseDetailSheet({
   onClose,
   interactionCount,
   theme = CONTEXT_THEME.trip,
+  zIndexClass = "z-50",
 }: Props) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -403,7 +410,7 @@ export function ExpenseDetailSheet({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+              className={`fixed inset-0 ${zIndexClass} bg-black/40 backdrop-blur-sm`}
               onClick={onClose}
             />
 
@@ -419,7 +426,7 @@ export function ExpenseDetailSheet({
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] flex flex-col"
+              className={`fixed bottom-0 left-0 right-0 ${zIndexClass} rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl max-h-[90vh] flex flex-col`}
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-1 shrink-0">

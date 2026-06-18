@@ -33,13 +33,17 @@ interface Props {
   showMapView?: boolean;
   /** Context palette — colour follows the group. Defaults to trip (cyan). */
   theme?: ContextTheme;
+  /** Group id + name — passed through to the cinema player (establishing shot
+   *  localStorage key + intro caption). Only required when `showMapView` is true. */
+  groupId?: string;
+  groupName?: string;
 }
 
 const ITEMS_PER_PAGE = 10;
 // Groups with ≤ this many total expenses skip pagination and show everything.
 const PAGE_ALL_THRESHOLD = 20;
 
-export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts, showMapView, theme = CONTEXT_THEME.trip }: Props) {
+export function ExpenseFilters({ expenses, members, currentUserId, currentMemberId, isAdmin, currency, groupStartDate, groupEndDate, groupByMonth, interactionCounts, showMapView, theme = CONTEXT_THEME.trip, groupId, groupName }: Props) {
   const [search, setSearch]        = useState("");
   const [category, setCategory]    = useState<string | null>(null);
   const [payerId, setPayerId]       = useState<string | null>(null);
@@ -421,6 +425,8 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
                   groupEndDate={groupEndDate}
                   filteredExpenses={filtered}
                   interactionCounts={interactionCounts}
+                  groupId={groupId ?? expenses[0]?.groupId ?? ""}
+                  groupName={groupName ?? "This trip"}
                 />
               </Suspense>
             </MapErrorBoundary>

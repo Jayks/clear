@@ -138,17 +138,27 @@ export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSec
                         const overviewHref = `/groups/${g.id}`;
 
                         if (sectionHref !== overviewHref) {
-                          // Two-step App Router navigation:
-                          //   1. replace → inserts /groups/B overview as a proper RSC entry
-                          //   2. push    → adds /groups/B/section on top
-                          // Result history: [..., /groups/A, /groups/B, /groups/B/section]
+                          // sessionStorage two-step navigation:
+                          //   1. Store the target section so GroupMobileNav can push it
+                          //      after it lands on the overview.
+                          //   2. replace → commits /groups/B overview into history.
+                          //   3. GroupMobileNav useEffect fires on /groups/B, reads the
+                          //      stored section, clears it, and pushes /groups/B/section.
+                          //
+                          // Resulting history: [..., /groups/A/X, /groups/B, /groups/B/X]
                           // Browser back → /groups/B overview ✓
                           //
-                          // setTimeout(0) puts the push in a separate task so the router
-                          // dispatches both as independent navigations rather than collapsing
-                          // them into one.
+                          // Why not setTimeout(0)? App Router may cancel the replace when
+                          // the push fires before it commits — sessionStorage decouples the
+                          // two navigations so they can't race.
+                          const section = sectionHref.slice(overviewHref.length + 1);
+                          try {
+                            sessionStorage.setItem(
+                              "clearSwitcherSection",
+                              JSON.stringify({ groupId: g.id, section }),
+                            );
+                          } catch { /* quota / private browsing — ignore */ }
                           router.replace(overviewHref);
-                          setTimeout(() => router.push(sectionHref), 0);
                         } else {
                           // Switching directly to overview: single replace so back exits
                           // to wherever the user was before entering the previous group.

@@ -119,6 +119,25 @@ export function GroupMobileNav({
   // Close the switcher once a switch commits (groupId prop changes).
   useEffect(() => { setSwitcherOpen(false); }, [groupId]);
 
+  // After a group-switch, GroupSwitcherSheet stores the target section in
+  // sessionStorage and replaces to the group overview.  Once we land there
+  // (groupId matches + pathname is exactly the overview URL) we push the
+  // section, giving history: [..., /groups/A/X, /groups/B, /groups/B/X].
+  // Browser back then lands on /groups/B overview ✓
+  useEffect(() => {
+    if (pathname !== `/groups/${groupId}`) return; // not on the overview
+    let parsed: { groupId: string; section: string } | null = null;
+    try {
+      const raw = sessionStorage.getItem("clearSwitcherSection");
+      if (raw) parsed = JSON.parse(raw) as { groupId: string; section: string };
+    } catch { /* ignore */ }
+    if (!parsed || parsed.groupId !== groupId || !parsed.section) return;
+    // Clear before pushing — if push fails the user is on the overview, which
+    // is a safe state; stale storage would cause an unexpected redirect later.
+    sessionStorage.removeItem("clearSwitcherSection");
+    router.push(`/groups/${groupId}/${parsed.section}`);
+  }, [pathname, groupId, router]);
+
   // Colour follows the group's context, not the section — the section icon
   // differentiates the sub-page.
   const theme = getContextTheme(groupType, circleMode);

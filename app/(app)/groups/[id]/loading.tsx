@@ -16,9 +16,14 @@ export default function GroupLoading() {
         <Skeleton className="h-4 w-28" />
       </div>
 
-      {/* Hero card — h-52, matches actual TripCard dashboard hero */}
+      {/* Hero card — h-52, matches actual TripCard dashboard hero.
+          Neutral slate shimmer, deliberately NOT context-coloured: this fallback
+          renders before any data loads, so it has no way to know whether the
+          group is a Trip (cyan)/Nest (emerald)/Circle (violet or amber) — guessing
+          one color means it's wrong most of the time, flashing it briefly before
+          the real hero swaps in. */}
       <div className="glass rounded-2xl overflow-hidden mb-6">
-        <div className="h-52 relative bg-gradient-to-br from-cyan-500/20 to-teal-500/15 dark:from-cyan-900/30 dark:to-teal-900/20 animate-pulse">
+        <div className="h-52 relative bg-gradient-to-br from-slate-200/70 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-800/30 animate-pulse">
           {/* Legibility overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-slate-900/10 to-transparent" />
           {/* Group name + date row at bottom */}
@@ -29,18 +34,18 @@ export default function GroupLoading() {
         </div>
       </div>
 
-      {/* Quick actions — 2-col on mobile, 4-col on sm+ */}
+      {/* Quick actions — 2-col on mobile, 4-col on sm+.
+          The real page gives all 4 tiles the SAME hue (the group's single
+          theme.gradient — see groups/[id]/page.tsx) — there's no per-section
+          colour anymore, that was the old design this replaced. Skeleton has
+          no more access to the group's context colour here than the hero
+          does, so all 4 icon badges stay neutral too, for the same reason. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {[
-          { w: "w-16", color: "from-cyan-500/20 to-teal-500/15 dark:from-cyan-900/30 dark:to-teal-900/20" },
-          { w: "w-20", color: "from-emerald-500/20 to-green-500/15 dark:from-emerald-900/30 dark:to-green-900/20" },
-          { w: "w-14", color: "from-violet-500/20 to-purple-500/15 dark:from-violet-900/30 dark:to-purple-900/20" },
-          { w: "w-20", color: "from-amber-500/20 to-orange-500/15 dark:from-amber-900/30 dark:to-orange-900/20" },
-        ].map((tile, i) => (
+        {["w-16", "w-20", "w-14", "w-20"].map((w, i) => (
           <div key={i} className="glass rounded-xl p-4 flex items-center gap-3">
-            <Skeleton className={`w-9 h-9 rounded-lg shrink-0 bg-gradient-to-br ${tile.color}`} />
+            <Skeleton className="w-9 h-9 rounded-lg shrink-0" />
             <div className="space-y-1.5 flex-1">
-              <Skeleton className={`h-3.5 ${tile.w}`} />
+              <Skeleton className={`h-3.5 ${w}`} />
               <Skeleton className="h-3 w-24" />
             </div>
           </div>

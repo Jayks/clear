@@ -43,8 +43,16 @@ export function SwipeableExpenseCard(props: Props) {
   const isDragging = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Live-reactive, not a one-shot check on mount — a one-shot read would freeze
+  // at whatever pointer capability was true when this card first mounted, so
+  // toggling Chrome DevTools' device toolbar (touch emulation) *after* the page
+  // already loaded would never flip it without a manual reload.
   useEffect(() => {
-    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+    const mq = window.matchMedia("(pointer: coarse)");
+    setIsTouchDevice(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsTouchDevice(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   // Cancel any pending 5s delete timer if the card unmounts mid-countdown

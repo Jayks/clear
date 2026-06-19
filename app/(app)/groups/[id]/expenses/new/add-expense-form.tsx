@@ -228,9 +228,12 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
       toast.success("Expense added!");
     }
 
+    // Reached by pushing forward (from the expenses list, or from Home via
+    // ?from=groups) — back() returns to whichever it was, popping that one
+    // entry instead of writing a same-URL duplicate next to it.
     maybeNudge(
       { groupId: group.id, groupName: group.name, wasAiScanned: aiFilledFields.size > 0 },
-      () => router.push(`/groups/${group.id}/expenses`)
+      () => router.back()
     );
   }
 

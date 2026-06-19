@@ -455,7 +455,18 @@ export function ExpenseDetailSheet({
                   {canEdit && (
                     <Link
                       href={`/groups/${expense.groupId}/expenses/${expense.id}/edit`}
-                      onClick={onClose}
+                      onClick={(e) => {
+                        // Don't call onClose() here — closing the sheet schedules
+                        // useSheetDismiss's async history.go(-1) cleanup (popping the
+                        // sheet's fake history entry), which races this Link's own
+                        // forward push and can resolve after it, silently undoing the
+                        // navigation (the button "does nothing"). router.replace()
+                        // overwrites the fake entry's slot directly instead — no race,
+                        // no extra entry — and the sheet unmounts naturally once the
+                        // route changes.
+                        e.preventDefault();
+                        router.replace(`/groups/${expense.groupId}/expenses/${expense.id}/edit`);
+                      }}
                       className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                       title="Edit expense"
                     >

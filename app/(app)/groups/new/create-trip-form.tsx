@@ -117,7 +117,7 @@ export function CreateTripForm({
     } else {
       toast.success(`${config.labels.singular} created!`);
     }
-    router.push(`/groups/${result.groupId}`);
+    router.replace(`/groups/${result.groupId}`);
   }
 
   return (

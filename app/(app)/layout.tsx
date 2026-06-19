@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import AppNav from "./app-nav";
+import AppSidebar from "./app-sidebar";
 import { MobileNav } from "@/components/shared/mobile-nav";
 import { PageTransition } from "@/components/shared/page-transition";
 import { isPlatformAdmin } from "@/lib/db/queries/admin";
@@ -30,12 +31,18 @@ export default async function AppLayout({
 
   return (
     <TourProvider>
-      <div className="min-h-screen flex flex-col">
+      {/* flex-col on mobile (unchanged: top AppNav + bottom MobileNav); flex-row
+          on desktop (AppSidebar rail on the left, content column on the right —
+          AppNav contributes nothing there, it's md:hidden internally now). */}
+      <div className="min-h-screen flex flex-col md:flex-row">
+        <AppSidebar user={user} isAdmin={isAdmin} plan={plan} />
         <AppNav user={user} isAdmin={isAdmin} plan={plan} />
-        <TrialBanner />
-        <main className="flex-1 flex flex-col p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">
-          <PageTransition>{children}</PageTransition>
-        </main>
+        <div className="flex-1 flex flex-col min-w-0">
+          <TrialBanner />
+          <main className="flex-1 flex flex-col p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">
+            <PageTransition>{children}</PageTransition>
+          </main>
+        </div>
         <MobileNav />
         <PushPermissionPrompt />
         <VisitorTracker />

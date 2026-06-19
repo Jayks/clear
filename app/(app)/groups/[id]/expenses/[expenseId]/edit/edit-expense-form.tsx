@@ -101,7 +101,9 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
     }
     hapticLight();
     toast.success("Expense updated!");
-    router.push(`/groups/${group.id}/expenses`);
+    // Always reached by pushing forward from the expenses list — back() pops
+    // that entry instead of writing a same-URL duplicate next to it.
+    router.back();
   }
 
   return (

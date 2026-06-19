@@ -53,7 +53,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode]     = useState<"full" | "compact" | "timeline" | "map">("full");
-  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   // Restore view mode from localStorage after hydration
   useEffect(() => {
@@ -138,6 +138,10 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
 
   const filteredTotal = displayItems.reduce((sum, e) => sum + Number(e.amount), 0);
   const isFiltered = !!(search || category || payerId || dateFrom || dateTo);
+  // Search has its own always-visible input (you can see when it's active) —
+  // this is just for the mobile Filter button's badge dot, which covers the
+  // controls that move into the drawer on mobile.
+  const hasActiveNonSearchFilters = !!(category || payerId || dateFrom || dateTo);
 
   // Timeline: re-sort `filtered` chronologically regardless of `sort` state
   const timelineGroups = useMemo(() => {
@@ -210,10 +214,10 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           </div>
         </div>
 
-        {/* ── Filter chrome — hidden on mobile when map is active ─────────── */}
-        <div className={viewMode === "map" ? "hidden md:block" : ""}>
-
-        {/* ── Search (always) + Sort (hidden in timeline — order is fixed) ─ */}
+        {/* ── Search — always visible on every viewport/mode. Sort sits next to
+              it on desktop; on mobile it folds into the Filter drawer below,
+              along with category/payer/date, so the page opens with just this
+              one row instead of stacking 5 rows of controls above the list. ── */}
         <div className="flex gap-2 mb-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -221,7 +225,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search expenses…"
-              className={`w-full pl-9 pr-8 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500`}
+              className={`w-full pl-9 pr-8 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 ${theme.ring} placeholder:text-slate-400 dark:placeholder:text-slate-500 transition`}
             />
             {search && (
               <button
@@ -233,7 +237,7 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             )}
           </div>
           {viewMode !== "timeline" && viewMode !== "map" && (
-            <div className="relative">
+            <div className="relative hidden md:block">
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortOption)}
@@ -247,7 +251,147 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
               <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
             </div>
           )}
+          {/* Filter — mobile only, toggles the inline panel below (no overlay —
+              desktop has room to show everything inline permanently instead).
+              Badge dot = a non-search filter is active. */}
+          <button
+            type="button"
+            onClick={() => setFiltersExpanded((v) => !v)}
+            aria-expanded={filtersExpanded}
+            className={`md:hidden relative shrink-0 flex items-center justify-center w-9 h-9 rounded-xl border transition-colors ${
+              filtersExpanded
+                ? `${theme.headerBadgeBg} ${theme.accentText} border-transparent`
+                : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400"
+            }`}
+            aria-label="Filters"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {hasActiveNonSearchFilters && (
+              <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-gradient-to-br ${theme.gradient} ring-2 ring-white dark:ring-slate-900`} />
+            )}
+          </button>
         </div>
+
+        {/* ── Mobile filter panel — expands INLINE in the page flow (not an
+              overlay/sheet): the list stays visible below it the whole time, so
+              picking a filter doesn't require a dismiss step to see the result.
+              Same Sort/Category/Payer/Date controls the desktop block below
+              shows permanently. ── */}
+        <AnimatePresence initial={false}>
+          {filtersExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              className="md:hidden overflow-hidden"
+            >
+              <div className="glass rounded-xl p-3 mb-3 space-y-3">
+                {/* Sort — irrelevant in Timeline (chronological) and Map. Label
+                    + select share one line instead of stacking. */}
+                {viewMode !== "timeline" && viewMode !== "map" && (
+                  <div className="flex items-center gap-2.5">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Sort by</p>
+                    <div className="relative">
+                      <select
+                        value={sort}
+                        onChange={(e) => setSort(e.target.value as SortOption)}
+                        className={`appearance-none pl-3 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 ${theme.ring} text-slate-600 dark:text-slate-300 cursor-pointer`}
+                      >
+                        <option value="date-desc">Newest</option>
+                        <option value="date-asc">Oldest</option>
+                        <option value="amount-desc">Highest</option>
+                        <option value="amount-asc">Lowest</option>
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Category */}
+                <div>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Category</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button onClick={() => setCategory(null)} className={`px-3 py-1 rounded-full text-xs font-medium ${!category ? `bg-gradient-to-br ${theme.gradient} text-white` : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"}`}>All</button>
+                    {usedCategories.map((cat) => {
+                      const cm = getCategory(cat);
+                      const active = category === cat;
+                      return (
+                        <button key={cat} onClick={() => setCategory(active ? null : cat)}
+                          className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${active ? `bg-gradient-to-br ${cm.gradient} text-white` : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"}`}>
+                          <cm.icon className="w-3 h-3" />{cm.shortLabel ?? cm.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Payer */}
+                {payers.length >= 2 && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Paid by</p>
+                    {payers.length <= 5 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        <button onClick={() => setPayerId(null)} className={`px-3 py-1 rounded-full text-xs font-medium ${!payerId ? `bg-gradient-to-br ${theme.gradient} text-white` : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"}`}>All</button>
+                        {payers.map((m) => {
+                          const isMe = !!currentMemberId && m.id === currentMemberId;
+                          const active = payerId === m.id;
+                          return (
+                            <button key={m.id} onClick={() => setPayerId(active ? null : m.id)}
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${active ? `bg-gradient-to-br ${theme.gradient} text-white` : "bg-white/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"}`}>
+                              {isMe ? "Mine" : getMemberName(m)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <select
+                          value={payerId ?? ""}
+                          onChange={(e) => setPayerId(e.target.value || null)}
+                          className={`w-full appearance-none pl-3 pr-7 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 focus:outline-none focus:ring-2 ${theme.ring} text-slate-600 dark:text-slate-300 cursor-pointer`}
+                        >
+                          <option value="">All payers</option>
+                          {payers.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.id === currentMemberId ? `Me (${getMemberName(m)})` : getMemberName(m)}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Date range — label + both inputs share one line instead of
+                    stacking, same treatment as Sort above. */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Date</p>
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                    className={`min-w-0 px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 ${theme.ring}`} />
+                  <span className="text-slate-400 text-xs">to</span>
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                    className={`min-w-0 px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 ${theme.ring}`} />
+                </div>
+
+                {hasActiveNonSearchFilters && (
+                  <button
+                    onClick={clearAll}
+                    className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    <X className="w-3 h-3" />
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Category / Payer / Date — desktop inline, permanently visible
+              (plenty of room). Mobile uses the expandable panel above instead. ── */}
+        <div className="hidden md:block">
 
         {/* ── Category pills — wrapping layout, all options visible ───────── */}
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -381,30 +525,11 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
           )}
         </div>
 
-        </div>{/* end filter chrome wrapper */}
+        </div>{/* end desktop-only category/payer/date wrapper */}
 
         {/* ── Map view ────────────────────────────────────────────────────── */}
         {viewMode === "map" && (
           <div className="relative mt-1">
-            {/* Mobile floating Filter chip — absolute over map container */}
-            <div className="md:hidden flex gap-2 mb-2 justify-end">
-              {isFiltered && (
-                <button
-                  onClick={clearAll}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-sm"
-                >
-                  <X className="w-3 h-3" /> Clear
-                </button>
-              )}
-              <button
-                onClick={() => setShowFilterDrawer(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-sm"
-              >
-                <SlidersHorizontal className="w-3 h-3" />
-                {isFiltered ? "Filtered" : "Filter"}
-              </button>
-            </div>
-
             <MapErrorBoundary>
               <Suspense fallback={
                 <div className="h-[calc(100dvh-220px)] md:h-[480px] rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
@@ -432,68 +557,6 @@ export function ExpenseFilters({ expenses, members, currentUserId, currentMember
             </MapErrorBoundary>
           </div>
         )}
-
-        {/* ── Mobile filter drawer — shown when floating Filter chip tapped ─ */}
-        <AnimatePresence>
-          {showFilterDrawer && viewMode === "map" && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/40 z-40 md:hidden"
-                onClick={() => setShowFilterDrawer(false)}
-              />
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 26, stiffness: 280 }}
-                className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-t-2xl p-5 shadow-xl"
-              >
-                <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-5" />
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Filter expenses</p>
-
-                {/* Category */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  <button onClick={() => setCategory(null)} className={`px-3 py-1 rounded-full text-xs font-medium ${!category ? `bg-gradient-to-br ${theme.gradient} text-white` : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>All</button>
-                  {usedCategories.map((cat) => {
-                    const cm = getCategory(cat);
-                    const active = category === cat;
-                    return (
-                      <button key={cat} onClick={() => setCategory(active ? null : cat)}
-                        className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${active ? `bg-gradient-to-br ${cm.gradient} text-white` : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>
-                        <cm.icon className="w-3 h-3" />{cm.shortLabel ?? cm.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Date range */}
-                <div className="flex gap-2 items-center mb-4 flex-wrap">
-                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                    className={`px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 ${theme.ring}`} />
-                  <span className="text-slate-400 text-xs">to</span>
-                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                    className={`px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-500 focus:outline-none focus:ring-2 ${theme.ring}`} />
-                </div>
-
-                <div className="flex gap-2">
-                  {isFiltered && (
-                    <button onClick={() => { clearAll(); setShowFilterDrawer(false); }}
-                      className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                      Clear all
-                    </button>
-                  )}
-                  <button onClick={() => setShowFilterDrawer(false)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-br ${theme.gradient} text-white`}>
-                    Done
-                  </button>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
 
         {/* ── Timeline: header + results + day cards — all in one spotlightable block ── */}
         {viewMode !== "map" && viewMode === "timeline" && !groupByMonth ? (

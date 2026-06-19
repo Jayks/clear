@@ -32,8 +32,10 @@ export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarU
   return (
     <div className="md:grid md:grid-cols-[200px_1fr] md:gap-8 md:items-start">
 
-      {/* Sidebar — desktop only */}
-      <aside className="hidden md:block sticky top-20">
+      {/* Sidebar — desktop only. Was top-20 (AppNav's 56px + 24px breathing
+          room) before AppSidebar replaced the horizontal AppNav on desktop;
+          now it's just the breathing room, top-6. */}
+      <aside className="hidden md:block sticky top-6">
         <nav className="space-y-0.5">
           {SIDEBAR_LINKS.map(({ id, label, icon: Icon }) => (
             <button

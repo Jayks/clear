@@ -68,7 +68,9 @@ export function AddTemplateForm({ group, members }: Props) {
       return;
     }
     toast.success("Recurring expense added!");
-    router.push(`/groups/${group.id}/expenses`);
+    // Always reached by pushing forward from the expenses list — back() pops
+    // that entry instead of writing a same-URL duplicate next to it.
+    router.back();
   }
 
   return (

@@ -93,7 +93,10 @@ export function EditTripForm({ group }: { group: Group }) {
       return;
     }
     toast.success(`${config.labels.singular} updated!`);
-    router.push(`/groups/${group.id}`);
+    // This page is always reached by pushing forward from the group overview
+    // (the Manage hub) — back() pops that one entry instead of writing a
+    // same-URL duplicate next to it (replace() did; see back-button.tsx).
+    router.back();
   }
 
   return (

@@ -106,7 +106,7 @@ export function RepeatTripPrompt({ groupId, groupName, memberNames, defaultCurre
 
     setSubmitting(false);
     closeSheet();
-    router.push(`/groups/${newGroupId}`);
+    router.replace(`/groups/${newGroupId}`);
   }
 
   if (!visible) return null;

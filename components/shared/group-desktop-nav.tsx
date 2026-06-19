@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getContextTheme } from "@/lib/theme/context-theme";
 import { getGroupTabs, sectionFromPath } from "@/lib/nav/group-tabs";
-import { GroupSwitcherSheet } from "./group-switcher-sheet";
+import { GroupSwitcherDropdown } from "./group-switcher-dropdown";
+import { GroupActionHub } from "@/components/trip/group-action-hub";
 
 /**
  * Desktop in-group tab strip (md+ only). The desktop counterpart of the mobile
@@ -16,15 +17,30 @@ import { GroupSwitcherSheet } from "./group-switcher-sheet";
  *
  * Active tab gets a context-coloured underline. Optimistic active (like the
  * bottom nav) so the indicator moves on click, not after the route commits.
+ *
+ * Carries the same ⋯ manage trigger GroupMobileNav has on every in-group page
+ * — previously the only desktop entry point to Edit/Archive/Share was
+ * GroupHeroHub on the Overview page specifically, so a desktop user on
+ * Expenses/Settle/Members/Insights had no way to reach it without navigating
+ * back first. showJumpTo={false}: this tab strip already covers "jump to".
  */
 interface Props {
-  groupId: string;
-  groupName: string;
-  groupType: string;
-  circleMode?: string | null;
+  groupId:         string;
+  groupName:       string;
+  groupType:       string;
+  circleMode?:     string | null;
+  currency:        string;
+  isArchived:      boolean;
+  isAdmin:         boolean;
+  shareToken?:     string | null;
+  groupStartDate?: string | null;
+  groupEndDate?:   string | null;
 }
 
-export function GroupDesktopNav({ groupId, groupName, groupType, circleMode }: Props) {
+export function GroupDesktopNav({
+  groupId, groupName, groupType, circleMode,
+  currency, isArchived, isAdmin, shareToken, groupStartDate, groupEndDate,
+}: Props) {
   const pathname = usePathname();
   const theme = getContextTheme(groupType, circleMode);
   const tabs = getGroupTabs(groupId, groupType);
@@ -34,32 +50,34 @@ export function GroupDesktopNav({ groupId, groupName, groupType, circleMode }: P
   useEffect(() => { setPending(null); }, [actual]);
   const current = pending ?? actual;
 
-  const [switcherOpen, setSwitcherOpen] = useState(false);
-  useEffect(() => { setSwitcherOpen(false); }, [groupId]);
+  const [hubOpen, setHubOpen] = useState(false);
+
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const joinUrl = shareToken ? `${appUrl}/join/${shareToken}` : undefined;
 
   return (
     <nav
-      className="flex items-center gap-1 h-12 px-8 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800/60"
+      className="flex items-center h-12 rounded-2xl bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm border border-slate-100 dark:border-slate-800/60 shadow-sm"
       aria-label="Group sections"
     >
-      {/* Group name + ▾ switcher */}
-      <button
-        type="button"
-        onClick={() => setSwitcherOpen(true)}
-        className="flex items-center gap-1 rounded-lg px-2 py-1 -ml-1 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors min-w-0"
-        aria-label={`Switch group — currently ${groupName}`}
-        aria-haspopup="dialog"
-      >
-        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[180px]" style={{ fontFamily: "var(--font-fraunces)" }}>
-          {groupName}
-        </span>
-        <ChevronDown className={`w-4 h-4 shrink-0 ${theme.accentText}`} />
-      </button>
+      {/* Group name + ▾ switcher — proper anchored dropdown on desktop (the
+          mobile bottom-sheet pattern looked out of place at this width).
+          pl-4 gives it breathing room from the bar's now-rounded left edge. */}
+      <div className="flex items-center pl-4 shrink-0">
+        <GroupSwitcherDropdown
+          groupId={groupId}
+          groupName={groupName}
+          currentSection={current}
+          accentClassName={theme.accentText}
+        />
+      </div>
 
       <span className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1.5 shrink-0" />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-0.5">
+      {/* Tabs — centered in the remaining width instead of packed against the
+          divider, so they don't look stranded on the left of a now much wider
+          rounded bar. */}
+      <div className="flex-1 flex items-center justify-center gap-0.5">
         {tabs.map(({ section, label, icon: Icon, href }) => {
           const active = current === section;
           return (
@@ -88,11 +106,31 @@ export function GroupDesktopNav({ groupId, groupName, groupType, circleMode }: P
         })}
       </div>
 
-      <GroupSwitcherSheet
-        isOpen={switcherOpen}
-        onClose={() => setSwitcherOpen(false)}
-        currentGroupId={groupId}
-        currentSection={current}
+      {/* ⋯ manage — Edit/Archive/Share, available on every in-group page
+          (matches GroupMobileNav's parity, not just the Overview hero). */}
+      <button
+        type="button"
+        onClick={() => setHubOpen(true)}
+        className="mr-2 shrink-0 flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
+        aria-label="Group actions"
+      >
+        <MoreHorizontal className="w-4 h-4" />
+      </button>
+
+      <GroupActionHub
+        isOpen={hubOpen}
+        onClose={() => setHubOpen(false)}
+        groupId={groupId}
+        groupName={groupName}
+        groupType={groupType}
+        circleMode={circleMode}
+        currency={currency}
+        isArchived={isArchived}
+        isAdmin={isAdmin}
+        joinUrl={joinUrl}
+        groupStartDate={groupStartDate}
+        groupEndDate={groupEndDate}
+        showJumpTo={false}
       />
     </nav>
   );

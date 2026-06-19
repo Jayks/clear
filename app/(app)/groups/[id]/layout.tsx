@@ -53,16 +53,27 @@ export default async function TripLayout({
         </div>
       )}
 
-      {/* Desktop in-group tab strip — sticky below AppNav (h-14). Breaks out of
-          <main>'s md:p-8 padding to span full width; the nav re-pads its content
-          with px-8 so it aligns with the page. */}
+      {/* Desktop in-group tab strip — sticky at the very top of the viewport.
+          Desktop no longer has a horizontal AppNav above it (AppSidebar is a
+          left rail instead, contributing no vertical space), so top-0 — not
+          top-14 — is correct here. Cancels only <main>'s top padding (-mt-8)
+          so it sits flush at the top; left/right stay within <main>'s normal
+          padding so the bar's edges — background included — line up with the
+          rest of the page's content instead of full-bleeding wider than
+          everything below it. */}
       {groupSummary && (
-        <div className="hidden md:block sticky top-14 z-30 -mx-8 -mt-8 mb-6">
+        <div className="hidden md:block sticky top-0 z-30 -mt-8 mb-6">
           <GroupDesktopNav
             groupId={id}
             groupName={groupSummary.name}
             groupType={groupSummary.groupType}
             circleMode={groupSummary.circleMode}
+            currency={groupSummary.defaultCurrency}
+            isArchived={groupSummary.isArchived ?? false}
+            isAdmin={isAdmin}
+            shareToken={groupSummary.shareToken}
+            groupStartDate={groupSummary.startDate}
+            groupEndDate={groupSummary.endDate}
           />
         </div>
       )}

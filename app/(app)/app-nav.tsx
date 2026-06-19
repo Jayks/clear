@@ -12,22 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, Home, LayoutDashboard, Settings, Newspaper, ArrowLeftRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { LogOut, LayoutDashboard, Settings, Newspaper } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
 
-// Each tab lights in its own identity colour (mirrors the mobile bottom nav):
-// Home = cyan, Streams = blue (Stream context), Insights = amber.
-const NAV_LINKS = [
-  { href: "/groups",   label: "Home",    icon: Home,           tourId: "nav-trips",
-    activeCls: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400" },
-  { href: "/stream",   label: "Streams", icon: ArrowLeftRight, tourId: "nav-streams",
-    activeCls: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400" },
-  { href: "/insights", label: "Insights", icon: BarChart2,     tourId: "nav-insights",
-    activeCls: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400" },
-];
-
+// Mobile-only top bar (logo + theme + avatar) — desktop uses AppSidebar
+// instead. Primary nav links (Home/Streams/Insights) live in AppSidebar on
+// desktop and MobileNav's bottom tabs on mobile; this header doesn't need
+// its own copy of them anymore.
 export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; isAdmin: boolean; plan?: "plus" | "free" }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -61,9 +53,13 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
 
   const hideOnMobile = isInsideGroup || isInsideStream;
 
+  // Desktop now uses AppSidebar instead (left rail, replaces this top bar
+  // entirely) — so this header is mobile-only going forward. On mobile, the
+  // existing per-page hiding still applies: group/stream pages have their own
+  // custom sticky header, every other page keeps this icon-only top bar.
   return (
-    <header className={`sticky top-0 z-50 backdrop-blur-sm${hideOnMobile ? " hidden md:block" : ""}`}>
-      <div className="max-w-7xl mx-auto px-6 md:px-8 h-14 flex items-center justify-between">
+    <header className={`sticky top-0 z-50 backdrop-blur-sm ${hideOnMobile ? "hidden" : "md:hidden"}`}>
+      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/groups" className="flex items-center shrink-0">
           <ClearLogo
@@ -72,29 +68,6 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
             className="flex items-center gap-2 group"
           />
         </Link>
-
-        {/* Nav links — hidden on mobile (bottom nav handles it), icon + label on desktop */}
-        <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ href, label, icon: Icon, tourId, activeCls }) => {
-            const active = pathname === href || pathname.startsWith(href + "/");
-            return (
-              <Link
-                key={href}
-                href={href}
-                data-tour={tourId}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                  active
-                    ? activeCls
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800"
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="hidden md:inline">{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
 
         <ThemeToggle />
 

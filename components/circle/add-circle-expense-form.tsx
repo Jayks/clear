@@ -116,9 +116,11 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
 
     toast.success(data.isAdvance ? "Advance logged!" : "Wallet expense logged!");
 
+    // Always reached by pushing forward from the wallet expenses list —
+    // back() pops that entry instead of writing a same-URL duplicate next to it.
     maybeNudge(
       { groupId: group.id, groupName: group.name, wasAiScanned: data.wasAiScanned ?? false },
-      () => router.push(`/groups/${group.id}/expenses`)
+      () => router.back()
     );
   }
 

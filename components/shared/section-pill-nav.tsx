@@ -5,7 +5,9 @@
  * and highlights the matching pill. Clicking any pill smooth-scrolls to that
  * section (scroll-behavior: smooth is set globally on <html>).
  *
- * Lives just below the sticky AppNav (top-14 = 56px).
+ * Lives just below the sticky AppNav on mobile (top-14 = 56px); on desktop
+ * AppNav is replaced by AppSidebar (a left rail, no vertical footprint), so
+ * this sticks at top-0 there instead.
  * Sections need scroll-mt-28 to clear both navbars on scroll.
  */
 
@@ -119,10 +121,12 @@ export function SectionPillNav({ sections, createPills = [] }: Props) {
   if (sections.length === 0) return null;
 
   return (
-    // Sticks just below the AppNav (h-14 = 56px → top-14)
+    // Mobile still has the AppNav top bar (h-14 = 56px → top-14). Desktop
+    // replaced it with AppSidebar (a left rail, no vertical footprint), so
+    // top-0 is correct there instead.
     // -mx-6 px-6 breaks out of main's p-6; md:-mx-8 md:px-8 handles p-8 on desktop
     // bg ensures the bar is opaque when it overlaps scrolling content
-    <div className="sticky top-14 z-40 -mx-6 px-6 md:-mx-8 md:px-8 pt-2 pb-2
+    <div className="sticky top-14 md:top-0 z-40 -mx-6 px-6 md:-mx-8 md:px-8 pt-2 pb-2
                     bg-[#DCEAFE]/55 dark:bg-slate-900/70 backdrop-blur-md
                     border-b border-white/30 dark:border-slate-800/50 mb-4">
       <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-0.5">

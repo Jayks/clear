@@ -1,7 +1,7 @@
 import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
-import { eq, desc, inArray, and, sql, sum } from "drizzle-orm";
+import { eq, desc, inArray, and, sql, sum, count, isNotNull } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
@@ -17,6 +17,27 @@ export async function getGroupTotalSpent(groupId: string): Promise<number> {
     .from(expenses)
     .where(and(eq(expenses.groupId, groupId), eq(expenses.isTemplate, false)));
 
+  return Number(row?.total ?? 0);
+}
+
+// Cumulative AI-receipt-scan count for a group — backs the celebratory AI
+// upgrade nudge (RAZORPAY_PLAN.md §10 / M4, lib/subscription/ai-nudge.ts).
+// No cache tag: read once per save event, not render-frequency traffic.
+// No membership check here (unlike getGroupTotalSpent above) — this is a raw
+// count with no sensitive content, but it is NOT a public query: the sole
+// caller, getAiNudgeStatus, checks membership first. Any new call site must
+// do the same before trusting a caller-supplied groupId.
+export async function getGroupReceiptScanCount(groupId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(expenses)
+    .where(
+      and(
+        eq(expenses.groupId, groupId),
+        eq(expenses.isTemplate, false),
+        isNotNull(expenses.receiptScannedAt)
+      )
+    );
   return Number(row?.total ?? 0);
 }
 

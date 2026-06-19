@@ -17,6 +17,7 @@ import { hapticLight } from "@/lib/haptics";
 import type { Group } from "@/lib/db/schema/groups";
 import { Camera, Wallet } from "lucide-react";
 import type { ParsedReceipt } from "@/lib/receipt/types";
+import { useAiUpgradeNudge } from "@/hooks/use-ai-upgrade-nudge";
 
 interface Props {
   group:       Group;
@@ -35,6 +36,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
   const [scannerOpen, setScannerOpen]   = useState(false);
   const [wasScanFilled, setWasScanFilled] = useState(false);
   const pendingProofFileRef              = useRef<File | null>(null);
+  const { maybeNudge, nudgeSheet }       = useAiUpgradeNudge();
 
   const {
     register,
@@ -72,6 +74,15 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
     setWasScanFilled(true);
   }
 
+  // This form has no per-field AI-fill tracking (unlike AddExpenseForm's
+  // aiFilledFields), so the conservative fix for the same staleness bug is:
+  // any manual edit to an AI-filled field after a scan invalidates the flag
+  // entirely, rather than leaving it stuck true once a scan ever happened.
+  function clearScanFlag() {
+    setValue("wasAiScanned", false);
+    setWasScanFilled(false);
+  }
+
   // ── Background proof upload ────────────────────────────────────────────────
   async function uploadReceiptProofInBackground(expenseId: string, groupId: string, file: File) {
     try {
@@ -104,7 +115,11 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
     }
 
     toast.success(data.isAdvance ? "Advance logged!" : "Wallet expense logged!");
-    router.push(`/groups/${group.id}/expenses`);
+
+    maybeNudge(
+      { groupId: group.id, groupName: group.name, wasAiScanned: data.wasAiScanned ?? false },
+      () => router.push(`/groups/${group.id}/expenses`)
+    );
   }
 
   return (
@@ -213,7 +228,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
           Description <span className="text-red-400">*</span>
         </label>
         <input
-          {...register("description")}
+          {...register("description", { onChange: clearScanFlag })}
           placeholder="e.g. Ground rental for June"
           className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
@@ -231,7 +246,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
               {currency}
             </span>
             <input
-              {...register("amount", { valueAsNumber: true })}
+              {...register("amount", { valueAsNumber: true, onChange: clearScanFlag })}
               type="number"
               inputMode="decimal"
               min="0"
@@ -265,6 +280,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
                 onClick={() => {
                   setValue("category", c.value, { shouldValidate: true });
                   if (c.value !== "other") setValue("customCategory", "");
+                  clearScanFlag();
                 }}
                 className={`flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl font-medium transition-all border ${
                   active
@@ -299,7 +315,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">Date</label>
         <input
-          {...register("expenseDate")}
+          {...register("expenseDate", { onChange: clearScanFlag })}
           type="date"
           className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-violet-400"
         />
@@ -308,7 +324,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
             <button
               key={s.label}
               type="button"
-              onClick={() => setValue("expenseDate", s.value, { shouldValidate: true })}
+              onClick={() => { setValue("expenseDate", s.value, { shouldValidate: true }); clearScanFlag(); }}
               className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-all ${
                 currentDate === s.value
                   ? "bg-violet-500 text-white"
@@ -355,6 +371,7 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
         isPlusUser={isPlusUser}
         pendingProofRef={pendingProofFileRef}
       />
+      {nudgeSheet}
     </form>
   );
 }

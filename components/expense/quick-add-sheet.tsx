@@ -22,6 +22,7 @@ import { getMemberName, formatDate, formatCurrency } from "@/lib/utils";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { mapToGroupCategory } from "@/lib/receipt/map-category";
 import { getContextTheme } from "@/lib/theme/context-theme";
+import { useAiUpgradeNudge } from "@/hooks/use-ai-upgrade-nudge";
 
 interface Props {
   groupId: string;
@@ -55,6 +56,7 @@ function buildExpenseInput(
   groupId: string,
   currency: string,
   context?: StickyContext | null,
+  wasAiScanned?: boolean,
 ): AddExpenseInput | null {
   if (!parsed.amount || parsed.amount <= 0 || !parsed.description) return null;
   if (members.length === 0) return null;
@@ -85,6 +87,7 @@ function buildExpenseInput(
     expenseDate: parsed.expenseDate ?? context?.expenseDate ?? today,
     splitMode: "equal",
     splits: splitMembers.map((m) => ({ memberId: m.id })),
+    wasAiScanned: wasAiScanned ?? false,
   };
 }
 
@@ -114,6 +117,7 @@ export function QuickAddSheet({
   // ── Scanner state ──────────────────────────────────────────────────────────
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanFilled, setScanFilled]   = useState(false);
+  const { maybeNudge, nudgeSheet }    = useAiUpgradeNudge();
 
   // Escape key + Android back-button dismissal
   useSheetDismiss(isOpen, onClose);
@@ -212,7 +216,7 @@ export function QuickAddSheet({
 
   function handleSave() {
     if (!parsed || !members) return;
-    const input = buildExpenseInput(parsed, members, groupId, currency, lastContext);
+    const input = buildExpenseInput(parsed, members, groupId, currency, lastContext, scanFilled);
     if (!input) {
       toast.error("Add an amount and description first");
       return;
@@ -235,10 +239,15 @@ export function QuickAddSheet({
         // Store payer + date as sticky context for the next "Add another" entry
         setLastContext({ paidByMemberId: input.paidByMemberId, expenseDate: input.expenseDate });
         setSaved(true);
-        // Auto-close after 2s — cancelled if user taps "Add another"
+        // Auto-close after 2s — cancelled if user taps "Add another". onClose()
+        // is routed through maybeNudge (not called directly) so a parent that
+        // unmounts this sheet shortly after onClose (e.g. GlobalFab's 350ms
+        // teardown) can never race the async eligibility check — onClose simply
+        // isn't invoked until that check has resolved. UpgradeSheet renders at
+        // z-[60] (above this sheet's z-50) for the eligible case.
         autoCloseTimerRef.current = setTimeout(() => {
           setSaved(false);
-          onClose();
+          maybeNudge({ groupId, groupName, wasAiScanned: scanFilled }, () => onClose());
         }, 2000);
       } else {
         toast.error(result.error ?? "Failed to save expense");
@@ -506,6 +515,7 @@ export function QuickAddSheet({
         groupType={groupType}
         isPlusUser={isPlusUser}
       />
+      {nudgeSheet}
     </>
   );
 }

@@ -27,6 +27,7 @@ import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import type { ParsedReceipt } from "@/lib/receipt/types";
 import { useRecentCategories } from "@/hooks/use-recent-categories";
+import { useAiUpgradeNudge } from "@/hooks/use-ai-upgrade-nudge";
 import { Camera, Paperclip, Receipt } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -57,6 +58,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
   const [wasScanFilled, setWasScanFilled]     = useState(false);
   const [proofPending, setProofPending]       = useState(false);
   const pendingProofFileRef                   = useRef<File | null>(null);
+  const { maybeNudge, nudgeSheet }            = useAiUpgradeNudge();
 
   const {
     register,
@@ -190,7 +192,12 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
       return;
     }
     setSubmitting(true);
-    const result = await addExpense(data);
+    // wasAiScanned is re-derived from aiFilledFields here rather than trusted as
+    // submitted: handleReceiptExtracted sets it once and clearAiFill() never
+    // clears it back, so it would otherwise stay stuck true after the user
+    // hand-edits every AI-filled field — falsely crediting receiptScannedAt
+    // (and the AI-nudge scan count) for an expense with no AI content left in it.
+    const result = await addExpense({ ...data, wasAiScanned: aiFilledFields.size > 0 });
     setSubmitting(false);
 
     if (!result.ok) {
@@ -220,7 +227,11 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
     } else {
       toast.success("Expense added!");
     }
-    router.push(`/groups/${group.id}/expenses`);
+
+    maybeNudge(
+      { groupId: group.id, groupName: group.name, wasAiScanned: aiFilledFields.size > 0 },
+      () => router.push(`/groups/${group.id}/expenses`)
+    );
   }
 
   return (
@@ -540,6 +551,7 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
         isPlusUser={isPlusUser}
         pendingProofRef={pendingProofFileRef}
       />
+      {nudgeSheet}
     </form>
   );
 }

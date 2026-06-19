@@ -5,7 +5,7 @@ import { subscriptions } from "@/lib/db/schema/subscriptions";
 import { razorpayPayments } from "@/lib/db/schema/razorpay-payments";
 import { eq, and } from "drizzle-orm";
 
-import { getCurrentUser } from "@/lib/db/queries/auth";
+import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { revalidatePath } from "next/cache";
 import { getEarlyBirdSlotsClaimed, isEarlyBirdActive } from "@/lib/subscription/early-bird";
 import { extendEntitlement, type PassType } from "@/lib/subscription/entitlement";
@@ -13,6 +13,9 @@ import { createOrder, fetchOrder } from "@/lib/razorpay/client";
 import { getPassAmountPaise } from "@/lib/razorpay/pass";
 import { buildOrderNotes, parseOrderNotes, isOwnedBy, buildReceiptId } from "@/lib/razorpay/order-notes";
 import { verifyCheckoutSignature } from "@/lib/razorpay/verify";
+import { getUserPlan } from "@/lib/subscription/gates";
+import { getGroupReceiptScanCount } from "@/lib/db/queries/expenses";
+import { shouldShowAiNudge } from "@/lib/subscription/ai-nudge";
 
 // Called fire-and-forget from app/(app)/layout.tsx on every authenticated page load.
 // Creates the subscription row (trialing) on first visit, regardless of entry point.
@@ -179,4 +182,27 @@ export async function confirmPassPurchase(
 
   revalidatePath("/", "layout");
   return { ok: true, plusUntil };
+}
+
+// ── AI celebratory upgrade nudge (RAZORPAY_PLAN.md §10 / M4) ─────────────────
+
+/**
+ * Eligibility check for the post-scan AI upgrade nudge — called by
+ * `useAiUpgradeNudge` after a successful AI-scanned expense save. Plus users
+ * and non-members never see it; the count is the group's cumulative
+ * AI-receipt-scan total (`getGroupReceiptScanCount`), which the caller's
+ * session guard combines with `shouldShowAiNudge`'s threshold check.
+ */
+export async function getAiNudgeStatus(groupId: string): Promise<{ show: boolean; count: number }> {
+  const user = await getCurrentUser();
+  if (!user) return { show: false, count: 0 };
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership) return { show: false, count: 0 };
+
+  const plan = await getUserPlan(user.id);
+  if (plan === "plus") return { show: false, count: 0 };
+
+  const count = await getGroupReceiptScanCount(groupId);
+  return { show: shouldShowAiNudge(count, plan), count };
 }

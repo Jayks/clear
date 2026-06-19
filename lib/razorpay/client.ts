@@ -10,13 +10,15 @@
  */
 
 import type { RazorpayNotes } from "./order-notes";
+import { getRazorpayMode, getRazorpayKeyId, getRazorpayKeySecret } from "./credentials";
 
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 
 function authHeader(): string {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-  if (!keyId || !keySecret) throw new Error("Razorpay credentials are not configured");
+  const mode = getRazorpayMode();
+  const keyId = getRazorpayKeyId(mode);
+  const keySecret = getRazorpayKeySecret(mode);
+  if (!keyId || !keySecret) throw new Error(`Razorpay ${mode} credentials are not configured`);
   return `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`;
 }
 

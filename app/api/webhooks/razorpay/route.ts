@@ -9,6 +9,7 @@ import { parseOrderNotes } from "@/lib/razorpay/order-notes";
 import { getPassAmountPaise } from "@/lib/razorpay/pass";
 import { extendEntitlement } from "@/lib/subscription/entitlement";
 import { getEventType, extractCapturedPayment, extractRefundPaymentId } from "@/lib/razorpay/webhook-logic";
+import { getRazorpayMode, getRazorpayWebhookSecret } from "@/lib/razorpay/credentials";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const raw = await req.text();
   const signature = req.headers.get("x-razorpay-signature") ?? "";
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const webhookSecret = getRazorpayWebhookSecret(getRazorpayMode());
 
   // Verify on the raw body BEFORE parsing — reject 400 on mismatch.
   if (!webhookSecret || !verifyWebhookSignature(raw, signature, webhookSecret)) {
@@ -102,6 +103,7 @@ async function handlePaymentCaptured(payload: unknown): Promise<void> {
       amount: getPassAmountPaise(notes.passType, notes.earlyBird),
       passType: notes.passType,
       earlyBird: notes.earlyBird,
+      mode: getRazorpayMode(),
     })
     .onConflictDoNothing({ target: razorpayPayments.paymentId })
     .returning({ id: razorpayPayments.id });

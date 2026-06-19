@@ -1,7 +1,8 @@
 import "server-only";
 import { db } from "@/lib/db/client";
 import { subscriptions } from "@/lib/db/schema/subscriptions";
-import { count, eq } from "drizzle-orm";
+import { razorpayPayments } from "@/lib/db/schema/razorpay-payments";
+import { and, countDistinct, eq } from "drizzle-orm";
 
 // ── Pricing — imported from client-safe prices.ts (single source of truth) ───
 // Re-exported so client components (billing-section.tsx) can import them too.
@@ -22,17 +23,21 @@ export const EARLY_BIRD_SLOTS_TOTAL = 300;
 // ── DB query ───────────────────────────────────────────────────────────────────
 
 /**
- * Count of subscribers with status = 'active'.
+ * Count of subscribers with status = 'active' AND at least one live-mode
+ * (real money) payment.
  * Trialing users (default state for new sign-ups) are not counted — only those
  * who have explicitly activated Plus (or will have paid after Razorpay goes live).
+ * The `mode = 'live'` filter (D11) keeps test-mode smoke-test purchases from
+ * ever consuming a real early-bird slot.
  * Fails open (returns 0) — better to show early-bird pricing than to block it on a DB error.
  */
 export async function getEarlyBirdSlotsClaimed(): Promise<number> {
   try {
     const [row] = await db
-      .select({ total: count() })
+      .select({ total: countDistinct(subscriptions.userId) })
       .from(subscriptions)
-      .where(eq(subscriptions.status, "active"));
+      .innerJoin(razorpayPayments, eq(razorpayPayments.userId, subscriptions.userId))
+      .where(and(eq(subscriptions.status, "active"), eq(razorpayPayments.mode, "live")));
     return Number(row?.total ?? 0);
   } catch {
     return 0;

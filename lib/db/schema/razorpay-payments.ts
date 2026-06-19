@@ -20,6 +20,11 @@ export const razorpayPayments = pgTable(
     amount: integer("amount").notNull(), // paise
     passType: text("pass_type").notNull(), // 'pass_30d' | 'annual'
     earlyBird: boolean("early_bird").notNull(),
+    // 'test' | 'live' — which Razorpay credential pair created this payment.
+    // Excludes test-mode smoke-test purchases from the early-bird slot count
+    // and lock-in check (RAZORPAY_PLAN.md §5, D11). Default 'test' is correct
+    // for every pre-existing row — no live keys existed before this column.
+    mode: text("mode").notNull().default("test"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
   },
   (t) => ({

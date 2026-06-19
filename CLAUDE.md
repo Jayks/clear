@@ -292,6 +292,16 @@ VAPID_EMAIL                          # mailto:you@yourdomain.com
 
 # Analytics
 NEXT_PUBLIC_GA_MEASUREMENT_ID        # G-XXXXXXXXXX from GA4 dashboard; omit to disable tracking
+
+# Payments (Razorpay) — both credential pairs live in env at once; RAZORPAY_MODE picks one
+# (lib/razorpay/credentials.ts). Defaults to "test" if unset. See RAZORPAY_PLAN.md D11.
+RAZORPAY_MODE                        # "test" | "live"
+RAZORPAY_TEST_KEY_ID
+RAZORPAY_TEST_KEY_SECRET
+RAZORPAY_TEST_WEBHOOK_SECRET
+RAZORPAY_LIVE_KEY_ID
+RAZORPAY_LIVE_KEY_SECRET
+RAZORPAY_LIVE_WEBHOOK_SECRET
 ```
 
 ---

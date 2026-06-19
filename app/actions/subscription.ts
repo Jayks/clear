@@ -13,6 +13,7 @@ import { createOrder, fetchOrder } from "@/lib/razorpay/client";
 import { getPassAmountPaise } from "@/lib/razorpay/pass";
 import { buildOrderNotes, parseOrderNotes, isOwnedBy, buildReceiptId } from "@/lib/razorpay/order-notes";
 import { verifyCheckoutSignature } from "@/lib/razorpay/verify";
+import { getRazorpayMode, getRazorpayKeyId, getRazorpayKeySecret } from "@/lib/razorpay/credentials";
 import { getUserPlan } from "@/lib/subscription/gates";
 import { getGroupReceiptScanCount } from "@/lib/db/queries/expenses";
 import { shouldShowAiNudge } from "@/lib/subscription/ai-nudge";
@@ -64,6 +65,10 @@ export async function ensureTrialStarted(): Promise<void> {
  * never increases" promise (see /pricing FAQ + RAZORPAY_PLAN.md D-early-bird).
  * Fix: anyone who has EVER completed an early-bird payment keeps early-bird
  * pricing on every future purchase, independent of the live slot count.
+ *
+ * Both this lock-in check and `getEarlyBirdSlotsClaimed()` filter to
+ * `mode = 'live'` — a test-mode smoke-test purchase (e.g. during QA) must
+ * never lock in or consume a real early-bird slot (D11).
  */
 export async function createPassOrder(
   passType: PassType
@@ -71,14 +76,21 @@ export async function createPassOrder(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const keyId = process.env.RAZORPAY_KEY_ID;
+  const mode = getRazorpayMode();
+  const keyId = getRazorpayKeyId(mode);
   if (!keyId) return { ok: false, error: "Payments are not configured yet" };
 
   const [priorEarlyBirdPayment, claimed] = await Promise.all([
     db
       .select({ id: razorpayPayments.id })
       .from(razorpayPayments)
-      .where(and(eq(razorpayPayments.userId, user.id), eq(razorpayPayments.earlyBird, true)))
+      .where(
+        and(
+          eq(razorpayPayments.userId, user.id),
+          eq(razorpayPayments.earlyBird, true),
+          eq(razorpayPayments.mode, "live")
+        )
+      )
       .limit(1),
     getEarlyBirdSlotsClaimed(),
   ]);
@@ -116,7 +128,7 @@ export async function confirmPassPurchase(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const keySecret = getRazorpayKeySecret(getRazorpayMode());
   if (!keySecret) return { ok: false, error: "Payments are not configured yet" };
 
   if (!verifyCheckoutSignature(orderId, paymentId, signature, keySecret)) {
@@ -145,6 +157,7 @@ export async function confirmPassPurchase(
       amount: getPassAmountPaise(passType, earlyBird),
       passType,
       earlyBird,
+      mode: getRazorpayMode(),
     })
     .onConflictDoNothing({ target: razorpayPayments.paymentId })
     .returning({ id: razorpayPayments.id });

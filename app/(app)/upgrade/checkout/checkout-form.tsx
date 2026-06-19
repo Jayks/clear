@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Script from "next/script";
 import { toast } from "sonner";
 import { createPassOrder, confirmPassPurchase } from "@/app/actions/subscription";
@@ -267,6 +268,11 @@ export function CheckoutForm({
           <Lock className="w-3 h-3" />
           Secured by Razorpay · UPI, cards, net banking
         </div>
+        <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+          By purchasing, you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-slate-600 dark:hover:text-slate-300">Terms</Link>{" "}
+          and <Link href="/refund" className="underline hover:text-slate-600 dark:hover:text-slate-300">Refund Policy</Link>.
+        </p>
       </div>
     </div>
   );

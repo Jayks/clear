@@ -1566,6 +1566,8 @@ export default function AboutPage() {
             <Link href="/pricing" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Pricing</Link>
             <Link href="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy</Link>
+            <Link href="/refund" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Refund</Link>
+            <Link href="/contact" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Contact</Link>
           </div>
         </div>
       </footer>

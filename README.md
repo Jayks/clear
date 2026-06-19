@@ -35,7 +35,7 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 - **Home greeting** — time-aware personal greeting at the top of the Home page (emoji prefix + "Good morning/afternoon/evening, [Name]") using the user's local timezone; rendered in Fraunces `text-2xl md:text-3xl` for visual prominence.
 - **Trip alive badges** — active trip cards show a live status badge replacing the date range: "Day 3 of 8" (cyan, pulsing dot), "Last day 🏁" (amber), or "Just returned ✓" (emerald, shown for 7 days after the trip ends).
 - **Group card identity patterns** — Trip and Nest cards without a cover photo use a vivid identity gradient + white SVG silhouette pattern: **Trip** = `cyan-500 → teal-500` with rounded-canopy tree silhouettes (4 trees, 220×110 tile — each has a branch-spread shoulder ellipse that distinguishes it from a balloon); **Nest** = `emerald-500 → teal-500` with a 14-building city skyline (400×110 tile, antennae + window grids on prominent buildings); **Circle** = pale indigo (recurring) or amber (one-time) with sine-wave or lollipop SVG patterns. All patterns are `repeat-x` anchored at the bottom. Pattern constants in `lib/group-patterns.ts` are shared between the home-page card thumbnail and the group dashboard hero so both surfaces are visually identical when no cover photo is set.
-- **AI receipt scanning** — tap the camera icon on any Add Expense form (Plus feature) to scan a receipt photo. Haiku vision reads the amount, merchant name, date, category, and GPS-tagged location in one shot. Detected fields fill the form automatically with an emerald ring highlight so you can see exactly what AI touched; editing any field clears its ring. Enable "Keep as proof" to attach the receipt photo to the expense — it uploads in the background after save and appears as a thumbnail in the expense detail sheet. Available in full Add Expense forms (Trips/Nests/Circles) and the compact QuickAdd sheet. Category cross-mapping ensures AI-detected categories are always valid for the target group type. Location field shows a Mapbox geocoding dropdown on trips; stays hidden on nests unless AI detected a location.
+- **AI receipt scanning** — tap the camera icon on any Add Expense form to scan a receipt photo — **free for everyone**, not a Plus feature. Haiku vision reads the amount, merchant name, date, category, and GPS-tagged location in one shot. Detected fields fill the form automatically with an emerald ring highlight so you can see exactly what AI touched; editing any field clears its ring. Enable "Keep as proof" to attach the receipt photo to the expense — it uploads in the background after save and appears as a thumbnail in the expense detail sheet. Available in full Add Expense forms (Trips/Nests/Circles) and the compact QuickAdd sheet. Category cross-mapping ensures AI-detected categories are always valid for the target group type. Location field shows a Mapbox geocoding dropdown on trips; stays hidden on nests unless AI detected a location. Free use is covered by a silent, generous monthly ceiling (never shown in the UI); heavy scanners on a trip get a one-time celebratory nudge toward Plus, never a block.
 - **Quick-add expenses** — type a natural description from any group card; placeholder shows a live example like `"Coffee ₹120 paid by Priya"` so AI parsing is immediately obvious; AI fills amount, payer, and split automatically; a live `÷ N members = ₹X each` pill appears as you type so you always know each person's share before confirming
 - **Group action hub** — tap `⋯` (always visible) or long-press any group card (Trip, Nest, or Circle) to open a three-zone action sheet: **Log expense** (one tap to Scan receipt / Voice input / Type + AI — each auto-triggers the matching mode in the quick-add form); **Jump to** (Members, Expenses, Settle Up, Insights for trips/nests; Expenses and Members only for circles); **Manage** (Edit, Archive/Unarchive with inline confirmation, Share invite — admin only). The balance badge links directly to Settle Up; the member count badge links directly to Members
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
@@ -63,7 +63,7 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 - **Member profile sheets** — tap any member on the Members page to open a bottom sheet showing their net balance, total paid, total share, and last 3 expenses paid
 - **Personal finance view** — a "You" tab on the all-groups insights page showing your personal numbers across every group: total your share (not group totals), a live net-position card bucketed into "Owed to you / You owe" with per-group rows linking directly to each Settle Up page, a financial circle of the people you share money with most (matched by Clear account, ranked by group count + shared total, with a "last active" green dot for recent activity), a banker card comparing what you paid upfront vs your actual share with an animated progress bar and year-over-year trend, a rule-based triggered insight (companion dominance → heavy banker → spending trajectory → milestone), category donut of your personal spend, and per-group share bars. Plus-only feature; non-Plus users see an upgrade prompt.
 - **Group insights** — story-driven analytics for every trip and nest. **Trip**: state-aware layout (pace tracker leads on active trips, T-minus badge on future trips, celebration state on completed under-budget trips); rule-based opening sentence ("Day 3 of 5 · Food at 38% · ₹2,100/day"); four KPIs including contextual "Your position" that links directly to Settle Up; three-card Highlights strip (biggest expense, peak day, tab-picker — suppressed until ≥3 expenses to avoid tautologies); stacked daily-spend bar chart with per-category colour coding (same palette as the donut, so colour language threads across charts) and peak-day annotation; member contributions chart with a "fair share" dashed reference line (bars right of line = overpaid, left = underpaid) and "You" highlighting; fairness score + distinctive member roles; cross-trip comparison (Suspense-streamed); Plan vs Reality AI analysis. **Nest**: monthly-average reference line on the spend bar so every month reads as above/below baseline at a glance; recurring vs one-off always split and surfaced; monthly pace projection (at this rate, how much will we spend?) vs 3-month rolling average; year-over-year same-period comparison when history exists. **All-groups**: home-vs-travel comparison card (₹X/day at home · ₹Y/day traveling · Nx more expensive) when both group types exist; trips chart is horizontal and chronological with a trend line connecting bar tips — at a glance you see if trips are getting more expensive; per-currency grouping so INR and USD trips are never compared on the same axis; companion insight (most frequent travel mate, matched by account or consistent guest name); daily travel pace (₹/day across all trips); nest year-over-year and biggest-month-ever highlights
-- **Add members — unified sheet** — a single violet **[+ Add members]** button on the Members page opens a multi-mode sheet: (1) **Clear network** — searchable, multi-select list of every person the admin has shared with across past groups, deduplicated by account; tap to select, chip appears at the top (Plus only — free users see a personalised teaser with real names dimmed and a count-based upgrade nudge); (2) **Import from a group** — pick a prior group and bulk-copy its members with one tap (Plus only, hidden for free users); (3) **Bulk paste** — type or paste comma/newline-separated names (always free); (4) **Manual type** — search input with "Add as guest" CTA for new names (always free). After any addition a share step appears with a WhatsApp invite button and copy link. Ghost members (not yet on Clear) show `⏳ Not joined yet` + a per-row `📤` share icon on the member list. Free plan limit (8 members) enforced server-side on all paths
+- **Add members — unified sheet** — a single violet **[+ Add members]** button on the Members page opens a multi-mode sheet: (1) **Clear network** — searchable, multi-select list of every person the admin has shared with across past groups, deduplicated by account; tap to select, chip appears at the top (Plus only — free users see a personalised teaser with real names dimmed and a count-based upgrade nudge); (2) **Import from a group** — pick a prior group and bulk-copy its members with one tap (Plus only, hidden for free users); (3) **Bulk paste** — type or paste comma/newline-separated names (always free); (4) **Manual type** — search input with "Add as guest" CTA for new names (always free). After any addition a share step appears with a WhatsApp invite button and copy link. Ghost members (not yet on Clear) show `⏳ Not joined yet` + a per-row `📤` share icon on the member list. No member-count limit on any plan — members, expenses, and every split mode are unlimited and free for everyone
 - **Repeat trip prompt** — when a trip ends or is archived, admins see a dismissable prompt to create a new trip with the same squad pre-populated; a bottom sheet lets them name the trip, pick dates, and toggle which members to copy
 - **AI trip narrative** — Haiku generates a shareable trip story and budget-adherence summary
 - **Rich trip summary timeline** — the public `/summary/[token]` page shows the same animated day-by-day timeline: stacked category bars, payer chips, count-up totals, connector threads, Day X/Y badges, and always-expanded expense rows for a shareable visual recap
@@ -75,7 +75,7 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 - **Invite preview** — share links show group name, cover photo, and member count before requiring sign-in; group admin's Share + Edit buttons are in the card hero; invite link reset and group archive live on the Edit page under Admin actions
 - **Guest claim flow** — guests added by name can claim their expenses when they join via invite link; name corrects automatically from their Google account
 - **Notifications** — email and web push alerts when group members log expenses; one-click email unsubscribe; per-group mute toggle in the avatar menu
-- **Clear Plus** — freemium subscription: free plan (4 groups, 8 members, 50 expenses each); Plus unlocks unlimited everything, AI features, CSV export, all split modes, templates, and budget tracking. **₹99/month · ₹799/year** (GST-inclusive). Founder pricing ₹79/₹699 locked forever for the first 500 subscribers — live slot counter on the pricing page. Group admin's plan covers all members.
+- **Clear Plus** — pay only when you need more, no recurring subscription: one-time **Razorpay passes** via UPI/cards. Free plan's only real limit is **5 active groups** — members, expenses, and every split mode are unlimited and free for everyone, and a 30-day card-free trial starts automatically on signup. **Logging AI (receipt scan, quick-add, chat import) is free for everyone too** — Plus just removes the generous monthly usage ceiling. Plus unlocks unlimited active groups, recurring templates, budget tracking, CSV export, the personal "You" insights tab, and analytical AI (trip narrative, Plan vs Reality). **30-day pass ₹79 · annual pass ₹699** (GST-inclusive) — Early Bird pricing **₹49 / ₹499**, locked in forever, for the first 300 subscribers, with a live slot counter on the pricing page. Group admin's plan covers all members.
 - **Settings page** — appearance (dark/light theme), billing (plan status, billing cycle, renewal date, downgrade), notifications (web push toggle), and profile (editable display name synced across all groups) in a tabbed sidebar layout
 - **What's New** — changelog accessible from the avatar dropdown inside the app, and from the marketing page nav
 - **PWA** — installable on iOS and Android, offline-capable service worker
@@ -99,6 +99,7 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 | Auth | Supabase Auth (Google OAuth) |
 | Realtime | Supabase Realtime |
 | AI | Anthropic claude-haiku-4-5-20251001 |
+| Payments | Razorpay — one-time Orders via REST API (`fetch` + Node `crypto`, no SDK) |
 | Geocoding | Mapbox API (receipt location + LocationInput dropdown) |
 | Image utils | exifr (EXIF GPS) + Canvas API (compression) |
 | PDF parsing | pdf-parse 1.1.1 (server-side, no AI) |
@@ -126,6 +127,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=Clear
 ANTHROPIC_API_KEY=
 PLATFORM_ADMIN_EMAIL=                 # comma-separated, guards /admin
+CRON_SECRET=                         # bearer secret for /api/cron/* routes
 
 # Geocoding (receipt scanner + LocationInput)
 NEXT_PUBLIC_MAPBOX_TOKEN=             # pk.eyJ1... — omit to disable location features
@@ -142,6 +144,16 @@ VAPID_EMAIL=                          # mailto:you@yourdomain.com
 
 # Analytics (optional)
 NEXT_PUBLIC_GA_MEASUREMENT_ID=        # G-XXXXXXXXXX from GA4 dashboard
+
+# Payments (Razorpay) — both credential pairs can live in env at once;
+# RAZORPAY_MODE picks which one is active (defaults to "test" if unset)
+RAZORPAY_MODE=test                    # "test" | "live"
+RAZORPAY_TEST_KEY_ID=
+RAZORPAY_TEST_KEY_SECRET=
+RAZORPAY_TEST_WEBHOOK_SECRET=         # set when registering the test-mode webhook
+RAZORPAY_LIVE_KEY_ID=
+RAZORPAY_LIVE_KEY_SECRET=
+RAZORPAY_LIVE_WEBHOOK_SECRET=         # set when registering the live webhook
 ```
 
 ```bash
@@ -155,13 +167,22 @@ pnpm dev
 1. Create a project at [supabase.com](https://supabase.com)
 2. Enable Google OAuth under Authentication → Providers
 3. Add `http://localhost:3000/**` to Authentication → URL Configuration → Redirect URLs
-4. Run `drizzle/policies.sql` in the SQL Editor to apply RLS policies (includes policies for `expense_reactions`, `expense_comments`, and `expense_disputes`)
-5. Run `drizzle/circle-tables.sql` in the SQL Editor to add Circle support (extends `group_type` enum, adds circle columns to `groups`, creates `circle_contributions` table with RLS)
-5b. Run `drizzle/circle-phase4.sql` to add `is_advance` column to `expenses` (required for wallet expense logging)
-6. Enable Realtime for tables: `expenses`, `expense_splits`, `settlements`, `group_members`
-6. Create a Storage bucket named `cover-photos` (public, 5 MB limit) and run the Storage RLS policies from CLAUDE.md
-7. Create a Storage bucket named `receipt-photos` (private, 10 MB limit) — run `drizzle/policies.sql` (includes receipt-photos RLS: members can upload to their group's path, authenticated users can read)
-7. Generate VAPID keys: `node -e "const wp=require('web-push');console.log(wp.generateVAPIDKeys())"` and add to `.env.local`
+4. Run `drizzle/policies.sql` in the SQL Editor to apply RLS policies (includes policies for `expense_reactions`, `expense_comments`, and `expense_disputes`, plus `receipt-photos` storage RLS)
+5. Run `drizzle/circle-tables.sql` to add Circle support (extends `group_type` enum, adds circle columns to `groups`, creates `circle_contributions` table with RLS)
+6. Run `drizzle/circle-phase4.sql` to add the `is_advance` column to `expenses` (required for wallet expense logging)
+7. Run `drizzle/stream-tables.sql` to add Streams support (`stream_guests`, `stream_records`, `stream_settlements` — order matters, it's one file)
+8. Run `drizzle/payment-requests.sql` to add the guest payment-request token flow
+9. Run `drizzle/summary-token.sql` to decouple the public trip-summary link from the invite/join link
+10. Run `drizzle/member-guest-name-unique.sql` to prevent duplicate guest members (case-insensitive unique index)
+11. Run `drizzle/receipt-map-schema.sql` for the Smart Receipt + Map View columns
+12. Run `drizzle/ai-usage.sql` to add the `ai_usage` table backing the free-tier logging-AI monthly ceiling
+13. Run `drizzle/razorpay-tables.sql` then `drizzle/razorpay-mode-column.sql` to add Clear Plus / Razorpay payment support (`subscriptions` columns, `razorpay_payments`, `razorpay_webhook_events`)
+14. Run `drizzle/indexes.sql` for the performance indexes (not managed by drizzle-kit)
+15. Enable Realtime for tables: `expenses`, `expense_splits`, `settlements`, `group_members`
+16. Create a Storage bucket named `cover-photos` (public, 5 MB limit) and run the Storage RLS policies from CLAUDE.md
+17. Create a Storage bucket named `receipt-photos` (private, 10 MB limit) — RLS for it is already included in `drizzle/policies.sql` (step 4)
+18. Generate VAPID keys: `node -e "const wp=require('web-push');console.log(wp.generateVAPIDKeys())"` and add to `.env.local`
+19. (Optional, for real payments) Create a [Razorpay](https://razorpay.com) account, generate a test-mode key pair, and add `RAZORPAY_MODE=test` + `RAZORPAY_TEST_KEY_ID`/`RAZORPAY_TEST_KEY_SECRET` to `.env.local` — the app fails open without these (checkout shows "Payments are not configured yet" rather than crashing)
 
 ### Windows note
 
@@ -173,6 +194,7 @@ pnpm dev
 
 ```bash
 pnpm dev              # dev server (Turbopack)
+pnpm dev:kill         # kill any running dev server on port 3000
 pnpm dev:restart      # kill existing dev server and restart
 pnpm build            # production build
 pnpm typecheck        # TypeScript check
@@ -182,6 +204,7 @@ pnpm db:studio        # open Drizzle Studio
 pnpm seed             # seed Goa trip demo data
 pnpm seed:temple      # seed South India temple tour
 pnpm seed:panindia    # seed Pan-India Explorer trip — 18 located expenses covering every map-pin scenario
+pnpm seed:us          # seed a US-currency trip
 pnpm seed:streams     # seed 3 stream counterparts, 30 entries (all statuses)
 pnpm seed:circles     # seed 4 circles covering Phase 4+5 test scenarios
 ```

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { regenerateShareToken } from "@/app/actions/groups";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { InviteQRSheet } from "@/components/shared/invite-qr-sheet";
+import { BRAND } from "@/lib/brand";
 import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
 interface Props {
@@ -33,7 +34,7 @@ export function InviteSection({ url: initialUrl, groupName, groupId, theme = CON
   async function handleShare() {
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: groupName, text: `Join ${groupName} on Clear!`, url });
+        await navigator.share({ title: groupName, text: `Join ${groupName} on ${BRAND.name}!`, url });
         return;
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {

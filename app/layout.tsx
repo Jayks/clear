@@ -7,6 +7,7 @@ import { IOSInstallHint } from "@/components/shared/ios-install-hint";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { NavProgress } from "@/components/shared/nav-progress";
 import Script from "next/script";
+import { BRAND, BRAND_TITLE } from "@/lib/brand";
 import "./globals.css";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -26,9 +27,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Clear — Split it. Clear it.",
-  description:
-    "Group expense splitting for any group. Log what you spent, who paid, and let Clear figure out who owes whom.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://clearoff.in"),
+  title: BRAND_TITLE,
+  description: `Group expense splitting for any group. Log what you spent, who paid, and let ${BRAND.name} figure out who owes whom.`,
   icons: {
     apple: [{ url: "/api/pwa-icon?size=192&v=2", sizes: "180x180", type: "image/png" }],
   },

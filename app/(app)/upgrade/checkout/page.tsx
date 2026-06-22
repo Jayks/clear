@@ -7,7 +7,7 @@ import { getEarlyBirdSlotsClaimed, isEarlyBirdActive, EARLY_BIRD_PRICE, REGULAR_
 import type { PassType } from "@/lib/subscription/entitlement";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Checkout — Clear Plus" };
+export const metadata: Metadata = { title: "Checkout — ClearOff Plus" };
 
 export default async function CheckoutPage({
   searchParams,

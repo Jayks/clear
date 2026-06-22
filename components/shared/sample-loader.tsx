@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { seedSampleStep, type SampleStep } from "@/app/actions/demo";
 import { interstitialReady, tipIndexAt } from "@/lib/demo/interstitial";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { BRAND } from "@/lib/brand";
 
 const MIN_MS = 2600; // floor so the screen is readable even on a fast seed
 const TIP_INTERVAL_MS = 2200;
@@ -21,7 +22,7 @@ const STEPS: { key: SampleStep; label: string; icon: LucideIcon }[] = [
 ];
 
 const TIPS: { emoji: string; text: string }[] = [
-  { emoji: "📸", text: "Snap a receipt — Clear's AI reads the items and splits them for you." },
+  { emoji: "📸", text: `Snap a receipt — ${BRAND.name}'s AI reads the items and splits them for you.` },
   { emoji: "🎙️", text: "Say it out loud — log an expense by voice, hands-free." },
   { emoji: "🗺️", text: "Trips map your spending — see where every expense happened." },
   { emoji: "🔄", text: "Nests auto-log recurring bills each month — set rent once." },

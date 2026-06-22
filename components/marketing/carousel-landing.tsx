@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ArrowRight, ChevronLeft, ChevronRight,
   CheckCircle2, RefreshCw, CalendarCheck, Bell,
@@ -9,8 +11,14 @@ import {
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SettleFlowDemo } from "@/components/marketing/settle-flow-demo";
-import { LoginModal } from "@/components/shared/login-modal";
+import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { motion } from "framer-motion";
+
+// LoginModal pulls in LoginForm → the full Supabase client SDK (auth, realtime,
+// postgrest — ~200KB minified). Lazy-loaded so that weight only downloads when
+// a visitor actually taps Sign in/Get started, not on every single visit to
+// this already JS-heavy carousel (see app/CLAUDE.md Landing Page section).
+const LoginModal = dynamic(() => import("@/components/shared/login-modal").then((mod) => mod.LoginModal), { ssr: false });
 
 // ─── Motion presets ───────────────────────────────────────────────────────────
 // Shared easing + variants used across all 9 slides.
@@ -39,11 +47,11 @@ const stagger = (delayChildren = 0) => ({
 const SLIDE_COUNT = 11;
 
 const SLIDES = [
-  { label: "Clear",       short: "Home",     accent: "#06B6D4" },
+  { label: "ClearOff",    short: "Home",     accent: "#06B6D4" },
   { label: "Overview",    short: "Overview", accent: "#0891B2" },
   { label: "Trips",       short: "Trips",    accent: "#06B6D4" },
-  { label: "AI",          short: "AI",       accent: "#7C3AED" },
-  { label: "Settle Up",   short: "Settle",   accent: "#059669" },
+  { label: "AI-powered",  short: "AI",       accent: "#7C3AED" },
+  { label: "Settle up",   short: "Settle",   accent: "#059669" },
   { label: "Insights",    short: "Insights", accent: "#D97706" },
   { label: "By the numbers", short: "Stats", accent: "#0891B2" },
   { label: "Nests",       short: "Nests",    accent: "#0D9488" },
@@ -710,8 +718,42 @@ function Av({ name, color, size = 28 }: { name: string; color: string; size?: nu
   );
 }
 
+// ─── Slide window — render virtualization for mobile load perf ────────────────
+/**
+ * Mounts `children` only when within 1 slide of `active`; otherwise renders a
+ * lightweight placeholder with identical scroll-snap sizing (so `handleScroll`'s
+ * `scrollLeft / clientWidth` arithmetic and snap geometry stay correct
+ * regardless of which slides are virtualized). Constructing a slide's JSX
+ * element graph is cheap, but actually mounting it — running `FeatureSlide`'s
+ * own function body, Framer Motion's variant setup, and the browser's real
+ * layout/paint work for nested SVGs/gradients/phone-frame mockups — is not,
+ * and doing that for all 11 slides on first paint was the dominant cost
+ * behind the carousel's slow mobile load (June 2026 investigation — see
+ * app/CLAUDE.md Landing Page section; the eager LoginModal→Supabase chain was
+ * a smaller, separately-fixed contributor). Window is ±1, not just the active
+ * slide alone, so a swipe never reveals an empty placeholder mid-gesture — the
+ * about-to-be-active neighbor is already mounted by the time the user arrives.
+ */
+function SlideWindow({ index, active, children }: { index: number; active: number; children: React.ReactNode }) {
+  if (Math.abs(active - index) <= 1) return <>{children}</>;
+  return (
+    <div
+      className="snap-start snap-always w-full shrink-0 h-full"
+      role="group"
+      aria-roledescription="slide"
+      aria-label={SLIDES[index]?.label}
+    />
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export function CarouselLanding() {
+  // On mobile, "/" renders this same component — so a link back to "/" is a
+  // dead no-op there (Next.js doesn't navigate a <Link> to the current URL).
+  // Only show the "go home"/"see all features" links when mounted at a
+  // different route (i.e. "/about", desktop's dedicated tour URL).
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   const [active, setActive] = useState(0);
   const [userInteracted, setUserInteracted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -764,7 +806,7 @@ export function CarouselLanding() {
       className="clear-carousel fixed inset-0 flex flex-col bg-white dark:bg-slate-950"
       role="region"
       aria-roledescription="carousel"
-      aria-label="Clear feature tour"
+      aria-label="ClearOff feature tour"
     >
       {/* Screen-reader announcement of the current slide */}
       <div aria-live="polite" className="sr-only">
@@ -797,17 +839,43 @@ export function CarouselLanding() {
         }
       `}</style>
 
-      {/* ── Top nav ── */}
-      <nav className="shrink-0 h-14 flex items-center justify-between px-4 sm:px-6 z-50 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-100/80 dark:border-slate-800/60">
-        <ClearLogo iconSize={30} wordmarkClassName="text-base font-semibold text-slate-800 dark:text-slate-100" className="flex items-center gap-2" />
+      {/* ── Top nav — two breakpoint-swapped variants, never both mounted
+          visibly at once. Mobile keeps its own bespoke nav (Home escape
+          hatch, no Pricing — see below); sm: and up uses the same
+          MarketingNav every other marketing page uses, for pixel-identical
+          logo placement and link cluster across /, /about, /pricing,
+          /changelog (June 2026 consistency pass). The bottom bar below is
+          carousel-position UI only, not navigation. ── */}
+      <nav className="sm:hidden shrink-0 h-14 flex items-center justify-between px-4 z-50 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-b border-slate-100/80 dark:border-slate-800/60">
+        {/* On mobile's own "/" there's nowhere further "home" to go, so it's
+            a plain, unlinked logo; on /about (rare on mobile, but reachable
+            by direct URL) it's a real back-to-home link. */}
+        {isHome ? (
+          <ClearLogo iconSize={30} showWordmark={false} className="flex items-center gap-2" />
+        ) : (
+          <Link href="/" className="flex items-center gap-2 group">
+            <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
+            <ClearLogo iconSize={30} showWordmark={false} className="flex items-center gap-2" />
+          </Link>
+        )}
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <button onClick={() => setLoginModal({ open: true })} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</button>
-          <button onClick={() => setLoginModal({ open: true, intent: "signup" })} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
-            Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
+          {/* Mobile has no other route to the full landing page (this carousel
+              IS its "/"), so this slot is a "Home" escape hatch instead of
+              Pricing — ?view=full overrides the device check in
+              app/page.tsx. Pricing is reachable from there once landed. */}
+          <Link href="/?view=full" className="text-xs font-medium text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+            Home
+          </Link>
+          <button onClick={() => setLoginModal({ open: true })} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</button>
+          <button onClick={() => setLoginModal({ open: true, intent: "signup" })} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-3 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
+            Get started
           </button>
         </div>
       </nav>
+      <div className="hidden sm:block shrink-0">
+        <MarketingNav current={isHome ? "home" : "about"} />
+      </div>
 
       {/* ── Carousel wrapper (relative so right-edge overlay can be absolute) ── */}
       <div className="relative flex-1 overflow-hidden">
@@ -877,7 +945,8 @@ export function CarouselLanding() {
             Gradient mesh background, no phone, centered content.
             Large logo → headline → 4 context pills → CTAs → trust badges → ticker
         ══════════════════════════════════════════════════════════════════ */}
-        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden ${active === 0 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Clear">
+        <SlideWindow index={0} active={active}>
+        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden ${active === 0 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="ClearOff">
 
           {/* ── Animated mesh gradient blobs ── */}
           <div className="absolute inset-0 pointer-events-none">
@@ -919,7 +988,7 @@ export function CarouselLanding() {
             >
               Split it.{" "}
               <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
-                Clear it.
+                Clear it off.
               </span>
             </motion.h1>
 
@@ -979,6 +1048,10 @@ export function CarouselLanding() {
               ))}
             </motion.div>
 
+            <motion.p className="text-[11px] text-slate-400/70 dark:text-slate-500/70 text-center mb-6 max-w-xs" variants={fadeUp}>
+              Native App Store / Play Store apps coming soon — install today as a web app, same full experience.
+            </motion.p>
+
             {/* Social proof ticker */}
             <motion.div className="w-full overflow-hidden rounded-xl" style={{ maxWidth:380 }} variants={fadeUp}>
               <div
@@ -1003,11 +1076,13 @@ export function CarouselLanding() {
             </motion.div>
           </motion.div>
         </div>
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 1 — Overview: Trips · Nests · Streams · Circle (2×2 grid)
             Designed for 4 contexts from day 1 — Circle shown as "coming soon".
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={1} active={active}>
         <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-5 sm:px-8 py-6 overflow-hidden ${active === 1 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Overview">
           {/* Headline — stagger in when slide 1 is active */}
           <motion.div
@@ -1131,10 +1206,12 @@ export function CarouselLanding() {
             ))}
           </motion.div>
         </div>
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 2 — Trips  (day-by-day timeline in the phone + 3-D map breakout)
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={2} active={active}>
         <FeatureSlide
           isActive={active === 2}
           label="Trips"
@@ -1265,10 +1342,12 @@ export function CarouselLanding() {
             </div>
           }
         />
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 3 — AI Quick-add
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={3} active={active}>
         <FeatureSlide
           isActive={active === 3}
           label="AI-powered"
@@ -1421,18 +1500,20 @@ export function CarouselLanding() {
             </div>
           }
         />
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 4 — Settle Up  (Debt-Flow graph in the phone + minimum-payment
             action lifted into the breakout — the old standalone Debt Flow slide
             is merged in here)
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={4} active={active}>
         <FeatureSlide
           isActive={active === 4}
           label="Settle up"
           labelHex="#059669"
           headline={<>One payment each. <span style={{ background:"linear-gradient(135deg,#059669 0%,#0891B2 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>No math.</span></>}
-          body="The Debt-Flow graph maps who owes whom with animated arcs; Clear's optimizer collapses the tangle into the fewest transfers. Tap an arc to pay."
+          body="The Debt-Flow graph maps who owes whom with animated arcs; ClearOff's optimizer collapses the tangle into the fewest transfers. Tap an arc to pay."
           pills={[
             { icon:"💫", text:"Animated Debt Flow", color:"#059669" },
             { icon:"🧮", text:"Fewest transfers",   color:"#0891B2" },
@@ -1487,10 +1568,12 @@ export function CarouselLanding() {
             </div>
           }
         />
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 5 — Insights
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={5} active={active}>
         <FeatureSlide
           isActive={active === 5}
           label="Insights"
@@ -1607,10 +1690,12 @@ export function CarouselLanding() {
             </div>
           }
         />
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 6 — Stats interstitial (pattern break — no phone, big numbers)
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={6} active={active}>
         <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden ${active === 6 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="By the numbers">
           {/* Ambient blobs */}
           <div className="absolute inset-0 pointer-events-none">
@@ -1661,10 +1746,12 @@ export function CarouselLanding() {
             </motion.p>
           </motion.div>
         </div>
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 7 — Nests
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={7} active={active}>
         <FeatureSlide
           isActive={active === 7}
           label="Nests"
@@ -1759,16 +1846,18 @@ export function CarouselLanding() {
             </div>
           }
         />
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 8 — Streams
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={8} active={active}>
         <FeatureSlide
           isActive={active === 8}
           label="Streams"
           labelHex="#6366F1"
           headline={<>Track 1:1 money <span style={{ background:"linear-gradient(135deg,#6366F1 0%,#8B5CF6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>with anyone.</span></>}
-          body="No group needed. A bilateral ledger — log, confirm, partially settle, or forgive. Works even for people who don't have Clear yet."
+          body="No group needed. A bilateral ledger — log, confirm, partially settle, or forgive. Works even for people who don't have ClearOff yet."
           pills={[
             { icon:"📒", text:"Bilateral spine",       color:"#6366F1" },
             { icon:"✅", text:"Guest confirm link",    color:"#8B5CF6" },
@@ -1786,7 +1875,7 @@ export function CarouselLanding() {
             caption: "Guest confirm",
             content: (
               <div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 mb-2">Priya isn&apos;t on Clear yet — share a link, she confirms or disputes. <span className="text-slate-400">No account needed.</span></p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 mb-2">Priya isn&apos;t on ClearOff yet — share a link, she confirms or disputes. <span className="text-slate-400">No account needed.</span></p>
                 <div className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 mb-2" style={{ background:"rgba(99,102,241,0.06)", border:"1px solid rgba(99,102,241,0.18)" }}>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 flex-1 min-w-0 truncate">clear.app/confirm/9f2a…</span>
                   <span className="rounded-md px-2 py-0.5 text-[10px] font-bold text-white shrink-0" style={{ background:"linear-gradient(135deg,#6366F1,#8B5CF6)" }}>Share</span>
@@ -1854,10 +1943,12 @@ export function CarouselLanding() {
             </div>
           }
         />
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 9 — Circles
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={9} active={active}>
         <FeatureSlide
           isActive={active === 9}
           label="Circles"
@@ -1967,10 +2058,12 @@ export function CarouselLanding() {
             </div>
           }
         />
+        </SlideWindow>
 
         {/* ══════════════════════════════════════════════════════════════════
             SLIDE 10 — CTA
         ══════════════════════════════════════════════════════════════════ */}
+        <SlideWindow index={10} active={active}>
         <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-6 relative overflow-hidden ${active === 10 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Get started">
           {/* Ambient blobs */}
           <div className="absolute inset-0 pointer-events-none">
@@ -2006,7 +2099,8 @@ export function CarouselLanding() {
                   Now clear yours.
                 </h2>
                 <p className="text-teal-100 text-base mb-1">30-day Plus trial. No credit card.</p>
-                <p className="text-teal-200/50 text-sm mb-8">Google sign-in · 30 seconds · iOS &amp; Android</p>
+                <p className="text-teal-200/50 text-sm mb-1">Google sign-in · 30 seconds · iOS &amp; Android</p>
+                <p className="text-teal-200/30 text-[11px] mb-8">Native iOS &amp; Android apps coming soon — install today as a web app.</p>
                 <button
                   onClick={() => setLoginModal({ open: true, intent: "signup" })}
                   className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-teal-700 font-bold text-base py-3.5 px-10 rounded-2xl shadow-xl transition-all hover:-translate-y-0.5"
@@ -2014,14 +2108,19 @@ export function CarouselLanding() {
                   Start for free <ArrowRight className="w-4 h-4" />
                 </button>
                 <div className="mt-7 flex items-center justify-center gap-5">
-                  <Link href="/about"   className="text-teal-200/60 text-sm hover:text-white transition-colors">See all features →</Link>
-                  <span className="text-teal-300/30">·</span>
+                  {!isHome && (
+                    <>
+                      <Link href="/" className="text-teal-200/60 text-sm hover:text-white transition-colors">See all features →</Link>
+                      <span className="text-teal-300/30">·</span>
+                    </>
+                  )}
                   <Link href="/pricing" className="text-teal-200/60 text-sm hover:text-white transition-colors">Pricing →</Link>
                 </div>
               </div>
             </div>
           </motion.div>
         </div>
+        </SlideWindow>
 
       </div>{/* end scroll container */}
 
@@ -2041,10 +2140,14 @@ export function CarouselLanding() {
 
       </div>{/* end carousel wrapper */}
 
-      {/* ── Bottom bar ── */}
-      <div className="shrink-0 relative h-13 flex items-center justify-between gap-3 px-4 sm:px-6 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-t border-slate-100/80 dark:border-slate-800/60 z-50" style={{ height:52 }}>
-        {/* Progress track + count — replaces the 11-dot row (too wide on mobile).
-            The track is the position indicator; swipe / arrows / chevron navigate. */}
+      {/* ── Bottom bar — carousel position indicator only. All navigation
+          (Home, Pricing, Sign in, Get started) now lives in the top nav for
+          every device — this strip used to also carry Home/Pricing ghost-chips,
+          but a fixed-bottom zone on a fullscreen `inset-0` layout is exactly
+          where mobile Safari/Chrome's own bottom toolbar can overlap and steal
+          taps, so anything that must be reliably tappable belongs in the top
+          nav instead. ── */}
+      <div className="shrink-0 relative h-13 flex items-center justify-center px-4 sm:px-6 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md border-t border-slate-100/80 dark:border-slate-800/60 z-50" style={{ height:52 }}>
         <div className="flex items-center gap-2.5 min-w-0">
           <div
             className="relative h-1.5 w-20 sm:w-28 rounded-full bg-slate-200/80 dark:bg-slate-700/70 overflow-hidden shrink-0"
@@ -2063,23 +2166,6 @@ export function CarouselLanding() {
             <span className="text-slate-600 dark:text-slate-300">{active + 1}</span>/{SLIDE_COUNT}
             <span className="hidden sm:inline"> · {SLIDES[active]?.label}</span>
           </span>
-        </div>
-        {/* Right side: discovery links as subtle ghost-chips (What's New lives on
-            the About page now, to de-clutter the bar). CTA is in top nav + last slide. */}
-        <div className="flex items-center gap-2">
-          {[
-            { href: "/about",   label: "About"   },
-            { href: "/pricing", label: "Pricing" },
-          ].map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="group inline-flex items-center gap-1 rounded-full pl-3 pr-2 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700/50 hover:text-slate-800 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-all"
-            >
-              {l.label}
-              <ChevronRight className="w-3 h-3 opacity-50 group-hover:opacity-90 group-hover:translate-x-0.5 transition-all" />
-            </Link>
-          ))}
         </div>
       </div>
 

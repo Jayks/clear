@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { LegalPageShell } from "@/components/marketing/legal-page-shell";
 
-export const metadata: Metadata = { title: "Privacy Policy — Clear" };
+export const metadata: Metadata = { title: "Privacy Policy — ClearOff" };
 
 export default function PrivacyPage() {
   return (
     <LegalPageShell title="Privacy Policy" updated="19 June 2026">
       <p>
-        This Privacy Policy explains what Clear ("Clear", "we", "us"), operated by <strong>Jayakumar Sekar</strong>
-        {" "}(Chennai, Tamil Nadu, India), collects, why, and who it&apos;s shared with. Using Clear means you&apos;ve
-        read and accepted this policy.
+        This Privacy Policy explains what ClearOff ("ClearOff", "we", "us") collects, why, and who it&apos;s shared
+        with. ClearOff is based in Chennai, Tamil Nadu, India. Using ClearOff means you&apos;ve read and accepted
+        this policy.
       </p>
 
       <h2>1. Information we collect</h2>
@@ -27,14 +27,14 @@ export default function PrivacyPage() {
       <p>
         To run the Service: compute balances and settlements, show your groups and streams, send notifications
         about activity in your groups, process AI-assisted receipt scans and natural-language entry, process
-        Clear Plus pass payments, and improve the product. We don&apos;t sell your data.
+        ClearOff Plus pass payments, and improve the product. We don&apos;t sell your data.
       </p>
 
       <h2>3. Who we share it with (sub-processors)</h2>
       <ul>
         <li><strong>Supabase</strong> — our database, authentication, and file storage provider. Your account and expense data lives here, access-controlled per group.</li>
         <li><strong>Anthropic</strong> — processes receipt photos, typed text, or pasted chat content you submit through the AI features, in order to extract expense details.</li>
-        <li><strong>Razorpay</strong> — processes Clear Plus pass payments. PCI-DSS compliant; Clear never stores your card or UPI credentials.</li>
+        <li><strong>Razorpay</strong> — processes ClearOff Plus pass payments. PCI-DSS compliant; ClearOff never stores your card or UPI credentials.</li>
         <li><strong>Resend</strong> — sends transactional emails (notifications, receipts).</li>
         <li><strong>Mapbox</strong> — converts addresses to/from coordinates when you use location features on a receipt or trip.</li>
         <li><strong>Google</strong> — handles sign-in (OAuth); browser push notifications are delivered via your browser vendor&apos;s own push service (Google, Mozilla, or Apple).</li>
@@ -42,13 +42,13 @@ export default function PrivacyPage() {
         <li><strong>Google Analytics</strong> — optional, anonymized product usage analytics.</li>
       </ul>
       <p>
-        Some of these providers process data on servers outside India. By using Clear, you consent to this
+        Some of these providers process data on servers outside India. By using ClearOff, you consent to this
         international transfer, which is necessary to provide the Service.
       </p>
 
-      <h2>4. Sharing with other Clear users</h2>
+      <h2>4. Sharing with other ClearOff users</h2>
       <p>
-        Clear is a shared-expense app — anything you log inside a Trip, Nest, or Circle is visible to every other
+        ClearOff is a shared-expense app — anything you log inside a Trip, Nest, or Circle is visible to every other
         member of that group. Stream entries are visible to you and the other person in that bilateral
         relationship (or a guest holding a confirmation link). This is core to how the product works, not an
         accident of data sharing.
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
       <h2>5. Data retention</h2>
       <p>
         We keep your account and expense data for as long as your account is active. Receipt photo files are
-        retained for 60 days on the free plan (the line-item data extracted from them is kept regardless); Clear
+        retained for 60 days on the free plan (the line-item data extracted from them is kept regardless); ClearOff
         Plus removes that limit. You can request deletion of your account and associated data at any time — see
         §7.
       </p>
@@ -72,13 +72,13 @@ export default function PrivacyPage() {
       <h2>7. Your rights</h2>
       <p>
         You can ask us to access, correct, or delete your personal data at any time by writing to{" "}
-        <a href="mailto:saijayakumar@gmail.com">saijayakumar@gmail.com</a>. Note that deleting your account may
+        <a href="mailto:support@clearoff.in">support@clearoff.in</a>. Note that deleting your account may
         affect shared groups other members rely on — we&apos;ll work with you on the best way to handle that.
       </p>
 
       <h2>8. Children&apos;s privacy</h2>
       <p>
-        Clear is not directed at children under 18. If you believe a minor has provided us personal data without
+        ClearOff is not directed at children under 18. If you believe a minor has provided us personal data without
         appropriate consent, contact us and we&apos;ll remove it.
       </p>
 
@@ -90,7 +90,7 @@ export default function PrivacyPage() {
       <h2>10. Contact</h2>
       <p>
         Questions about this policy? Visit our <a href="/contact">Contact page</a> or email{" "}
-        <a href="mailto:saijayakumar@gmail.com">saijayakumar@gmail.com</a>.
+        <a href="mailto:support@clearoff.in">support@clearoff.in</a>.
       </p>
     </LegalPageShell>
   );

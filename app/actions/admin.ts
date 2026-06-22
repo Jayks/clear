@@ -72,7 +72,7 @@ export async function trackVisit(): Promise<void> {
     const time = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
 
     const lines = [
-      `👤 <b>New visit · Clear</b>`,
+      `👤 <b>New visit · ClearOff</b>`,
       ``,
       isNew ? `🆕 <b>NEW USER</b>` : null,
       `${name} (${email})`,

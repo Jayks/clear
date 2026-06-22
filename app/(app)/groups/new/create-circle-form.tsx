@@ -9,6 +9,7 @@ import { createCircleSchema, type CircleMember } from "@/lib/validations/circle"
 import { createCircle } from "@/app/actions/circle";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
+import { BRAND } from "@/lib/brand";
 import {
   ArrowLeft, ArrowRight, Plus, Trash2, RotateCcw,
   MessageCircle, Copy, Check, ExternalLink,
@@ -56,7 +57,7 @@ function buildRecurringMessage(
   const upiLine = upiId
     ? `\nPay ₹${amount}: upi://pay?pa=${upiId}&am=${amount}&cu=${currency}&tn=${encodeURIComponent(name)}`
     : "";
-  return `Hey! ${creatorName} added you to ${name} on Clear 💰\n₹${amount}/month · Due on the ${ordinal(contributionDay)} of each month${upiLine}\nTrack it on Clear: ${joinUrl}`;
+  return `Hey! ${creatorName} added you to ${name} on ${BRAND.name} 💰\n₹${amount}/month · Due on the ${ordinal(contributionDay)} of each month${upiLine}\nTrack it on ${BRAND.name}: ${joinUrl}`;
 }
 
 function buildOneTimeMessage(

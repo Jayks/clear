@@ -5,7 +5,7 @@ import { DeleteUserButton } from "./delete-user-button";
 import { PlanToggle } from "./plan-toggle";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Users — Clear Admin" };
+export const metadata: Metadata = { title: "Users — ClearOff Admin" };
 
 const ROLE_CONFIG = {
   platform_admin: {

@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PricingCards } from "./pricing-cards";
 
-export const metadata: Metadata = { title: "Upgrade to Plus — Clear" };
+export const metadata: Metadata = { title: "Upgrade to Plus — ClearOff" };
 
 export default async function UpgradePage() {
   const [user, claimed] = await Promise.all([
@@ -46,7 +46,7 @@ export default async function UpgradePage() {
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-3xl text-slate-800 dark:text-slate-100 mb-2" style={{ fontFamily: "var(--font-fraunces)" }}>
-            Clear Plus
+            ClearOff Plus
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             {isPlus
@@ -71,8 +71,8 @@ export default async function UpgradePage() {
 
         <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6 pb-4">
           Questions? Reach us at{" "}
-          <a href="mailto:support@useclear.in" className="text-cyan-600 dark:text-cyan-400 hover:underline">
-            support@useclear.in
+          <a href="mailto:support@clearoff.in" className="text-cyan-600 dark:text-cyan-400 hover:underline">
+            support@clearoff.in
           </a>
         </p>
       </div>

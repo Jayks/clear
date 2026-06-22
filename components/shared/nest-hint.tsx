@@ -15,7 +15,7 @@ const STEPS = [
   {
     target: "[data-tour='log-template-btn']",
     title: "Log for this month",
-    description: "One tap logs the expense for the current month. Clear prevents double-logging automatically.",
+    description: "One tap logs the expense for the current month. ClearOff prevents double-logging automatically.",
   },
 ];
 

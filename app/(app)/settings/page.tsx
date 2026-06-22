@@ -11,7 +11,7 @@ import { eq, isNotNull, and } from "drizzle-orm";
 import { extractDisplayName } from "@/lib/utils";
 import { getUserUpiIds } from "@/lib/db/queries/upi";
 
-export const metadata: Metadata = { title: "Settings — Clear" };
+export const metadata: Metadata = { title: "Settings — ClearOff" };
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();

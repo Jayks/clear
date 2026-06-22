@@ -69,7 +69,7 @@ export default function GlobalError({
             Something went wrong
           </h1>
           <p style={{ fontSize: "0.875rem", color: "#64748b", margin: "0 0 1.75rem" }}>
-            Clear ran into an unexpected problem. Refreshing usually fixes it — if
+            ClearOff ran into an unexpected problem. Refreshing usually fixes it — if
             it keeps happening, please try again in a few minutes.
           </p>
           <button

@@ -29,7 +29,7 @@ export async function generateMetadata({
     .select({ description: expenses.description })
     .from(expenses)
     .where(eq(expenses.id, expenseId));
-  return { title: expense ? `${expense.description} · Thread | Clear` : "Clear" };
+  return { title: expense ? `${expense.description} · Thread | ClearOff` : "ClearOff" };
 }
 
 export default async function ThreadPage({

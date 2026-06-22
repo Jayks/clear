@@ -29,7 +29,7 @@ import type { TappedApp } from "@/lib/payment/types";
 const UTR_TIPS: Record<TappedApp, { where: string; steps: string }> = {
   gpay: {
     where: "G Pay",
-    steps: 'Activity → tap "Clear · [trip]" → copy the "Transaction ID" at the bottom',
+    steps: 'Activity → tap "ClearOff · [trip]" → copy the "Transaction ID" at the bottom',
   },
   phonepe: {
     where: "PhonePe",

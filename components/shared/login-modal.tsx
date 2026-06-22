@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { BRAND } from "@/lib/brand";
 import LoginForm from "@/app/(auth)/login/login-form";
 
 interface LoginModalProps {
@@ -24,7 +25,7 @@ export function LoginModal({ error, returnTo, intent, onClose }: LoginModalProps
     ? "Sign in to join the group"
     : isSignup
     ? "Create your account"
-    : "Sign in to Clear";
+    : `Sign in to ${BRAND.name}`;
 
   const subtitle = returnTo?.startsWith("/join")
     ? "You'll be taken directly to the group after signing in."
@@ -131,10 +132,10 @@ export function LoginModal({ error, returnTo, intent, onClose }: LoginModalProps
                   className="text-4xl text-slate-800 dark:text-slate-100"
                   style={{ fontFamily: "var(--font-fraunces)" }}
                 >
-                  Clear
+                  {BRAND.name}
                 </h1>
                 <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-                  Split it. Clear it.
+                  {BRAND.tagline}
                 </p>
               </div>
 

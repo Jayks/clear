@@ -8,6 +8,7 @@ import { MemberProfileSheet } from "@/components/shared/member-profile-sheet";
 import { getMemberName } from "@/lib/utils";
 import { RemoveMemberButton } from "./remove-member-button";
 import { toast } from "sonner";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
   members: GroupMember[];
@@ -34,10 +35,10 @@ export function MemberListClient({
   const [selectedMember, setSelectedMember] = useState<GroupMember | null>(null);
 
   async function shareInviteFor(name: string) {
-    const text = `Hey ${name}! You've been added to "${groupName}" on Clear.`;
+    const text = `Hey ${name}! You've been added to "${groupName}" on ${BRAND.name}.`;
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: `Join ${groupName} on Clear`, text, url: inviteUrl });
+        await navigator.share({ title: `Join ${groupName} on ${BRAND.name}`, text, url: inviteUrl });
         return;
       } catch (err) {
         // AbortError = user dismissed — that's fine. Other errors fall through.
@@ -54,7 +55,7 @@ export function MemberListClient({
       await navigator.clipboard.writeText(inviteUrl);
       toast.success("Invite link copied!");
     } catch {
-      const wa = `https://wa.me/?text=${encodeURIComponent(`Join "${groupName}" on Clear: ${inviteUrl}`)}`;
+      const wa = `https://wa.me/?text=${encodeURIComponent(`Join "${groupName}" on ${BRAND.name}: ${inviteUrl}`)}`;
       window.open(wa, "_blank");
     }
   }

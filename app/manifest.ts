@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
+import { BRAND, BRAND_TITLE } from "@/lib/brand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Clear — Split it. Clear it.",
-    short_name: "Clear",
+    name: BRAND_TITLE,
+    short_name: BRAND.name,
     description: "Group expense splitting for trips and households.",
     id: "/",
     scope: "/",

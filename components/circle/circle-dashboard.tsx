@@ -583,8 +583,8 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mb-3">
               <Clock className="w-3.5 h-3.5 shrink-0" />
               {ghostCount === 1
-                ? "1 member hasn't joined Clear yet"
-                : `${ghostCount} members haven't joined Clear yet`}
+                ? "1 member hasn't joined ClearOff yet"
+                : `${ghostCount} members haven't joined ClearOff yet`}
             </p>
           ) : null;
         })()}

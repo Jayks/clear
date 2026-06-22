@@ -108,7 +108,7 @@ export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: Use
     >
       {/* Logo + collapse toggle (toggle moves below when collapsed — no room beside the icon) */}
       <div className={cn("flex items-center h-14 shrink-0", collapsed ? "justify-center" : "justify-between px-4")}>
-        <Link href="/groups" className="flex items-center shrink-0" aria-label="Clear home">
+        <Link href="/groups" className="flex items-center shrink-0" aria-label="ClearOff home">
           <ClearLogo
             iconSize={28}
             showWordmark={!collapsed}

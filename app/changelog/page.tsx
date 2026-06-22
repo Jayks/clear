@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft } from "lucide-react";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { ArrowRight } from "lucide-react";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { BRAND } from "@/lib/brand";
 import { FadeIn } from "@/components/shared/fade-in";
+import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { changelog, type ChangelogRelease, type TagVariant } from "@/lib/changelog";
 
-export const metadata: Metadata = { title: "What's New — Clear" };
+export const metadata: Metadata = { title: "What's New — ClearOff" };
 
 // ── TagChip — complete class strings per variant (no dynamic interpolation) ──
 const TAG_CLASSES: Record<TagVariant, string> = {
@@ -99,35 +100,8 @@ export default function ChangelogPage() {
   return (
     <div className="overflow-x-clip">
 
-      {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav className="glass-nav sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
-            <ClearLogo
-              iconSize={32}
-              wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100"
-              className="flex items-center gap-2.5"
-            />
-          </Link>
-          <div className="flex items-center gap-1.5">
-            <ThemeToggle />
-            <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1.5" />
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/login?intent=signup"
-              className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
-            >
-              Get started <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      </nav>
+      {/* ── Nav — shared across every marketing page, see MarketingNav ── */}
+      <MarketingNav current="changelog" />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="text-center pt-20 pb-12 px-6">
@@ -139,7 +113,7 @@ export default function ChangelogPage() {
           className="text-4xl sm:text-5xl font-normal text-slate-800 dark:text-slate-100 mb-4"
           style={{ fontFamily: "var(--font-fraunces)" }}
         >
-          What&apos;s New in Clear
+          What&apos;s New in ClearOff
         </h1>
         <p className="text-lg text-slate-500 dark:text-slate-400 max-w-md mx-auto">
           Everything shipped since day one — from the core splitting engine to the full social layer.
@@ -174,7 +148,7 @@ export default function ChangelogPage() {
             className="text-2xl text-slate-800 dark:text-slate-100 mb-2"
             style={{ fontFamily: "var(--font-fraunces)" }}
           >
-            Start using Clear today
+            Start using ClearOff today
           </p>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
             30-day free trial · No credit card required · Google sign-in
@@ -198,7 +172,7 @@ export default function ChangelogPage() {
               className="flex items-center gap-2"
             />
             <span className="text-slate-300 dark:text-slate-600">·</span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">Split it. Clear it.</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{BRAND.tagline}</span>
           </div>
           <div className="flex items-center gap-5 text-xs text-slate-400 dark:text-slate-500">
             <Link href="/login" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Sign in</Link>

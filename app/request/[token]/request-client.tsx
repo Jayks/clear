@@ -18,6 +18,7 @@ import { UpiPayButton } from "@/components/payment/upi-pay-button";
 import { selfReportExternalPayment } from "@/app/actions/payment-requests";
 import { useUpiReturn } from "@/hooks/use-upi-return";
 import type { TappedApp } from "@/lib/payment/types";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
   token:        string;
@@ -365,7 +366,7 @@ export function RequestClient({
 
       {/* Soft footer */}
       <p className="text-center text-[11px] text-slate-300 dark:text-slate-600 pt-1">
-        Powered by Clear — group expense tracking
+        Powered by {BRAND.name} — group expense tracking
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { TourStep } from "./types";
+import { BRAND } from "../brand";
 
 /**
  * A short, linear "tour your sample" walk-through. Every targeted step anchors on
@@ -10,9 +11,9 @@ import type { TourStep } from "./types";
 export function getTourSteps(demoTripId: string | null): TourStep[] {
   const welcome: TourStep = {
     target: null,
-    title: "Welcome to Clear",
+    title: `Welcome to ${BRAND.name}`,
     description:
-      "Clear tracks shared money four ways — Trips, Nests, Circles and one-on-one Streams. Here's a 30-second walk through a sample trip.",
+      `${BRAND.name} tracks shared money four ways — Trips, Nests, Circles and one-on-one Streams. Here's a 30-second walk through a sample trip.`,
   };
 
   if (!demoTripId) return [welcome];

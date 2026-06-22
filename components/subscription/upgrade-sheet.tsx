@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Sparkles } from "lucide-react";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Shared violet ✦ upgrade sheet (RAZORPAY_PLAN.md §10 / M4) — one chrome,
@@ -59,7 +60,7 @@ function buildCopy(reason: UpgradeReason, context?: UpgradeSheetContext) {
       };
     case "network":
       return {
-        title: "Your Clear network is waiting.",
+        title: `Your ${BRAND.name} network is waiting.`,
         body: "Add people from past groups in one tap — no re-typing names.",
         cta: "Unlock your network →",
         href: "/upgrade",
@@ -112,7 +113,7 @@ export function UpgradeSheet({ open, reason, context, onDismiss, onUpgrade }: Up
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Upgrade to Clear Plus"
+            aria-label={`Upgrade to ${BRAND.plus}`}
             tabIndex={-1}
             className="fixed bottom-0 left-0 right-0 z-[60] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-t-2xl p-6"
             style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))", outline: "none" }}

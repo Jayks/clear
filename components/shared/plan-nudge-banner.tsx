@@ -1,5 +1,6 @@
 import { AlertTriangle, XCircle } from "lucide-react";
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 
 const COPY = {
   groups: {
@@ -37,7 +38,7 @@ export function PlanNudgeBanner({ nudge, resource }: Props) {
       <span>
         {message}{" "}
         <Link href="/upgrade" className="font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity">
-          Upgrade to Clear Plus
+          Upgrade to {BRAND.plus}
         </Link>
         {" "}for unlimited.
       </span>

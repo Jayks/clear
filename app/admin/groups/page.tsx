@@ -4,7 +4,7 @@ import { Map, Archive, Users, Receipt, TrendingUp } from "lucide-react";
 import { DeleteGroupButton } from "./delete-group-button";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Trips — Clear Admin" };
+export const metadata: Metadata = { title: "Trips — ClearOff Admin" };
 
 export default async function AdminTripsPage() {
   const trips = await getAdminGroupList();

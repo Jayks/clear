@@ -20,9 +20,11 @@ Clear is a shared expense and personal debt tracking app. Log what each person p
 
 ## Navigation
 
-Three-tab structure: **Home** (Trips + Nests + Circles) · **Streams** · **Insights**
+Three-destination structure: **Home** (Trips + Nests + Circles) · **Streams** · **Insights**. On mobile this is a bottom tab bar; on desktop it's a collapsible left sidebar (collapses to icon-only, expand/collapse preference remembered) — both surfaces carry the same unread/dispute indicator on Streams.
 
 The Home page has an **Active / Archived** underline-tab toggle above the section pills. Active view shows Trips · Nests · Circles with colour-coded headers and a sticky pill nav. Archived view shows the same type groupings at full opacity. The tab row doubles as a search bar — a 🔍 icon expands to a full search input; blurring with a query collapses it to a filter chip `[🔍 query ×]` so the tabs stay accessible.
+
+Inside a group, the same three-destination idea repeats one level down: a tab strip (Overview · Expenses · Settle · Members · Insights) with a group switcher and a `⋯` manage menu (Edit/Archive/Share) — available from every page in the group on both mobile and desktop, not just the overview.
 
 ---
 
@@ -40,7 +42,7 @@ The Home page has an **Active / Archived** underline-tab toggle above the sectio
 - **Group action hub** — tap `⋯` (always visible) or long-press any group card (Trip, Nest, or Circle) to open a three-zone action sheet: **Log expense** (one tap to Scan receipt / Voice input / Type + AI — each auto-triggers the matching mode in the quick-add form); **Jump to** (Members, Expenses, Settle Up, Insights for trips/nests; Expenses and Members only for circles); **Manage** (Edit, Archive/Unarchive with inline confirmation, Share invite — admin only). The balance badge links directly to Settle Up; the member count badge links directly to Members
 - **Mobile group nav** — inside a group, the full top nav is replaced by a slim contextual header (← back, group name, `⋯`) so screen space goes to content
 - **Expense detail** — tap any expense card to open a WhatsApp-style bottom sheet: amount, split breakdown, notes, compact reaction pills, pending dispute card, resolved dispute history, an inline comment thread with a persistent footer input, and a direct "View thread" link — no separate page needed for the common case
-- **Expense search** — instant search across description and category; filters and pagination compose naturally; pagination only appears for groups with >20 expenses (smaller groups show all at once)
+- **Expense search** — instant search across description and category; filters and pagination compose naturally; pagination only appears for groups with >20 expenses (smaller groups show all at once). On mobile, sort/category/payer/date collapse behind a single ⚙️ Filter button that expands an inline panel in place (not an overlay) — the list stays visible and updates live as you filter, no dismiss step required.
 - **Timeline view** — third expense list mode (trips only): animated day-by-day view with stacked category bar (proportional colored segments, clickable to filter), √-scaled payer avatar chips (area ∝ amount paid), count-up day totals, connector threads that draw on scroll, Day X/Y orientation badges, 🔥 busiest day callouts, and empty-day ghost rows for the full trip range
 - **Map view** — fourth expense list mode (trips only): every located expense (AI-scanned GPS or manually pinned) plotted on a richly-detailed Mapbox Standard-style map (theme-aware day/night lighting) with Supercluster clustering — individual stops show rich chips (category emoji + truncated description + amount), dense groupings collapse into "N · ₹total" cluster bubbles that bloom into chips on zoom-in. An animated route path traces the trip geographically with a clear travelled-vs-upcoming colour identity (glowing emerald-green for the ground already covered, muted amber for the road ahead — both self-illuminated so they read true in light or dark mode). A date scrubber replays the trip day by day, auto-framing the camera to that day's pins and walking multi-stop days one place at a time (`fitBounds` — wide for cross-country same-day spreads like a Chennai-to-Delhi flight day, tight for same-city clusters so they un-merge into readable chips). **Cinema mode** (`▶ Play this trip`) auto-plays the whole trip end to end with a cinematic camera tilt and 3D buildings/landmarks rising into view at each close-up stop. Full dark-mode support.
 - **Expense audit trail** — every card and edit page shows who logged the expense and who last edited it, with relative timestamps
@@ -221,15 +223,15 @@ app/
   api/pwa-icon/   — PWA icon endpoint (192 + 512 px, edge runtime) — "B-Converge" glass mark
   manifest.ts     — PWA manifest
   icon.tsx        — favicon (32 px) — "B-Converge" glass mark
-  page.tsx        — landing page (redirects authed users → /groups; renders CarouselLanding)
-  about/          — full-feature marketing page (/about)
+  page.tsx        — landing page (redirects authed users → /groups; device-aware: desktop/tablet renders AboutLanding, mobile renders CarouselLanding)
+  about/          — swipe-carousel feature tour (/about), reachable via "About App" link from the desktop home page
   pricing/        — public pricing page (plan-cards async RSC + faq-section client)
 components/
   circle/         — circle-dashboard (RSC), circle-card + server (home card), circle-chip-grid, circle-cycle-nav, circle-reminder-sheet/button, record-contribution-sheet
   expense/        — expense cards, quick-add sheet, split editor, detail sheet (WhatsApp-style), reaction/question/dispute forms, thread discussion (bubble UI), thread comment input
   trip/           — group cards, cover photo picker, budget bar, overview badge RSCs (balance, insights, activity feed)
   settlement/     — debt-flow-graph (interactive SVG), settle-hero-card, settled-celebration
-  marketing/      — carousel-landing (9-slide fullscreen carousel with HD phone frames), settle-flow-demo (animated SVG debt-flow, used in /about and inside carousel phone)
+  marketing/      — carousel-landing (fullscreen swipe carousel with HD phone frames, lives at /about), about-landing (full scrollable tour, desktop's / homepage), settle-flow-demo (animated SVG debt-flow, used in both)
   insights/       — charts and insights tabs
   shared/         — clear-logo ("B-Converge" mark: chamfered-C + inflow strokes into a split node, on a cyan→teal glass tile), nav, skeletons, animated-list, tour layer, member profile sheet
   tour/           — tour context and spotlight layer
@@ -255,3 +257,5 @@ lib/
 - **`GroupActionHub` / `QuickAddSheet`** — own their own portal (`document.body`) and `AnimatePresence`; always rendered, visibility controlled via `isOpen` prop. Cards have Share + `⋯` floating on the cover image; `⋯` always visible (`w-10 h-10` on mobile for iOS tap targets). `GroupActionHub` is the consolidated hub replacing the old `TripCardNavSheet` + `TripCardQuickAdd`; `QuickAddSheet` accepts `startMode` prop to auto-trigger Scan/Voice/Type on open. QuickAddSheet has post-save "✓ Saved!" state → "+ Add another expense →" link with 2 s auto-close
 - **Platform-aware share / invite** — `TripCardShareDrawer` + `InviteSection` call `navigator.share()` directly; iOS cancel (AbortError) falls back to `InviteQRSheet` (QR + copy); Windows/Android cancel does nothing (native sheet already includes QR + copy)
 - **GroupBalanceBadge** — async RSC streamed into each active TripCard via `Suspense`; reads `getHomeBalances(userId)` — one batched, React-`cache()`-deduped query computing the user's net for ALL groups at once (replaces the old per-card `getBalances` fan-out that serialised through the `max:3` pool on cold load)
+- **`AppSidebar`** — desktop nav is a collapsible left rail (`app/(app)/app-sidebar.tsx`) replacing the old `AppNav` top bar; `AppNav` is mobile-only now. Collapse state persists in `localStorage`, read post-mount (server always renders expanded — same SSR-can't-know-localStorage pattern as other dismissable UI in the app)
+- **Deterministic back navigation** — `BackButton` pushes a known `href` rather than calling `router.back()`; a form reached by pushing forward from a list (Edit group, Edit/Add expense, templates, circle wallet expense) calls `router.back()` on save instead of `router.push`/`replace()` to that same list URL — pushing/replacing there would write an adjacent duplicate-URL history entry, making the native back button's first press appear to do nothing

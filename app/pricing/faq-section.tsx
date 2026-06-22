@@ -26,10 +26,10 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     ],
   },
   {
-    section: "Clear Plus features",
+    section: "ClearOff Plus features",
     items: [
       {
-        q: "What exactly does Clear Plus unlock?",
+        q: "What exactly does ClearOff Plus unlock?",
         a: "Plus is about power features and scale, not unlocking the basics. It gives you unlimited active groups (the free plan caps you at 5), recurring expense templates for households, budget tracking, CSV export of any group, personal cross-group \"You\" insights, and AI trip narratives with Plan-vs-Reality analysis. Members, expenses, all split modes, and AI expense logging are free for everyone — Plus never paywalls the core bill-splitting job.",
       },
       {
@@ -38,7 +38,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "What is AI expense parsing?",
-        a: "You describe an expense in natural language — \"Paid ₹1,200 for dinner at Thalappakatti, split between Ravi, Priya, and me\" — and Clear structures it into the correct amount, category, members, and split automatically. You can also scan a receipt photo or import a chat. It's powered by Claude (Anthropic) and is free for everyone within a generous monthly allowance. The Plus-only AI is the analytical kind — trip narratives and Plan-vs-Reality.",
+        a: "You describe an expense in natural language — \"Paid ₹1,200 for dinner at Thalappakatti, split between Ravi, Priya, and me\" — and ClearOff structures it into the correct amount, category, members, and split automatically. You can also scan a receipt photo or import a chat. It's powered by Claude (Anthropic) and is free for everyone within a generous monthly allowance. The Plus-only AI is the analytical kind — trip narratives and Plan-vs-Reality.",
       },
     ],
   },
@@ -47,7 +47,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "Does the group admin's Plus subscription cover all members?",
-        a: "Yes. If the person who created the group has Clear Plus, every member in that group — including guests — gets the group's Plus features automatically: recurring templates, budget tracking, AI trip narratives, and CSV export. Members never need their own subscription for groups they're part of. The everyday basics — all split modes, members, expenses, and AI logging — are free for everyone regardless.",
+        a: "Yes. If the person who created the group has ClearOff Plus, every member in that group — including guests — gets the group's Plus features automatically: recurring templates, budget tracking, AI trip narratives, and CSV export. Members never need their own subscription for groups they're part of. The everyday basics — all split modes, members, expenses, and AI logging — are free for everyone regardless.",
       },
       {
         q: "I'm a member, not the group creator — do I need Plus?",
@@ -68,7 +68,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "What is Early Bird Pricing, and who is it for?",
-        a: "Early Bird Pricing is a permanently discounted rate reserved for the first 300 people who buy a Clear Plus pass. 30-day pass: ₹49 instead of ₹79. Annual pass: ₹499 instead of ₹699 (just ₹41/month equivalent) — and it's locked in forever, so every pass you buy afterward keeps the same discount. It's our way of rewarding the people who back Clear early.",
+        a: "Early Bird Pricing is a permanently discounted rate reserved for the first 300 people who buy a ClearOff Plus pass. 30-day pass: ₹49 instead of ₹79. Annual pass: ₹499 instead of ₹699 (just ₹41/month equivalent) — and it's locked in forever, so every pass you buy afterward keeps the same discount. It's our way of rewarding the people who back ClearOff early.",
       },
       {
         q: "Is the Early Bird price really locked in forever?",
@@ -85,7 +85,7 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "30-day pass vs annual pass — which should I choose?",
-        a: "Clear Plus is sold as one-time passes, not a recurring subscription. The 30-day pass suits a single trip or a month of heavy use; the annual pass covers a full year and works out cheaper per month — Early Bird annual at ₹499 is ₹41/month equivalent (saving ₹89 vs buying the 30-day pass twelve times over). Regular annual at ₹699 is ₹58/month equivalent (saving ₹249). Features are identical either way. If you'll use Clear for more than a few months a year, the annual pass is the better deal.",
+        a: "ClearOff Plus is sold as one-time passes, not a recurring subscription. The 30-day pass suits a single trip or a month of heavy use; the annual pass covers a full year and works out cheaper per month — Early Bird annual at ₹499 is ₹41/month equivalent (saving ₹89 vs buying the 30-day pass twelve times over). Regular annual at ₹699 is ₹58/month equivalent (saving ₹249). Features are identical either way. If you'll use ClearOff for more than a few months a year, the annual pass is the better deal.",
       },
       {
         q: "When does billing actually start?",
@@ -118,11 +118,11 @@ const FAQ_SECTIONS: { section: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "Is there a refund policy?",
-        a: "Email support@useclear.in if something's wrong — a failed activation, a duplicate charge, anything. We review refund requests case by case and process approved ones through Razorpay; your Plus access is cleared as soon as the refund goes through.",
+        a: "Email support@clearoff.in if something's wrong — a failed activation, a duplicate charge, anything. We review refund requests case by case and process approved ones through Razorpay; your Plus access is cleared as soon as the refund goes through.",
       },
       {
         q: "I still have questions — how do I reach you?",
-        a: "Email us at support@useclear.in. We read and respond to every message.",
+        a: "Email us at support@clearoff.in. We read and respond to every message.",
       },
     ],
   },

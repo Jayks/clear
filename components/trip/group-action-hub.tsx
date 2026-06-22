@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { archiveGroup } from "@/app/actions/groups";
 import { QuickAddSheet } from "@/components/expense/quick-add-sheet";
+import { BRAND } from "@/lib/brand";
 import { LogExpenseTiles, type StartMode } from "@/components/expense/log-expense-tiles";
 import { getContextTheme } from "@/lib/theme/context-theme";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -121,7 +122,7 @@ export function GroupActionHub({
   function handleShare() {
     if (!joinUrl) { onClose(); return; }
     if (typeof navigator.share === "function") {
-      navigator.share({ title: `Join ${groupName} on Clear`, url: joinUrl }).catch(() => {});
+      navigator.share({ title: `Join ${groupName} on ${BRAND.name}`, url: joinUrl }).catch(() => {});
     } else {
       navigator.clipboard.writeText(joinUrl).then(() => {
         toast.success("Invite link copied!");

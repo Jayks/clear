@@ -8,7 +8,28 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
-    event.respondWith(fetch(event.request).catch(() => fetch("/")));
+    // Network-first; falls back to "/" if the exact page fails (e.g. a
+    // transient blip), then to a static inline page if even "/" fails (truly
+    // offline — there's no cache here, so "/" still needs network too). The
+    // inner .catch() matters: without it, a double failure rejects
+    // unhandled — "Uncaught (in promise) TypeError: Failed to fetch" — and
+    // the browser falls back to its own generic offline page instead of ours.
+    event.respondWith(
+      fetch(event.request).catch(() =>
+        fetch("/").catch(
+          () =>
+            new Response(
+              `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+                <title>Offline</title></head>
+                <body style="font-family:system-ui,sans-serif;text-align:center;padding:4rem 1.5rem;color:#475569">
+                  <p style="font-size:1.1rem;margin-bottom:0.5rem">You're offline</p>
+                  <p style="color:#94a3b8;font-size:0.9rem">Check your connection and try again.</p>
+                </body></html>`,
+              { status: 200, headers: { "Content-Type": "text/html" } }
+            )
+        )
+      )
+    );
   }
 });
 

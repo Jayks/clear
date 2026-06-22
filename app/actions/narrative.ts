@@ -32,7 +32,7 @@ export async function generateTripNarrative(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
   if (!checkAiRateLimit(user.id)) return { ok: false, error: "Rate limit exceeded — 20 AI requests per hour." };
-  if (!(await canUseAI(user.id))) return { ok: false, error: "AI features require Clear Plus." };
+  if (!(await canUseAI(user.id))) return { ok: false, error: "AI features require ClearOff Plus." };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

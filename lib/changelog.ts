@@ -28,11 +28,11 @@ export const changelog: ChangelogRelease[] = [
     tagVariant: "slate",
     headline: "Smarter member-adding, Circle cards redesigned, and ghost-member sharing.",
     description:
-      "The member-add sheet now surfaces your Clear network — people you've grouped with before — for instant re-invite without retyping. Circle cards were rebuilt to match the Trip/Nest visual language. Ghost members get a per-row share button so admins can send personalised WhatsApp invites in one tap.",
+      "The member-add sheet now surfaces your ClearOff network — people you've grouped with before — for instant re-invite without retyping. Circle cards were rebuilt to match the Trip/Nest visual language. Ghost members get a per-row share button so admins can send personalised WhatsApp invites in one tap.",
     features: [
       {
         icon: "🧑‍🤝‍🧑",
-        title: "Clear network contacts",
+        title: "ClearOff network contacts",
         description:
           "Past group members appear as quick-add chips — tap to add, no retyping. Plus-only; free users see a teaser showing the first 3 names.",
       },
@@ -101,7 +101,7 @@ export const changelog: ChangelogRelease[] = [
         icon: "👻",
         title: "Ghost members",
         description:
-          "Add people by name only — no Clear account required. Admin records contributions on their behalf; they claim with Google sign-in later.",
+          "Add people by name only — no ClearOff account required. Admin records contributions on their behalf; they claim with Google sign-in later.",
       },
       {
         icon: "🏦",
@@ -138,7 +138,7 @@ export const changelog: ChangelogRelease[] = [
         icon: "🔗",
         title: "Guest confirmation link",
         description:
-          "Share a link and the other person confirms or disputes the entry — no Clear account needed. Disputed entries turn amber and stay visible until resolved.",
+          "Share a link and the other person confirms or disputes the entry — no ClearOff account needed. Disputed entries turn amber and stay visible until resolved.",
       },
       {
         icon: "💚",
@@ -372,13 +372,13 @@ export const changelog: ChangelogRelease[] = [
   {
     id: "v1-0-plus",
     version: "v1.0",
-    name: "Clear Plus",
+    name: "ClearOff Plus",
     date: "May 24, 2026",
     tag: "Features",
     tagVariant: "amber",
     headline: "Unlimited everything — 30-day free trial, no credit card.",
     description:
-      "Clear Plus unlocks unlimited groups, members, and expenses, plus AI parsing, CSV export, all split modes, and recurring templates. The free plan stays free forever with generous limits.",
+      "ClearOff Plus unlocks unlimited groups, members, and expenses, plus AI parsing, CSV export, all split modes, and recurring templates. The free plan stays free forever with generous limits.",
     features: [
       {
         icon: "✦",
@@ -445,7 +445,7 @@ export const changelog: ChangelogRelease[] = [
         icon: "✨",
         title: "AI trip narrative",
         description:
-          "Clear writes a short story of your trip from the expense history — the Haiku model summarises where you went and what you spent.",
+          "ClearOff writes a short story of your trip from the expense history — the Haiku model summarises where you went and what you spent.",
       },
       {
         icon: "📊",
@@ -544,7 +544,7 @@ export const changelog: ChangelogRelease[] = [
     tagVariant: "emerald",
     headline: "Join a group without creating an account. Claim your spot later.",
     description:
-      "Add people to a group by name even if they don't have a Clear account yet. Share an invite link or QR code — they join instantly and can claim their expenses later with Google sign-in.",
+      "Add people to a group by name even if they don't have a ClearOff account yet. Share an invite link or QR code — they join instantly and can claim their expenses later with Google sign-in.",
     features: [
       {
         icon: "🔗",
@@ -581,13 +581,13 @@ export const changelog: ChangelogRelease[] = [
     tagVariant: "cyan",
     headline: "Type it the way you'd say it. AI fills in the rest.",
     description:
-      "Describe an expense in plain English — or paste your whole group chat — and Clear extracts the amount, payer, and split automatically. Powered by Claude Haiku.",
+      "Describe an expense in plain English — or paste your whole group chat — and ClearOff extracts the amount, payer, and split automatically. Powered by Claude Haiku.",
     features: [
       {
         icon: "✨",
         title: "Natural language entry",
         description:
-          '"Priya paid 4500 for dinner split with Raj and Kiran" — Clear extracts description, amount, payer, and split in under a second.',
+          '"Priya paid 4500 for dinner split with Raj and Kiran" — ClearOff extracts description, amount, payer, and split in under a second.',
       },
       {
         icon: "💬",
@@ -770,9 +770,9 @@ export const changelog: ChangelogRelease[] = [
     date: "May 10, 2026",
     tag: "Features",
     tagVariant: "cyan",
-    headline: "Install Clear on your home screen — iOS and Android.",
+    headline: "Install ClearOff on your home screen — iOS and Android.",
     description:
-      "Clear is a full Progressive Web App. Add it to your home screen on any device for a native app feel — it works offline, sends push notifications, and removes all browser chrome.",
+      "ClearOff is a full Progressive Web App. Add it to your home screen on any device for a native app feel — it works offline, sends push notifications, and removes all browser chrome.",
     features: [
       {
         icon: "📲",
@@ -803,13 +803,13 @@ export const changelog: ChangelogRelease[] = [
   {
     id: "v0-1-launch",
     version: "v0.1",
-    name: "Clear is Live",
+    name: "ClearOff is Live",
     date: "May 9–10, 2026",
     tag: "Launch",
     tagVariant: "slate",
     headline: "Group expense tracking for trips and shared living — from scratch.",
     description:
-      "Clear launched with a complete expense splitting engine: two group types, four split modes, a settlement optimizer that guarantees the fewest possible payments, and recurring expense templates for nests.",
+      "ClearOff launched with a complete expense splitting engine: two group types, four split modes, a settlement optimizer that guarantees the fewest possible payments, and recurring expense templates for nests.",
     features: [
       {
         icon: "🗺️",

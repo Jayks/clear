@@ -63,7 +63,7 @@ export function PricingCards({
           You&apos;re on Plus
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          All features are unlocked. Enjoy Clear Plus!
+          All features are unlocked. Enjoy ClearOff Plus!
         </p>
       </div>
     );

@@ -5,7 +5,7 @@ import { Users, Map, Receipt, TrendingUp, Shield, Briefcase, UserCircle2, Bell }
 import { VisitorNotificationsToggle } from "./visitor-notifications-toggle";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Admin Dashboard — Clear" };
+export const metadata: Metadata = { title: "Admin Dashboard — ClearOff" };
 
 const ROLE_CONFIG = {
   platform_admin: {

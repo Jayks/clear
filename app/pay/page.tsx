@@ -51,12 +51,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const title = `${sym}${Number(amount).toLocaleString("en-IN")} payment request`;
   const desc  = contextName
     ? `${payeeName} is requesting ${sym}${Number(amount).toLocaleString("en-IN")} for ${contextName}`
-    : `${payeeName} is requesting ${sym}${Number(amount).toLocaleString("en-IN")} via Clear`;
+    : `${payeeName} is requesting ${sym}${Number(amount).toLocaleString("en-IN")} via ClearOff`;
 
   // Explicit OG image URL so WhatsApp/Telegram get the payment params.
   // opengraph-image.tsx receives these as searchParams in production.
   // In Turbopack dev, searchParams isn't passed — the image falls back to defaults.
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "https://getclear.app";
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "https://clearoff.in";
   const ogImgUrl  = new URL("/pay/opengraph-image", appUrl);
   if (params.to) ogImgUrl.searchParams.set("to", params.to);
   if (params.am) ogImgUrl.searchParams.set("am", params.am);
@@ -98,14 +98,14 @@ export default async function PayPage({ searchParams }: PageProps) {
   if (!payeeUser) notFound();
 
   const payeeName =
-    (payeeUser.user_metadata?.full_name as string | undefined) ?? "Clear User";
+    (payeeUser.user_metadata?.full_name as string | undefined) ?? "ClearOff User";
 
   // ── Fetch payee's default UPI ID ──────────────────────────────────────
   const defaultUpiId = await getDefaultUpiId(userId);
 
   const sym     = currency === "INR" ? "₹" : currency;
   const backUrl = refGroupId ? `/groups/${refGroupId}/settle` : "/groups";
-  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "https://getclear.app";
+  const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "https://clearoff.in";
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-cyan-50/30 dark:from-slate-950 dark:to-slate-900">
@@ -140,7 +140,7 @@ export default async function PayPage({ searchParams }: PageProps) {
                 {payeeName}
               </p>
               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-                ✓ Verified Clear user
+                ✓ Verified ClearOff user
               </p>
             </div>
 
@@ -169,7 +169,7 @@ export default async function PayPage({ searchParams }: PageProps) {
             vpa={defaultUpiId?.upiId ?? null}
             amount={amount}
             currency={currency}
-            contextName={contextName || "Clear"}
+            contextName={contextName || "ClearOff"}
             backUrl={backUrl}
             appUrl={appUrl}
           />
@@ -178,7 +178,7 @@ export default async function PayPage({ searchParams }: PageProps) {
           <p className="text-center text-[11px] text-slate-400 dark:text-slate-600 pt-2">
             Powered by{" "}
             <Link href="/" className="text-cyan-600 dark:text-cyan-500 hover:underline">
-              Clear
+              ClearOff
             </Link>{" "}
             — group expense tracking
           </p>

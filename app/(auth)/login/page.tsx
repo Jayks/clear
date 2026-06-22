@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import LoginForm from "./login-form";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { BRAND } from "@/lib/brand";
 
 export default async function LoginPage({
   searchParams,
@@ -36,10 +37,10 @@ export default async function LoginPage({
             className="text-5xl text-slate-800 dark:text-slate-100"
             style={{ fontFamily: "var(--font-fraunces)" }}
           >
-            Clear
+            {BRAND.name}
           </h1>
           <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm">
-            Split it. Clear it.
+            {BRAND.tagline}
           </p>
         </div>
 
@@ -50,7 +51,7 @@ export default async function LoginPage({
               ? "Sign in to join the group"
               : isSignup
               ? "Create your account"
-              : "Sign in to Clear"}
+              : `Sign in to ${BRAND.name}`}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
             {returnTo?.startsWith("/join")

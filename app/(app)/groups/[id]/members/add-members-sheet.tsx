@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { importMembersFromGroup } from "@/app/actions/members";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { BRAND } from "@/lib/brand";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import type { ContextTheme } from "@/lib/theme/context-theme";
 import type { getNetworkMembers, getGroupsForImport } from "@/lib/db/queries/groups";
@@ -199,7 +200,7 @@ export function AddMembersSheet({
   // ── share step ────────────────────────────────────────────────────────────
 
   async function handleWhatsAppShare() {
-    const text = `You've been added to "${groupName}" on Clear. Join here to track contributions and expenses:`;
+    const text = `You've been added to "${groupName}" on ${BRAND.name}. Join here to track contributions and expenses:`;
     window.open(`https://wa.me/?text=${encodeURIComponent(`${text}\n${inviteUrl}`)}`, "_blank");
   }
 
@@ -749,7 +750,7 @@ export function AddMembersSheet({
                       {addedCount === 1 ? "1 member added!" : `${addedCount} members added!`}
                     </h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
-                      Share the invite link so they can join Clear and see the {groupName} circle.
+                      Share the invite link so they can join {BRAND.name} and see the {groupName} circle.
                     </p>
                     <div className="w-full space-y-2.5">
                       <button

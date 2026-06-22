@@ -35,7 +35,7 @@ import {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const name = await getGroupName(id);
-  return { title: name ? `${name} | Clear` : "Clear" };
+  return { title: name ? `${name} | ClearOff` : "ClearOff" };
 }
 
 export default async function GroupPage({

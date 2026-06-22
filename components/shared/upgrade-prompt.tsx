@@ -53,7 +53,7 @@ export function UpgradePrompt({ open, onClose }: Props) {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>
-                  Clear Plus
+                  ClearOff Plus
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Unlock the full experience</p>
               </div>

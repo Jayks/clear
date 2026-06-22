@@ -5,6 +5,7 @@ import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { eq, sql } from "drizzle-orm";
 import { differenceInDays, parseISO } from "date-fns";
+import { BRAND } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -21,7 +22,7 @@ export default async function OgImage({
   if (!trip) {
     return new ImageResponse(
       <div style={{ width: "100%", height: "100%", background: "#0891B2", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 32 }}>
-        Clear
+        {BRAND.name}
       </div>,
       size
     );
@@ -94,7 +95,7 @@ export default async function OgImage({
             <path d="M77.8 41 A9 9 0 0 1 77.8 59 Z" fill="white" fillOpacity="0.8" />
           </svg>
         </div>
-        <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>Clear</span>
+        <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>{BRAND.name}</span>
       </div>
 
       {/* Trip name + date */}
@@ -144,7 +145,7 @@ export default async function OgImage({
 
       {/* Tagline */}
       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 17, letterSpacing: "0.3px" }}>
-        Split it. Clear it.
+        {BRAND.tagline}
       </div>
     </div>,
     { ...size }

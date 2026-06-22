@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Shared chrome for the legal/compliance pages (Terms, Privacy, Refund,
@@ -50,7 +51,7 @@ export function LegalPageShell({ title, updated, children }: { title: string; up
               className="flex items-center gap-2"
             />
             <span className="text-slate-300 dark:text-slate-600">·</span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">Split it. Clear it.</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{BRAND.tagline}</span>
           </div>
           <div className="flex items-center gap-5 text-xs text-slate-400 dark:text-slate-500">
             <Link href="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms</Link>

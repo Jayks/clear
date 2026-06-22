@@ -23,7 +23,7 @@ export async function TrialBanner() {
     }`}>
       <Zap className="w-3.5 h-3.5 shrink-0" />
       <span>
-        Clear Plus trial —{" "}
+        ClearOff Plus trial —{" "}
         <span className="font-semibold">{daysLeft} day{daysLeft === 1 ? "" : "s"} left</span>
         {" · "}
         <Link href="/upgrade" className="underline underline-offset-2 hover:opacity-80 transition-opacity">

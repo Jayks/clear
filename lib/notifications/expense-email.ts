@@ -33,7 +33,7 @@ export function buildExpenseEmail(params: ExpenseEmailParams): { subject: string
           <tr>
             <td style="padding-bottom:24px;text-align:center;">
               <span style="display:inline-block;background:linear-gradient(140deg,#22D3EE,#0BB6D4,#0E8FA8,#0B5E70);border-radius:12px;width:40px;height:40px;line-height:40px;text-align:center;font-size:20px;color:#fff;font-weight:700;">C</span>
-              <span style="display:inline-block;margin-left:8px;font-size:20px;font-weight:700;color:#0F172A;vertical-align:middle;">Clear</span>
+              <span style="display:inline-block;margin-left:8px;font-size:20px;font-weight:700;color:#0F172A;vertical-align:middle;">ClearOff</span>
             </td>
           </tr>
 
@@ -63,7 +63,7 @@ export function buildExpenseEmail(params: ExpenseEmailParams): { subject: string
                 <tr>
                   <td align="center">
                     <a href="${groupUrl}" style="display:inline-block;background:linear-gradient(135deg,#06B6D4,#14B8A6);color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 32px;border-radius:12px;">
-                      View in Clear →
+                      View in ClearOff →
                     </a>
                   </td>
                 </tr>

@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { groups } from "@/lib/db/schema/groups";
 import { eq } from "drizzle-orm";
+import { BRAND } from "@/lib/brand";
 
 function verifyToken(memberId: string, token: string): boolean {
   const expected = createHmac("sha256", process.env.RESEND_UNSUBSCRIBE_SECRET!)
@@ -87,7 +88,7 @@ function page(title: string, heading: string, sub: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title} — Clear</title>
+  <title>${title} — ${BRAND.name}</title>
   <style>
     body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F0FDFA; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     .card { background: #fff; border-radius: 20px; padding: 40px 32px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
@@ -102,7 +103,7 @@ function page(title: string, heading: string, sub: string): string {
     <div class="logo">C</div>
     <h1>${heading}</h1>
     ${sub ? `<p>${sub}</p>` : ""}
-    <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "/"}">Back to Clear</a>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "/"}">Back to ${BRAND.name}</a>
   </div>
 </body>
 </html>`;

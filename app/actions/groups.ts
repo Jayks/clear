@@ -10,6 +10,7 @@ import { extractDisplayName } from "@/lib/utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { canCreateGroup } from "@/lib/subscription/gates";
 import { getAllGroups } from "@/lib/db/queries/groups";
+import { BRAND } from "@/lib/brand";
 
 /** Lean active-group list for the in-group switcher (lazy-fetched on sheet open). */
 export interface SwitcherGroup {
@@ -44,7 +45,7 @@ export async function createGroup(input: CreateGroupInput) {
 
   try {
     if (!(await canCreateGroup(user.id)))
-      return { ok: false, error: "Free plan allows up to 5 active groups. Upgrade to Clear Plus for unlimited groups." } as const;
+      return { ok: false, error: `Free plan allows up to 5 active groups. Upgrade to ${BRAND.plus} for unlimited groups.` } as const;
 
     // B-3 fix: wrap both inserts in a transaction so a failed groupMembers insert
     // can't leave behind a group with no admin that is inaccessible and occupies a plan slot.

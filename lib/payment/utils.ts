@@ -14,9 +14,11 @@
  *   tn  — transaction note (max 50 chars recommended)
  */
 
-/** Standard transaction note for all Clear UPI payments */
+import { BRAND } from "../brand";
+
+/** Standard transaction note for all ClearOff UPI payments */
 export function buildTransactionNote(contextName: string): string {
-  return `Clear · ${contextName}`;
+  return `${BRAND.name} · ${contextName}`;
 }
 
 /** Generic UPI deep link — Android only */
@@ -83,7 +85,7 @@ export function buildPaymentPageUrl(
   const base =
     typeof window !== "undefined"
       ? window.location.origin
-      : (process.env.NEXT_PUBLIC_APP_URL ?? "https://getclear.app");
+      : (process.env.NEXT_PUBLIC_APP_URL ?? "https://clearoff.in");
   const params = new URLSearchParams({
     to: payeeUserId,
     am: String(amount),

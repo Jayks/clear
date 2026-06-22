@@ -9,6 +9,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { CategoryDonut } from "@/components/insights/category-donut";
+import { BRAND } from "@/lib/brand";
 import { PaymentMethodCard } from "@/components/insights/payment-method-card";
 import { FadeIn } from "@/components/shared/fade-in";
 import { AnimatedList } from "@/components/shared/animated-list";
@@ -86,7 +87,7 @@ export function PersonalPlusGate() {
         className="inline-flex items-center gap-1.5 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl px-5 py-2.5 shadow-md shadow-violet-500/25 transition-all"
       >
         <Sparkles className="w-3.5 h-3.5" />
-        Upgrade to Clear Plus
+        Upgrade to {BRAND.plus}
       </Link>
     </motion.div>
   );

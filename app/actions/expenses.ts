@@ -290,7 +290,7 @@ export async function createExpenseTemplate(input: AddTemplateInput) {
     return { ok: false, error: "Only group admins can create templates" } as const;
 
   if (!(await canUseTemplates(groupId)))
-    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
+    return { ok: false, error: "Recurring templates require ClearOff Plus." } as const;
 
   const [paidByMember] = await db.select({ id: groupMembers.id }).from(groupMembers)
     .where(and(eq(groupMembers.id, paidByMemberId), eq(groupMembers.groupId, groupId)));
@@ -362,7 +362,7 @@ export async function logFromTemplate(templateId: string) {
   // gated entirely by canUseTemplates (Plus-only, full stop) — strictly stronger
   // than the overflow-lock, which only ever fires for an already-free admin.
   if (!(await canUseTemplates(template.groupId)))
-    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
+    return { ok: false, error: "Recurring templates require ClearOff Plus." } as const;
 
   const templateSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, templateId));
@@ -452,7 +452,7 @@ export async function updateTemplate(templateId: string, input: AddTemplateInput
     return { ok: false, error: "Only group admins can edit templates" } as const;
 
   if (!(await canUseTemplates(template.groupId)))
-    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
+    return { ok: false, error: "Recurring templates require ClearOff Plus." } as const;
 
   const { paidByMemberId, description, category, amount, recurrence, splitMode, splits } = parsed.data;
 
@@ -583,7 +583,7 @@ export async function batchLogTemplates(groupId: string) {
   if (!membership) return { ok: false, error: "Not a member" } as const;
 
   if (!(await canUseTemplates(groupId)))
-    return { ok: false, error: "Recurring templates require Clear Plus." } as const;
+    return { ok: false, error: "Recurring templates require ClearOff Plus." } as const;
 
   const templates = await getGroupTemplates(groupId);
   const due = templates.filter((t) => !t.loggedThisMonth);

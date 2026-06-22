@@ -23,13 +23,14 @@ import { UpiPayButton } from "@/components/payment/upi-pay-button";
 import { buildWhatsAppRequestUrl } from "@/lib/payment/utils";
 import { useUpiReturn } from "@/hooks/use-upi-return";
 import type { TappedApp } from "@/lib/payment/types";
+import { BRAND } from "@/lib/brand";
 
 // ── App-specific UTR instructions (same constants as PaymentConfirmPrompt) ────
 
 const UTR_TIPS: Record<TappedApp, { where: string; steps: string }> = {
   gpay: {
     where: "G Pay",
-    steps: 'Activity → tap "Clear · [trip]" → copy the "Transaction ID" at the bottom',
+    steps: `Activity → tap "${BRAND.name} · [trip]" → copy the "Transaction ID" at the bottom`,
   },
   phonepe: {
     where: "PhonePe",
@@ -115,7 +116,7 @@ export function PayClient({ payeeName, vpa, amount, currency, contextName, backU
   // ── No UPI ID ─────────────────────────────────────────────────────────────
   if (!vpa) {
     const whatsappMsg =
-      `Hey ${payeeName}, please add your UPI ID to Clear so I can pay you ` +
+      `Hey ${payeeName}, please add your UPI ID to ${BRAND.name} so I can pay you ` +
       `${sym}${Number(amount).toLocaleString("en-IN")} easily. ` +
       `Settings → Profile → UPI IDs: ${appUrl}/settings`;
 
@@ -127,7 +128,7 @@ export function PayClient({ payeeName, vpa, amount, currency, contextName, backU
             {payeeName} hasn't added a UPI ID yet
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Ask them to add it in Clear Settings so you can pay them directly.
+            Ask them to add it in {BRAND.name} Settings so you can pay them directly.
           </p>
         </div>
         <a
@@ -220,7 +221,7 @@ export function PayClient({ payeeName, vpa, amount, currency, contextName, backU
                       💸 Did you pay?
                     </p>
                     <p className="text-xs text-cyan-600/80 dark:text-cyan-400/70 leading-relaxed">
-                      Open Clear to confirm your{" "}
+                      Open {BRAND.name} to confirm your{" "}
                       {sym}{Number(amount).toLocaleString("en-IN")}{" "}
                       payment and notify {firstName}.
                     </p>
@@ -276,7 +277,7 @@ export function PayClient({ payeeName, vpa, amount, currency, contextName, backU
                                    text-white transition-all
                                    flex items-center justify-center gap-1"
                       >
-                        Confirm in Clear
+                        Confirm in {BRAND.name}
                         <ExternalLink className="w-3 h-3" />
                       </Link>
                     </div>
@@ -308,7 +309,7 @@ export function PayClient({ payeeName, vpa, amount, currency, contextName, backU
           href={backUrl}
           className="text-cyan-600 dark:text-cyan-400 underline underline-offset-2 hover:text-cyan-700"
         >
-          Open Clear to confirm →
+          Open {BRAND.name} to confirm →
         </Link>
       </p>
     </div>

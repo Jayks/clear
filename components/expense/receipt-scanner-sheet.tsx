@@ -430,7 +430,7 @@ function IdleState({
               </div>
               <p className="text-white font-semibold text-base">AI Receipt Scanning</p>
               <p className="text-slate-300 text-sm leading-relaxed">
-                Snap a photo of any receipt — Clear reads the amount, merchant, date, and items automatically.
+                Snap a photo of any receipt — ClearOff reads the amount, merchant, date, and items automatically.
               </p>
               <a
                 href="/upgrade"

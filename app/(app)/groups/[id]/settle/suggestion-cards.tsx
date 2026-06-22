@@ -151,7 +151,7 @@ export function SuggestionCards({
       const creditorFn  = memberName(s.to);
       const debtorFn    = memberName(s.from);
       const amtStr      = formatCurrency(s.amount, currency);
-      const shareText   = `Hi ${debtorFn}, ${creditorFn} has requested ${amtStr} via Clear. Tap to pay: ${requestUrl}`;
+      const shareText   = `Hi ${debtorFn}, ${creditorFn} has requested ${amtStr} via ClearOff. Tap to pay: ${requestUrl}`;
 
       if (typeof navigator.share === "function") {
         await navigator.share({ text: shareText, url: requestUrl }).catch(() => {

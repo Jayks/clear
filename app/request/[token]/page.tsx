@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ClearLogo } from "@/components/shared/clear-logo";
 import { RequestClient } from "./request-client";
 import { getPaymentRequestByToken } from "@/lib/db/queries/payment-requests";
+import { BRAND } from "@/lib/brand";
 
 // UUID format validation — avoids a DB round-trip on obviously invalid tokens
 const UUID_RE =
@@ -86,7 +87,7 @@ export default async function RequestPage({ params }: Props) {
 
       {/* Soft acquisition CTA — shown on all states */}
       <p className="text-center text-sm text-slate-400 dark:text-slate-500">
-        Track shared expenses on Clear.{" "}
+        Track shared expenses on {BRAND.name}.{" "}
         <Link
           href="/login?intent=signup"
           className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"

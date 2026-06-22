@@ -1,17 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
+// useSearchParams() requires a Suspense boundary — wrapped here so the
+// app/layout.tsx call site doesn't need one.
 export function NavProgress() {
+  return (
+    <Suspense fallback={null}>
+      <NavProgressInner />
+    </Suspense>
+  );
+}
+
+function NavProgressInner() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
 
-  // Navigation complete — hide the bar
+  // Navigation complete — hide the bar. Must watch the full URL (pathname +
+  // search), not just pathname: a navigation that only changes search params
+  // (e.g. CarouselLanding's mobile "Home" link, "/" → "/?view=full") left
+  // this effect's dependency unchanged, so the bar never cleared — stuck
+  // "loading" forever even though the page had actually navigated underneath
+  // (June 2026 bug — looked like "keeps rendering, never navigates").
   useEffect(() => {
     setLoading(false);
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   // Any internal link click — show bar immediately
   useEffect(() => {

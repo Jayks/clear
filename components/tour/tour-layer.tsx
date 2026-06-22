@@ -92,7 +92,7 @@ function QuickAddLegend() {
         <LegendTile icon={Keyboard} label="Type"  sub="type it in"  color="from-slate-500 to-slate-600" />
       </div>
       <p className="text-xs text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
-        Clear&apos;s AI reads the amount, payer and split for you — free on every plan.
+        ClearOff&apos;s AI reads the amount, payer and split for you — free on every plan.
       </p>
     </div>
   );

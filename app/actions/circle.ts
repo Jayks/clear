@@ -13,6 +13,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { canCreateGroup } from "@/lib/subscription/gates";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
 import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
+import { BRAND } from "@/lib/brand";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 // ── Create circle group ───────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ export async function createCircle(input: CreateCircleActionInput) {
 
   try {
     if (!(await canCreateGroup(user.id)))
-      return { ok: false, error: "Free plan allows up to 5 active groups. Upgrade to Clear Plus for unlimited groups." } as const;
+      return { ok: false, error: `Free plan allows up to 5 active groups. Upgrade to ${BRAND.plus} for unlimited groups.` } as const;
 
     // B-4 fix: wrap all three inserts in a single transaction so a partial failure
     // (e.g. admin member insert or ghost member insert fails) cannot leave behind a

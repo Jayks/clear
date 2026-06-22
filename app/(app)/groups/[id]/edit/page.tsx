@@ -14,7 +14,7 @@ import { getGroupConfig } from "@/lib/group-config";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const name = await getGroupName(id);
-  return { title: name ? `Edit — ${name} | Clear` : "Clear" };
+  return { title: name ? `Edit — ${name} | ClearOff` : "ClearOff" };
 }
 
 export default async function EditGroupPage({ params }: { params: Promise<{ id: string }> }) {

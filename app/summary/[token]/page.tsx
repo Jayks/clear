@@ -13,6 +13,7 @@ import { SummaryShareButton } from "@/components/trip/summary-share-button";
 import { NarrativeSection } from "@/components/trip/narrative-section";
 import { TripTimeline } from "@/components/trip/trip-timeline";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { BRAND } from "@/lib/brand";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, TrendingUp } from "lucide-react";
@@ -109,8 +110,8 @@ export async function generateMetadata({
   const total = new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(totalSpend);
 
   return {
-    title: `${trip.name} | Clear`,
-    description: `${memberCount} people · ${total} total · Split it. Clear it.`,
+    title: `${trip.name} | ${BRAND.name}`,
+    description: `${memberCount} people · ${total} total · ${BRAND.tagline}`,
   };
 }
 
@@ -321,9 +322,9 @@ export default async function SummaryPage({
         <p className="text-center text-xs text-slate-400 dark:text-slate-500">
           Made with{" "}
           <Link href="/" className="text-cyan-500 hover:text-cyan-600 font-medium transition-colors">
-            Clear
+            {BRAND.name}
           </Link>
-          {" "}· Split it. Clear it.
+          {" "}· {BRAND.tagline}
         </p>
       </div>
     </div>

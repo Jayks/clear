@@ -1,6 +1,7 @@
 import React from "react";
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
+import { BRAND } from "@/lib/brand";
 
 export const runtime = "edge";
 
@@ -123,7 +124,7 @@ export function GET(request: NextRequest) {
             React.createElement(
               "span",
               { style: { fontSize: 30, fontWeight: 700, color: "#0F172A", letterSpacing: "-0.5px" } },
-              "Clear",
+              BRAND.name,
             ),
           ),
           // Group name pill
@@ -302,7 +303,7 @@ export function GET(request: NextRequest) {
           React.createElement(
             "span",
             { style: { fontSize: 17, color: "#64748B" } },
-            "Split smarter with Clear",
+            `Split smarter with ${BRAND.name}`,
           ),
           React.createElement(
             "div",
@@ -318,7 +319,7 @@ export function GET(request: NextRequest) {
             React.createElement(
               "span",
               { style: { fontSize: 17, fontWeight: 700, color: "white" } },
-              "Settle on Clear →",
+              `Settle on ${BRAND.name} →`,
             ),
           ),
         ),

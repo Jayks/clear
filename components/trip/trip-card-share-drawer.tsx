@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Share2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { InviteQRSheet } from "@/components/shared/invite-qr-sheet";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
   url: string;
@@ -43,7 +44,7 @@ export function TripCardShareDrawer({ url, groupName, onShareOpenChange }: Props
 
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: groupName, text: `Join ${groupName} on Clear!`, url });
+        await navigator.share({ title: groupName, text: `Join ${groupName} on ${BRAND.name}!`, url });
         return;
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {

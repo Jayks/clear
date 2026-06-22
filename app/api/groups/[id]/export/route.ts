@@ -30,7 +30,7 @@ export async function GET(
   if (!user) return new Response("Unauthorized", { status: 401 });
 
   if (!(await canExportCSV(user.id)))
-    return new Response("CSV export requires Clear Plus.", { status: 402 });
+    return new Response("CSV export requires ClearOff Plus.", { status: 402 });
 
   // Verify membership
   const [member] = await db

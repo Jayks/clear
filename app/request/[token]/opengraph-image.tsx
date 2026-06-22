@@ -15,6 +15,7 @@ import { ImageResponse } from "next/og";
 import { db } from "@/lib/db/client";
 import { paymentRequests } from "@/lib/db/schema/payment-requests";
 import { eq } from "drizzle-orm";
+import { BRAND } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const size    = { width: 1200, height: 630 };
@@ -89,7 +90,7 @@ export default async function OgImage({
               <path d="M77.8 41 A9 9 0 0 1 77.8 59 Z" fill="white" fillOpacity="0.8" />
             </svg>
           </div>
-          <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 26, fontWeight: 600 }}>Clear</span>
+          <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 26, fontWeight: 600 }}>{BRAND.name}</span>
         </div>
 
         <div style={{ flex: 1 }} />
@@ -122,7 +123,7 @@ export default async function OgImage({
 
         {/* Tagline */}
         <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 17, letterSpacing: "0.4px" }}>
-          Tap to pay via UPI - Powered by Clear
+          Tap to pay via UPI - Powered by {BRAND.name}
         </div>
       </div>
     ),

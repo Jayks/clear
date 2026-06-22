@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Share2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
   /** Name of the person paying */
@@ -33,8 +34,8 @@ export function SettleShareButton({
   // URL is embedded in the text body so WhatsApp auto-links it (caption links aren't clickable in media shares)
   const shareText =
     direction === "owe"
-      ? `I owe ${toName} ${formattedAmount} for ${groupName}. Tracked on Clear 💸\n${settleUrl}`
-      : `${fromName} owes me ${formattedAmount} for ${groupName}. Tracked on Clear 💸\n${settleUrl}`;
+      ? `I owe ${toName} ${formattedAmount} for ${groupName}. Tracked on ${BRAND.name} 💸\n${settleUrl}`
+      : `${fromName} owes me ${formattedAmount} for ${groupName}. Tracked on ${BRAND.name} 💸\n${settleUrl}`;
 
   const imageUrl =
     `/api/settle-card?` +
@@ -60,7 +61,7 @@ export function SettleShareButton({
           if (navigator.canShare?.({ files: [file] })) {
             await navigator.share({
               files: [file],
-              title: "Clear – Settle Up",
+              title: `${BRAND.name} – Settle Up`,
               text:  shareText,
               // url omitted — already embedded in shareText so WhatsApp renders it as a clickable link
             });
@@ -72,7 +73,7 @@ export function SettleShareButton({
 
         // ── Text + URL share (Android fallback) ─────────────────────────────
         try {
-          await navigator.share({ title: "Clear – Settle Up", text: shareText });
+          await navigator.share({ title: `${BRAND.name} – Settle Up`, text: shareText });
           return;
         } catch (e: unknown) {
           if (e instanceof Error && e.name === "AbortError") return; // user dismissed

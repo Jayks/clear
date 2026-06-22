@@ -3,7 +3,10 @@
     "allow": [
       "WebSearch",
       "Bash(node scripts/find-bad-imports.mjs)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(pnpm dev *)",
+      "Bash(disown)",
+      "Bash(node *)"
     ]
   }
 }

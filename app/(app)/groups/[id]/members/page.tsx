@@ -17,7 +17,7 @@ import { Link2 } from "lucide-react";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const name = await getGroupName(id);
-  return { title: name ? `Members — ${name} | Clear` : "Clear" };
+  return { title: name ? `Members — ${name} | ClearOff` : "ClearOff" };
 }
 
 export default async function MembersPage({ params }: { params: Promise<{ id: string }> }) {

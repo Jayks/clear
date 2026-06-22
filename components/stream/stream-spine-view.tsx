@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { hapticSuccess } from "@/lib/haptics";
 import { settleStream } from "@/app/actions/stream";
 import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
+import { BRAND } from "@/lib/brand";
 import type { EnrichedStreamRecord } from "@/lib/db/queries/stream";
 import type { PaymentMethod } from "@/lib/payment/types";
 import { PAYMENT_METHOD_ICONS, PAYMENT_METHOD_LABELS } from "@/lib/payment/types";
@@ -234,7 +235,7 @@ function SpineCard({
     const first    = currentUserName?.split(" ")[0] ?? "Someone";
     const amt      = formatCurrency(Math.abs(record.netAmount), record.currency);
     const noteText = record.note ? ` for ${record.note}` : "";
-    const msg      = `Hi! ${first} logged a payment on Clear.\nYou owe ${amt}${noteText}.\nConfirm here → ${shareUrl}`;
+    const msg      = `Hi! ${first} logged a payment on ${BRAND.name}.\nYou owe ${amt}${noteText}.\nConfirm here → ${shareUrl}`;
     window.open(`https://wa.me?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
   }
 

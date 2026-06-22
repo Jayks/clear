@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ClearLogo } from "@/components/shared/clear-logo";
 import { ConfirmStreamClient } from "@/components/stream/confirm-stream-client";
 import { getStreamForConfirmPage } from "@/lib/db/queries/stream";
+import { BRAND } from "@/lib/brand";
 
 // UUID format validation — avoids a DB round-trip on obviously invalid tokens
 const UUID_RE =
@@ -78,7 +79,7 @@ export default async function ConfirmStreamPage({ params }: Props) {
 
       {/* Soft acquisition CTA — shown on all states */}
       <p className="text-center text-sm text-slate-400 dark:text-slate-500">
-        Track your own debts on Clear.{" "}
+        Track your own debts on {BRAND.name}.{" "}
         <Link
           href="/login?intent=signup"
           className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"

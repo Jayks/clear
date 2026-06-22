@@ -54,7 +54,7 @@ async function getGroupName(groupId: string): Promise<string> {
     .select({ name: groups.name })
     .from(groups)
     .where(eq(groups.id, groupId));
-  return row?.name ?? "Clear";
+  return row?.name ?? "ClearOff";
 }
 
 // ── Fetch actions (called from client components, like fetchExpenseSplitsAction) ─

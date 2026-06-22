@@ -127,7 +127,7 @@ export function IOSInstallHint() {
             {/* Text */}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight">
-                Install Clear
+                Install ClearOff
               </p>
               {showIOS ? (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">

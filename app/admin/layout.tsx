@@ -21,7 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="hidden sm:inline">Back to app</span>
           </Link>
           <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 shrink-0">Clear Admin</span>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 shrink-0">ClearOff Admin</span>
           <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-medium px-2 py-0.5 rounded-full shrink-0">
             Platform Admin
           </span>

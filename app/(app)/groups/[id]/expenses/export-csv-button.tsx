@@ -13,7 +13,7 @@ export function ExportCsvButton({ groupId }: { groupId: string }) {
       const res = await fetch(`/api/groups/${groupId}/export`);
       if (res.status === 402) {
         const text = await res.text();
-        toast.error(text || "CSV export requires Clear Plus.");
+        toast.error(text || "CSV export requires ClearOff Plus.");
         return;
       }
       if (!res.ok) {

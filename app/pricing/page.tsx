@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Minus, CheckCircle2, ChevronLeft } from "lucide-react";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { ArrowRight, Minus, CheckCircle2 } from "lucide-react";
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
+import { BRAND } from "@/lib/brand";
+import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { PlanCards } from "./plan-cards";
 import { FaqSection } from "./faq-section";
 
-export const metadata: Metadata = { title: "Pricing — Clear" };
+export const metadata: Metadata = { title: "Pricing — ClearOff" };
 
 const TABLE_SECTIONS: {
   label: string;
@@ -45,35 +46,8 @@ export default function PricingPage() {
   return (
     <div className="overflow-x-clip">
 
-      {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav className="glass-nav sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
-            <ClearLogo
-              iconSize={32}
-              wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100"
-              className="flex items-center gap-2.5"
-            />
-          </Link>
-          <div className="flex items-center gap-1.5">
-            <ThemeToggle />
-            <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1.5" />
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/login?intent=signup"
-              className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
-            >
-              Get started <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      </nav>
+      {/* ── Nav — shared across every marketing page, see MarketingNav ── */}
+      <MarketingNav current="pricing" />
 
       {/* ── Hero + Plan cards — fills the viewport above the fold on laptop ── */}
       <section className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center px-6 py-12">
@@ -205,7 +179,7 @@ export default function PricingPage() {
               className="flex items-center gap-2"
             />
             <span className="text-slate-300 dark:text-slate-600">·</span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">Split it. Clear it.</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{BRAND.tagline}</span>
           </div>
           <div className="flex items-center gap-5 text-xs text-slate-400 dark:text-slate-500">
             <Link href="/login" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Sign in</Link>

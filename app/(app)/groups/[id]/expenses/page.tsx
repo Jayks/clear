@@ -28,7 +28,7 @@ import { CircleExpenseList } from "@/components/circle/circle-expense-list";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const name = await getGroupName(id);
-  return { title: name ? `Expenses — ${name} | Clear` : "Clear" };
+  return { title: name ? `Expenses — ${name} | ClearOff` : "ClearOff" };
 }
 
 export default async function ExpensesPage({ params }: { params: Promise<{ id: string }> }) {

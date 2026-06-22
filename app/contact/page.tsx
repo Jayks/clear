@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { Mail, MapPin, Clock } from "lucide-react";
 import { LegalPageShell } from "@/components/marketing/legal-page-shell";
 
-export const metadata: Metadata = { title: "Contact — Clear" };
+export const metadata: Metadata = { title: "Contact — ClearOff" };
 
-const CONTACT_EMAIL = "saijayakumar@gmail.com";
+const CONTACT_EMAIL = "support@clearoff.in";
 
 export default function ContactPage() {
   return (
     <LegalPageShell title="Contact us" updated="19 June 2026">
       <p>
-        Clear is operated by <strong>Jayakumar Sekar</strong>. For support, billing questions, refund requests,
+        ClearOff is based in Chennai, Tamil Nadu, India. For support, billing questions, refund requests,
         or anything else, reach out here:
       </p>
 

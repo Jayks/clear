@@ -96,7 +96,7 @@ export function CheckoutForm({
       amount: order.amount,
       currency: "INR",
       order_id: order.orderId,
-      name: "Clear Plus",
+      name: "ClearOff Plus",
       description: passType === "pass_30d" ? "Plus — 30-day pass" : "Plus — Annual pass",
       theme: { color: "#7c3aed" },
       prefill: { name: userName, email: userEmail },
@@ -227,7 +227,7 @@ export function CheckoutForm({
           {/* Plan line */}
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-600 dark:text-slate-300">
-              Clear Plus · {passType === "pass_30d" ? "30-day pass" : "Annual pass"}
+              ClearOff Plus · {passType === "pass_30d" ? "30-day pass" : "Annual pass"}
               {earlyBird && <span className="ml-1.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-full align-middle">Early Bird</span>}
             </span>
             <span className="tabular-nums text-slate-700 dark:text-slate-200 font-medium">

@@ -10,25 +10,25 @@ import {
 } from "./utils";
 
 describe("buildTransactionNote", () => {
-  it("prefixes context name with 'Clear · '", () => {
-    expect(buildTransactionNote("Goa Trip")).toBe("Clear · Goa Trip");
+  it("prefixes context name with 'ClearOff ·'", () => {
+    expect(buildTransactionNote("Goa Trip")).toBe("ClearOff · Goa Trip");
   });
   it("works with empty string", () => {
-    expect(buildTransactionNote("")).toBe("Clear · ");
+    expect(buildTransactionNote("")).toBe("ClearOff · ");
   });
   it("handles unicode context names", () => {
-    expect(buildTransactionNote("मुंबई")).toBe("Clear · मुंबई");
+    expect(buildTransactionNote("मुंबई")).toBe("ClearOff · मुंबई");
   });
 });
 
 describe("buildUpiDeepLink", () => {
   it("produces a upi:// deep link with all standard params", () => {
-    const url = buildUpiDeepLink("name@okaxis", 1200, "INR", "Clear · Goa Trip");
+    const url = buildUpiDeepLink("name@okaxis", 1200, "INR", "ClearOff · Goa Trip");
     expect(url).toMatch(/^upi:\/\/pay\?/);
     expect(url).toContain("pa=name%40okaxis");
     expect(url).toContain("am=1200");
     expect(url).toContain("cu=INR");
-    expect(url).toContain("tn=Clear+%C2%B7+Goa+Trip");
+    expect(url).toContain("tn=ClearOff+%C2%B7+Goa+Trip");
   });
 
   it("truncates transaction note to 50 chars", () => {
@@ -39,27 +39,27 @@ describe("buildUpiDeepLink", () => {
   });
 
   it("handles decimal amounts", () => {
-    const url = buildUpiDeepLink("a@b", 1234.50, "INR", "Clear · Test");
+    const url = buildUpiDeepLink("a@b", 1234.50, "INR", "ClearOff · Test");
     expect(url).toContain("am=1234.5");
   });
 
   it("handles special characters in VPA", () => {
-    const url = buildUpiDeepLink("user.name+tag@okicici", 500, "INR", "Clear · T");
+    const url = buildUpiDeepLink("user.name+tag@okicici", 500, "INR", "ClearOff · T");
     expect(url).toContain("pa=user.name%2Btag%40okicici");
   });
 });
 
 describe("buildGPayLink", () => {
   it("produces a tez:// deep link", () => {
-    const url = buildGPayLink("name@okaxis", 500, "INR", "Clear · Trip");
+    const url = buildGPayLink("name@okaxis", 500, "INR", "ClearOff · Trip");
     expect(url).toMatch(/^tez:\/\/upi\/pay\?/);
     expect(url).toContain("pa=name%40okaxis");
     expect(url).toContain("am=500");
   });
 
   it("uses same param structure as generic UPI link", () => {
-    const gpay = buildGPayLink("a@b", 100, "INR", "Clear · X");
-    const generic = buildUpiDeepLink("a@b", 100, "INR", "Clear · X");
+    const gpay = buildGPayLink("a@b", 100, "INR", "ClearOff · X");
+    const generic = buildUpiDeepLink("a@b", 100, "INR", "ClearOff · X");
     // Same query params, different scheme
     const gpayParams  = new URL(gpay.replace("tez://upi", "https://x.com")).searchParams;
     const genericParams = new URL(generic.replace("upi://", "https://x.com/")).searchParams;
@@ -71,7 +71,7 @@ describe("buildGPayLink", () => {
 
 describe("buildPhonePeLink", () => {
   it("produces a phonepe:// deep link", () => {
-    const url = buildPhonePeLink("name@okaxis", 750, "INR", "Clear · Trip");
+    const url = buildPhonePeLink("name@okaxis", 750, "INR", "ClearOff · Trip");
     expect(url).toMatch(/^phonepe:\/\/pay\?/);
     expect(url).toContain("pa=name%40okaxis");
     expect(url).toContain("am=750");
@@ -80,15 +80,15 @@ describe("buildPhonePeLink", () => {
 
 describe("buildUpiQrContent", () => {
   it("returns the same format as buildUpiDeepLink (QR uses generic upi:// — works via camera on iOS)", () => {
-    const qr   = buildUpiQrContent("a@b", 100, "INR", "Clear · Test");
-    const link = buildUpiDeepLink("a@b", 100, "INR", "Clear · Test");
+    const qr   = buildUpiQrContent("a@b", 100, "INR", "ClearOff · Test");
+    const link = buildUpiDeepLink("a@b", 100, "INR", "ClearOff · Test");
     expect(qr).toBe(link);
     expect(qr).toMatch(/^upi:\/\//);
   });
 
   it("QR content is always generic upi:// even when app-specific links differ", () => {
-    const qr    = buildUpiQrContent("vpa@upi", 500, "INR", "Clear · Trip");
-    const gpay  = buildGPayLink("vpa@upi", 500, "INR", "Clear · Trip");
+    const qr    = buildUpiQrContent("vpa@upi", 500, "INR", "ClearOff · Trip");
+    const gpay  = buildGPayLink("vpa@upi", 500, "INR", "ClearOff · Trip");
     expect(qr).not.toMatch(/^tez:\/\//);
     expect(gpay).toMatch(/^tez:\/\//);
   });

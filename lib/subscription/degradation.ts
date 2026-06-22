@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { BRAND } from "../brand";
 
 /**
  * Overflow read-only lock — the "stock" half of the flow/stock degradation split
@@ -20,7 +21,7 @@ export const FREE_GROUP_CAP = 5;
 
 /** Shared copy for every write-guard that refuses on a locked group — one voice, not scattered messages. */
 export const LOCKED_GROUP_ERROR =
-  "This group is read-only on the Free plan (5-group limit). Upgrade to Clear Plus to keep editing it.";
+  `This group is read-only on the Free plan (5-group limit). Upgrade to ${BRAND.plus} to keep editing it.`;
 
 export interface LockCheckGroup {
   id: string;

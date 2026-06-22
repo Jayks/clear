@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The dev-mode floating indicator badge (build status corner widget) has a
+  // known internal bug — its drag-tracking throws "Uncaught NotFoundError:
+  // Failed to execute 'releasePointerCapture'" when a route navigation or an
+  // unrelated click elsewhere on the page desyncs its pointer-capture state.
+  // Harmless (dev-only, never ships to production) but a recurring console-
+  // error false alarm with no upside here — disabled outright.
+  devIndicators: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

@@ -49,11 +49,11 @@ export function UpiRequestButton({
   const isSm    = size === "sm";
   const pageUrl = buildPaymentPageUrl(payeeUserId, amount, currency, contextName, groupId);
   const shareText =
-    `Hey! Pay me ${formatCurrency(amount, currency)} for ${contextName}. Open Clear to pay:`;
+    `Hey! Pay me ${formatCurrency(amount, currency)} for ${contextName}. Open ClearOff to pay:`;
   const firstName = payeeName.split(" ")[0];
 
   // WhatsApp message text — used for the secondary link
-  const waMessage = `Hi! ${firstName} is requesting ${formatCurrency(amount, currency)} for ${contextName}. Pay instantly via Clear:\n${pageUrl}`;
+  const waMessage = `Hi! ${firstName} is requesting ${formatCurrency(amount, currency)} for ${contextName}. Pay instantly via ClearOff:\n${pageUrl}`;
 
   async function handleCopy() {
     try {

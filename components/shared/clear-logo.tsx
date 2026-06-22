@@ -1,6 +1,8 @@
 // Shared brand components — the "B-Converge" mark (C + two inflow strokes
 // converging into a split node) at any size. Mirrors app/icon.tsx.
 
+import { BRAND } from "@/lib/brand";
+
 const GRADIENT =
   "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)";
 
@@ -86,7 +88,7 @@ export function ClearLogo({
       </div>
       {showWordmark && (
         <span className={wordmarkClassName} style={{ fontFamily: "var(--font-fraunces)" }}>
-          Clear
+          {BRAND.name}
         </span>
       )}
     </div>

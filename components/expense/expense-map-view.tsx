@@ -84,6 +84,7 @@ function compactAmount(amount: number, currency: string): string {
     : currency === "SGD" ? "S$"
     : currency === "AED" ? "AED "
     : currency === "THB" ? "฿"
+    : currency === "MYR" ? "RM"
     : `${currency} `;
   if (amount >= 1000) {
     return `${sym}${(amount / 1000).toFixed(amount % 1000 === 0 ? 0 : 1)}k`;

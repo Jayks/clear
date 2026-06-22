@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const DEFAULT_CURRENCY = "INR";
-export const SUPPORTED_CURRENCIES = ["INR", "USD", "EUR", "GBP", "SGD", "AED", "JPY", "CAD", "AUD"] as const;
+export const SUPPORTED_CURRENCIES = ["INR", "USD", "EUR", "GBP", "SGD", "AED", "JPY", "CAD", "AUD", "MYR"] as const;
 export const CHART_AXIS_TICK = { fontSize: 10, fill: "#94A3B8" } as const;
 
 // BUG-03 fix: map each supported currency to the correct display locale so
@@ -22,6 +22,7 @@ export const CURRENCY_LOCALE: Record<string, string> = {
   JPY: "ja-JP",
   CAD: "en-CA",
   AUD: "en-AU",
+  MYR: "ms-MY",
 };
 
 export function formatCurrency(

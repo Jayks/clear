@@ -26,7 +26,7 @@ Required shape:
 {
   "description": string (merchant name or what was purchased — concise, max 60 chars),
   "amount": number or null (grand total after tax/GST/tip; null if unclear),
-  "currency": "INR" | "USD" | "EUR" | "GBP" | "SGD" | "AED" | "THB" | null,
+  "currency": "INR" | "USD" | "EUR" | "GBP" | "SGD" | "AED" | "THB" | "MYR" | null,
   "category": string (one of: food, accommodation, transport, sightseeing, shopping, activities, groceries, supplies, utilities, rent, healthcare, maintenance, venue, equipment, gift, tour_package, other),
   "expenseDate": "YYYY-MM-DD" or null (use the date printed on the receipt, not today),
   "receiptItems": array of { "description": string, "amount": number, "quantity": number (optional) } or []

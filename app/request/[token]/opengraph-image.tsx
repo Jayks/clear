@@ -123,7 +123,7 @@ export default async function OgImage({
 
         {/* Tagline */}
         <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 17, letterSpacing: "0.4px" }}>
-          Tap to pay via UPI - Powered by {BRAND.name}
+          {`Tap to pay via UPI - Powered by ${BRAND.name}`}
         </div>
       </div>
     ),

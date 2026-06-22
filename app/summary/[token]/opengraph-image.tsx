@@ -105,7 +105,7 @@ export default async function OgImage({
         </div>
         {(dateRange || tripDays > 0) && (
           <div style={{ color: "rgba(255,255,255,0.62)", fontSize: 26 }}>
-            {dateRange}{tripDays > 0 ? ` · ${tripDays} days` : ""}
+            {`${dateRange}${tripDays > 0 ? ` · ${tripDays} days` : ""}`}
           </div>
         )}
       </div>

@@ -1006,7 +1006,7 @@ export function CarouselLanding() {
             Large logo → headline → 4 context pills → CTAs → trust badges → ticker
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={0} active={active}>
-        {/* justify-[safe_center] is the actual fix (confirmed via cross-device
+        {/* justify-center-safe is the actual fix (confirmed via cross-device
             testing, 2026-06-22 — only the shortest viewports, iPhone SE/Galaxy
             S8, clip the logo; taller phones render fine, proving this is a
             content-taller-than-viewport overflow, not a contrast/styling issue).
@@ -1019,7 +1019,7 @@ export function CarouselLanding() {
             when content fits, falls back to top-alignment (never clips) when
             it doesn't. overflow-y-auto stays as the safety net for the bottom
             overflow that fallback then produces on short viewports. */}
-        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-[safe_center] px-6 overflow-y-auto overflow-x-hidden ${active === 0 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="ClearOff">
+        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center-safe px-6 overflow-y-auto overflow-x-hidden ${active === 0 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="ClearOff">
 
           {/* ── Animated mesh gradient blobs ── */}
           <div className="absolute inset-0 pointer-events-none">
@@ -1175,11 +1175,11 @@ export function CarouselLanding() {
             Designed for 4 contexts from day 1 — Circle shown as "coming soon".
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={1} active={active}>
-        {/* justify-[safe_center] + overflow-y-auto — same preventive fix as
+        {/* justify-center-safe + overflow-y-auto — same preventive fix as
             slide 0 (see its comment): avoids the identical clip-on-short-
             viewports failure mode pre-emptively, not because this slide was
             reported broken. */}
-        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-[safe_center] px-5 sm:px-8 py-6 overflow-y-auto overflow-x-hidden ${active === 1 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Overview">
+        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center-safe px-5 sm:px-8 py-6 overflow-y-auto overflow-x-hidden ${active === 1 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Overview">
           {/* Headline — stagger in when slide 1 is active */}
           <motion.div
             className="text-center mb-5 sm:mb-6"
@@ -1792,8 +1792,8 @@ export function CarouselLanding() {
             SLIDE 6 — Stats interstitial (pattern break — no phone, big numbers)
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={6} active={active}>
-        {/* justify-[safe_center] + overflow-y-auto — same preventive fix as slide 0. */}
-        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-[safe_center] px-6 overflow-y-auto overflow-x-hidden ${active === 6 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="By the numbers">
+        {/* justify-center-safe + overflow-y-auto — same preventive fix as slide 0. */}
+        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center-safe px-6 overflow-y-auto overflow-x-hidden ${active === 6 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="By the numbers">
           {/* Ambient blobs */}
           <div className="absolute inset-0 pointer-events-none">
             <div style={{ position:"absolute", top:"-12%", left:"-8%", width:"55%", height:"55%", borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.22) 0%,transparent 70%)", animation:"blob1 15s ease-in-out infinite" }} />
@@ -2161,8 +2161,8 @@ export function CarouselLanding() {
             SLIDE 10 — CTA
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={10} active={active}>
-        {/* justify-[safe_center] + overflow-y-auto — same preventive fix as slide 0. */}
-        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-[safe_center] px-6 relative overflow-y-auto overflow-x-hidden ${active === 10 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Get started">
+        {/* justify-center-safe + overflow-y-auto — same preventive fix as slide 0. */}
+        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center-safe px-6 relative overflow-y-auto overflow-x-hidden ${active === 10 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Get started">
           {/* Ambient blobs */}
           <div className="absolute inset-0 pointer-events-none">
             <div style={{ position:"absolute", top:"-20%", left:"-10%", width:"60%", height:"60%", borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.12) 0%,transparent 70%)", animation:"blob1 16s ease-in-out infinite" }} />

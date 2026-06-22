@@ -155,7 +155,7 @@ export default function ChangelogPage() {
           </p>
           <Link
             href="/login?intent=signup"
-            className="inline-flex items-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold py-3 px-8 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white font-semibold py-3 px-8 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
           >
             Get started free <ArrowRight className="w-4 h-4" />
           </Link>

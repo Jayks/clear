@@ -1,10 +1,24 @@
 import React from "react";
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import {
+  GLYPH_GRADIENT,
+  GLYPH_DARK,
+  PATH_C,
+  INFLOW_1,
+  INFLOW_2,
+  NODE_CX,
+  NODE_CY,
+  NODE_R,
+  HALO_R,
+  CHECK_PATH,
+  HIGHLIGHT,
+  buildBevelLayers,
+} from "@/lib/brand-glyph";
 
 export const runtime = "edge";
 
-// Clear PWA / apple-touch icon — "B-Converge refined".
+// ClearOff PWA / apple-touch icon — "B-Converge refined".
 // See app/icon.tsx for the design rationale. Same glyph, scaled for 192 / 512.
 export function GET(request: NextRequest) {
   const sizeParam = parseInt(request.nextUrl.searchParams.get("size") ?? "192");
@@ -26,6 +40,27 @@ export function GET(request: NextRequest) {
       },
     });
 
+  const layers = buildBevelLayers();
+  const glyphChildren = [
+    // faint halo (stands in for the glow Satori can't blur)
+    React.createElement("circle", { key: "halo", cx: NODE_CX, cy: NODE_CY, r: HALO_R, fill: "white", fillOpacity: "0.1" }),
+    // C outline + inflow strokes + node disc — 3D bevel stack
+    ...layers.map((l, i) =>
+      React.createElement(
+        "g",
+        { key: `layer-${i}`, transform: `translate(${l.dx},${l.dy})` },
+        React.createElement("path", { d: PATH_C, fill: "none", stroke: l.color, strokeWidth: "10", strokeLinecap: "round", strokeLinejoin: "miter", strokeOpacity: l.isFront ? "0.97" : "1" }),
+        React.createElement("path", { d: INFLOW_1, fill: "none", stroke: l.color, strokeWidth: "5", strokeLinecap: "round", strokeOpacity: l.isFront ? "0.95" : "1" }),
+        React.createElement("path", { d: INFLOW_2, fill: "none", stroke: l.color, strokeWidth: "5", strokeLinecap: "round", strokeOpacity: l.isFront ? "0.95" : "1" }),
+        React.createElement("circle", { cx: NODE_CX, cy: NODE_CY, r: NODE_R, fill: l.color })
+      )
+    ),
+    // checkmark cut into the node — "cleared off"
+    React.createElement("path", { key: "check", d: CHECK_PATH, fill: "none", stroke: GLYPH_DARK, strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }),
+    // gloss highlight
+    React.createElement("circle", { key: "highlight", cx: HIGHLIGHT.cx, cy: HIGHLIGHT.cy, r: HIGHLIGHT.r, fill: "white", fillOpacity: "0.9" }),
+  ];
+
   return new ImageResponse(
     React.createElement(
       "div",
@@ -38,8 +73,7 @@ export function GET(request: NextRequest) {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: radius,
-          background:
-            "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)",
+          background: GLYPH_GRADIENT,
           overflow: "hidden",
         },
       },
@@ -67,29 +101,7 @@ export function GET(request: NextRequest) {
       React.createElement(
         "svg",
         { width: svgSize, height: svgSize, viewBox: "0 0 100 100" },
-
-        // chamfered C — flat left side + 45° cut corners + 45° lips cupping the node
-        React.createElement("path", {
-          d: "M73 25 L66 18 L32 18 L18 32 L18 68 L32 82 L66 82 L73 75",
-          fill: "none",
-          stroke: "white",
-          strokeWidth: "10",
-          strokeLinecap: "round",
-          strokeLinejoin: "miter",
-          strokeOpacity: "0.97",
-        }),
-
-        // faint halo (stands in for the glow Satori can't blur)
-        React.createElement("circle", { cx: "77", cy: "50", r: "13", fill: "white", fillOpacity: "0.1" }),
-
-        // two inflow strokes (the L + r) — tuck under the node disc
-        React.createElement("path", { d: "M96 37 Q88 44 80 49", fill: "none", stroke: "white", strokeWidth: "5", strokeLinecap: "round", strokeOpacity: "0.95" }),
-        React.createElement("path", { d: "M96 63 Q88 56 80 51", fill: "none", stroke: "white", strokeWidth: "5", strokeLinecap: "round", strokeOpacity: "0.95" }),
-
-        // split node — left half (e) bright, right half (a) dimmed, plus highlight
-        React.createElement("path", { d: "M76.2 41 A9 9 0 0 0 76.2 59 Z", fill: "white" }),
-        React.createElement("path", { d: "M77.8 41 A9 9 0 0 1 77.8 59 Z", fill: "white", fillOpacity: "0.8" }),
-        React.createElement("circle", { cx: "74", cy: "46.5", r: "3.4", fill: "white", fillOpacity: "0.9" })
+        ...glyphChildren
       )
     ),
     { width: size, height: size }

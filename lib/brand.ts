@@ -9,6 +9,15 @@
 export const BRAND = {
   /** Product name. */
   name: "ClearOff",
+  /**
+   * Wordmark split for two-tone icon+text lockups — "Off" gets the brand
+   * accent colour to echo the glyph's checkmark ("this part = resolved").
+   * `namePrefix + nameAccent === name`. Only use this split in a standalone
+   * logo lockup (icon beside text); sentence-embedded mentions of `name`
+   * (taglines, CTAs) should render as one plain string.
+   */
+  namePrefix: "Clear",
+  nameAccent: "Off",
   /** Marketing tagline. The "Clear" here is the verb/pun, kept literal. */
   tagline: "Split it. Clear it off.",
   /** Paid plan name. */

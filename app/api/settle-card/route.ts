@@ -2,6 +2,18 @@ import React from "react";
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 import { BRAND } from "@/lib/brand";
+import {
+  GLYPH_GRADIENT,
+  GLYPH_DARK,
+  PATH_C,
+  INFLOW_1,
+  INFLOW_2,
+  NODE_CX,
+  NODE_CY,
+  NODE_R,
+  CHECK_PATH,
+  buildBevelLayers,
+} from "@/lib/brand-glyph";
 
 export const runtime = "edge";
 
@@ -104,7 +116,7 @@ export function GET(request: NextRequest) {
                   width:          44,
                   height:         44,
                   borderRadius:   11,
-                  background:     "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)",
+                  background:     GLYPH_GRADIENT,
                   display:        "flex",
                   alignItems:     "center",
                   justifyContent: "center",
@@ -113,18 +125,27 @@ export function GET(request: NextRequest) {
               React.createElement(
                 "svg",
                 { width: 28, height: 28, viewBox: "0 0 100 100" },
-                // B-Converge mark — C + two inflow strokes into a split node
-                React.createElement("path", { d: "M73 25 L66 18 L32 18 L18 32 L18 68 L32 82 L66 82 L73 75", fill: "none", stroke: "white", strokeWidth: "10", strokeLinecap: "round", strokeLinejoin: "miter", strokeOpacity: "0.97" }),
-                React.createElement("path", { d: "M96 37 Q88 44 80 49", fill: "none", stroke: "white", strokeWidth: "5", strokeLinecap: "round", strokeOpacity: "0.95" }),
-                React.createElement("path", { d: "M96 63 Q88 56 80 51", fill: "none", stroke: "white", strokeWidth: "5", strokeLinecap: "round", strokeOpacity: "0.95" }),
-                React.createElement("path", { d: "M76.2 41 A9 9 0 0 0 76.2 59 Z", fill: "white" }),
-                React.createElement("path", { d: "M77.8 41 A9 9 0 0 1 77.8 59 Z", fill: "white", fillOpacity: "0.8" }),
+                // B-Converge mark — C + two inflow strokes into a node, resolving
+                // into a checkmark cut. 3D bevel stack (no halo/highlight at this
+                // small inline size — same minimal treatment this logo always had).
+                ...buildBevelLayers().map((l, i) =>
+                  React.createElement(
+                    "g",
+                    { key: `layer-${i}`, transform: `translate(${l.dx},${l.dy})` },
+                    React.createElement("path", { d: PATH_C, fill: "none", stroke: l.color, strokeWidth: "10", strokeLinecap: "round", strokeLinejoin: "miter", strokeOpacity: l.isFront ? "0.97" : "1" }),
+                    React.createElement("path", { d: INFLOW_1, fill: "none", stroke: l.color, strokeWidth: "5", strokeLinecap: "round", strokeOpacity: l.isFront ? "0.95" : "1" }),
+                    React.createElement("path", { d: INFLOW_2, fill: "none", stroke: l.color, strokeWidth: "5", strokeLinecap: "round", strokeOpacity: l.isFront ? "0.95" : "1" }),
+                    React.createElement("circle", { cx: NODE_CX, cy: NODE_CY, r: NODE_R, fill: l.color })
+                  )
+                ),
+                React.createElement("path", { d: CHECK_PATH, fill: "none", stroke: GLYPH_DARK, strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }),
               ),
             ),
             React.createElement(
               "span",
               { style: { fontSize: 30, fontWeight: 700, color: "#0F172A", letterSpacing: "-0.5px" } },
-              BRAND.name,
+              BRAND.namePrefix,
+              React.createElement("span", { style: { color: "#0891B2" } }, BRAND.nameAccent),
             ),
           ),
           // Group name pill

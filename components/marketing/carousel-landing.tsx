@@ -902,7 +902,7 @@ export function CarouselLanding() {
             Home
           </Link>
           <button onClick={() => setLoginModal({ open: true })} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</button>
-          <button onClick={() => setLoginModal({ open: true, intent: "signup" })} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-semibold py-2 px-3 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
+          <button onClick={() => setLoginModal({ open: true, intent: "signup" })} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-sm font-semibold py-2 px-3 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
             Get started
           </button>
         </div>
@@ -1020,7 +1020,8 @@ export function CarouselLanding() {
               style={{ fontFamily: "var(--font-fraunces)" }}
               variants={fadeUp}
             >
-              Split it.{" "}
+              Split it.
+              <br />
               <span style={{ background:"linear-gradient(135deg,#0891B2 0%,#14B8A6 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
                 Clear it off.
               </span>
@@ -1057,7 +1058,7 @@ export function CarouselLanding() {
             <motion.div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mb-6" variants={fadeUp}>
               <button
                 onClick={() => setLoginModal({ open: true, intent: "signup" })}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-sm py-3 px-8 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white font-semibold text-sm py-3 px-8 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5"
               >
                 Start for free <ArrowRight className="w-4 h-4" />
               </button>

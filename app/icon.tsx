@@ -1,15 +1,33 @@
 import { ImageResponse } from "next/og";
+import {
+  GLYPH_GRADIENT,
+  GLYPH_DARK,
+  PATH_C,
+  INFLOW_1,
+  INFLOW_2,
+  NODE_CX,
+  NODE_CY,
+  NODE_R,
+  HALO_R,
+  CHECK_PATH,
+  HIGHLIGHT,
+  buildBevelLayers,
+} from "@/lib/brand-glyph";
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-// Clear app icon — "B-Converge refined":
-// a chamfered boxy C (= Clear) — flat left side, 45° cut corners, 45° lips
-// cupping the node — with inflow strokes converging into a split node.
-// The node's two halves (one bright, one dimmed) hide the "e + a" of Clear and
-// echo the retired split-coin. Glass material = base gradient + specular bloom
-// + bottom vignette + white rim. The seam intentionally vanishes at this size.
+// ClearOff app icon — "B-Converge refined": a chamfered boxy C (= Clear) with
+// inflow strokes converging into a node, resolving into a checkmark cut
+// ("cleared off") instead of the old straight-seam split coin. C outline,
+// inflow strokes, and the node disc are each duplicated through a diagonally
+// offset, darkening stack to fake a 3D emboss — Satori can't do real lighting
+// filters, so this is pure shape data instead. Glass material = darker base
+// gradient + specular bloom + bottom vignette + white rim. Fine detail
+// (the checkmark, the bevel) is expected to soften at this size — same as
+// the old split-seam always did.
 export default function Icon() {
+  const layers = buildBevelLayers();
   return new ImageResponse(
     (
       <div
@@ -21,8 +39,7 @@ export default function Icon() {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 8,
-          background:
-            "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)",
+          background: GLYPH_GRADIENT,
           overflow: "hidden",
         }}
       >
@@ -64,25 +81,21 @@ export default function Icon() {
         />
         {/* glyph */}
         <svg width={22} height={22} viewBox="0 0 100 100">
-          {/* chamfered C — flat left side + 45° cut corners + 45° lips cupping the node */}
-          <path
-            d="M73 25 L66 18 L32 18 L18 32 L18 68 L32 82 L66 82 L73 75"
-            fill="none"
-            stroke="white"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeLinejoin="miter"
-            strokeOpacity="0.97"
-          />
           {/* faint halo (stands in for the glow Satori can't blur) */}
-          <circle cx="77" cy="50" r="13" fill="white" fillOpacity="0.1" />
-          {/* two inflow strokes (the L + r) — tuck under the node disc */}
-          <path d="M96 37 Q88 44 80 49" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.95" />
-          <path d="M96 63 Q88 56 80 51" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.95" />
-          {/* split node — left half (e) bright, right half (a) dimmed, + highlight */}
-          <path d="M76.2 41 A9 9 0 0 0 76.2 59 Z" fill="white" />
-          <path d="M77.8 41 A9 9 0 0 1 77.8 59 Z" fill="white" fillOpacity="0.8" />
-          <circle cx="74" cy="46.5" r="3.4" fill="white" fillOpacity="0.9" />
+          <circle cx={NODE_CX} cy={NODE_CY} r={HALO_R} fill="white" fillOpacity="0.1" />
+          {/* C outline + inflow strokes + node disc — 3D bevel stack */}
+          {layers.map((l, i) => (
+            <g key={i} transform={`translate(${l.dx},${l.dy})`}>
+              <path d={PATH_C} fill="none" stroke={l.color} strokeWidth="10" strokeLinecap="round" strokeLinejoin="miter" strokeOpacity={l.isFront ? 0.97 : 1} />
+              <path d={INFLOW_1} fill="none" stroke={l.color} strokeWidth="5" strokeLinecap="round" strokeOpacity={l.isFront ? 0.95 : 1} />
+              <path d={INFLOW_2} fill="none" stroke={l.color} strokeWidth="5" strokeLinecap="round" strokeOpacity={l.isFront ? 0.95 : 1} />
+              <circle cx={NODE_CX} cy={NODE_CY} r={NODE_R} fill={l.color} />
+            </g>
+          ))}
+          {/* checkmark cut into the node — "cleared off" */}
+          <path d={CHECK_PATH} fill="none" stroke={GLYPH_DARK} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          {/* gloss highlight */}
+          <circle cx={HIGHLIGHT.cx} cy={HIGHLIGHT.cy} r={HIGHLIGHT.r} fill="white" fillOpacity="0.9" />
         </svg>
       </div>
     ),

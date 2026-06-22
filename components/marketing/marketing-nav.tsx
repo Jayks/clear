@@ -72,7 +72,7 @@ export function MarketingNav({ current }: { current: MarketingPage }) {
             <Link
               href="/login?intent=signup"
               scroll={false}
-              className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
             >
               Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
             </Link>
@@ -119,7 +119,7 @@ export function MarketingNav({ current }: { current: MarketingPage }) {
           <Link
             href="/login?intent=signup"
             scroll={false}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
+            className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
           >
             Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
           </Link>

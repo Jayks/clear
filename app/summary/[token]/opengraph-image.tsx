@@ -6,6 +6,17 @@ import { expenses } from "@/lib/db/schema/expenses";
 import { eq, sql } from "drizzle-orm";
 import { differenceInDays, parseISO } from "date-fns";
 import { BRAND } from "@/lib/brand";
+import {
+  GLYPH_DARK,
+  PATH_C,
+  INFLOW_1,
+  INFLOW_2,
+  NODE_CX,
+  NODE_CY,
+  NODE_R,
+  CHECK_PATH,
+  buildBevelLayers,
+} from "@/lib/brand-glyph";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -88,14 +99,24 @@ export default async function OgImage({
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <svg width={35} height={35} viewBox="0 0 100 100">
-            <path d="M73 25 L66 18 L32 18 L18 32 L18 68 L32 82 L66 82 L73 75" fill="none" stroke="white" strokeWidth="10" strokeLinecap="round" strokeLinejoin="miter" strokeOpacity="0.97" />
-            <path d="M96 37 Q88 44 80 49" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.95" />
-            <path d="M96 63 Q88 56 80 51" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.95" />
-            <path d="M76.2 41 A9 9 0 0 0 76.2 59 Z" fill="white" />
-            <path d="M77.8 41 A9 9 0 0 1 77.8 59 Z" fill="white" fillOpacity="0.8" />
+            {/* B-Converge mark — C + inflow strokes into a node, resolving into a
+                checkmark cut. 3D bevel stack (no halo/highlight at this small
+                inline size — same minimal treatment this logo always had). */}
+            {buildBevelLayers().map((l, i) => (
+              <g key={i} transform={`translate(${l.dx},${l.dy})`}>
+                <path d={PATH_C} fill="none" stroke={l.color} strokeWidth="10" strokeLinecap="round" strokeLinejoin="miter" strokeOpacity={l.isFront ? 0.97 : 1} />
+                <path d={INFLOW_1} fill="none" stroke={l.color} strokeWidth="5" strokeLinecap="round" strokeOpacity={l.isFront ? 0.95 : 1} />
+                <path d={INFLOW_2} fill="none" stroke={l.color} strokeWidth="5" strokeLinecap="round" strokeOpacity={l.isFront ? 0.95 : 1} />
+                <circle cx={NODE_CX} cy={NODE_CY} r={NODE_R} fill={l.color} />
+              </g>
+            ))}
+            <path d={CHECK_PATH} fill="none" stroke={GLYPH_DARK} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>{BRAND.name}</span>
+        <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 24, fontWeight: 600 }}>
+          {BRAND.namePrefix}
+          <span style={{ color: "#22D3EE" }}>{BRAND.nameAccent}</span>
+        </span>
       </div>
 
       {/* Trip name + date */}

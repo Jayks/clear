@@ -84,6 +84,14 @@ All four financial contexts use the same pattern:
 ```tsx
 className="bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white"
 ```
+This stays the in-app default (Save/Confirm/everyday actions) — don't change it.
+
+### Marketing CTA gradient (logo-family echo)
+The primary "Get started"/"Start for free" buttons on public marketing surfaces (`MarketingNav`, `AboutLanding`, `CarouselLanding`, `/changelog`) use a richer, deeper gradient instead of the in-app default — picked to echo the brand icon's darker D2 gradient (see Brand components below) without going as dark as the icon itself (the icon's near-black bottom stop would fight a button's "inviting" job against the pale page background):
+```tsx
+className="bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A]"
+```
+Hover shifts to the icon gradient's next stop pair (same "one notch deeper" idea as the in-app button's 500→600 hover) — not a separate colour choice. Scope is deliberately narrow: only the sign-up teaser CTAs that link to `/login?intent=signup` from public pages. Do not apply to the shared `Button` component default, in-app actions, or plan-card outline buttons (e.g. the free-tier CTA on `/pricing`).
 
 ### Dark mode conventions
 - Labels: `text-slate-700 dark:text-slate-200`

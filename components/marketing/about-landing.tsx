@@ -69,7 +69,7 @@ export function AboutLanding() {
           <div className="absolute inset-0 hidden dark:block" style={{ background: "linear-gradient(105deg, rgba(15,23,42,0.93) 0%, rgba(12,21,32,0.88) 28%, rgba(10,26,24,0.78) 55%, rgba(11,31,21,0.55) 80%, rgba(10,26,24,0.40) 100%)" }} />
         </div>
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 pt-20 pb-28 lg:pt-28 lg:pb-36">
+        <div className="relative z-10 max-w-6xl mx-auto px-6 pt-20 pb-28 lg:pt-16 lg:pb-16">
           <div className="flex flex-col lg:flex-row items-center gap-14 lg:gap-16">
 
             {/* Left — copy (CSS keyframe stagger, works in RSC) */}
@@ -80,7 +80,8 @@ export function AboutLanding() {
               </div>
 
               <h1 className="animate-hero-2 text-5xl sm:text-6xl lg:text-[66px] xl:text-[72px] font-normal leading-[1.06] text-slate-800 dark:text-slate-100 mb-7" style={{ fontFamily: "var(--font-fraunces)" }}>
-                Split it.{" "}
+                Split it.
+                <br />
                 <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
                   Clear it off.
                 </span>
@@ -92,7 +93,7 @@ export function AboutLanding() {
               </p>
 
               <div className="animate-hero-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-10">
-                <Link href="/login?intent=signup" scroll={false} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
+                <Link href="/login?intent=signup" scroll={false} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white font-semibold text-base py-3.5 px-9 rounded-2xl shadow-lg shadow-cyan-500/30 transition-all hover:shadow-cyan-500/40 hover:-translate-y-0.5">
                   Start for free <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a href="#why-clear" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 glass text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 font-medium text-base py-3.5 px-9 rounded-2xl transition-all hover:shadow-md">
@@ -126,7 +127,7 @@ export function AboutLanding() {
                   {[
                     { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
                     { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
-                    { emoji: "✈️", name: "Manali Trip",   badge: "Settled ✓",          cls: "text-slate-400 bg-slate-50 dark:bg-slate-800/40" },
+                    { emoji: "☕", name: "Office Coffee Pool", badge: "✓ You've paid",  cls: "text-violet-600 bg-violet-50 dark:bg-violet-950/30 dark:text-violet-400" },
                   ].map((g, i) => (
                     <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
                       <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{g.emoji}</div>
@@ -175,7 +176,7 @@ export function AboutLanding() {
                   {[
                     { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
                     { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
-                    { emoji: "✈️", name: "Manali Trip",   badge: "Settled ✓",          cls: "text-slate-400 bg-slate-50 dark:bg-slate-800/40" },
+                    { emoji: "☕", name: "Office Coffee Pool", badge: "✓ You've paid",  cls: "text-violet-600 bg-violet-50 dark:bg-violet-950/30 dark:text-violet-400" },
                     { emoji: "🏕️", name: "Coorg Weekend", badge: "You owe ₹220",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
                   ].map((g, i) => (
                     <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
@@ -214,7 +215,7 @@ export function AboutLanding() {
                 {/* Floating badge — bobs gently after load */}
                 <div className="animate-float-bob absolute glass-sm rounded-full px-3 py-1.5 shadow-md border border-white/80 flex items-center gap-1.5" style={{ top: 0, right: 24, zIndex: 3 }}>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Trips & nests</span>
+                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Trips · Nests · Circles</span>
                 </div>
               </div>
 

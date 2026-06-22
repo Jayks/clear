@@ -781,6 +781,20 @@ export function CarouselLanding() {
   // route re-open bug (modal stuck with isOpen:false on second click).
   const [loginModal, setLoginModal] = useState<{ open: boolean; intent?: string } | null>(null);
 
+  // Tracks whether the Hero slide's fade-up entrance has already played once.
+  // Lives on CarouselLanding (not inside the slide-0 subtree) so it survives
+  // SlideWindow unmounting/remounting that subtree as the user swipes away and
+  // back. Starts false so the very first mount — server-rendered HTML, before
+  // hydration — never ships the Hero text at opacity:0: Framer Motion can't
+  // run JS during SSR, so an `initial="hidden"` Hero would otherwise paint
+  // invisible in the SSR'd HTML and stay that way until hydration completes,
+  // and Chrome's LCP algorithm excludes 0-opacity elements from candidacy —
+  // confirmed via a perf trace as the dominant chunk of this slide's LCP
+  // render delay (2026-06-22). Flipped to true after the first paint so any
+  // later revisit (swipe away ≥2 slides, then back) still gets the intended
+  // animated entrance — see the "replays on each visit" comment below.
+  const heroFirstPaintDoneRef = useRef(false);
+
   const handleScroll = useCallback(() => {
     const c = containerRef.current;
     if (!c) return;
@@ -836,6 +850,16 @@ export function CarouselLanding() {
     c.addEventListener("scroll", handleScroll, { passive: true });
     return () => c.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
+
+  // Flips once, right after CarouselLanding's own first paint (this component
+  // mounts exactly once per page session — unlike the slide-0 subtree, which
+  // SlideWindow unmounts/remounts as the user swipes away and back). From
+  // this point on, any (re)mount of the Hero slide gets its normal animated
+  // entrance; only the very first one — the SSR/hydration-flash-prone one —
+  // skipped it.
+  useEffect(() => {
+    heroFirstPaintDoneRef.current = true;
+  }, []);
 
   // No autostart — the slideshow waits for the user. A one-time coach hint +
   // edge peek invite the first swipe instead.
@@ -1058,11 +1082,12 @@ export function CarouselLanding() {
             <div className="hidden dark:block absolute inset-0" style={{ background:"radial-gradient(ellipse at 30% 40%,rgba(6,182,212,0.08) 0%,transparent 60%)" }} />
           </div>
 
-          {/* ── Content — staggered Framer Motion entrance, replays on each visit ── */}
+          {/* ── Content — staggered Framer Motion entrance, replays on each visit
+              (after the very first page load — see heroFirstPaintDoneRef above). ── */}
           <motion.div
             className="relative z-10 flex flex-col items-center text-center max-w-xl"
             variants={stagger(0)}
-            initial="hidden"
+            initial={heroFirstPaintDoneRef.current ? "hidden" : false}
             animate={active === 0 ? "visible" : "hidden"}
           >
 

@@ -22,6 +22,7 @@ const LOADERS = {
   "settlement":            () => import("./showcases/settlement-showcase"),
   "debt-flow":             () => import("./showcases/debt-flow-showcase"),
   "insights":              () => import("./showcases/insights-showcase"),
+  "why-clearoff":          () => import("./showcases/why-clearoff-showcase"),
 } as const;
 
 export type ShowcaseId = keyof typeof LOADERS;
@@ -30,6 +31,13 @@ interface LazySectionProps {
   sectionId: ShowcaseId;
   /** Reserved height while not yet mounted, so the page doesn't jump as content pops in. Pick something close to the section's real rendered height. */
   minHeight?: number;
+  /** Anchor id, e.g. for a same-page `<a href="#why-clear">` CTA elsewhere on
+   *  the page. Applied to the wrapper div, which is ALWAYS rendered (it's
+   *  the IntersectionObserver target), never to the lazy content itself —
+   *  so the anchor exists immediately, before `inView` flips true. A click
+   *  scrolling to it is what makes the observer fire and mount the real
+   *  content in the first place, same as an ordinary scroll would. */
+  id?: string;
 }
 
 /**
@@ -50,7 +58,7 @@ interface LazySectionProps {
  * Server Component and just renders this normally, handing it a string
  * `sectionId` (NOT a loader function — see the LOADERS comment above).
  */
-export function LazySection({ sectionId, minHeight = 560 }: LazySectionProps) {
+export function LazySection({ sectionId, minHeight = 560, id }: LazySectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   // useState initializer (not a plain dynamic() call in the render body) —
@@ -74,7 +82,7 @@ export function LazySection({ sectionId, minHeight = 560 }: LazySectionProps) {
   }, [inView]);
 
   return (
-    <div ref={ref} style={inView ? undefined : { minHeight }}>
+    <div ref={ref} id={id} style={inView ? undefined : { minHeight }}>
       {inView && <Section />}
     </div>
   );

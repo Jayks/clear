@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
-  ArrowRight, Users, CheckCircle2, X,
+  ArrowRight, Users, CheckCircle2,
   MapPin, Building2, Receipt, Zap,
   LayoutGrid,
 } from "lucide-react";
@@ -53,8 +53,14 @@ const tickerItems = [
  * Mobile keeps `CarouselLanding` as `/`'s content instead; this component
  * is also what used to live at `/about` before the carousel took over that
  * URL. See `app/CLAUDE.md` Landing Page section for the full split.
+ *
+ * `isMobileUA` — server-detected device type (from `page.tsx`'s `userAgent()`
+ * call), NOT a CSS breakpoint. Used only to pick which of the hero's two
+ * mockup-card layouts to render (see below) — this component otherwise
+ * targets desktop/tablet, but `?view=full` can still land a real phone here.
+ * Defaults `false` (desktop/tablet — the overwhelmingly common case).
  */
-export function AboutLanding() {
+export function AboutLanding({ isMobileUA = false }: { isMobileUA?: boolean }) {
   return (
     <div className="overflow-x-clip overflow-y-visible">
       {/* overflow-y-visible is deliberate: CSS auto-computes overflow-y:auto
@@ -72,7 +78,12 @@ export function AboutLanding() {
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <Image src={HERO_IMAGE} alt="Travel with friends" fill priority className="object-cover object-center" />
+          {/* `priority` alone only controls eager-loading + emits a <link rel=preload>
+              in this Next.js version — it does NOT set fetchpriority="high" on the
+              <img> itself (confirmed via get-img-props.js: `fetchPriority` is a fully
+              separate prop). Without it, the browser's preload scanner still treats
+              this LCP image as default/low priority, found via a perf trace. */}
+          <Image src={HERO_IMAGE} alt="Travel with friends" fill priority fetchPriority="high" className="object-cover object-center" />
           <div className="absolute inset-0 dark:hidden" style={{ background: "linear-gradient(105deg, rgba(239,246,255,0.97) 0%, rgba(236,254,255,0.93) 28%, rgba(240,253,250,0.80) 55%, rgba(236,253,245,0.60) 80%, rgba(240,253,250,0.45) 100%)" }} />
           <div className="absolute inset-0 hidden dark:block" style={{ background: "linear-gradient(105deg, rgba(15,23,42,0.93) 0%, rgba(12,21,32,0.88) 28%, rgba(10,26,24,0.78) 55%, rgba(11,31,21,0.55) 80%, rgba(10,26,24,0.40) 100%)" }} />
         </div>
@@ -121,112 +132,118 @@ export function AboutLanding() {
               </p>
             </div>
 
-            {/* Right — groups overview + expense detail (slides in from right) */}
+            {/* Right — groups overview + expense detail (slides in from right).
+                Only ONE of the two layouts below is ever rendered — picked
+                server-side by `isMobileUA`, not CSS breakpoints, so the
+                other variant's markup never enters the DOM at all (was
+                previously always-rendered + CSS-hidden, ~doubling this
+                section's node count for every visitor; found in a perf
+                trace flagging "Large DOM Size" as a Layout/Style cost). */}
             <div className="animate-hero-right flex-1 w-full max-w-[420px] lg:max-w-none">
-
-              {/* ── Mobile: stacked ── */}
-              <div className="flex flex-col gap-3 sm:hidden">
-                {/* Groups list */}
-                <div className="glass rounded-2xl p-4 shadow-xl">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your groups</p>
-                    <span className="text-[10px] text-slate-400">4 active</span>
-                  </div>
-                  {[
-                    { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
-                    { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
-                    { emoji: "☕", name: "Office Coffee Pool", badge: "✓ You've paid",  cls: "text-violet-600 bg-violet-50 dark:bg-violet-950/30 dark:text-violet-400" },
-                  ].map((g, i) => (
-                    <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
-                      <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{g.emoji}</div>
-                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 flex-1">{g.name}</p>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${g.cls}`}>{g.badge}</span>
+              {isMobileUA ? (
+                /* ── Phone (via ?view=full): stacked ── */
+                <div className="flex flex-col gap-3">
+                  {/* Groups list */}
+                  <div className="glass rounded-2xl p-4 shadow-xl">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your groups</p>
+                      <span className="text-[10px] text-slate-400">4 active</span>
                     </div>
-                  ))}
-                </div>
-
-                {/* Expense detail */}
-                <div className="glass rounded-2xl p-4" style={{ boxShadow: "0 12px 40px rgba(6,182,212,0.15)" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-sm shadow-sm">🏖️</div>
-                  </div>
-                  {[
-                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500",  by: "Priya" },
-                    { icon: "🏨", desc: "Hotel check-in",  amount: "₹12,000", by: "You"   },
-                    { icon: "🚕", desc: "Airport taxi",    amount: "₹2,000",  by: "Raj"   },
-                  ].map((e, i) => (
-                    <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
-                      <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
-                        <p className="text-[10px] text-slate-400">{e.by} · 5 splits</p>
+                    {[
+                      { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
+                      { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
+                      { emoji: "☕", name: "Office Coffee Pool", badge: "✓ You've paid",  cls: "text-violet-600 bg-violet-50 dark:bg-violet-950/30 dark:text-violet-400" },
+                    ].map((g, i) => (
+                      <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                        <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{g.emoji}</div>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 flex-1">{g.name}</p>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${g.cls}`}>{g.badge}</span>
                       </div>
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">{e.amount}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── sm+: overlapping absolute layout ── */}
-              <div className="hidden sm:block relative" style={{ height: 460 }}>
-                <div className="absolute inset-6 rounded-3xl blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgba(6,182,212,0.18) 0%, rgba(20,184,166,0.12) 60%, transparent 100%)" }} />
-
-                {/* Groups list card — behind, left */}
-                <div className="absolute glass rounded-2xl p-5 w-[262px]" style={{ top: 20, left: 0, transform: "rotate(-2.5deg)", zIndex: 1 }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your groups</p>
-                    <span className="text-[10px] text-slate-400">4 active</span>
+                    ))}
                   </div>
-                  {[
-                    { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
-                    { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
-                    { emoji: "☕", name: "Office Coffee Pool", badge: "✓ You've paid",  cls: "text-violet-600 bg-violet-50 dark:bg-violet-950/30 dark:text-violet-400" },
-                    { emoji: "🏕️", name: "Coorg Weekend", badge: "You owe ₹220",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
-                  ].map((g, i) => (
-                    <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
-                      <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{g.emoji}</div>
-                      <p className="text-xs font-medium text-slate-700 dark:text-slate-200 flex-1">{g.name}</p>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${g.cls}`}>{g.badge}</span>
-                    </div>
-                  ))}
-                </div>
 
-                {/* Expense detail card — front, right */}
-                <div className="absolute glass rounded-2xl p-5 w-[238px]" style={{ bottom: 0, right: 0, transform: "rotate(2.5deg)", zIndex: 2, boxShadow: "0 20px 60px rgba(6,182,212,0.18), 0 4px 16px rgba(0,0,0,0.08)" }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-base shadow-sm">🏖️</div>
-                  </div>
-                  {[
-                    { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500",  by: "Priya" },
-                    { icon: "🏨", desc: "Hotel check-in",  amount: "₹12,000", by: "You"   },
-                    { icon: "🚕", desc: "Airport taxi",    amount: "₹2,000",  by: "Raj"   },
-                  ].map((e, i) => (
-                    <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
-                      <div className="w-7 h-7 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
-                        <p className="text-[11px] text-slate-400">{e.by} · 5 splits</p>
+                  {/* Expense detail */}
+                  <div className="glass rounded-2xl p-4" style={{ boxShadow: "0 12px 40px rgba(6,182,212,0.15)" }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
                       </div>
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">{e.amount}</p>
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-sm shadow-sm">🏖️</div>
                     </div>
-                  ))}
+                    {[
+                      { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500",  by: "Priya" },
+                      { icon: "🏨", desc: "Hotel check-in",  amount: "₹12,000", by: "You"   },
+                      { icon: "🚕", desc: "Airport taxi",    amount: "₹2,000",  by: "Raj"   },
+                    ].map((e, i) => (
+                      <div key={i} className="flex items-center gap-2.5 py-2 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                        <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
+                          <p className="text-[10px] text-slate-400">{e.by} · 5 splits</p>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">{e.amount}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              ) : (
+                /* ── Desktop/tablet: overlapping absolute layout ── */
+                <div className="relative" style={{ height: 460 }}>
+                  <div className="absolute inset-6 rounded-3xl blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgba(6,182,212,0.18) 0%, rgba(20,184,166,0.12) 60%, transparent 100%)" }} />
 
-                {/* Floating badge — bobs gently after load */}
-                <div className="animate-float-bob absolute glass-sm rounded-full px-3 py-1.5 shadow-md border border-white/80 flex items-center gap-1.5" style={{ top: 0, right: 24, zIndex: 3 }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Trips · Nests · Circles</span>
+                  {/* Groups list card — behind, left */}
+                  <div className="absolute glass rounded-2xl p-5 w-[262px]" style={{ top: 20, left: 0, transform: "rotate(-2.5deg)", zIndex: 1 }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Your groups</p>
+                      <span className="text-[10px] text-slate-400">4 active</span>
+                    </div>
+                    {[
+                      { emoji: "🏖️", name: "Goa 2025",     badge: "You owe ₹450",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
+                      { emoji: "🏠", name: "Mumbai Flat",   badge: "You're owed ₹1,200", cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" },
+                      { emoji: "☕", name: "Office Coffee Pool", badge: "✓ You've paid",  cls: "text-violet-600 bg-violet-50 dark:bg-violet-950/30 dark:text-violet-400" },
+                      { emoji: "🏕️", name: "Coorg Weekend", badge: "You owe ₹220",      cls: "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" },
+                    ].map((g, i) => (
+                      <div key={i} className="flex items-center gap-2.5 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                        <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{g.emoji}</div>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 flex-1">{g.name}</p>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${g.cls}`}>{g.badge}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Expense detail card — front, right */}
+                  <div className="absolute glass rounded-2xl p-5 w-[238px]" style={{ bottom: 0, right: 0, transform: "rotate(2.5deg)", zIndex: 2, boxShadow: "0 20px 60px rgba(6,182,212,0.18), 0 4px 16px rgba(0,0,0,0.08)" }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100" style={{ fontFamily: "var(--font-fraunces)" }}>Goa 2025</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">5 members · 8 expenses</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-400 flex items-center justify-center text-base shadow-sm">🏖️</div>
+                    </div>
+                    {[
+                      { icon: "🍽️", desc: "Welcome dinner", amount: "₹4,500",  by: "Priya" },
+                      { icon: "🏨", desc: "Hotel check-in",  amount: "₹12,000", by: "You"   },
+                      { icon: "🚕", desc: "Airport taxi",    amount: "₹2,000",  by: "Raj"   },
+                    ].map((e, i) => (
+                      <div key={i} className="flex items-center gap-3 py-2.5 border-b border-slate-100/80 dark:border-slate-700/40 last:border-0">
+                        <div className="w-7 h-7 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">{e.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{e.desc}</p>
+                          <p className="text-[11px] text-slate-400">{e.by} · 5 splits</p>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">{e.amount}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Floating badge — bobs gently after load */}
+                  <div className="animate-float-bob absolute glass-sm rounded-full px-3 py-1.5 shadow-md border border-white/80 flex items-center gap-1.5" style={{ top: 0, right: 24, zIndex: 3 }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Trips · Nests · Circles</span>
+                  </div>
                 </div>
-              </div>
-
+              )}
             </div>
 
           </div>
@@ -446,94 +463,11 @@ export function AboutLanding() {
         </div>
       </section>
 
-      {/* ── Why ClearOff? ───────────────────────────────────────────────────── */}
-      <section id="why-clear" className="max-w-6xl mx-auto px-6 pb-24">
-        <FadeIn className="text-center mb-12">
-          <p className="text-sm font-semibold text-cyan-600 uppercase tracking-widest mb-3">Why ClearOff?</p>
-          <h2 className="text-4xl sm:text-5xl text-slate-800 dark:text-slate-100 mb-4" style={{ fontFamily: "var(--font-fraunces)" }}>
-            Not just another
-            <br />
-            <span style={{ background: "linear-gradient(135deg, #0891B2 0%, #14B8A6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              expense splitter.
-            </span>
-          </h2>
-        </FadeIn>
-
-        <FadeIn>
-          <div className="glass rounded-2xl overflow-hidden mb-10">
-            <div className="grid grid-cols-2 border-b border-slate-100 dark:border-slate-700/60">
-              <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60">
-                <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">Other apps</p>
-              </div>
-              <div className="px-6 py-4 bg-cyan-50/50 dark:bg-cyan-950/20">
-                <p className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">ClearOff ✦</p>
-              </div>
-            </div>
-            {[
-              {
-                them: "Type every field manually",
-                us:   "AI parses amount, payer and split in seconds",
-              },
-              {
-                them: "Everyone must create an account to join",
-                us:   "Add guests by name — they claim with Google later",
-              },
-              {
-                them: "Complex chains of IOUs between everyone",
-                us:   "Minimum transactions — one payment per person, guaranteed",
-              },
-              {
-                them: "No visual way to see who owes whom",
-                us:   "Debt Flow graph — animated money flows, tap any arc to pay instantly",
-              },
-              {
-                them: "Expenses pile up silently",
-                us:   "Email + push the moment any money moves",
-              },
-              {
-                them: "Disagreements go to WhatsApp",
-                us:   "Raise a dispute in-app — payer accepts, split updates automatically",
-              },
-              {
-                them: "No way to track direct 1:1 debts outside a group",
-                us:   "Streams — bilateral ledger for any two people, guest confirmation, partial settle",
-              },
-              {
-                them: "No shared fund or kitty management",
-                us:   "Circles — recurring or one-time pool, contribution tracking, WhatsApp reminders",
-              },
-            ].map((row, i) => (
-              <div key={i} className={`grid grid-cols-2 border-b border-slate-100/60 dark:border-slate-700/40 last:border-0 ${i % 2 === 1 ? "bg-slate-50/30 dark:bg-slate-800/20" : ""}`}>
-                <div className="px-6 py-4 border-r border-slate-100 dark:border-slate-700/60 flex items-start gap-2.5">
-                  <X className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-slate-400 dark:text-slate-500">{row.them}</p>
-                </div>
-                <div className="px-6 py-4 bg-cyan-50/20 dark:bg-cyan-950/10 flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
-                  <p className="text-sm text-slate-700 dark:text-slate-200">{row.us}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </FadeIn>
-
-        <FadeIn delay={80} className="flex flex-wrap items-center justify-center gap-3">
-          {[
-            "AI expense parsing", "Chat import", "Voice input", "Live split preview",
-            "Recurring templates", "Guest members", "QR code invites", "Import members",
-            "Per-group insights", "Trip timeline", "Email & push alerts", "UPI pay links",
-            "Debt flow graph", "CSV export", "Expense audit trail", "Installs on any device",
-            "Inline comments", "In-app dispute resolution",
-            "Streams · bilateral 1:1 ledger", "Guest confirmation link", "Partial settle",
-            "Circles · shared fund", "Recurring & one-time modes", "WhatsApp group reminder",
-            "Ghost members", "Flexi contributions",
-          ].map((pill) => (
-            <span key={pill} className="glass-sm rounded-full px-4 py-1.5 text-sm text-slate-600 dark:text-slate-300 border border-white/60 dark:border-slate-700/40">
-              {pill}
-            </span>
-          ))}
-        </FadeIn>
-      </section>
+      {/* ── Why ClearOff? — lazy-loaded (comparison table + 26-pill cloud was
+          the single heaviest eager DOM block on this page; extracted the
+          same way the 11 showcases below were). Anchor id stays on
+          LazySection's wrapper — see its `id` prop comment. ── */}
+      <LazySection sectionId="why-clearoff" id="why-clear" minHeight={1000} />
 
       {/* ── Trip timeline showcase — lazy-loaded, see lazy-section.tsx ── */}
       <LazySection sectionId="trip-timeline" minHeight={620} />

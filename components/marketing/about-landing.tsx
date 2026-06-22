@@ -1651,7 +1651,12 @@ export function AboutLanding() {
             <span className="text-slate-300 dark:text-slate-600">·</span>
             <span className="text-xs text-slate-400 dark:text-slate-500">{BRAND.tagline}</span>
           </div>
-          <div className="flex items-center gap-5 text-xs text-slate-400 dark:text-slate-500">
+          {/* flex-wrap: these 7 links + gaps never fit one unbroken row on a
+              mobile width — without wrap they silently overflowed past the
+              page's overflow-x-clip (added for the carousel scroll fix) and
+              read as "cut off" rather than scrollable (reported 2026-06-22).
+              justify-center keeps wrapped lines tidy instead of ragged-left. */}
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400 dark:text-slate-500">
             <Link href="/login" scroll={false} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Sign in</Link>
             <Link href="/changelog" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">What&apos;s New</Link>
             <Link href="/pricing" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Pricing</Link>

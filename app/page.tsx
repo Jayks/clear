@@ -24,7 +24,7 @@ export default async function LandingPage({
   // Desktop/tablet gets the full scrollable tour; phones keep the swipe
   // carousel (touch-native — see app/CLAUDE.md Landing Page section).
   // `?view=full` overrides this — it's the target of CarouselLanding's
-  // mobile-only "Home" nav link, the one way a phone can reach the full
+  // mobile-only "Full site" nav link, the one way a phone can reach the full
   // landing page (there is otherwise no route to it from a mobile UA).
   const { device } = userAgent({ headers: await headers() });
   const isMobile = device.type === "mobile" && view !== "full";

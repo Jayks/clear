@@ -13,7 +13,10 @@ import { BRAND } from "@/lib/brand";
  */
 export function LegalPageShell({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
   return (
-    <div className="overflow-x-clip min-h-screen">
+    <div className="overflow-x-clip overflow-y-visible min-h-screen">
+      {/* overflow-y-visible: see about-landing.tsx for why overflow-x-clip
+          needs an explicit overflow-y pin (CSS auto-coerces overflow-y to
+          "auto" otherwise, which can swallow mobile scroll gestures). */}
       <nav className="glass-nav sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">

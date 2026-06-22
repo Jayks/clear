@@ -23,7 +23,7 @@ const LINKS: { page: MarketingPage; href: string; label: string; className?: str
  * drifting apart (June 2026 consistency pass).
  *
  * `current === "home"` is special-cased on mobile width: that content only
- * ever reaches a phone via the carousel's "Home" nav link (`?view=full`,
+ * ever reaches a phone via the carousel's "Full site" nav link (`?view=full`,
  * overriding the device check in app/page.tsx — there's otherwise no route
  * to it from a mobile UA), so its mobile nav mirrors what sent it there —
  * Pricing/Sign in/Get started, no About App/What's New tour links — and its

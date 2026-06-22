@@ -9,6 +9,7 @@ import {
   CheckCircle2, RefreshCw, CalendarCheck, Bell,
 } from "lucide-react";
 import { ClearLogo, ClearIcon } from "@/components/shared/clear-logo";
+import { GLYPH_GRADIENT } from "@/lib/brand-glyph";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SettleFlowDemo } from "@/components/marketing/settle-flow-demo";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
@@ -86,9 +87,16 @@ function PhoneFrame({ children, tilt = 0 }: { children: React.ReactNode; tilt?: 
           transition: "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)",
         }}
       >
-        {/* ── Wide ambient shadow beneath the device ── */}
+        {/* ── Wide ambient shadow beneath the device — opacity-50 dark:opacity-100:
+            these shadow/glow values were tuned by eye against the dark-mode
+            background, where harshness disappears into the surrounding dark
+            page. Against the light-mode page they read as a visible dark smudge
+            with a soft-but-noticeable rectangular edge instead of fading away
+            (reported across multiple slides, 2026-06-22) — halving opacity in
+            light mode (the default, no dark: prefix) fixes that without
+            touching how it already looks in dark mode. ── */}
         <div
-          className="absolute"
+          className="absolute opacity-50 dark:opacity-100"
           style={{
             bottom: -32,
             left: "10%",
@@ -97,6 +105,19 @@ function PhoneFrame({ children, tilt = 0 }: { children: React.ReactNode; tilt?: 
             borderRadius: "50%",
             background: "rgba(0,0,0,0.38)",
             filter: "blur(22px)",
+          }}
+        />
+
+        {/* ── Outer-shell drop shadow — split from the body fill below so
+            opacity-50 dark:opacity-100 only softens the shadow, not the
+            device's own purple colour. Sits behind the body (rendered first). ── */}
+        <div
+          className="absolute inset-0 opacity-50 dark:opacity-100"
+          style={{
+            borderRadius: 54,
+            boxShadow:
+              "0 12px 32px rgba(58,48,72,0.7)," +   /* tight purple shadow */
+              "0 48px 96px rgba(30,20,45,0.55)",     /* wide purple halo */
           }}
         />
 
@@ -117,8 +138,6 @@ function PhoneFrame({ children, tilt = 0 }: { children: React.ReactNode; tilt?: 
               "#3A3048 82%," +     /* darker lower-right */
               "#5A4E6B 100%)",     /* bottom-right specular */
             boxShadow:
-              "0 12px 32px rgba(58,48,72,0.7)," +   /* tight purple shadow */
-              "0 48px 96px rgba(30,20,45,0.55)," +   /* wide purple halo */
               "inset 0 1px 0 rgba(255,255,255,0.18)," + /* top inner light */
               "inset 0 -1px 0 rgba(0,0,0,0.45)",
           }}
@@ -355,10 +374,11 @@ function ResponsivePhone({
         className="md:hidden relative mx-auto"
         style={{ width: MOBILE_W, height: CLIP_H, overflow: "hidden" }}
       >
-        {/* Per-slide ambient glow behind the phone */}
+        {/* Per-slide ambient glow behind the phone — opacity-50 dark:opacity-100,
+            same light-mode softening as PhoneFrame's drop shadow above. */}
         {accentGlow && (
           <div
-            className="absolute pointer-events-none"
+            className="absolute pointer-events-none opacity-50 dark:opacity-100"
             style={{
               inset: -40,
               background: `radial-gradient(ellipse at 50% 60%, ${accentGlow} 0%, transparent 70%)`,
@@ -382,7 +402,7 @@ function ResponsivePhone({
       <div className="hidden md:block relative">
         {accentGlow && (
           <div
-            className="absolute pointer-events-none"
+            className="absolute pointer-events-none opacity-50 dark:opacity-100"
             style={{
               inset: -60,
               background: `radial-gradient(ellipse at 50% 55%, ${accentGlow} 0%, transparent 65%)`,
@@ -895,11 +915,17 @@ export function CarouselLanding() {
         <div className="flex items-center gap-1">
           <ThemeToggle />
           {/* Mobile has no other route to the full landing page (this carousel
-              IS its "/"), so this slot is a "Home" escape hatch instead of
-              Pricing — ?view=full overrides the device check in
-              app/page.tsx. Pricing is reachable from there once landed. */}
+              IS its "/"), so this slot is a "Full site" escape hatch instead of
+              Pricing — ?view=full overrides the device check in app/page.tsx.
+              Pricing is reachable from there once landed. Labelled "Full site",
+              not "Home" — the carousel already IS home for a mobile UA, so a
+              "Home" link pointing elsewhere read as broken/misleading
+              (reported 2026-06-22). "Full tour" was considered and rejected —
+              the carousel's own aria-label is "ClearOff feature tour", so
+              that wording would've read as "more of the same" rather than a
+              different format. */}
           <Link href="/?view=full" className="text-xs font-medium text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
-            Home
+            Full site
           </Link>
           <button onClick={() => setLoginModal({ open: true })} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</button>
           <button onClick={() => setLoginModal({ open: true, intent: "signup" })} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-sm font-semibold py-2 px-3 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
@@ -980,7 +1006,20 @@ export function CarouselLanding() {
             Large logo → headline → 4 context pills → CTAs → trust badges → ticker
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={0} active={active}>
-        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden ${active === 0 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="ClearOff">
+        {/* justify-[safe_center] is the actual fix (confirmed via cross-device
+            testing, 2026-06-22 — only the shortest viewports, iPhone SE/Galaxy
+            S8, clip the logo; taller phones render fine, proving this is a
+            content-taller-than-viewport overflow, not a contrast/styling issue).
+            Plain `justify-center` + overflow-hidden/auto clips or strands the
+            TOP of overflowing centered flex content — browsers don't reliably
+            let you scroll into the negative space above a centered flex
+            container's natural top edge, so the logo (topmost element in the
+            stack) stayed clipped regardless of overflow-hidden vs overflow-auto.
+            `safe center` is the CSS WG's purpose-built fix: centers normally
+            when content fits, falls back to top-alignment (never clips) when
+            it doesn't. overflow-y-auto stays as the safety net for the bottom
+            overflow that fallback then produces on short viewports. */}
+        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-[safe_center] px-6 overflow-y-auto overflow-x-hidden ${active === 0 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="ClearOff">
 
           {/* ── Animated mesh gradient blobs ── */}
           <div className="absolute inset-0 pointer-events-none">
@@ -1002,16 +1041,34 @@ export function CarouselLanding() {
             animate={active === 0 ? "visible" : "hidden"}
           >
 
-            {/* Logo mark */}
+            {/* Logo mark — confirmed via DevTools to render at the correct 80×80
+                (2026-06-22); the "half visible" report was the gradient's
+                darkest corner (#062F38) sitting too close in value to the dark
+                page background (#020617/#0F172A) to read as a defined edge.
+                The nav logo (ClearLogo component) doesn't have this problem
+                because it layers a specular bloom + rim border on top of the
+                gradient — this hand-rolled copy was missing both. Added here. */}
             <motion.div
-              className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-cyan-500/20"
+              className="relative w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-cyan-500/20 overflow-hidden"
               variants={fadeScale}
               style={{
-                background: "linear-gradient(140deg, #22D3EE 0%, #0BB6D4 42%, #0E8FA8 78%, #0B5E70 100%)",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.15) inset, 0 20px 48px rgba(8,145,178,0.35)",
+                background: GLYPH_GRADIENT,
+                boxShadow: "0 20px 48px rgba(8,145,178,0.35)",
               }}
             >
-              <ClearIcon size={52} />
+              {/* specular bloom (top-left) — same as ClearLogo */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "radial-gradient(circle at 28% 16%, rgba(255,255,255,0.5), rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 62%)",
+                }}
+              />
+              {/* glass rim — same as ClearLogo, defines the edge against any background */}
+              <div className="absolute inset-0 rounded-3xl" style={{ border: "1px solid rgba(255,255,255,0.22)" }} />
+              <div className="relative flex">
+                <ClearIcon size={52} />
+              </div>
             </motion.div>
 
             {/* Headline */}
@@ -1118,7 +1175,11 @@ export function CarouselLanding() {
             Designed for 4 contexts from day 1 — Circle shown as "coming soon".
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={1} active={active}>
-        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-5 sm:px-8 py-6 overflow-hidden ${active === 1 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Overview">
+        {/* justify-[safe_center] + overflow-y-auto — same preventive fix as
+            slide 0 (see its comment): avoids the identical clip-on-short-
+            viewports failure mode pre-emptively, not because this slide was
+            reported broken. */}
+        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-[safe_center] px-5 sm:px-8 py-6 overflow-y-auto overflow-x-hidden ${active === 1 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Overview">
           {/* Headline — stagger in when slide 1 is active */}
           <motion.div
             className="text-center mb-5 sm:mb-6"
@@ -1731,7 +1792,8 @@ export function CarouselLanding() {
             SLIDE 6 — Stats interstitial (pattern break — no phone, big numbers)
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={6} active={active}>
-        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-center px-6 overflow-hidden ${active === 6 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="By the numbers">
+        {/* justify-[safe_center] + overflow-y-auto — same preventive fix as slide 0. */}
+        <div className={`snap-start snap-always w-full shrink-0 h-full relative flex flex-col items-center justify-[safe_center] px-6 overflow-y-auto overflow-x-hidden ${active === 6 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="By the numbers">
           {/* Ambient blobs */}
           <div className="absolute inset-0 pointer-events-none">
             <div style={{ position:"absolute", top:"-12%", left:"-8%", width:"55%", height:"55%", borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.22) 0%,transparent 70%)", animation:"blob1 15s ease-in-out infinite" }} />
@@ -2099,7 +2161,8 @@ export function CarouselLanding() {
             SLIDE 10 — CTA
         ══════════════════════════════════════════════════════════════════ */}
         <SlideWindow index={10} active={active}>
-        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-center px-6 relative overflow-hidden ${active === 10 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Get started">
+        {/* justify-[safe_center] + overflow-y-auto — same preventive fix as slide 0. */}
+        <div className={`snap-start snap-always w-full shrink-0 h-full flex flex-col items-center justify-[safe_center] px-6 relative overflow-y-auto overflow-x-hidden ${active === 10 ? "" : "slide-paused"}`} role="group" aria-roledescription="slide" aria-label="Get started">
           {/* Ambient blobs */}
           <div className="absolute inset-0 pointer-events-none">
             <div style={{ position:"absolute", top:"-20%", left:"-10%", width:"60%", height:"60%", borderRadius:"50%", background:"radial-gradient(circle,rgba(6,182,212,0.12) 0%,transparent 70%)", animation:"blob1 16s ease-in-out infinite" }} />

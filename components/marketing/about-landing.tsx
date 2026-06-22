@@ -56,7 +56,15 @@ const tickerItems = [
  */
 export function AboutLanding() {
   return (
-    <div className="overflow-x-clip">
+    <div className="overflow-x-clip overflow-y-visible">
+      {/* overflow-y-visible is deliberate: CSS auto-computes overflow-y:auto
+          whenever overflow-x is non-visible and overflow-y is left unset,
+          silently turning this div into its own scroll container — which can
+          capture touch-drag gestures on mobile instead of letting them bubble
+          to the page (the actual cause of "Home from the carousel renders a
+          page that won't scroll" on Android Chrome, found 2026-06-22). Pinning
+          overflow-y explicitly prevents that auto-coercion while keeping the
+          original horizontal-clip protection. */}
 
       {/* ── Nav — shared across every marketing page, see MarketingNav ── */}
       <MarketingNav current="home" />

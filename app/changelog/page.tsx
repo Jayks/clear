@@ -98,7 +98,9 @@ function ReleaseCard({ release, index }: { release: ChangelogRelease; index: num
 
 export default function ChangelogPage() {
   return (
-    <div className="overflow-x-clip">
+    <div className="overflow-x-clip overflow-y-visible">
+      {/* overflow-y-visible: see about-landing.tsx for why overflow-x-clip
+          needs an explicit overflow-y pin. */}
 
       {/* ── Nav — shared across every marketing page, see MarketingNav ── */}
       <MarketingNav current="changelog" />

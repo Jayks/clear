@@ -21,7 +21,7 @@ function NavProgressInner() {
 
   // Navigation complete — hide the bar. Must watch the full URL (pathname +
   // search), not just pathname: a navigation that only changes search params
-  // (e.g. CarouselLanding's mobile "Home" link, "/" → "/?view=full") left
+  // (e.g. CarouselLanding's mobile "Full site" link, "/" → "/?view=full") left
   // this effect's dependency unchanged, so the bar never cleared — stuck
   // "loading" forever even though the page had actually navigated underneath
   // (June 2026 bug — looked like "keeps rendering, never navigates").

@@ -1,6 +1,6 @@
 export default function ChangelogLoading() {
   return (
-    <div className="overflow-x-clip">
+    <div className="overflow-x-clip overflow-y-visible">
 
       {/* Nav skeleton */}
       <div className="glass-nav sticky top-0 z-50">

@@ -923,10 +923,35 @@ export function CarouselLanding() {
               (reported 2026-06-22). "Full tour" was considered and rejected —
               the carousel's own aria-label is "ClearOff feature tour", so
               that wording would've read as "more of the same" rather than a
-              different format. */}
-          <Link href="/?view=full" className="text-xs font-medium text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+              different format.
+
+              Hard window.location.href navigation, not a soft <Link> —
+              this was tried once before (2026-06-22) and reverted because
+              AboutLanding was heavy enough (451KB) that the extra reload
+              cost was a worse regression than the bug it fixed. Since then,
+              AboutLanding's 11 feature showcases were lazy-loaded (down to
+              ~247KB, see lazy-section.tsx) and a real RSC bug in that work
+              was found and fixed — re-tested afterward, soft navigation
+              still didn't render fresh content (NavProgress fired, but the
+              carousel stayed on screen for a long, visible delay before
+              eventually showing the real page) — consistent with Next.js's
+              client router cache serving the stale cached "/" entry and
+              only swapping in real content once a background revalidation
+              finishes, since the router cache is keyed by pathname and "/"
+              → "/?view=full" only changes searchParams. A hard navigation
+              skips that entirely — same fix the codebase already uses for
+              /admin (see app/CLAUDE.md "Admin navigation") — and the
+              original objection (page too heavy) no longer applies now
+              that the destination is fast. */}
+          <button
+            onClick={() => {
+              window.dispatchEvent(new Event("navprogress"));
+              window.location.href = "/?view=full";
+            }}
+            className="text-xs font-medium text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all"
+          >
             Full site
-          </Link>
+          </button>
           <button onClick={() => setLoginModal({ open: true })} className="text-sm font-semibold text-slate-600 dark:text-slate-300 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Sign in</button>
           <button onClick={() => setLoginModal({ open: true, intent: "signup" })} className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-sm font-semibold py-2 px-3 rounded-xl shadow-md shadow-cyan-500/25 transition-all hover:-translate-y-0.5">
             Get started

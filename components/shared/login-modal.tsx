@@ -36,24 +36,36 @@ export function LoginModal({ error, returnTo, intent, onClose }: LoginModalProps
 
   function close() {
     setIsOpen(false);
-    setTimeout(() => {
-      if (onClose) {
-        // Client-side modal (opened from CarouselLanding via state, not router).
-        // Just invoke the callback — no router navigation needed, no stale @modal
-        // slot issue, re-opening always works.
-        onClose();
-      } else if (returnTo?.startsWith("/join/") && isSafeReturnTo(returnTo)) {
-        // Join preview is a public page — send them there so they can still see it.
-        // `isSafeReturnTo` is redundant against "/join/" today (kept in sync via
-        // this shared helper rather than a second hand-rolled check, so a future
-        // edit to either guard can't silently drift apart from the other).
-        router.replace(returnTo);
-      } else {
-        // Intercepting-route mode (AutoLoginRedirect path). Use push so the clean
-        // "/" URL doesn't carry ?returnTo, preventing AutoLoginRedirect re-loop.
-        router.push("/");
-      }
-    }, 250);
+    if (onClose) {
+      // Client-side modal (opened from CarouselLanding via state, not router).
+      // Delay is safe here — no router transition involved, so there's nothing
+      // a subsequent click could race against. Just invoke the callback once
+      // the exit animation has had time to play.
+      setTimeout(() => onClose(), 250);
+      return;
+    }
+    // Router-based dismissal (intercepting-route /login) — fire immediately,
+    // NOT delayed. The 250ms delay used to apply here too, but it opened a
+    // window where the modal was already visually gone (isOpen=false fired
+    // synchronously) while the actual router.push/replace that dismisses the
+    // intercepted route was still pending — clicking a different /login link
+    // inside that window collided with the delayed navigation and one of the
+    // two was silently lost ("click Sign in, cancel, click Get started does
+    // nothing, and vice versa" — reported 2026-06-22). Firing immediately
+    // removes the race window entirely; React's own async render cycle still
+    // gives the exit animation enough time to be visible without an explicit
+    // delay stacked on top.
+    if (returnTo?.startsWith("/join/") && isSafeReturnTo(returnTo)) {
+      // Join preview is a public page — send them there so they can still see it.
+      // `isSafeReturnTo` is redundant against "/join/" today (kept in sync via
+      // this shared helper rather than a second hand-rolled check, so a future
+      // edit to either guard can't silently drift apart from the other).
+      router.replace(returnTo);
+    } else {
+      // Intercepting-route mode (AutoLoginRedirect path). Use push so the clean
+      // "/" URL doesn't carry ?returnTo, preventing AutoLoginRedirect re-loop.
+      router.push("/");
+    }
   }
 
   // Escape key

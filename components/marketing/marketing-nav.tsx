@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft } from "lucide-react";
 import { ClearLogo } from "@/components/shared/clear-logo";
@@ -5,9 +9,11 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 export type MarketingPage = "home" | "about" | "pricing" | "changelog";
 
-// scroll={false} on every /login Link below — without it, Next.js scrolls to
-// the {modal} slot when the intercepting /login route mounts (app/CLAUDE.md
-// Login modal gotcha).
+// LoginModal pulls in LoginForm → the full Supabase client SDK (auth, realtime,
+// postgrest — ~200KB minified). Lazy-loaded so that weight only downloads when
+// a visitor actually taps Sign in/Get started, not on every marketing-page view
+// (same pattern as carousel-landing.tsx).
+const LoginModal = dynamic(() => import("@/components/shared/login-modal").then((mod) => mod.LoginModal), { ssr: false });
 
 const LINKS: { page: MarketingPage; href: string; label: string; className?: string }[] = [
   { page: "about", href: "/about", label: "About App" },
@@ -39,92 +45,112 @@ const LINKS: { page: MarketingPage; href: string; label: string; className?: str
  * Pricing/Sign in/Get started properly sized for that width, and each page
  * has its own in-body CTA (PlanCards on `/pricing`, the hero buttons on
  * `/about`'s carousel).
+ *
+ * Sign in / Get started are buttons that open `<LoginModal>` via local state,
+ * NOT `<Link href="/login...">` navigation through the intercepting-route
+ * convention (`app/@modal/(.)login`). That convention has a real, reproducible
+ * Next.js limitation: the `@modal` parallel-route slot can fail to re-activate
+ * on a SECOND visit to the same intercepted route within one client session
+ * after it's already been opened and dismissed once — URL updates correctly,
+ * but the modal silently doesn't render (found + root-caused 2026-06-22:
+ * "Sign in works, cancel it, Get started does nothing — and vice versa").
+ * `CarouselLanding` already worked around this the same way (see its
+ * `loginModal` state comment); this brings `MarketingNav` in line with it
+ * instead of patching the intercepting-route path indefinitely.
  */
 export function MarketingNav({ current }: { current: MarketingPage }) {
+  const [loginModal, setLoginModal] = useState<{ open: boolean; intent?: string } | null>(null);
+
   if (current === "home") {
     return (
-      <nav className="glass-nav sticky top-0 z-50">
-        <div className="w-full px-4 sm:px-6 lg:px-10 h-14 flex items-center justify-between">
-          <Link href="/" className="flex sm:hidden items-center gap-2 group">
-            <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
-            <ClearLogo iconSize={32} showWordmark={false} className="flex items-center gap-2.5" />
-          </Link>
-          <ClearLogo iconSize={32} wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100" className="hidden sm:flex items-center gap-2.5" />
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <Link href="/about" className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
-              About App
+      <>
+        <nav className="glass-nav sticky top-0 z-50">
+          <div className="w-full px-4 sm:px-6 lg:px-10 h-14 flex items-center justify-between">
+            <Link href="/" className="flex sm:hidden items-center gap-2 group">
+              <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
+              <ClearLogo iconSize={32} showWordmark={false} className="flex items-center gap-2.5" />
             </Link>
-            <Link href="/changelog" className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
-              What&apos;s New
-            </Link>
-            <Link href="/pricing" className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
-              Pricing
-            </Link>
-            <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <Link
-              href="/login"
-              scroll={false}
-              className="inline-flex items-center text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 sm:px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/login?intent=signup"
-              scroll={false}
-              className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
-            >
-              Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
-            </Link>
+            <ClearLogo iconSize={32} wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100" className="hidden sm:flex items-center gap-2.5" />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Link href="/about" className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                About App
+              </Link>
+              <Link href="/changelog" className="hidden sm:block text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                What&apos;s New
+              </Link>
+              <Link href="/pricing" className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                Pricing
+              </Link>
+              <span className="hidden sm:block w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+              <button
+                onClick={() => setLoginModal({ open: true })}
+                className="inline-flex items-center text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 sm:px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm"
+              >
+                Sign in
+              </button>
+              <button
+                onClick={() => setLoginModal({ open: true, intent: "signup" })}
+                className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
+              >
+                Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
+              </button>
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+        {loginModal?.open && (
+          <LoginModal intent={loginModal.intent} onClose={() => setLoginModal(null)} />
+        )}
+      </>
     );
   }
 
   return (
-    <nav className="glass-nav sticky top-0 z-50">
-      <div className="w-full px-4 sm:px-6 lg:px-10 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
-          <ClearLogo iconSize={32} wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100" className="flex items-center gap-2.5" />
-        </Link>
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
-          <div className="hidden sm:flex items-center gap-1">
-            {LINKS.filter((l) => l.page !== current).map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all ${l.className ?? ""}`}
-              >
-                {l.label}
-              </Link>
-            ))}
-            <span className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-            <Link
-              href="/login"
-              scroll={false}
-              className="inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm"
-            >
-              Sign in
-            </Link>
-          </div>
-          {/* Get started stays visible at every width, unlike the rest of the
-              cluster above — it's the one action that should never need more
-              than one tap, especially on pages with no fold-visible CTA of
-              their own (changelog's "Get started free" sits after every
-              release note; pricing's plan cards are better, but consistency
-              matters more than relying on each page's own layout). */}
-          <Link
-            href="/login?intent=signup"
-            scroll={false}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
-          >
-            Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
+    <>
+      <nav className="glass-nav sticky top-0 z-50">
+        <div className="w-full px-4 sm:px-6 lg:px-10 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
+            <ClearLogo iconSize={32} wordmarkClassName="text-lg font-semibold text-slate-800 dark:text-slate-100" className="flex items-center gap-2.5" />
           </Link>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <div className="hidden sm:flex items-center gap-1">
+              {LINKS.filter((l) => l.page !== current).map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`text-sm font-medium text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all ${l.className ?? ""}`}
+                >
+                  {l.label}
+                </Link>
+              ))}
+              <span className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+              <button
+                onClick={() => setLoginModal({ open: true })}
+                className="inline-flex items-center text-sm font-semibold text-slate-700 dark:text-slate-200 px-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-800/60 hover:-translate-y-0.5 transition-all shadow-sm"
+              >
+                Sign in
+              </button>
+            </div>
+            {/* Get started stays visible at every width, unlike the rest of the
+                cluster above — it's the one action that should never need more
+                than one tap, especially on pages with no fold-visible CTA of
+                their own (changelog's "Get started free" sits after every
+                release note; pricing's plan cards are better, but consistency
+                matters more than relying on each page's own layout). */}
+            <button
+              onClick={() => setLoginModal({ open: true, intent: "signup" })}
+              className="inline-flex items-center gap-1.5 bg-gradient-to-br from-[#129DB8] to-[#07788C] hover:from-[#07788C] hover:to-[#08596A] text-white text-xs sm:text-sm font-semibold py-2 px-3 sm:px-4 rounded-xl shadow-md shadow-cyan-500/20 transition-all hover:-translate-y-0.5"
+            >
+              Get started <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
+            </button>
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+      {loginModal?.open && (
+        <LoginModal intent={loginModal.intent} onClose={() => setLoginModal(null)} />
+      )}
+    </>
   );
 }

@@ -6,6 +6,7 @@ import { ServiceWorkerRegistration } from "@/components/shared/service-worker-re
 import { IOSInstallHint } from "@/components/shared/ios-install-hint";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { NavProgress } from "@/components/shared/nav-progress";
+import { BfcacheReload } from "@/components/shared/bfcache-reload";
 import Script from "next/script";
 import { BRAND, BRAND_TITLE } from "@/lib/brand";
 import "./globals.css";
@@ -56,6 +57,7 @@ export default function RootLayout({
           <NavProgress />
           <OfflineBanner />
           <ServiceWorkerRegistration />
+          <BfcacheReload />
           {/* Decorative background blobs */}
           <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
             <div className="absolute -top-48 -right-48 w-[600px] h-[600px] rounded-full bg-cyan-300/20 dark:bg-cyan-800/20 blur-3xl" />

@@ -3,10 +3,13 @@ import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { expenses } from "@/lib/db/schema/expenses";
 import { settlements } from "@/lib/db/schema/settlements";
+import { adminActivity } from "@/lib/db/schema/admin-activity";
+import type { AdminActivity } from "@/lib/db/schema/admin-activity";
 import { count, sum, eq, sql, desc, isNotNull, and, inArray } from "drizzle-orm";
 import { subscriptions } from "@/lib/db/schema/subscriptions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/db/queries/auth";
+import { unstable_cache } from "next/cache";
 
 // Uses the shared getCurrentUser() (itself React-cache()-wrapped) so the admin
 // queries reuse the same validated-session lookup as the rest of the request
@@ -42,6 +45,34 @@ export function isPlatformAdmin(email: string | null | undefined): boolean {
   return getPlatformAdminEmails().includes(email);
 }
 
+// Resolves PLATFORM_ADMIN_EMAIL entries to Supabase Auth user IDs via the
+// Admin API. Fails open to [] (never throws) — callers treat "no admins
+// resolved" as a no-op, same posture as the original inline block this
+// replaces (used to live inline in getAdminUserList()).
+async function resolvePlatformAdminUserIds(): Promise<string[]> {
+  const adminEmails = new Set(getPlatformAdminEmails());
+  if (adminEmails.size === 0) return [];
+  try {
+    const adminClient = createAdminClient();
+    const { data } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+    return (data?.users ?? [])
+      .filter((u) => u.email && adminEmails.has(u.email))
+      .map((u) => u.id);
+  } catch {
+    return [];
+  }
+}
+
+// Cached wrapper — the raw resolver above is a listUsers({ perPage: 1000 })
+// Admin API call, too heavy to run on every login (notifyAdmins() calls this
+// once per trackVisit()). The admin email→ID mapping essentially never
+// changes, so cache it for an hour instead of hitting the Admin API per visit.
+export const getPlatformAdminUserIds = unstable_cache(
+  resolvePlatformAdminUserIds,
+  ["platform-admin-ids"],
+  { revalidate: 3600 }
+);
+
 export async function getAdminStats() {
   await requirePlatformAdmin();
   return withAdminTimeout(async (tx) => {
@@ -68,20 +99,9 @@ export async function getAdminStats() {
 export async function getAdminUserList() {
   await requirePlatformAdmin();
 
-  // Resolve platform admin emails → user IDs via Supabase Auth (outside the DB transaction)
-  const adminEmails = new Set(getPlatformAdminEmails());
-  const platformAdminIds = new Set<string>();
-  if (adminEmails.size > 0) {
-    try {
-      const adminClient = createAdminClient();
-      const { data } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-      for (const u of data?.users ?? []) {
-        if (u.email && adminEmails.has(u.email)) platformAdminIds.add(u.id);
-      }
-    } catch {
-      // admin client unavailable — skip platform admin tagging
-    }
-  }
+  // Resolve platform admin emails → user IDs via the shared cached resolver
+  // (outside the DB transaction).
+  const platformAdminIds = new Set(await getPlatformAdminUserIds());
 
   return withAdminTimeout(async (tx) => {
     const rows = await tx
@@ -171,5 +191,20 @@ export async function getAdminGroupList() {
       .limit(200);
 
     return rows.map(r => ({ ...r, creatorName: "—" }));
+  });
+}
+
+// Deliberately UNCACHED, unlike getPlatformAdminUserIds above — that cache is
+// justified because the admin email→ID mapping never changes; this data
+// changes on every login, so caching it would directly defeat the feature's
+// purpose (refreshing /admin after a fresh login wouldn't show it).
+export async function getRecentAdminActivity(limit: number): Promise<AdminActivity[]> {
+  await requirePlatformAdmin();
+  return withAdminTimeout(async (tx) => {
+    return tx
+      .select()
+      .from(adminActivity)
+      .orderBy(desc(adminActivity.createdAt))
+      .limit(limit);
   });
 }

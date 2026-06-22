@@ -477,6 +477,8 @@ RSC → `InsightsTabs` (`"use client"`, `AnimatePresence` tab cross-fade). `getA
 
 **DB resilience** — `lib/db/client.ts`: `max:3`, `idle_timeout:20`, `connect_timeout:10`. Admin page uses `Promise.race` against 12s fallback (never rejects).
 
+**Recent activity feed** — persisted `/admin` section (between Settings and Recent trips) showing logins/signups/purchases/refunds. 5th query in the page's `Promise.race` tuple: `getRecentAdminActivity(20)`. Icon badge per `admin_activity.type` via the local `ACTIVITY_BADGE` map (`login`→`LogIn` slate, `signup`→`UserPlus` emerald, `purchase`→`IndianRupee` amber, `refund`→`Undo2` slate). Event-producing call sites (`trackVisit`, `confirmPassPurchase`, the Razorpay webhook) call `recordAdminEvent()` (`lib/notifications/send-admin-alert.ts`), never `notifyAdmins` directly — see the `admin_activity` entry in `lib/db/CLAUDE.md` for the persist-then-notify + refund-dedup design.
+
 ---
 
 ## App-Route Gotchas

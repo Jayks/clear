@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractCapturedPayment, extractRefundPaymentId, getEventType } from "./webhook-logic";
+import { extractCapturedPayment, extractRefundEntity, getEventType } from "./webhook-logic";
 
 describe("getEventType", () => {
   it("reads the event discriminator from a well-formed payload", () => {
@@ -85,26 +85,35 @@ describe("extractCapturedPayment", () => {
   });
 });
 
-describe("extractRefundPaymentId", () => {
-  it("extracts payment_id from a well-formed refund payload", () => {
+describe("extractRefundEntity", () => {
+  it("extracts id + payment_id from a well-formed refund payload", () => {
     const payload = {
       event: "refund.processed",
       payload: { refund: { entity: { id: "rfnd_1", payment_id: "pay_29QQoUBi66xm2f" } } },
     };
-    expect(extractRefundPaymentId(payload)).toBe("pay_29QQoUBi66xm2f");
+    expect(extractRefundEntity(payload)).toEqual({ id: "rfnd_1", paymentId: "pay_29QQoUBi66xm2f" });
   });
 
   it("returns null for a non-object payload", () => {
-    expect(extractRefundPaymentId(null)).toBeNull();
+    expect(extractRefundEntity(null)).toBeNull();
   });
 
   it("returns null when payload.refund is missing", () => {
-    expect(extractRefundPaymentId({ event: "refund.processed", payload: {} })).toBeNull();
+    expect(extractRefundEntity({ event: "refund.processed", payload: {} })).toBeNull();
   });
 
   it("returns null when refund.entity.payment_id is missing or not a string", () => {
     expect(
-      extractRefundPaymentId({ event: "refund.processed", payload: { refund: { entity: { id: "rfnd_1" } } } }),
+      extractRefundEntity({ event: "refund.processed", payload: { refund: { entity: { id: "rfnd_1" } } } }),
+    ).toBeNull();
+  });
+
+  it("returns null when refund.entity.id is missing or not a string", () => {
+    expect(
+      extractRefundEntity({
+        event: "refund.processed",
+        payload: { refund: { entity: { payment_id: "pay_1" } } },
+      }),
     ).toBeNull();
   });
 });

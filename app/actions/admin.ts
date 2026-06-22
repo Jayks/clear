@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { subscriptions } from "@/lib/db/schema/subscriptions";
-import { eq, count, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/db/queries/admin";
@@ -12,7 +12,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getVisitorNotificationsEnabled, setVisitorNotificationsEnabled } from "@/lib/db/queries/settings";
-import { sendTelegramMessage } from "@/lib/notifications/send-telegram-notification";
+import { recordAdminEvent } from "@/lib/notifications/send-admin-alert";
 
 function parseBrowser(ua: string): string {
   if (/edg\//i.test(ua)) return "Edge";
@@ -33,13 +33,6 @@ function parseOS(ua: string): string {
   return "Unknown OS";
 }
 
-function accountAge(createdAt: string): string {
-  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000);
-  if (days === 0) return "today";
-  if (days === 1) return "1 day ago";
-  return `${days} days ago`;
-}
-
 export async function trackVisit(): Promise<void> {
   try {
     const [user, enabled] = await Promise.all([getCurrentUser(), getVisitorNotificationsEnabled()]);
@@ -49,13 +42,9 @@ export async function trackVisit(): Promise<void> {
     const ip = hdrs.get("x-forwarded-for")?.split(",")[0].trim() ?? "";
     const ua = hdrs.get("user-agent") ?? "";
 
-    // geolocation + group count in parallel
-    const [geo, groupCountRow] = await Promise.all([
-      ip && ip !== "::1" && ip !== "127.0.0.1"
-        ? fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) }).then((r) => r.json()).catch(() => null)
-        : Promise.resolve(null),
-      db.select({ cnt: count() }).from(groupMembers).where(eq(groupMembers.userId, user.id)).then((r) => r[0]?.cnt ?? 0).catch(() => 0),
-    ]);
+    const geo = ip && ip !== "::1" && ip !== "127.0.0.1"
+      ? await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) }).then((r) => r.json()).catch(() => null)
+      : null;
 
     const location = geo?.city
       ? `${geo.city}, ${geo.region ?? ""}, ${geo.country_code ?? ""}`.replace(/, ,/g, ",").trim()
@@ -63,26 +52,18 @@ export async function trackVisit(): Promise<void> {
     const isp = geo?.org ? ` · ${geo.org.replace(/^AS\d+ /i, "")}` : "";
 
     const name = user.user_metadata?.full_name ?? "Unknown";
-    const email = user.email ?? "";
     const os = parseOS(ua);
     const browser = parseBrowser(ua);
     const joinedAt = user.created_at ?? "";
     const isNew = joinedAt && Date.now() - new Date(joinedAt).getTime() < 5 * 60 * 1000;
-    const age = joinedAt ? accountAge(joinedAt) : "unknown";
-    const time = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
 
-    const lines = [
-      `👤 <b>New visit · ClearOff</b>`,
-      ``,
-      isNew ? `🆕 <b>NEW USER</b>` : null,
-      `${name} (${email})`,
-      `📍 ${location}${isp}`,
-      `💻 ${os} · ${browser}`,
-      `🗓 Joined ${age} · ${groupCountRow} group${groupCountRow === 1 ? "" : "s"}`,
-      `🕐 ${time} IST`,
-    ].filter((l) => l !== null).join("\n");
+    // Push bodies get truncated on lock screens — keep it to one glanceable
+    // line (who + where + device). New-vs-returning moves into the title
+    // since the old bold "NEW USER" line doesn't fit here.
+    const title = isNew ? "🆕 New signup" : "👤 New visit";
+    const body = `${name} · ${location}${isp} · ${os}/${browser}`;
 
-    await sendTelegramMessage(lines);
+    await recordAdminEvent({ type: isNew ? "signup" : "login", userId: user.id, title, body, url: "/admin" });
   } catch {
     // fire-and-forget — never surfaces to the user
   }

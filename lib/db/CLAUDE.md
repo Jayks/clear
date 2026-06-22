@@ -192,6 +192,21 @@ UNIQUE: (user_id, period)
 ```
 Per-user monthly logging-AI counter backing the **silent free-tier abuse ceiling** (`FREE_AI_MONTHLY_CEILING = 50` in `lib/subscription/ai-quota.ts`). Schema: `lib/db/schema/ai-usage.ts`. RLS enabled, **no policies** (only the Drizzle direct connection writes it; `canUseLoggingAI` fails open if the table is absent). Apply via `drizzle/ai-usage.sql` in the Supabase SQL Editor.
 
+### admin_activity
+```
+id: uuid PK
+type: text NOT NULL          -- 'login' | 'signup' | 'purchase' | 'refund' — text not enum, matches expenses.category convention
+user_id: uuid NOT NULL       -- auth.users.id, no FK (cross-schema — matches stream_guests.created_by precedent)
+title: text NOT NULL         -- short label, e.g. "👤 New visit" — stored for fidelity, not re-displayed in the UI
+body: text NOT NULL          -- detail line shown in the /admin feed, e.g. "Jayakumar Sekar · Chennai, TN, IN · Windows/Chrome"
+dedup_key: text nullable     -- only refund events set this (`refund:${refundId}`)
+created_at: timestamptz NOT NULL
+UNIQUE: dedup_key            -- multiple NULLs are distinct in Postgres, so login/signup/purchase rows are unaffected
+```
+Persisted "recent activity" feed backing `/admin`'s Recent activity section — closes the durability gap of the push-only admin-alert path (a missed/failed push no longer leaves zero trace). Schema: `lib/db/schema/admin-activity.ts`. Write primitive: `recordAdminActivity()` (`lib/db/queries/admin-activity.ts`) — `INSERT … ON CONFLICT (dedup_key) DO NOTHING`, returns `boolean` ("should this go on to notify?"); never throws, fails open (`true`) on an unexpected DB error so persistence failures can never silently suppress a push. Read query: `getRecentAdminActivity(limit)` (`lib/db/queries/admin.ts`) — **uncached** (unlike `getPlatformAdminUserIds`; this data changes on every login, so caching it would defeat the feature). RLS enabled, **no policies** — same posture as `ai_usage`. Apply via `drizzle/admin-activity.sql`.
+
+**Why a dedup key at all**: Razorpay fires both `refund.created` and `refund.processed` for one refund — two distinct `event_id`s, so the webhook route's own event_id dedup ledger (`razorpay_webhook_events`) doesn't collapse them. `recordAdminEvent()` (`lib/notifications/send-admin-alert.ts`) is the orchestrator every call site uses instead of `notifyAdmins` directly — it awaits the persist, and only pushes when the persist actually won the claim. Keyed on the refund's own stable id, not `eventType` or `paymentId` — order-independent, and a payment can have multiple distinct refunds.
+
 ### stream_guests
 ```
 id: uuid PK

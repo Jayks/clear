@@ -8,8 +8,11 @@ import { verifyWebhookSignature } from "@/lib/razorpay/verify";
 import { parseOrderNotes } from "@/lib/razorpay/order-notes";
 import { getPassAmountPaise } from "@/lib/razorpay/pass";
 import { extendEntitlement } from "@/lib/subscription/entitlement";
-import { getEventType, extractCapturedPayment, extractRefundPaymentId } from "@/lib/razorpay/webhook-logic";
+import { getEventType, extractCapturedPayment, extractRefundEntity } from "@/lib/razorpay/webhook-logic";
 import { getRazorpayMode, getRazorpayWebhookSecret } from "@/lib/razorpay/credentials";
+import { recordAdminEvent } from "@/lib/notifications/send-admin-alert";
+import { formatCurrency } from "@/lib/utils";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,17 +140,49 @@ async function handlePaymentCaptured(payload: unknown): Promise<void> {
     });
 
   revalidatePath("/", "layout");
+
+  // This is the backstop path (checkout tab closed before confirmPassPurchase
+  // ran) — the atomic claim above (claimedPayment.length === 0 check) means
+  // exactly one of this path or confirmPassPurchase's own notify call reaches
+  // here per payment, so this never double-fires with the client callback.
+  // Buyer name lookup is wrapped separately so a failure here can never
+  // affect the entitlement grant above (already committed) — only the
+  // notify call's body falls back to "Someone".
+  let buyerName = "Someone";
+  try {
+    const { data } = await createAdminClient().auth.admin.getUserById(notes.userId);
+    buyerName = data.user?.user_metadata?.full_name ?? "Someone";
+  } catch {
+    // name enrichment is best-effort — fall back silently
+  }
+  await recordAdminEvent({
+    type: "purchase",
+    userId: notes.userId,
+    title: "💰 Purchase",
+    body: `${buyerName} · ${formatCurrency(getPassAmountPaise(notes.passType, notes.earlyBird) / 100, "INR")} · ${notes.passType === "annual" ? "Annual pass" : "30-day pass"}${notes.earlyBird ? " (Early Bird)" : ""}`,
+    url: "/admin",
+  });
 }
 
-/** v1 simplification (RAZORPAY_PLAN.md §4): clear the entitlement, don't day-math a partial refund. */
+/**
+ * v1 simplification (RAZORPAY_PLAN.md §4): clear the entitlement, don't
+ * day-math a partial refund.
+ *
+ * Called unconditionally for BOTH `refund.created` and `refund.processed` —
+ * these are distinct event_ids for the same refund, so the route's own
+ * event_id dedup ledger does NOT collapse them. The admin-activity dedup key
+ * (`refund:${refundEntity.id}`) is what makes the notify exactly-once here,
+ * independent of which event type arrives, or arrives first — webhook
+ * delivery order is never guaranteed.
+ */
 async function handleRefund(payload: unknown): Promise<void> {
-  const paymentId = extractRefundPaymentId(payload);
-  if (!paymentId) return;
+  const refundEntity = extractRefundEntity(payload);
+  if (!refundEntity) return;
 
   const [paymentRow] = await db
     .select({ userId: razorpayPayments.userId })
     .from(razorpayPayments)
-    .where(eq(razorpayPayments.paymentId, paymentId))
+    .where(eq(razorpayPayments.paymentId, refundEntity.paymentId))
     .limit(1);
   if (!paymentRow) return; // refund for a payment we never recorded — nothing to clear
 
@@ -157,4 +192,20 @@ async function handleRefund(payload: unknown): Promise<void> {
     .where(eq(subscriptions.userId, paymentRow.userId));
 
   revalidatePath("/", "layout");
+
+  let buyerName = "Someone";
+  try {
+    const { data } = await createAdminClient().auth.admin.getUserById(paymentRow.userId);
+    buyerName = data.user?.user_metadata?.full_name ?? "Someone";
+  } catch {
+    // name enrichment is best-effort — fall back silently
+  }
+  await recordAdminEvent({
+    type: "refund",
+    userId: paymentRow.userId,
+    title: "↩️ Refund",
+    body: `${buyerName} · entitlement cleared`,
+    url: "/admin",
+    dedupKey: `refund:${refundEntity.id}`,
+  });
 }

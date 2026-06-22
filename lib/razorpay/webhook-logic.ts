@@ -37,8 +37,17 @@ export function extractCapturedPayment(payload: unknown): CapturedPaymentEntity 
   return { id, orderId, notes };
 }
 
+export interface RefundEntity {
+  /** The refund's own stable id (e.g. `re_xxx`) — used as the dedup key
+   * across `refund.created`/`refund.processed`, since those are two distinct
+   * events (different `event_id`s) for the same refund and webhook delivery
+   * order is never guaranteed. */
+  id: string;
+  paymentId: string;
+}
+
 /** `refund.created`/`refund.processed` events nest the refund entity under payload.refund.entity. */
-export function extractRefundPaymentId(payload: unknown): string | null {
+export function extractRefundEntity(payload: unknown): RefundEntity | null {
   if (!isRecord(payload)) return null;
   const payloadField = payload.payload;
   if (!isRecord(payloadField)) return null;
@@ -46,6 +55,7 @@ export function extractRefundPaymentId(payload: unknown): string | null {
   if (!isRecord(refund)) return null;
   const entity = refund.entity;
   if (!isRecord(entity)) return null;
-  const paymentId = entity.payment_id;
-  return typeof paymentId === "string" ? paymentId : null;
+  const { id, payment_id: paymentId } = entity;
+  if (typeof id !== "string" || typeof paymentId !== "string") return null;
+  return { id, paymentId };
 }

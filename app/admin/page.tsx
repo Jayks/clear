@@ -1,9 +1,12 @@
-import { getAdminStats, getAdminUserList, getAdminGroupList } from "@/lib/db/queries/admin";
+import type React from "react";
+import { getAdminStats, getAdminUserList, getAdminGroupList, getRecentAdminActivity } from "@/lib/db/queries/admin";
 import { getVisitorNotificationsEnabled } from "@/lib/db/queries/settings";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Users, Map, Receipt, TrendingUp, Shield, Briefcase, UserCircle2, Bell } from "lucide-react";
+import { Users, Map, Receipt, TrendingUp, Shield, Briefcase, UserCircle2, Bell, Activity, LogIn, UserPlus, IndianRupee, Undo2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { VisitorNotificationsToggle } from "./visitor-notifications-toggle";
 import type { Metadata } from "next";
+import type { AdminActivity } from "@/lib/db/schema/admin-activity";
 
 export const metadata: Metadata = { title: "Admin Dashboard — ClearOff" };
 
@@ -27,19 +30,42 @@ const ROLE_CONFIG = {
 
 const EMPTY_STATS = { totalUsers: 0, totalGroups: 0, totalExpenses: 0, totalSettled: 0 };
 
+// Icon badge per admin_activity.type — the documented "Neutral (activity
+// feed, generic)" slate entry in components/CLAUDE.md's section-header color
+// table, except purchase/signup get their own accent (amber/emerald) since
+// this feed mixes positive and neutral events in one list. Keyed by `string`
+// (not AdminActivityType) since the DB column is text, not an enum — a
+// fallback default keeps this safe against any unexpected value at runtime.
+const ACTIVITY_BADGE: Record<string, { icon: React.ElementType; bg: string; border: string; iconColor: string }> = {
+  login:    { icon: LogIn,       bg: "bg-slate-100 dark:bg-slate-800",       border: "border-slate-200 dark:border-slate-700",         iconColor: "text-slate-500 dark:text-slate-400"     },
+  signup:   { icon: UserPlus,    bg: "bg-emerald-50 dark:bg-emerald-900/30", border: "border-emerald-200 dark:border-emerald-800/60",  iconColor: "text-emerald-600 dark:text-emerald-400" },
+  purchase: { icon: IndianRupee, bg: "bg-amber-50 dark:bg-amber-900/30",     border: "border-amber-200 dark:border-amber-800/60",      iconColor: "text-amber-600 dark:text-amber-400"     },
+  refund:   { icon: Undo2,       bg: "bg-slate-100 dark:bg-slate-800",       border: "border-slate-200 dark:border-slate-700",         iconColor: "text-slate-500 dark:text-slate-400"     },
+};
+
+function ActivityBadge({ type }: { type: string }) {
+  const { icon: Icon, bg, border, iconColor } = ACTIVITY_BADGE[type] ?? ACTIVITY_BADGE.login;
+  return (
+    <div className={`w-8 h-8 rounded-full ${bg} border ${border} flex items-center justify-center shrink-0`}>
+      <Icon className={`w-4 h-4 ${iconColor}`} />
+    </div>
+  );
+}
+
 export default async function AdminDashboardPage() {
   // withAdminTimeout in each query sets SET LOCAL statement_timeout = 8s, so
   // slow queries are hard-cancelled by Postgres and release their connections.
   // The 12s page-level fallback is a last-resort safety net.
-  const [stats, users, trips, visitorNotificationsEnabled] = await Promise.race([
+  const [stats, users, trips, visitorNotificationsEnabled, recentActivity] = await Promise.race([
     Promise.all([
       getAdminStats().catch(() => EMPTY_STATS),
       getAdminUserList().catch(() => [] as Awaited<ReturnType<typeof getAdminUserList>>),
       getAdminGroupList().catch(() => [] as Awaited<ReturnType<typeof getAdminGroupList>>),
       getVisitorNotificationsEnabled().catch(() => true),
+      getRecentAdminActivity(20).catch(() => [] as AdminActivity[]),
     ]),
-    new Promise<[typeof EMPTY_STATS, never[], never[], boolean]>((resolve) =>
-      setTimeout(() => resolve([EMPTY_STATS, [], [], true]), 12_000)
+    new Promise<[typeof EMPTY_STATS, never[], never[], boolean, AdminActivity[]]>((resolve) =>
+      setTimeout(() => resolve([EMPTY_STATS, [], [], true, []]), 12_000)
     ),
   ]);
 
@@ -152,11 +178,41 @@ export default async function AdminDashboardPage() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Visitor notifications</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Send a Telegram message when an authenticated user opens the app (once per session).
+              Send a push notification to your devices when an authenticated user opens the app (once per session).
             </p>
           </div>
           <VisitorNotificationsToggle initialEnabled={visitorNotificationsEnabled} />
         </div>
+      </div>
+
+      {/* Recent activity */}
+      <div>
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+            <Activity className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent activity</span>
+          <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r from-slate-300/60 to-transparent dark:from-slate-600/50 dark:to-transparent" />
+        </div>
+        {recentActivity.length === 0 ? (
+          <div className="glass-sm rounded-xl px-4 py-5 text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400">No activity yet</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {recentActivity.map((event) => (
+              <div key={event.id} className="glass-sm rounded-xl px-3 py-2.5 flex items-center gap-3">
+                <ActivityBadge type={event.type} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700 dark:text-slate-200 leading-snug truncate">{event.body}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    {formatDistanceToNow(event.createdAt, { addSuffix: true })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent trips */}

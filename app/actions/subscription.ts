@@ -17,6 +17,8 @@ import { getRazorpayMode, getRazorpayKeyId, getRazorpayKeySecret } from "@/lib/r
 import { getUserPlan } from "@/lib/subscription/gates";
 import { getGroupReceiptScanCount } from "@/lib/db/queries/expenses";
 import { shouldShowAiNudge } from "@/lib/subscription/ai-nudge";
+import { recordAdminEvent } from "@/lib/notifications/send-admin-alert";
+import { formatCurrency } from "@/lib/utils";
 
 // Called fire-and-forget from app/(app)/layout.tsx on every authenticated page load.
 // Creates the subscription row (trialing) on first visit, regardless of entry point.
@@ -194,6 +196,20 @@ export async function confirmPassPurchase(
     });
 
   revalidatePath("/", "layout");
+
+  // This is the fast/primary confirmation path (checkout tab stayed open) —
+  // the atomic claim above means exactly one of this path or the webhook
+  // backstop (handlePaymentCaptured) reaches here per payment, so this never
+  // double-fires with the webhook's own notify call.
+  const buyerName = user.user_metadata?.full_name ?? "Someone";
+  await recordAdminEvent({
+    type: "purchase",
+    userId: user.id,
+    title: "💰 Purchase",
+    body: `${buyerName} · ${formatCurrency(getPassAmountPaise(passType, earlyBird) / 100, "INR")} · ${passType === "annual" ? "Annual pass" : "30-day pass"}${earlyBird ? " (Early Bird)" : ""}`,
+    url: "/admin",
+  });
+
   return { ok: true, plusUntil };
 }
 

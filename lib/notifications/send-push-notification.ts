@@ -147,3 +147,59 @@ export async function sendPushToMembers(params: PushParams): Promise<void> {
     })
   );
 }
+
+// ── Generic per-user push, no group context ─────────────────────────────────
+
+/**
+ * Send a web-push notification to every device a specific user has subscribed
+ * from. No group/notifications_muted check — used for system-level alerts
+ * (admin login/purchase pings) that aren't tied to any group.
+ *
+ * Returns the number of subscriptions the send was attempted against, so
+ * callers can detect "this user has zero subscriptions" and log accordingly.
+ *
+ * Deliberately logs (console.error) any send failure that isn't a 410 Gone —
+ * sendPushToUser/sendPushToMembers above silently swallow those, which is a
+ * pre-existing blind spot not worth touching here, but this function backs
+ * the admin-alert system that replaced a channel (Telegram) that died
+ * silently with nobody noticing, so failures here should be visible.
+ */
+export async function sendPushToUserId(
+  userId: string,
+  payload: { title: string; body: string; url: string }
+): Promise<number> {
+  const subs = await db
+    .select()
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.userId, userId));
+
+  if (subs.length === 0) return 0;
+
+  const webpush = ((await import("web-push")) as unknown as { default: typeof webpushType }).default;
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+
+  const message = JSON.stringify(payload);
+
+  await Promise.all(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          message
+        );
+      } catch (err: unknown) {
+        if (typeof err === "object" && err !== null && "statusCode" in err && (err as { statusCode: number }).statusCode === 410) {
+          await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, sub.id));
+        } else {
+          console.error(`[push] delivery failed for user ${userId}:`, err);
+        }
+      }
+    })
+  );
+
+  return subs.length;
+}

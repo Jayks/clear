@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/db/queries/auth";
 import { CarouselLanding } from "@/components/marketing/carousel-landing";
 import { AboutLanding } from "@/components/marketing/about-landing";
 import { AutoLoginRedirect } from "@/components/marketing/auto-login-redirect";
+import { isSafeReturnTo } from "@/lib/url-utils";
 
 export default async function LandingPage({
   searchParams,
@@ -18,10 +19,7 @@ export default async function LandingPage({
 
   // Sanitise: only allow same-origin paths (proxy always sets this from pathname,
   // but a crafted URL could contain an external URL).
-  const safePath =
-    returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
-      ? returnTo
-      : undefined;
+  const safePath = isSafeReturnTo(returnTo) ? returnTo : undefined;
 
   // Desktop/tablet gets the full scrollable tour; phones keep the swipe
   // carousel (touch-native — see app/CLAUDE.md Landing Page section).

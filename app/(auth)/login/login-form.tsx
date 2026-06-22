@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { Mail, ArrowRight, Loader2 } from "lucide-react";
+import { isSafeReturnTo } from "@/lib/url-utils";
 
 interface Props {
   returnTo?: string;
@@ -15,16 +16,31 @@ export default function LoginForm({ returnTo }: Props) {
   const [magicSent, setMagicSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const callbackUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback${returnTo ? `?next=${encodeURIComponent(returnTo)}` : ""}`;
+  const safeReturnTo = isSafeReturnTo(returnTo) ? returnTo : undefined;
+  const callbackUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback${safeReturnTo ? `?next=${encodeURIComponent(safeReturnTo)}` : ""}`;
+
+  function switchMode(next: "oauth" | "magic") {
+    setMode(next);
+    setError(null);
+  }
 
   async function handleGoogleLogin() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: callbackUrl },
     });
+    // On success, signInWithOAuth navigates away (window.location.assign) and
+    // this component unmounts — nothing left to do. On failure it resolves
+    // normally instead of throwing, so without this check `loading` stayed
+    // true forever: a permanently disabled button stuck on "Redirecting…"
+    // with no error shown and no way to retry short of a hard refresh.
+    if (err) {
+      setLoading(false);
+      setError(err.message);
+    }
   }
 
   async function handleMagicLink(e: React.FormEvent) {
@@ -70,13 +86,13 @@ export default function LoginForm({ returnTo }: Props) {
       {/* Mode tabs */}
       <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden text-sm">
         <button
-          onClick={() => setMode("oauth")}
+          onClick={() => switchMode("oauth")}
           className={`flex-1 py-2 font-medium transition-colors ${mode === "oauth" ? "bg-slate-800 dark:bg-slate-600 text-white" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"}`}
         >
           Google
         </button>
         <button
-          onClick={() => setMode("magic")}
+          onClick={() => switchMode("magic")}
           className={`flex-1 py-2 font-medium transition-colors ${mode === "magic" ? "bg-slate-800 dark:bg-slate-600 text-white" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"}`}
         >
           Email link

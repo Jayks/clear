@@ -771,8 +771,42 @@ export function CarouselLanding() {
   const goTo = useCallback((i: number) => {
     const c = containerRef.current;
     if (!c) return;
-    c.scrollTo({ left: i * c.clientWidth, behavior: "smooth" });
-    setActive(i);
+    // Clamp here (not just at call sites) — every caller today happens to
+    // clamp first, but that's not guaranteed for a future call site, and an
+    // out-of-range `active` makes SLIDES[active] undefined and breaks
+    // SlideWindow's ±1 virtualization window.
+    const clamped = Math.max(0, Math.min(i, SLIDE_COUNT - 1));
+    c.scrollTo({ left: clamped * c.clientWidth, behavior: "smooth" });
+    setActive(clamped);
+  }, []);
+
+  // Re-snap on resize/orientation change. `active` is otherwise only ever
+  // recomputed from a `scroll` event — a viewport resize (phone rotation, or
+  // a desktop browser resize since this component also renders at /about on
+  // desktop) changes `clientWidth` without necessarily firing one. Left
+  // alone, `active` goes stale: SlideWindow (which only mounts active ± 1)
+  // can then unmount the slide actually on screen, leaving a blank
+  // aria-label-only placeholder until the user swipes again. Debounced so a
+  // drag-resize doesn't re-snap on every intermediate frame.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const handleResize = () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const c = containerRef.current;
+        if (!c) return;
+        const idx = Math.max(0, Math.min(Math.round(c.scrollLeft / c.clientWidth), SLIDE_COUNT - 1));
+        c.scrollTo({ left: idx * c.clientWidth });
+        setActive(idx);
+      }, 150);
+    };
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
   }, []);
 
   // Scroll tracking

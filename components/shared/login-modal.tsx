@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { ClearLogo } from "@/components/shared/clear-logo";
 import { BRAND } from "@/lib/brand";
+import { isSafeReturnTo } from "@/lib/url-utils";
 import LoginForm from "@/app/(auth)/login/login-form";
 
 interface LoginModalProps {
@@ -41,8 +42,11 @@ export function LoginModal({ error, returnTo, intent, onClose }: LoginModalProps
         // Just invoke the callback — no router navigation needed, no stale @modal
         // slot issue, re-opening always works.
         onClose();
-      } else if (returnTo?.startsWith("/join/")) {
-        // Join preview is a public page — send them there so they can still see it
+      } else if (returnTo?.startsWith("/join/") && isSafeReturnTo(returnTo)) {
+        // Join preview is a public page — send them there so they can still see it.
+        // `isSafeReturnTo` is redundant against "/join/" today (kept in sync via
+        // this shared helper rather than a second hand-rolled check, so a future
+        // edit to either guard can't silently drift apart from the other).
         router.replace(returnTo);
       } else {
         // Intercepting-route mode (AutoLoginRedirect path). Use push so the clean

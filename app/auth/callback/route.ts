@@ -2,11 +2,17 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isSafeReturnTo } from "@/lib/url-utils";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/groups";
+  const rawNext = searchParams.get("next");
+  // Validate before use — `${origin}${next}` is a string concatenation, not
+  // a relative-URL resolution, so an unvalidated `next` like "@evil.com"
+  // produces "https://oursite.com@evil.com", which browsers parse as host
+  // "evil.com" (oursite.com becomes URL userinfo). See lib/url-utils.ts.
+  const next = isSafeReturnTo(rawNext) ? rawNext : "/groups";
 
   if (code) {
     const cookieStore = await cookies();

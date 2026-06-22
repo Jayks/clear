@@ -30,7 +30,10 @@ export async function PlanCards() {
   const price = earlyBird ? EARLY_BIRD_PRICE : REGULAR_PRICE;
   const annualMonthlyEquiv = earlyBird ? EARLY_BIRD_ANNUAL_MONTHLY_EQUIV : REGULAR_ANNUAL_MONTHLY_EQUIV;
   const annualSavings = earlyBird ? EARLY_BIRD_ANNUAL_SAVINGS : REGULAR_ANNUAL_SAVINGS;
-  const slotsRemaining = EARLY_BIRD_SLOTS_TOTAL - claimed;
+  // Defensive floor — only ever rendered while earlyBird (claimed < TOTAL) is
+  // true today, so this can't go negative yet, but it's not guaranteed by the
+  // arithmetic itself (e.g. a future change to the threshold comparison).
+  const slotsRemaining = Math.max(0, EARLY_BIRD_SLOTS_TOTAL - claimed);
   const progressPct = Math.min((claimed / EARLY_BIRD_SLOTS_TOTAL) * 100, 100);
   // Early Bird's hook = the discount vs the regular price (locked forever).
   const annualOffRegular = REGULAR_PRICE.annual - price.annual; // ₹200 while early-bird is active

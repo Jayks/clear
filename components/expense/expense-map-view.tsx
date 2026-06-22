@@ -5,7 +5,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { useTheme } from "next-themes";
 import { format, parseISO } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, ChevronLeft, ChevronRight, Play, Pause, X, RotateCcw, Maximize2 } from "lucide-react";
+import { MapPin, ChevronLeft, ChevronRight, Play, Pause, X, RotateCcw, Maximize2, AlertTriangle } from "lucide-react";
 import { parseExpenseLocation } from "@/lib/db/schema/expenses";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { GroupMember } from "@/lib/db/schema/group-members";
@@ -177,6 +177,16 @@ export function ExpenseMapView({
   // trigger re-renders either. This counter always changes on recreation, so
   // it's a dependable re-run signal regardless of batching.
   const [mapGeneration, setMapGeneration] = useState(0);
+  // Set when Mapbox itself reports a load-blocking error (auth/URL-restriction
+  // 401/403, rate-limit 429, or a network-level failure with no HTTP status at
+  // all) — see the "error" listener in initMap below. Found via a real
+  // production incident: a Mapbox token's URL allow-list pointed at the old
+  // domain only, so every tile request 403'd post-domain-migration while the
+  // lighter style-metadata request still succeeded — `mapReady` flipped true
+  // (attribution + custom layers rendered) but the basemap stayed blank, with
+  // nothing telling the user (or us) why. This surfaces that failure visibly
+  // instead of silently leaving a broken-looking map.
+  const [mapTilesError, setMapTilesError] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
 
@@ -537,6 +547,15 @@ export function ExpenseMapView({
           mapContainerRef.current.removeChild(mapContainerRef.current.firstChild);
         }
 
+        // Reset HERE — before constructing the new instance — rather than
+        // inside "load" below. "load" can fire even when tiles are actively
+        // 403ing (confirmed in production: style/sprite/glyphs loaded fine,
+        // only the tile requests were rejected), so "error" and "load" race
+        // with no guaranteed order. Resetting at the top of every fresh
+        // attempt avoids that race entirely: this instance's own error
+        // listener (below) is the only thing allowed to set it true again.
+        setMapTilesError(false);
+
         const locList = allLocated.map((e) => parseExpenseLocation(e.location)!);
         const lngs    = locList.map((l) => l.lng).sort((a, b) => a - b);
         const lats    = locList.map((l) => l.lat).sort((a, b) => a - b);
@@ -554,6 +573,21 @@ export function ExpenseMapView({
           style:     "mapbox://styles/mapbox/standard",
           center: restoreCenter ? [restoreCenter.lng, restoreCenter.lat] : [midLng, midLat],
           zoom:   restoreZoom ?? 11,
+        });
+
+        // Mapbox fires "error" for a wide range of things — a single missing
+        // sprite icon, one failed tile request at the edge of coverage, etc.
+        // Only surface the ones that mean the basemap genuinely can't load:
+        // an AJAXError-shaped failure carrying an HTTP status (401/403 = auth
+        // or URL-restriction rejection, 429 = rate-limited), or no status at
+        // all (a network-level failure — DNS, offline, blocked request).
+        // Anything else (a stray 404 on one tile) is too noisy to alarm on.
+        map.on("error", (e) => {
+          const status = (e.error as { status?: number } | undefined)?.status;
+          const isLoadBlocking = status === undefined || status === 401 || status === 403 || status === 429;
+          if (!isLoadBlocking) return;
+          console.error("[ExpenseMapView] map error event:", e.error);
+          setMapTilesError(true);
         });
 
         map.on("load", () => {
@@ -1587,6 +1621,24 @@ export function ExpenseMapView({
                 <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
                 <p className="text-xs text-slate-500">Loading map…</p>
               </div>
+            </div>
+          )}
+
+          {/* Tile-load error banner — Mapbox can fire "load" even when the
+              basemap tiles themselves are being rejected (auth/URL-restriction,
+              rate-limit, or a network failure), so this is intentionally NOT
+              gated on `!mapReady` — it can show alongside a "loaded" map that's
+              actually blank, not just during the loading spinner above.
+              `pointer-events-none` so it never blocks the Replay Journey tap
+              target underneath. Generic copy — this reaches every visitor, not
+              just admins, so no token/HTTP-status detail here; see the
+              console.error in the "error" listener for that. */}
+          {mapTilesError && (
+            <div className="absolute top-2 left-2 right-2 z-10 flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50/95 dark:bg-amber-900/90 border border-amber-200 dark:border-amber-800/60 shadow-sm pointer-events-none">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Map couldn't fully load. Check your connection and try again.
+              </p>
             </div>
           )}
 

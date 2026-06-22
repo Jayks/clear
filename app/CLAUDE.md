@@ -253,7 +253,9 @@ Valid in Next.js App Router RSC files. Used for Accept / Decline buttons on the 
 
 ## Demo Data Seeding
 
-`ensureDemoGroup()` (`app/actions/demo.ts`) — called on groups page load. Seeds Goa 2025 trip + Mumbai Flat nest (both `is_demo=true`); detects stale nest seed by description string and re-seeds. Demo groups sort last (`ORDER BY is_demo ASC`). `data-tour="demo-trip"` / `"demo-nest"` attrs on cards. **Seeding order matters**: `await ensureDemoGroup()` before `getAllGroups()` to avoid a race where SELECT returns before INSERT on first load.
+Sample data is **opt-in**, not force-seeded on load. A brand-new account (0 groups) lands on `EmptyChooser` ("What are you tracking?") with an "Explore a sample" CTA (`SampleLoader`); choosing it calls `seedSampleStep(step)` (`app/actions/demo.ts`) per context — `step: "trip" | "nest" | "circle"` maps to `seedDemoGroup` / `seedDemoNest` / `seedDemoCircle` (`lib/demo/`). Idempotent: re-checks for an existing `is_demo=true` group of that type for the user before seeding again. Demo groups always sort last (`ORDER BY is_demo ASC`) and live in their own **Sample tab** on the Home page (`HomeControlBar`), isolated from real groups. `data-tour="demo-trip"` attr on the sample trip card (read by the onboarding tour). `removeSampleData()` deletes all of a user's demo groups (cascades via FK).
+
+**Sample trip** (`seedDemoGroup`, `lib/demo/seed-demo-trip.ts`) — "Pan-India Explorer · Sample": a 7-day, 5-person, 18-expense trip spanning Chennai → Pondicherry → Delhi → Agra → Jaipur (chosen over the old single-city Goa trip so the Map view has a genuinely cross-country spread — close-together pins, same-day spread-out pairs, and one isolated pin). Mixes split types (equal/exact/shares/percentage) so the sample still demonstrates every split mechanic. No cover photo set — relies on the no-photo gradient+pattern fallback. **Sample nest** (`seedDemoNest`, `lib/demo/seed-demo-nest.ts`) — "Mumbai Flat · Sample". **Sample circle** (`seedDemoCircle`, `lib/demo/seed-demo-circle.ts`).
 
 ---
 

@@ -27,7 +27,7 @@ export function getTourSteps(demoTripId: string | null): TourStep[] {
       target: "[data-tour='demo-trip']",
       page: "/groups",
       title: "Your sample trip",
-      description: "This is real, editable demo data — a 5-day Goa trip with five people. Let's look inside.",
+      description: "This is real, editable demo data — a 7-day trip across India with five people. Let's look inside.",
       isSampleData: true,
     },
 

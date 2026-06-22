@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   title: BRAND_TITLE,
   description: `Group expense splitting for any group. Log what you spent, who paid, and let ${BRAND.name} figure out who owes whom.`,
   icons: {
-    apple: [{ url: "/api/pwa-icon?size=192&v=2", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/api/pwa-icon?size=192&v=3", sizes: "180x180", type: "image/png" }],
   },
 };
 

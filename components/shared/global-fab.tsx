@@ -35,6 +35,8 @@ interface Props {
   isPlusUser?: boolean;
   /** Whether the user has any Streams — gates the People section in the picker. */
   hasStreams?: boolean;
+  /** Creator's display name — used in the post-log "share with guest" message. */
+  currentUserName?: string;
 }
 
 // Max tiles shown in "Recent" section
@@ -46,7 +48,7 @@ const FAB_SHADOW   = "shadow-cyan-500/35";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function GlobalFab({ trips, nests, circles, isPlusUser = false, hasStreams = false }: Props) {
+export function GlobalFab({ trips, nests, circles, isPlusUser = false, hasStreams = false, currentUserName }: Props) {
   const [mounted,        setMounted]        = useState(false);
   const [pickerOpen,     setPickerOpen]     = useState(false);
   const [chooserOpen,    setChooserOpen]    = useState(false);
@@ -233,6 +235,7 @@ export function GlobalFab({ trips, nests, circles, isPlusUser = false, hasStream
           setTimeout(() => setStreamPerson(undefined), 350);
         }}
         preselectedPerson={streamPerson}
+        currentUserName={currentUserName}
       />
     </>
   );

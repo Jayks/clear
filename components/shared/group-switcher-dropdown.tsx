@@ -90,7 +90,7 @@ export function GroupSwitcherDropdown({ groupId, groupName, currentSection, acce
         render={
           <button
             type="button"
-            className="flex items-center gap-1 rounded-lg px-2 py-1 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors min-w-0"
+            className="flex items-center gap-1 rounded-lg px-2 py-1 border border-slate-200 dark:border-slate-700 bg-white/40 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/80 active:scale-95 transition-all min-w-0"
             aria-label={`Switch group — currently ${groupName}`}
           />
         }

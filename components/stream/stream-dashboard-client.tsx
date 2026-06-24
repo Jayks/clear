@@ -18,9 +18,10 @@ const SEARCH_THRESHOLD = 6;
 
 interface Props {
   data: StreamDashboardData;
+  currentUserName?: string;
 }
 
-export function StreamDashboardClient({ data }: Props) {
+export function StreamDashboardClient({ data, currentUserName }: Props) {
   const [logOpen,       setLogOpen]       = useState(false);
   const [personSearch,  setPersonSearch]  = useState("");
 
@@ -108,7 +109,8 @@ export function StreamDashboardClient({ data }: Props) {
             No Streams yet
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs">
-            Log a quick debt — no group needed. "He paid my Uber", "I owe her lunch."
+            Money between you and one person — no group needed. "He paid my Uber",
+            "I owe her lunch."
           </p>
           <button
             onClick={() => setLogOpen(true)}
@@ -308,7 +310,11 @@ export function StreamDashboardClient({ data }: Props) {
         </FadeIn>
       )}
 
-      <StreamLogSheet isOpen={logOpen} onClose={() => setLogOpen(false)} />
+      <StreamLogSheet
+        isOpen={logOpen}
+        onClose={() => setLogOpen(false)}
+        currentUserName={currentUserName}
+      />
     </>
   );
 }

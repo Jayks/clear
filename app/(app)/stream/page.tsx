@@ -9,5 +9,10 @@ export default async function StreamPage() {
 
   const data = await getStreamDashboard(user.id);
 
-  return <StreamDashboardClient data={data} />;
+  return (
+    <StreamDashboardClient
+      data={data}
+      currentUserName={user.user_metadata?.full_name as string | undefined}
+    />
+  );
 }

@@ -423,6 +423,7 @@ export function StreamPersonPageClient({
         isOpen={logOpen}
         onClose={() => setLogOpen(false)}
         preselectedPerson={{ personId: person.personId, type: person.type, name: person.name }}
+        currentUserName={currentUserName}
       />
 
       <StreamSettleSheet

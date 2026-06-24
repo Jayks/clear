@@ -17,6 +17,7 @@ import { CategoryIcon } from "@/components/expense/category-icon";
 import { Coins, Repeat2, Target } from "lucide-react";
 import { BackButton } from "@/components/shared/back-button";
 import { getContextTheme } from "@/lib/theme/context-theme";
+import { getGroupConfig } from "@/lib/group-config";
 import { Lock } from "lucide-react";
 
 interface Props {
@@ -35,6 +36,7 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   const isFlexi     = isOneTime && group.contributionAmount === null;
   const isAdmin     = currentMember?.role === "admin";
   const amount      = group.contributionAmount ? Number(group.contributionAmount) : null;
+  const config      = getGroupConfig(group.groupType);
 
   const dash = await getCircleDashboardData(
     group.id,
@@ -223,6 +225,12 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             <h1 className={`${hasCover ? "text-white" : "text-slate-800 dark:text-white"} text-2xl`} style={{ fontFamily: "var(--font-fraunces)" }}>
               {group.name}
             </h1>
+            {/* One-line in-app explainer of the invented vocabulary — theme H */}
+            {config.labels.tagline && (
+              <p className={`text-sm mt-0.5 ${hasCover ? "text-white/75" : "text-slate-600 dark:text-white/70"}`}>
+                {config.labels.tagline}
+              </p>
+            )}
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { optimizeSettlements } from "./optimize";
+import { optimizeSettlements, countNaivePairwiseTransactions } from "./optimize";
 
 /** Helper: total amount transferred in a solution */
 function totalTransferred(txns: ReturnType<typeof optimizeSettlements>) {
@@ -95,5 +95,54 @@ describe("optimizeSettlements", () => {
     const txns = optimizeSettlements(balances);
     expect(txns).toHaveLength(4); // exactly n-1 for single creditor
     verifySolution(balances, txns);
+  });
+});
+
+describe("countNaivePairwiseTransactions", () => {
+  it("1 creditor + 1 debtor — naive equals optimized (trivial case)", () => {
+    const balances = [
+      { memberId: "A", net:  50 },
+      { memberId: "B", net: -50 },
+    ];
+    expect(countNaivePairwiseTransactions(balances)).toBe(1);
+    expect(optimizeSettlements(balances)).toHaveLength(1);
+  });
+
+  it("1 creditor + 4 debtors — naive equals optimized (single creditor, nothing to net)", () => {
+    const balances = [
+      { memberId: "A", net:  800 },
+      { memberId: "B", net: -200 },
+      { memberId: "C", net: -200 },
+      { memberId: "D", net: -200 },
+      { memberId: "E", net: -200 },
+    ];
+    expect(countNaivePairwiseTransactions(balances)).toBe(4);
+    expect(optimizeSettlements(balances)).toHaveLength(4);
+  });
+
+  it("3 creditors + 3 debtors — naive (9) collapses to optimized (3)", () => {
+    const balances = [
+      { memberId: "A", net:  100 },
+      { memberId: "B", net:  100 },
+      { memberId: "C", net:  100 },
+      { memberId: "D", net: -100 },
+      { memberId: "E", net: -100 },
+      { memberId: "F", net: -100 },
+    ];
+    expect(countNaivePairwiseTransactions(balances)).toBe(9);
+    expect(optimizeSettlements(balances)).toHaveLength(3);
+  });
+
+  it("fully settled group — naive is 0", () => {
+    const balances = [
+      { memberId: "A", net: 0 },
+      { memberId: "B", net: 0 },
+      { memberId: "C", net: 0 },
+    ];
+    expect(countNaivePairwiseTransactions(balances)).toBe(0);
+  });
+
+  it("empty balances — naive is 0, no crash", () => {
+    expect(countNaivePairwiseTransactions([])).toBe(0);
   });
 });

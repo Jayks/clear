@@ -10,9 +10,10 @@ import { cn } from "@/lib/utils";
 import { hapticSuccess } from "@/lib/haptics";
 import { settleStream } from "@/app/actions/stream";
 import { PaymentPendingBadge } from "@/components/payment/payment-pending-badge";
-import { BRAND } from "@/lib/brand";
+import { buildStreamConfirmMessage } from "@/lib/stream/share-message";
 import type { EnrichedStreamRecord } from "@/lib/db/queries/stream";
 import type { PaymentMethod } from "@/lib/payment/types";
+import type { StreamDirection } from "@/lib/validations/stream";
 import { PAYMENT_METHOD_ICONS, PAYMENT_METHOD_LABELS } from "@/lib/payment/types";
 
 // ── Emoji inference ───────────────────────────────────────────────────────────
@@ -232,10 +233,17 @@ function SpineCard({
 
   function handleShare() {
     if (!shareUrl) return;
-    const first    = currentUserName?.split(" ")[0] ?? "Someone";
-    const amt      = formatCurrency(Math.abs(record.netAmount), record.currency);
-    const noteText = record.note ? ` for ${record.note}` : "";
-    const msg      = `Hi! ${first} logged a payment on ${BRAND.name}.\nYou owe ${amt}${noteText}.\nConfirm here → ${shareUrl}`;
+    const first = currentUserName?.split(" ")[0] ?? "Someone";
+    // direction-aware — fixes a prior bug where this always said "You owe",
+    // which was backwards whenever the Clear user (not the guest) owes.
+    const msg = buildStreamConfirmMessage({
+      creatorFirstName: first,
+      amount:           Math.abs(record.netAmount),
+      currency:         record.currency,
+      note:             record.note,
+      direction:        record.direction as StreamDirection,
+      confirmUrl:       shareUrl,
+    });
     window.open(`https://wa.me?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
   }
 

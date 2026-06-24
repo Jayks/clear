@@ -7,6 +7,7 @@ import { getUserMemberIds } from "@/lib/db/queries/auth";
 import { TripCard } from "@/components/trip/trip-card";
 import { GroupBalanceBadge } from "@/components/trip/group-balance-badge";
 import { AnimatedList } from "@/components/shared/animated-list";
+import { CollapsibleGroupGrid } from "@/components/shared/collapsible-group-grid";
 import { EmptyChooser } from "@/components/shared/empty-chooser";
 import { SampleBanner } from "@/components/shared/sample-banner";
 import { SampleTourPrompt } from "@/components/shared/sample-tour-prompt";
@@ -120,6 +121,63 @@ export default async function GroupsPage() {
     ...(archivedCircles.length > 0 ? [{ id: "archived-circles", label: "Circles", count: archivedCircles.length, color: "violet"  as const }] : []),
   ];
 
+  // ── Pre-built card elements per section ───────────────────────────────────
+  // Built once here (not inline in the JSX below) so CollapsibleGroupGrid can
+  // slice the array for "Show N more" — theme D, home page scale with 20+ groups.
+  const tripCards = trips.map(({ group, memberCount }, index) => {
+    const memberInfo = memberIds[group.id];
+    return (
+      <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
+        <TripCard
+          group={group}
+          memberCount={Number(memberCount)}
+          priority={index < 2}
+          isPlusPlan={adminPlans[group.id] === "plus"}
+          isAdmin={memberInfo?.role === "admin"}
+          isLocked={lockedGroupIds.has(group.id)}
+          balanceBadge={
+            memberInfo && user && !group.isDemo ? (
+              <Suspense key={group.id} fallback={balanceFallback()}>
+                <GroupBalanceBadge groupId={group.id} userId={user.id} />
+              </Suspense>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  });
+
+  const nestCards = nests.map(({ group, memberCount }, index) => {
+    const memberInfo = memberIds[group.id];
+    return (
+      <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
+        <TripCard
+          group={group}
+          memberCount={Number(memberCount)}
+          priority={index < 2 && trips.length === 0}
+          isPlusPlan={adminPlans[group.id] === "plus"}
+          isAdmin={memberInfo?.role === "admin"}
+          isLocked={lockedGroupIds.has(group.id)}
+          balanceBadge={
+            memberInfo && user && !group.isDemo ? (
+              <Suspense key={group.id} fallback={balanceFallback()}>
+                <GroupBalanceBadge groupId={group.id} userId={user.id} />
+              </Suspense>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  });
+
+  const circleCards = circles.map(({ group }) => (
+    <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
+      <Suspense fallback={<CircleCardSkeleton />}>
+        <CircleCardServer group={group} isLocked={lockedGroupIds.has(group.id)} />
+      </Suspense>
+    </div>
+  ));
+
   // ── Active content — real groups, or the chooser when there are none ──────
   const activeContent = realGroups.length === 0 ? (
     <EmptyChooser showSampleCta={demoGroups.length === 0} />
@@ -140,8 +198,8 @@ export default async function GroupsPage() {
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Trips</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
-                            from-cyan-200/70 to-transparent
-                            dark:from-cyan-800/40 dark:to-transparent" />
+                            from-cyan-300/80 to-transparent
+                            dark:from-cyan-400/50 dark:to-transparent" />
             <Link
               href="/groups/new?type=trip"
               data-tour="new-trip-btn"
@@ -159,30 +217,10 @@ export default async function GroupsPage() {
             <EmptyTypeNudge type="trip" />
           ) : (
             <>
-              <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {trips.map(({ group, memberCount }, index) => {
-                  const memberInfo = memberIds[group.id];
-                  return (
-                    <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
-                      <TripCard
-                        group={group}
-                        memberCount={Number(memberCount)}
-                        priority={index < 2}
-                        isPlusPlan={adminPlans[group.id] === "plus"}
-                        isAdmin={memberInfo?.role === "admin"}
-                        isLocked={lockedGroupIds.has(group.id)}
-                        balanceBadge={
-                          memberInfo && user && !group.isDemo ? (
-                            <Suspense key={group.id} fallback={balanceFallback()}>
-                              <GroupBalanceBadge groupId={group.id} userId={user.id} />
-                            </Suspense>
-                          ) : undefined
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </AnimatedList>
+              <CollapsibleGroupGrid
+                items={tripCards}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              />
               <LongPressHint demoTripId={trips.find((g) => g.group.isDemo)?.group.id ?? null} />
             </>
           )}
@@ -200,8 +238,8 @@ export default async function GroupsPage() {
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nests</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
-                            from-emerald-200/70 to-transparent
-                            dark:from-emerald-800/40 dark:to-transparent" />
+                            from-emerald-300/80 to-transparent
+                            dark:from-emerald-400/50 dark:to-transparent" />
             <Link
               href="/groups/new?type=nest"
               aria-label="New nest"
@@ -217,33 +255,11 @@ export default async function GroupsPage() {
           {nests.length === 0 ? (
             <EmptyTypeNudge type="nest" />
           ) : (
-            <AnimatedList
+            <CollapsibleGroupGrid
+              items={nestCards}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
               initialDelayMs={trips.length > 0 ? trips.length * 80 : 0}
-            >
-              {nests.map(({ group, memberCount }, index) => {
-                const memberInfo = memberIds[group.id];
-                return (
-                  <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
-                    <TripCard
-                      group={group}
-                      memberCount={Number(memberCount)}
-                      priority={index < 2 && trips.length === 0}
-                      isPlusPlan={adminPlans[group.id] === "plus"}
-                      isAdmin={memberInfo?.role === "admin"}
-                      isLocked={lockedGroupIds.has(group.id)}
-                      balanceBadge={
-                        memberInfo && user && !group.isDemo ? (
-                          <Suspense key={group.id} fallback={balanceFallback()}>
-                            <GroupBalanceBadge groupId={group.id} userId={user.id} />
-                          </Suspense>
-                        ) : undefined
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </AnimatedList>
+            />
           )}
         </section>
       )}
@@ -259,8 +275,8 @@ export default async function GroupsPage() {
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Circles</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
-                            from-violet-200/70 to-transparent
-                            dark:from-violet-800/40 dark:to-transparent" />
+                            from-violet-300/80 to-transparent
+                            dark:from-violet-400/50 dark:to-transparent" />
             <Link
               href="/groups/new?type=circle"
               aria-label="New circle"
@@ -276,18 +292,11 @@ export default async function GroupsPage() {
           {circles.length === 0 ? (
             <EmptyTypeNudge type="circle" />
           ) : (
-            <AnimatedList
+            <CollapsibleGroupGrid
+              items={circleCards}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
               initialDelayMs={(trips.length + nests.length) > 0 ? (trips.length + nests.length) * 80 : 0}
-            >
-              {circles.map(({ group }) => (
-                <div key={group.id} data-group-card="" data-group-name={group.name.toLowerCase()}>
-                  <Suspense fallback={<CircleCardSkeleton />}>
-                    <CircleCardServer group={group} isLocked={lockedGroupIds.has(group.id)} />
-                  </Suspense>
-                </div>
-              ))}
-            </AnimatedList>
+            />
           )}
         </section>
       )}
@@ -311,8 +320,8 @@ export default async function GroupsPage() {
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Trips</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
-                            from-cyan-200/70 to-transparent
-                            dark:from-cyan-800/40 dark:to-transparent" />
+                            from-cyan-300/80 to-transparent
+                            dark:from-cyan-400/50 dark:to-transparent" />
           </div>
           <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {archivedTrips.map(({ group, memberCount }) => (
@@ -338,8 +347,8 @@ export default async function GroupsPage() {
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Nests</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
-                            from-emerald-200/70 to-transparent
-                            dark:from-emerald-800/40 dark:to-transparent" />
+                            from-emerald-300/80 to-transparent
+                            dark:from-emerald-400/50 dark:to-transparent" />
           </div>
           <AnimatedList
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
@@ -368,8 +377,8 @@ export default async function GroupsPage() {
             </BadgePop>
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Circles</span>
             <div className="animate-rule-enter flex-1 h-[1.5px] bg-gradient-to-r
-                            from-violet-200/70 to-transparent
-                            dark:from-violet-800/40 dark:to-transparent" />
+                            from-violet-300/80 to-transparent
+                            dark:from-violet-400/50 dark:to-transparent" />
           </div>
           <AnimatedList
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
@@ -464,6 +473,7 @@ export default async function GroupsPage() {
           circles={circles}
           isPlusUser={isPlusUser}
           hasStreams={streamBadge.latestUpdatedAt !== null}
+          currentUserName={user?.user_metadata?.full_name as string | undefined}
         />
       )}
 

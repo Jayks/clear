@@ -45,6 +45,8 @@ interface Props {
   currency:        string;
   // SuggestionCards + hero
   suggestions:          Transaction[];
+  /** Naive pairwise baseline (debtors × creditors) — powers the "N instead of M" trust line */
+  naiveCount:           number;
   members:              GroupMember[];
   currentMemberId:      string | undefined;
   groupName:            string;
@@ -65,7 +67,7 @@ interface Props {
 export function SettleActionsClient({
   balances, pendingSettlements, focusId, pendingExternalPayments,
   groupId, currentUserId, isAdmin, currency,
-  suggestions, members, currentMemberId, groupName, upiIdMap,
+  suggestions, naiveCount, members, currentMemberId, groupName, upiIdMap,
   settleUrl, inviteUrl, pastSettlementsTotal, settlementCount,
   contextType, appUrl, theme, children,
 }: Props) {
@@ -145,6 +147,7 @@ export function SettleActionsClient({
         />
         <SuggestionCards
           suggestions={visibleSuggestions}
+          naiveCount={naiveCount}
           members={members}
           currentMemberId={currentMemberId}
           isAdmin={isAdmin}

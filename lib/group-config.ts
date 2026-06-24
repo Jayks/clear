@@ -11,6 +11,11 @@ export const GROUP_CONFIG = {
       noGroups: "No trips yet",
       noGroupsDesc: "Create your first trip and invite your travel companions. Expenses and settlements follow.",
       createFirst: "Plan your first trip",
+      // "Trip" is self-evident — unlike Nest/Stream/Circle it needs no in-app
+      // descriptor (see DESIGN_UX_IMPROVEMENT_PLAN.md theme H). Kept null (not
+      // omitted) so GroupConfig['labels']['tagline'] has one consistent type
+      // across all three group types instead of an optional-on-some-members union.
+      tagline: null as string | null,
     },
     icon: MapPin,
     showDates: true,
@@ -31,6 +36,8 @@ export const GROUP_CONFIG = {
       noGroups: "No nests yet",
       noGroupsDesc: "Create a nest and split expenses with your mates.",
       createFirst: "Create your first nest",
+      // One-line in-app explainer of the invented vocabulary — see theme H.
+      tagline: "Household bills, month to month" as string | null,
     },
     icon: Building2,
     showDates: false,
@@ -51,6 +58,8 @@ export const GROUP_CONFIG = {
       noGroups: "No circles yet",
       noGroupsDesc: "Create a Circle to collect fixed contributions each month or pool money toward a shared goal.",
       createFirst: "Start your first Circle",
+      // One-line in-app explainer of the invented vocabulary — see theme H.
+      tagline: "A shared fund" as string | null,
     },
     icon: Coins,
     showDates: false,

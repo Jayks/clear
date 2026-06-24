@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { RotateCcw } from "lucide-react";
 import { formatCurrency, getMemberName } from "@/lib/utils";
 import { MemberProfileSheet } from "@/components/shared/member-profile-sheet";
@@ -115,6 +115,11 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
   const [isDraggingAny, setIsDraggingAny] = useState(false);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [settled, setSettled]             = useState(false);
+  // Raw SVG/SMIL — neither MotionConfig nor the global CSS reduced-motion
+  // baseline can reach <animateMotion>/<animate>, so the money-flow particles
+  // need their own explicit gate below.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const reducedMotion = useReducedMotion();
   // Hint is hidden after the user has tapped an arc at least once (persisted in localStorage)
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [hasUsedGraph, setHasUsedGraph]   = useState(false);
@@ -620,7 +625,7 @@ export function DebtFlowGraph({ suggestions, members, balances, currentMemberId,
               </motion.g>
 
               {/* ── Flow particles — count 1–3 proportional to arc amount ── */}
-              {!isDraggingAny && (() => {
+              {!isDraggingAny && !reducedMotion && (() => {
                 const count = Math.max(1, Math.round((s.amount / maxAmount) * 3));
                 return (
                   <>

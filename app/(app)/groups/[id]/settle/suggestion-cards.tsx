@@ -38,6 +38,8 @@ interface PaymentCallbackParams {
 
 interface Props {
   suggestions:          Transaction[];
+  /** Naive pairwise baseline (debtors × creditors) — powers the "N instead of M" trust line */
+  naiveCount:           number;
   members:              GroupMember[];
   currentMemberId:      string | undefined;
   isAdmin:              boolean;
@@ -57,7 +59,7 @@ interface Props {
 }
 
 export function SuggestionCards({
-  suggestions, members, currentMemberId, isAdmin,
+  suggestions, naiveCount, members, currentMemberId, isAdmin,
   currency, groupId, groupName, upiIdMap,
   settleUrl, inviteUrl, pastSettlementsTotal, settlementCount,
   contextType, appUrl,
@@ -193,14 +195,14 @@ export function SuggestionCards({
                style={{ fontFamily: "var(--font-fraunces)" }}>
               All settled up!
             </p>
-            <p className="text-sm text-emerald-600/75 dark:text-emerald-400/70 mt-1">
+            <p className="text-sm text-emerald-600/90 dark:text-emerald-400/85 mt-1">
               {pastSettlementsTotal > 0
                 ? `${formatCurrency(pastSettlementsTotal, currency)} tracked and squared away`
                 : "No payments needed right now."}
             </p>
           </div>
           {settlementCount > 0 && (
-            <div className="flex items-center gap-2 text-xs text-emerald-600/55 dark:text-emerald-400/50">
+            <div className="flex items-center gap-2 text-xs text-emerald-600/75 dark:text-emerald-400/70">
               <span>{settlementCount} payment{settlementCount !== 1 ? "s" : ""} recorded</span>
               <span className="w-1 h-1 rounded-full bg-emerald-400/60 dark:bg-emerald-600/60 inline-block" />
               <span>{members.length} member{members.length !== 1 ? "s" : ""}</span>
@@ -223,6 +225,12 @@ export function SuggestionCards({
           {formatCurrency(suggestions.reduce((sum, s) => sum + s.amount, 0), currency)} total
         </p>
       </div>
+
+      {naiveCount > suggestions.length && (
+        <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/70 -mt-2 mb-3 px-0.5">
+          {suggestions.length} instead of {naiveCount} — we netted out the rest.
+        </p>
+      )}
 
       <div className="space-y-2 mb-8">
         {suggestions.map((s, i) => {

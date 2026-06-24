@@ -175,7 +175,7 @@ export function GroupMobileNav({
             <button
               type="button"
               onClick={() => setSwitcherOpen(true)}
-              className="flex items-center gap-1 min-w-0 rounded-lg px-2 py-1 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors"
+              className="flex items-center gap-1 min-w-0 rounded-lg px-2 py-1 border border-slate-200 dark:border-slate-700 bg-white/40 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/80 active:scale-95 transition-all"
               aria-label={`Switch group — currently ${groupName}`}
               aria-haspopup="dialog"
             >

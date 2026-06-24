@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getBalances, getSettlements, getSettlementsTotal } from "@/lib/db/queries/balances";
+import { countNaivePairwiseTransactions } from "@/lib/settle/optimize";
 import { getMonthlyExpenseSummary } from "@/lib/db/queries/expenses";
 import { Skeleton } from "@/components/shared/skeleton";
 // SettleHeroCard now rendered inside SettleActionsClient (shared optimistic state)
@@ -65,6 +66,10 @@ export async function BalancesSection({
     return m ? getMemberName(m) : "Member";
   };
 
+  // Naive pairwise baseline for the "N instead of M — we netted out the rest" trust
+  // copy on the suggestion cards. Computed once from the page-load balances.
+  const naiveCount = countNaivePairwiseTransactions(balances);
+
   return (
     <>
       {/* Mixed-currency warning */}
@@ -95,6 +100,7 @@ export async function BalancesSection({
         isAdmin={isAdmin}
         currency={currency}
         suggestions={suggestions}
+        naiveCount={naiveCount}
         members={members}
         currentMemberId={currentMemberId}
         groupName={groupName}

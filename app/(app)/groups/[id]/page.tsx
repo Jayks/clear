@@ -24,6 +24,7 @@ import { SettleBalanceBadge, SettleBalanceSkeleton } from "@/components/trip/set
 import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components/trip/insights-summary-badge";
 import { NestMonthlyBadge, NestMonthlyBadgeSkeleton } from "@/components/trip/nest-monthly-badge";
 import { RepeatTripPrompt } from "@/components/trip/repeat-trip-prompt";
+import { FirstRunChecklist } from "@/components/trip/first-run-checklist";
 import { HeroBalancePill } from "@/components/trip/hero-balance-pill";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
 import { Lock } from "lucide-react";
@@ -59,6 +60,15 @@ export default async function GroupPage({
   const config  = getGroupConfig(group.groupType);
   const isAdmin = currentMember?.role === "admin";
   const isNest  = group.groupType === "nest";
+  // Brand-new real group — show the first-run checklist instead of a blank
+  // dashboard (theme C) while EITHER actionable step is still outstanding.
+  // Gating on just "zero expenses" would hide the still-relevant "Add
+  // members" nudge the moment a first expense is logged even with no members
+  // added yet (caught in manual testing) — so this stays visible until both
+  // are done. Demo/archived groups never qualify.
+  const hasExpenses = totalSpent > 0;
+  const showFirstRunChecklist =
+    !group.isDemo && !group.isArchived && (!hasExpenses || members.length === 1);
   // Colour follows the group's context — the four quick-action tiles share one
   // hue (the section icon differentiates them), resolving the old per-section
   // colour collision. Circles never reach here (they branch to CircleDashboard).
@@ -169,7 +179,10 @@ export default async function GroupPage({
             {/* Date / member count row + personal net pill side-by-side */}
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {isNest ? (
-                <p className="text-white/75 text-sm">{members.length} {members.length === 1 ? "member" : "members"}</p>
+                <p className="text-white/75 text-sm">
+                  {members.length} {members.length === 1 ? "member" : "members"}
+                  {config.labels.tagline && ` · ${config.labels.tagline}`}
+                </p>
               ) : (group.startDate || group.endDate) ? (
                 <p className="text-white/75 text-sm">
                   {group.startDate ? formatDate(group.startDate) : ""}
@@ -218,6 +231,16 @@ export default async function GroupPage({
         </div>
       )}
 
+      {/* First-run checklist — brand-new real group, zero expenses yet */}
+      {showFirstRunChecklist && (
+        <FirstRunChecklist
+          groupId={group.id}
+          memberCount={members.length}
+          hasExpenses={hasExpenses}
+          theme={theme}
+        />
+      )}
+
       {/* Quick actions — Expenses + Settle up lead on mobile (most-used first row) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" data-tour="trip-quick-actions">
         {/* 1 — Expenses (most frequent action) */}
@@ -233,7 +256,7 @@ export default async function GroupPage({
               </Suspense>
             ) : (
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {totalSpent > 0
+                {hasExpenses
                   ? formatCurrency(totalSpent, group.defaultCurrency)
                   : "No expenses yet"}
               </p>

@@ -72,8 +72,12 @@ All four financial contexts use the same pattern:
 .dark .glass-sm  { background:rgba(15,23,42,0.65); border:1px solid rgba(51,65,85,0.5); }
 .dark .glass-nav { background:rgba(13,18,30,0.92); backdrop-filter:saturate(150%) blur(20px); }
 .light body { background:linear-gradient(135deg,#DCEAFE 0%,#D6F5FB 35%,#D5F6EE 70%,#D9F2E6 100%); }
-.dark body  { background:linear-gradient(135deg,#0D1B2A 0%,#091C1A 35%,#0A1F17 70%,#0C1A24 100%); }
+.dark body  { background:linear-gradient(135deg,#0D1B2A 0%,#0A1F2C 35%,#0A2228 70%,#0C2024 100%); }
 ```
+**Dark body is deliberately NOT a hue-for-hue mirror of light's emerald-ending journey** — it stays
+in blue/cyan throughout, matching the app's brand colour and avoiding a collision with emerald's
+existing semantic meaning elsewhere in dark mode (Settle accent, "owed to you" amounts, settled
+confetti). See the full rationale comment in `app/globals.css`.
 
 ### Typography
 - **Headings**: Fraunces via `style={{ fontFamily: "var(--font-fraunces)" }}` — NOT Tailwind class

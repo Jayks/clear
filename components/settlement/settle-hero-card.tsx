@@ -75,6 +75,17 @@ export function SettleHeroCard({ balances, suggestions, currentMemberId, currenc
 
   const StatusIcon = isOwe ? TrendingDown : isOwed ? TrendingUp : CheckCircle2;
 
+  // Theme J — connects the always-visible "why" narrative on this card to the
+  // raw per-expense ledger accordion further down the page (previously only
+  // reachable by scrolling past the suggestion cards and noticing an
+  // easy-to-miss button). Scrolls first, then opens the accordion slightly
+  // after — so the user sees it arrive at the closed button, then watches it
+  // expand, rather than the page jumping straight to already-expanded content.
+  function handleSeeBreakdown() {
+    document.getElementById("expense-breakdown")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => window.dispatchEvent(new Event("open-settle-breakdown")), 400);
+  }
+
   return (
     <motion.div
       variants={container}
@@ -153,6 +164,13 @@ export function SettleHeroCard({ balances, suggestions, currentMemberId, currenc
             {formatCurrency(myBalance.totalOwed, currency)}
           </span>
         </span>
+        <button
+          type="button"
+          onClick={handleSeeBreakdown}
+          className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline font-medium"
+        >
+          See exactly how →
+        </button>
       </motion.div>
 
       {/* ── Person pills — glass-sm base, only the amount is coloured ─ */}

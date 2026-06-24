@@ -6,6 +6,27 @@ html { scroll-behavior: smooth; }
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── Global reduced-motion baseline ─────────────────────────────────────── */
+/* Covers plain CSS @keyframes animations (confettiFall, rule-enter, marketing
+   hero/blob keyframes, etc.) that MotionConfig's reducedMotion="user" (set on
+   <MotionConfig> in app/layout.tsx) doesn't touch — that only governs Framer
+   Motion's own motion.* components. Near-zero duration + a single iteration
+   (not `animation: none`) so a looping animation still lands on its natural
+   end-state frame instead of visibly freezing mid-cycle (e.g. confetti
+   stopping mid-fall, a shimmer frozen mid-streak). `!important` is required —
+   this must win over every per-element animation declaration without finding
+   and overriding each one individually. The one thing this CANNOT reach is
+   raw SVG/SMIL animation (<animateMotion>, <animate> — see DebtFlowGraph),
+   which isn't a CSS animation at all and needs its own JS-level gate. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── AnimatedList entrance keyframe ────────────────────────────────────── */
 /* Declared at root (not inside @layer) so it's always available.
    16px y-offset + 300ms gives a visible, satisfying entrance on mobile. */
@@ -200,7 +221,18 @@ html { scroll-behavior: smooth; }
     background-attachment: fixed;
   }
   .dark body {
-    background: #0F172A;
+    /* Deliberately NOT a hue-for-hue mirror of the light gradient above (which
+       journeys into pale emerald) — stays in blue/cyan throughout, matching
+       the app's actual brand colour (--primary: #0891B2) instead. Emerald is
+       already a semantic colour elsewhere in dark mode (Settle page accent,
+       "owed to you" amounts, settled-celebration confetti); an ambient
+       emerald patch in the background would compete with that meaning
+       instead of just adding depth. The old flat #0F172A read as "uncrafted"
+       next to light mode's richer wash — this multi-stop blue/cyan gradient
+       fixes that without the collision. Glass overlays already assume a dark
+       surface (rgba(15,23,42,…) overlays), so no other change is needed for
+       cards to sit correctly on top of this. */
+    background: linear-gradient(135deg, #0D1B2A 0%, #0A1F2C 35%, #0A2228 70%, #0C2024 100%);
     background-attachment: fixed;
   }
   h1, h2, h3, h4, h5, h6 {

@@ -55,3 +55,25 @@ export function optimizeSettlements(balances: MemberBalance[]): Transaction[] {
 
   return transactions;
 }
+
+/**
+ * Naive baseline: how many pairwise transfers would be needed if every net debtor
+ * paid every net creditor directly (the "before optimization" case), vs. the
+ * minimum-transaction plan `optimizeSettlements` actually returns. Used only to
+ * power the "N instead of M — we netted out the rest" trust copy; never used for
+ * real transactions.
+ *
+ * Pure upper-bound heuristic (debtorCount × creditorCount) — NOT a literal
+ * reconstruction of raw per-expense IOUs. Documented here so a future reader
+ * doesn't expect this to match exact transaction history.
+ */
+export function countNaivePairwiseTransactions(balances: MemberBalance[]): number {
+  let creditors = 0;
+  let debtors = 0;
+  for (const { net } of balances) {
+    const rounded = round2(net);
+    if (rounded > 0) creditors++;
+    if (rounded < 0) debtors++;
+  }
+  return creditors * debtors;
+}

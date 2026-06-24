@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { CategoryIcon } from "@/components/expense/category-icon";
@@ -18,6 +18,18 @@ interface Props {
 export function SettlementBreakdown({ expensesWithSplits, members, currency }: Props) {
   const [open, setOpen] = useState(false);
 
+  // SettleHeroCard's "See exactly how →" link lives in a sibling component
+  // tree (rendered inside SettleActionsClient, this is rendered separately in
+  // balances-section.tsx) — a custom window event is the simplest decoupled
+  // way to reach across that boundary, same pattern this app already uses
+  // for ExpenseFilters' tour-driven view-mode switch and the Streams nav
+  // badge sync (theme J — "make the ledger detail easier to reach").
+  useEffect(() => {
+    function handleOpen() { setOpen(true); }
+    window.addEventListener("open-settle-breakdown", handleOpen);
+    return () => window.removeEventListener("open-settle-breakdown", handleOpen);
+  }, []);
+
   const nameOf = (id: string) => {
     const m = members.find((m) => m.id === id);
     return m ? getMemberName(m) : "Member";
@@ -26,7 +38,7 @@ export function SettlementBreakdown({ expensesWithSplits, members, currency }: P
   if (expensesWithSplits.length === 0) return null;
 
   return (
-    <div className="mt-6">
+    <div id="expense-breakdown" className="mt-6 scroll-mt-20">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 glass rounded-xl hover:shadow-md transition-all text-sm font-medium text-slate-600 dark:text-slate-300"

@@ -16,7 +16,7 @@ import { mapToGroupCategory } from "@/lib/receipt/map-category";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useTransition } from "react";
 import { hapticLight } from "@/lib/haptics";
 import { useWarnBeforeLeave } from "@/hooks/use-warn-before-leave";
 import type { Group } from "@/lib/db/schema/groups";
@@ -41,6 +41,7 @@ interface Props {
 
 export function AddExpenseForm({ group, members, canUseNonEqual = true, currentMemberId, isPlusUser = false }: Props) {
   const router = useRouter();
+  const [, startBackTransition] = useTransition();
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
   const theme = getContextTheme(group.groupType, group.circleMode);
@@ -228,12 +229,25 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
       toast.success("Expense added!");
     }
 
-    // Reached by pushing forward (from the expenses list, or from Home via
-    // ?from=groups) — back() returns to whichever it was, popping that one
-    // entry instead of writing a same-URL duplicate next to it.
+    // Reached by pushing forward (from the expenses list, the overview page's
+    // first-run checklist, or from Home via ?from=groups) — back() returns to
+    // whichever it was, popping that one entry instead of writing a same-URL
+    // duplicate next to it.
+    //
+    // Paired with router.refresh() inside a transition — same fix this
+    // codebase already applies in ErrorCard's retry handler ("reset() alone
+    // does not refetch RSC data"). addExpense's revalidatePath(…, 'layout')
+    // invalidates the WHOLE /groups/[id] layout subtree (the segment we're
+    // mid-navigation away from when this fires); without an explicit refresh,
+    // the destination page can render from a stale/fallback boundary instead
+    // of its own — observed as the Home page's skeleton flashing briefly
+    // when landing back on the group overview page.
     maybeNudge(
       { groupId: group.id, groupName: group.name, wasAiScanned: aiFilledFields.size > 0 },
-      () => router.back()
+      () => startBackTransition(() => {
+        router.back();
+        router.refresh();
+      })
     );
   }
 

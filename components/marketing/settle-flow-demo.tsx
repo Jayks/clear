@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 // Exact same palette as MemberAvatar / DebtFlowGraph
 const AVATAR_COLORS = [
@@ -68,6 +68,9 @@ function quadMid(x1: number, y1: number, x2: number, y2: number) {
  */
 export function SettleFlowDemo({ dark: forceDark = false }: { dark?: boolean }) {
   const [drawn, setDrawn] = useState(false);
+  // Raw SVG/SMIL particles — neither MotionConfig nor the CSS reduced-motion
+  // baseline reaches <animateMotion>/<animate>, so gate explicitly.
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const t = setTimeout(() => setDrawn(true), 420);
@@ -168,7 +171,7 @@ export function SettleFlowDemo({ dark: forceDark = false }: { dark?: boolean }) 
               )}
 
               {/* Flow particles — two per arc, 180° out of phase */}
-              {drawn &&
+              {drawn && !reducedMotion &&
                 [0, PARTICLE_DUR / 2].map((phaseOff, pi) => (
                   <circle key={`p-${arc.i}-${pi}`} r={2.5} fill="#FDE68A">
                     {React.createElement("animateMotion", {

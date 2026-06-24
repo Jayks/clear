@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sheet } from "@/components/shared/sheet";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X, ChevronLeft, Plus, Search, Loader2 } from "lucide-react";
+import { X, ChevronLeft, Plus, Search, Loader2, Check, Copy, MessageCircle } from "lucide-react";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { hapticSuccess } from "@/lib/haptics";
 import { formatCurrency, DEFAULT_CURRENCY } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { buildStreamConfirmMessage } from "@/lib/stream/share-message";
 import {
   logStream,
   deleteStream,
@@ -36,18 +37,20 @@ type LastContext = {
   createdAt: Date | string;
 };
 
-type Step = "pick-person" | "add-guest" | "enter-amount";
+type Step = "pick-person" | "add-guest" | "enter-amount" | "share";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   /** Pre-selected person — skips directly to the amount step. */
   preselectedPerson?: PersonOption;
+  /** Creator's display name — used in the post-log "share with guest" message. */
+  currentUserName?: string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
+export function StreamLogSheet({ isOpen, onClose, preselectedPerson, currentUserName }: Props) {
   const router = useRouter();
 
   // ── Step state ──────────────────────────────────────────────────────────────
@@ -71,6 +74,10 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
   const [lastContext, setLastContext] = useState<LastContext | null>(null);
   const [contextLoading, setContextLoading] = useState(false);
 
+  // ── Share step state (guest counterparts only) ─────────────────────────────
+  const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
   // ── Submission ──────────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
 
@@ -93,6 +100,8 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
         setAmountStr("");
         setNote("");
         setLastContext(null);
+        setConfirmUrl(null);
+        setCopied(false);
       }, 300); // wait for exit animation
       return () => clearTimeout(timer);
     }
@@ -191,12 +200,16 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
       }
 
       hapticSuccess();
-      onClose();
 
       const amountLabel = formatCurrency(amount, DEFAULT_CURRENCY);
       const dirLabel    = direction === "they_owe_me"
         ? `${selected.name} owes you ${amountLabel}`
         : `You owe ${selected.name} ${amountLabel}`;
+
+      // Guest counterparts with a confirm link get a "share now" step instead of
+      // an immediate close — "log first, share second". Clear-user counterparts
+      // keep closing right away (they already got a push notification).
+      const isGuestWithLink = selected.type === "guest" && !!result.confirmUrl;
 
       // Toast with 4-second undo
       const streamId = result.streamId;
@@ -208,6 +221,7 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
             const undoResult = await deleteStream(streamId);
             if (undoResult.ok) {
               toast.success("Entry removed");
+              onClose(); // also closes the share step, if it was showing
               router.refresh();
             } else {
               toast.error("Couldn't undo — entry may already be confirmed");
@@ -217,12 +231,42 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
       });
 
       router.refresh();
+
+      if (isGuestWithLink) {
+        setConfirmUrl(`${process.env.NEXT_PUBLIC_APP_URL ?? ""}${result.confirmUrl}`);
+        setStep("share");
+      } else {
+        onClose();
+      }
     } catch (err) {
       console.error("logStream error:", err);
       toast.error("Couldn't save entry — check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // ── Share step actions (guest counterparts only) ───────────────────────────
+
+  function handleShareWhatsApp() {
+    if (!confirmUrl || !selected) return;
+    const msg = buildStreamConfirmMessage({
+      creatorFirstName: currentUserName?.split(" ")[0] ?? "Someone",
+      amount:           parseFloat(amountStr),
+      currency:         DEFAULT_CURRENCY,
+      note:             note.trim() || null,
+      direction,
+      confirmUrl,
+    });
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+  }
+
+  function handleCopyLink() {
+    if (!confirmUrl) return;
+    navigator.clipboard.writeText(confirmUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -292,6 +336,17 @@ export function StreamLogSheet({ isOpen, onClose, preselectedPerson }: Props) {
                     />
                   </motion.div>
                 )}
+
+                {step === "share" && selected && (
+                  <motion.div key="share" {...slideAnim}>
+                    <ShareStep
+                      guestName={selected.name}
+                      onWhatsAppShare={handleShareWhatsApp}
+                      onCopyLink={handleCopyLink}
+                      copied={copied}
+                    />
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
     </Sheet>
@@ -320,10 +375,11 @@ function SheetHeader({
   onBack: () => void;
   onClose: () => void;
 }) {
-  const showBack = step !== "pick-person";
+  const showBack = step !== "pick-person" && step !== "share";
   const title =
     step === "pick-person"  ? "New entry" :
     step === "add-guest"    ? "Add a person" :
+    step === "share"        ? "Logged ✓" :
     selectedName            ? `Entry with ${selectedName}` : "New entry";
 
   return (
@@ -502,7 +558,7 @@ function AddGuestStep({
       </div>
       <div>
         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-          Email <span className="text-slate-400 font-normal">(optional — to send confirmation link)</span>
+          Email <span className="text-slate-400 font-normal">(optional — for your reference)</span>
         </label>
         <input
           type="email"
@@ -527,6 +583,69 @@ function AddGuestStep({
       >
         Next →
       </button>
+    </div>
+  );
+}
+
+// ── Share step (guest counterparts only) ──────────────────────────────────────
+// Modeled on AddMembersSheet's `mode === "share"` block — the closest existing
+// in-house precedent for "just created something, offer to share it now".
+// No separate "Skip" button: the sheet's existing ✕ / Escape / backdrop dismiss
+// already covers it, same as AddMembersSheet's share step.
+
+function ShareStep({
+  guestName,
+  onWhatsAppShare,
+  onCopyLink,
+  copied,
+}: {
+  guestName: string;
+  onWhatsAppShare: () => void;
+  onCopyLink: () => void;
+  copied: boolean;
+}) {
+  const firstName = guestName.split(" ")[0];
+
+  return (
+    <div className="pt-3 flex flex-col items-center text-center px-2">
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500
+                      flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
+        <Check className="w-8 h-8 text-white" />
+      </div>
+      <h3
+        className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-1"
+        style={{ fontFamily: "var(--font-fraunces)" }}
+      >
+        Logged ✓
+      </h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
+        Let {firstName} know — they can confirm it in one tap.
+      </p>
+      <div className="w-full space-y-2.5">
+        <button
+          type="button"
+          onClick={onWhatsAppShare}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl
+                     bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-medium
+                     shadow-md transition-all active:scale-[0.98]"
+        >
+          <MessageCircle className="w-4 h-4" />
+          Share on WhatsApp
+        </button>
+        <button
+          type="button"
+          onClick={onCopyLink}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all active:scale-[0.98]",
+            copied
+              ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300"
+              : "border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800",
+          )}
+        >
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? "Link copied!" : "Copy link"}
+        </button>
+      </div>
     </div>
   );
 }

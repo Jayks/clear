@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
+import { MotionConfig } from "framer-motion";
 import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
 import { IOSInstallHint } from "@/components/shared/ios-install-hint";
 import { OfflineBanner } from "@/components/shared/offline-banner";
@@ -56,21 +57,28 @@ export default function RootLayout({
       <body className="min-h-full">
         <IOSSplashLinks />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <NavProgress />
-          <OfflineBanner />
-          <ServiceWorkerRegistration />
-          <BfcacheReload />
-          {/* Decorative background blobs */}
-          <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-            <div className="absolute -top-48 -right-48 w-[600px] h-[600px] rounded-full bg-cyan-300/20 dark:bg-cyan-800/20 blur-3xl" />
-            <div className="absolute top-1/3 -left-48 w-[500px] h-[500px] rounded-full bg-teal-300/20 dark:bg-teal-800/20 blur-3xl" />
-            <div className="absolute -bottom-48 right-1/4 w-[500px] h-[500px] rounded-full bg-blue-300/15 dark:bg-blue-800/20 blur-3xl" />
-            <div className="absolute top-2/3 right-1/3 w-80 h-80 rounded-full bg-emerald-300/15 dark:bg-emerald-800/15 blur-3xl" />
-          </div>
-          {children}
-          {modal}
-          <Toaster richColors position="bottom-center" />
-          <IOSInstallHint />
+          {/* reducedMotion="user" — every motion.* component app-wide instantly
+              respects the OS "reduce motion" setting (Framer Motion auto-skips
+              transform/opacity animations, keeping layout/exit timing intact).
+              One global switch instead of patching FadeIn/BadgePop/NavProgress/
+              every sheet individually — see DESIGN_UX_IMPROVEMENT_PLAN.md theme F. */}
+          <MotionConfig reducedMotion="user">
+            <NavProgress />
+            <OfflineBanner />
+            <ServiceWorkerRegistration />
+            <BfcacheReload />
+            {/* Decorative background blobs */}
+            <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+              <div className="absolute -top-48 -right-48 w-[600px] h-[600px] rounded-full bg-cyan-300/20 dark:bg-cyan-800/20 blur-3xl" />
+              <div className="absolute top-1/3 -left-48 w-[500px] h-[500px] rounded-full bg-teal-300/20 dark:bg-teal-800/20 blur-3xl" />
+              <div className="absolute -bottom-48 right-1/4 w-[500px] h-[500px] rounded-full bg-blue-300/15 dark:bg-blue-800/20 blur-3xl" />
+              <div className="absolute top-2/3 right-1/3 w-80 h-80 rounded-full bg-emerald-300/15 dark:bg-emerald-800/15 blur-3xl" />
+            </div>
+            {children}
+            {modal}
+            <Toaster richColors position="bottom-center" />
+            <IOSInstallHint />
+          </MotionConfig>
         </ThemeProvider>
         {GA_ID && (
           <>

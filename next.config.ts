@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: { canvas: "./empty-canvas-shim.ts" },
   },
+  // We deleted the stale pre-rebrand app/favicon.ico so the new B-Converge glyph
+  // (app/icon.tsx) is the sole favicon. Modern browsers read the injected
+  // <link rel="icon"> tag, but some older browsers/bots still hard-request
+  // /favicon.ico — rewrite that to the same generated new-glyph PNG so they
+  // never see a 404 (or a cached old icon).
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/api/pwa-icon?size=192&v=3" }];
+  },
 };
 
 export default nextConfig;

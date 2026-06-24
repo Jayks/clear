@@ -7,6 +7,7 @@ import { IOSInstallHint } from "@/components/shared/ios-install-hint";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { NavProgress } from "@/components/shared/nav-progress";
 import { BfcacheReload } from "@/components/shared/bfcache-reload";
+import { IOSSplashLinks } from "@/components/shared/ios-splash-links";
 import Script from "next/script";
 import { BRAND, BRAND_TITLE } from "@/lib/brand";
 import "./globals.css";
@@ -53,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable} h-full`} suppressHydrationWarning data-scroll-behavior="smooth">
       <body className="min-h-full">
+        <IOSSplashLinks />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <NavProgress />
           <OfflineBanner />

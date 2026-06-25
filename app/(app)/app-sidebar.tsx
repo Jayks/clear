@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -13,50 +13,112 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { LogOut, BarChart2, Home, LayoutDashboard, Settings, Newspaper, ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  LogOut, BarChart2, LayoutDashboard, Settings, Newspaper,
+  ArrowLeftRight, ChevronLeft, ChevronRight,
+  MapPin, Building2, Coins,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
 
-// Same nav set + identity colours as the old AppNav top bar (mirrors the
-// mobile bottom nav too): Home = cyan, Streams = blue, Insights = amber.
-const NAV_LINKS = [
-  { href: "/groups",   label: "Home",    icon: Home,           tourId: "nav-trips",
-    activeCls: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400" },
-  { href: "/stream",   label: "Streams", icon: ArrowLeftRight, tourId: "nav-streams",
-    activeCls: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400" },
-  { href: "/insights", label: "Insights", icon: BarChart2,     tourId: "nav-insights",
-    activeCls: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400" },
-];
+// ── Group-type navigation (Trips / Nests / Circles) ──────────────────────────
+// First-class destinations: each links to a focused type-filtered view.
+// tourId migrated from the old "Home" link to Trips (primary groups entry point).
+const GROUP_TYPE_LINKS = [
+  {
+    href: "/groups?type=trips",
+    label: "Trips",
+    icon: MapPin,
+    type: "trips" as const,
+    tourId: "nav-trips",
+    activeCls: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400",
+  },
+  {
+    href: "/groups?type=nests",
+    label: "Nests",
+    icon: Building2,
+    type: "nests" as const,
+    activeCls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400",
+  },
+  {
+    href: "/groups?type=circles",
+    label: "Circles",
+    icon: Coins,
+    type: "circles" as const,
+    activeCls: "text-violet-600 bg-violet-50 dark:bg-violet-950/50 dark:text-violet-400",
+  },
+] as const;
+
+// ── Other feature navigation (below separator) ────────────────────────────────
+const FEATURE_NAV_LINKS = [
+  {
+    href: "/stream",
+    label: "Streams",
+    icon: ArrowLeftRight,
+    tourId: "nav-streams",
+    activeCls: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400",
+  },
+  {
+    href: "/insights",
+    label: "Insights",
+    icon: BarChart2,
+    tourId: "nav-insights",
+    activeCls: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400",
+  },
+] as const;
 
 const COLLAPSE_KEY = "clear_sidebar_collapsed";
 
-/**
- * AppSidebar — desktop-only (md+) replacement for the old horizontal AppNav
- * top bar. Mobile is untouched: AppNav still renders there (icon-only top
- * bar + MobileNav bottom tabs), this component is `hidden` below `md`.
- *
- * Collapsible to an icon-only rail; preference persisted in localStorage.
- * Server always renders expanded (no way to know the cookie-less preference
- * during SSR) — corrected client-side in an effect after mount, same pattern
- * as other dismissable-state UI in this app (read in useEffect, write on
- * toggle, never trust localStorage during the server render).
- */
-export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: User; isAdmin: boolean; plan?: "plus" | "free" }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
-  const [streamBadge, setStreamBadge] = useState<string | null>(null);
+const INACTIVE_CLS =
+  "text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800";
 
+/**
+ * AppSidebar — desktop-only (md+) left rail.
+ *
+ * Navigation hierarchy:
+ *   ✈️  Trips    → /groups?type=trips   (cyan)
+ *   🏡  Nests    → /groups?type=nests   (emerald)
+ *   💰  Circles  → /groups?type=circles  (violet)
+ *   ──────────────────────────────────
+ *   ↔   Streams  → /stream              (blue)
+ *   📊  Insights → /insights            (amber)
+ *
+ * Logo at top links to /groups (all-types overview). No "Home" nav item —
+ * the logo IS the home button, same as most app-first products.
+ *
+ * Group-type active state: GroupTypeSyncer (in the groups/[id] layout) writes
+ * `clear_current_group_type` to localStorage and dispatches `group-type-change`
+ * whenever the user enters or leaves a group detail page. This sidebar reads
+ * that key so Trips/Nests/Circles stays highlighted while browsing a group's
+ * sub-pages (settle, expenses, members, insights).
+ */
+export default function AppSidebar({
+  user,
+  isAdmin,
+  plan = "free",
+}: {
+  user: User;
+  isAdmin: boolean;
+  plan?: "plus" | "free";
+}) {
+  const router     = useRouter();
+  const pathname   = usePathname();
+  const searchParams = useSearchParams();
+  const typeParam  = searchParams.get("type"); // "trips" | "nests" | "circles" | null
+
+  const [collapsed,         setCollapsed]         = useState(false);
+  const [streamBadge,       setStreamBadge]       = useState<string | null>(null);
+  const [currentGroupType,  setCurrentGroupType]  = useState<string | null>(null);
+
+  // ── Collapsed preference (localStorage → no SSR flash) ───────────────────
   useEffect(() => {
     try {
       if (localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
-    } catch { /* private browsing / storage disabled — default expanded */ }
+    } catch { /* private browsing */ }
   }, []);
 
-  // Same unread/dispute indicator MobileNav shows on its Streams tab — was
-  // mobile-only before; worth carrying over now that this sidebar is a
-  // permanent fixture rather than an easy-to-miss top bar.
+  // ── Streams unread / dispute badge ───────────────────────────────────────
   useEffect(() => {
     const read = () => setStreamBadge(localStorage.getItem("clear_stream_has_badge"));
     read();
@@ -71,6 +133,33 @@ export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: Use
       setStreamBadge(null);
     }
   }, [pathname]);
+
+  // ── Current group type (written by GroupTypeSyncer in groups/[id] layout) ─
+  // Re-reads on every pathname change so navigating into / out of a group
+  // updates the active type link immediately, even before the custom event fires.
+  useEffect(() => {
+    const read = () => {
+      if (pathname.startsWith("/groups/")) {
+        setCurrentGroupType(localStorage.getItem("clear_current_group_type"));
+      } else {
+        setCurrentGroupType(null);
+      }
+    };
+    read();
+    window.addEventListener("group-type-change", read);
+    return () => window.removeEventListener("group-type-change", read);
+  }, [pathname]);
+
+  // ── Active state helper for type links ───────────────────────────────────
+  // Two cases light up a type link:
+  //  1. User is on the type-filtered home page (/groups?type=trips)
+  //  2. User is inside a group of that type (/groups/[id]/…)
+  function isTypeActive(type: "trips" | "nests" | "circles"): boolean {
+    const dbMap = { trips: "trip", nests: "nest", circles: "circle" } as const;
+    if (pathname === "/groups" && typeParam === type) return true;
+    if (pathname.startsWith("/groups/") && currentGroupType === dbMap[type]) return true;
+    return false;
+  }
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -106,7 +195,7 @@ export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: Use
       )}
       aria-label="Main navigation"
     >
-      {/* Logo + collapse toggle (toggle moves below when collapsed — no room beside the icon) */}
+      {/* ── Logo + collapse toggle ────────────────────────────────────────── */}
       <div className={cn("flex items-center h-14 shrink-0", collapsed ? "justify-center" : "justify-between px-4")}>
         <Link href="/groups" className="flex items-center shrink-0" aria-label="ClearOff home">
           <ClearLogo
@@ -142,9 +231,36 @@ export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: Use
         </div>
       )}
 
-      {/* Nav links */}
+      {/* ── Nav links ─────────────────────────────────────────────────────── */}
       <nav className="flex-1 flex flex-col gap-1 px-2.5 mt-1">
-        {NAV_LINKS.map(({ href, label, icon: Icon, tourId, activeCls }) => {
+
+        {/* Trips / Nests / Circles — group types as first-class destinations */}
+        {GROUP_TYPE_LINKS.map(({ href, label, icon: Icon, type, activeCls, ...rest }) => {
+          const active  = isTypeActive(type);
+          const tourId  = "tourId" in rest ? (rest as { tourId: string }).tourId : undefined;
+          return (
+            <Link
+              key={href}
+              href={href}
+              data-tour={tourId}
+              title={collapsed ? label : undefined}
+              className={cn(
+                "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
+                collapsed && "justify-center px-0",
+                active ? activeCls : INACTIVE_CLS,
+              )}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              {!collapsed && <span className="whitespace-nowrap">{label}</span>}
+            </Link>
+          );
+        })}
+
+        {/* Separator between group types and other features */}
+        <div className="my-1.5 mx-0.5 h-px bg-slate-100 dark:bg-slate-800/60" />
+
+        {/* Streams + Insights */}
+        {FEATURE_NAV_LINKS.map(({ href, label, icon: Icon, tourId, activeCls }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           const badge  = href === "/stream" ? streamBadge : null;
           return (
@@ -156,9 +272,7 @@ export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: Use
               className={cn(
                 "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
                 collapsed && "justify-center px-0",
-                active
-                  ? activeCls
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800"
+                active ? activeCls : INACTIVE_CLS,
               )}
             >
               <span className="relative shrink-0">
@@ -178,7 +292,7 @@ export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: Use
         })}
       </nav>
 
-      {/* Bottom — theme toggle + avatar/menu */}
+      {/* ── Bottom — theme toggle + avatar/menu ───────────────────────────── */}
       <div className={cn(
         "flex items-center gap-2 px-2.5 py-3 border-t border-slate-100 dark:border-slate-800/60",
         collapsed && "flex-col gap-2.5"
@@ -200,12 +314,13 @@ export default function AppSidebar({ user, isAdmin, plan = "free" }: { user: Use
               </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
-          {/* side="right": the sidebar sits at the screen's left edge, so opening
-              downward (the old top-bar default) would frequently clip against the
-              bottom of the viewport since the trigger itself is already near the
-              bottom. align="end" keeps the menu's bottom edge anchored to the
-              trigger instead of growing past the viewport. */}
-          <DropdownMenuContent side="right" align="end" className="w-52 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/60 shadow-xl shadow-black/8 dark:shadow-black/40 rounded-xl">
+          {/* side="right": sidebar sits at left edge so opening rightward avoids
+              clipping; align="end" anchors bottom edge to trigger (near viewport bottom). */}
+          <DropdownMenuContent
+            side="right"
+            align="end"
+            className="w-52 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/60 shadow-xl shadow-black/8 dark:shadow-black/40 rounded-xl"
+          >
             <div className="px-3 py-2">
               <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                 <span className="truncate">{user.user_metadata?.full_name ?? "User"}</span>

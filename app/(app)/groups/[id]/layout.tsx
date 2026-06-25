@@ -2,6 +2,7 @@ import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { GroupMobileNav } from "@/components/shared/group-mobile-nav";
 import { GroupBottomNav } from "@/components/shared/group-bottom-nav";
 import { GroupDesktopNav } from "@/components/shared/group-desktop-nav";
+import { GroupTypeSyncer } from "@/components/shared/group-type-syncer";
 import { getGroupSummary } from "@/lib/db/queries/meta";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
@@ -32,6 +33,10 @@ export default async function TripLayout({
           Any change on expenses / splits / settlements / members
           triggers router.refresh() so all server components update. */}
       <RealtimeRefresh groupId={id} />
+
+      {/* Invisible — writes the current group's type to localStorage so
+          AppSidebar can highlight Trips / Nests / Circles while inside a group. */}
+      {groupSummary && <GroupTypeSyncer groupType={groupSummary.groupType} />}
 
       {/* Slim contextual header on mobile — replaces the full AppNav.
           Uses negative margins to break out of <main>'s p-6 padding

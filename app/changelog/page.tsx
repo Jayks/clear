@@ -5,6 +5,7 @@ import { ClearLogo } from "@/components/shared/clear-logo";
 import { BRAND } from "@/lib/brand";
 import { FadeIn } from "@/components/shared/fade-in";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
+import { OlderReleasesToggle } from "@/components/marketing/changelog-older-releases";
 import { changelog, type ChangelogRelease, type TagVariant } from "@/lib/changelog";
 
 export const metadata: Metadata = { title: "What's New — ClearOff" };
@@ -135,10 +136,20 @@ export default function ChangelogPage() {
             }}
           />
 
+          {/* Latest 3 releases — always visible */}
           <div className="space-y-10">
-            {changelog.map((release, index) => (
+            {changelog.slice(0, 3).map((release, index) => (
               <ReleaseCard key={release.id} release={release} index={index} />
             ))}
+          </div>
+
+          {/* Older releases — collapsible */}
+          <div className="mt-10">
+            <OlderReleasesToggle count={changelog.length - 3}>
+              {changelog.slice(3).map((release, index) => (
+                <ReleaseCard key={release.id} release={release} index={index + 3} />
+              ))}
+            </OlderReleasesToggle>
           </div>
         </div>
       </section>

@@ -20,6 +20,113 @@ export type ChangelogRelease = {
 
 export const changelog: ChangelogRelease[] = [
   {
+    id: "v2-0-navigation-ux-overhaul",
+    version: "v2.0",
+    name: "Navigation & UX Overhaul",
+    date: "June 25, 2026",
+    tag: "Polish",
+    tagVariant: "slate",
+    headline: "Jump to any section instantly — and a settle page that tells the full story.",
+    description:
+      "The biggest navigation update since launch. Trips, Nests, and Circles are now first-class destinations in the desktop sidebar — no more going through the home screen to switch sections. Plus a focused polish pass: settlement confidence callouts, a Stream share preview step, a guided first-run checklist for new groups, and collapsible home sections so you see only what matters right now.",
+    features: [
+      {
+        icon: "🗂️",
+        title: "Sidebar section shortcuts",
+        description:
+          "Trips, Nests, and Circles appear as direct links in the desktop sidebar — click once to jump straight to that section without going via the home screen.",
+      },
+      {
+        icon: "✅",
+        title: "Settlement confidence",
+        description:
+          "After marking a payment, the settle page now shows a clear confirmation of who paid whom and the amount — no more wondering if it actually went through.",
+      },
+      {
+        icon: "📤",
+        title: "Stream share preview",
+        description:
+          "Before sending an IOU link, a new share step shows a preview of the entry so you can confirm it looks right first.",
+      },
+      {
+        icon: "📝",
+        title: "First-run checklist",
+        description:
+          "Brand-new groups open with a short setup checklist — add members, log the first expense — so the blank-slate start is guided, not confusing.",
+      },
+      {
+        icon: "📚",
+        title: "Collapsible home sections",
+        description:
+          "Each section on the home screen can be collapsed so Nests and Circles stay out of the way when you only care about Trips today.",
+      },
+      {
+        icon: "🐛",
+        title: "Bug fixes",
+        description: "Stability improvements and minor issues resolved.",
+      },
+    ],
+  },
+  {
+    id: "v1-9-payments-guest-flows-map-cinema",
+    version: "v1.9",
+    name: "Payments, Guest Flows & Map Cinema",
+    date: "June 16–22, 2026",
+    tag: "New",
+    tagVariant: "amber",
+    headline: "Pay for Plus in-app, send payment links to anyone, and replay your trip on a map.",
+    description:
+      "A major release across three areas: real Razorpay payments so you can buy ClearOff Plus directly in the app; guest payment links so anyone can settle up in a Trip, Nest, or Circle without creating an account; and a cinema-style full-screen map replay for trips. Shipped alongside a redesigned in-group navigation, a smarter home-screen FAB, and a revamped mobile filter bar.",
+    features: [
+      {
+        icon: "💳",
+        title: "Buy Plus in-app",
+        description:
+          "Purchase a 30-day or annual ClearOff Plus pass directly in the app via Razorpay — no external redirects. Early Bird pricing for the first 300 buyers.",
+      },
+      {
+        icon: "🔗",
+        title: "Guest payment links",
+        description:
+          "Send a payment request to anyone in a Trip, Nest, or Circle — even if they don't have a ClearOff account. They click the link, pay, and it records automatically.",
+      },
+      {
+        icon: "🎬",
+        title: "Trip map cinema replay",
+        description:
+          "Tap Play on the trip map to watch your journey unfold day by day — full-screen, animated, with location pins appearing in the order you travelled.",
+      },
+      {
+        icon: "🧭",
+        title: "New in-group navigation",
+        description:
+          "Inside a group, a contextual bottom nav replaces the generic bar — showing only the sections relevant to that group type, with a built-in group switcher.",
+      },
+      {
+        icon: "⊕",
+        title: "Smarter quick-add",
+        description:
+          "Tapping + on the home screen now asks which group first, then offers Scan / Voice / Type — so you never accidentally log to the wrong group.",
+      },
+      {
+        icon: "🎛️",
+        title: "Redesigned mobile filters",
+        description:
+          "Expense filters on mobile are now swipeable chips — filter by category, payer, or date range in one tap without opening a modal.",
+      },
+      {
+        icon: "🇲🇾",
+        title: "Malaysian Ringgit",
+        description: "MYR added as a supported currency for groups and expenses.",
+      },
+      {
+        icon: "🐛",
+        title: "Bug fixes",
+        description: "Stability improvements and minor issues resolved.",
+      },
+    ],
+  },
+  {
     id: "v1-8-members-polish",
     version: "v1.8",
     name: "Members & Visual Polish",

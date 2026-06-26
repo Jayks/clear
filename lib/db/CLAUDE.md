@@ -1,4 +1,4 @@
-# Clear — DB & Data Layer Reference
+# ClearOff — DB & Data Layer Reference
 
 > Loaded when editing `lib/db/**`, `lib/splits/`, `lib/settle/`, `lib/group-config.ts`, `lib/categories.ts`, `drizzle/**`.
 

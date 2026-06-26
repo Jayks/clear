@@ -1,4 +1,4 @@
-# CLAUDE.md — Clear
+# CLAUDE.md — ClearOff
 
 > Source of truth for Claude Code. Reflects actual built state. When in doubt, ask.
 >
@@ -18,13 +18,15 @@
 - **Circle** — shared fund managed by an organiser. Two modes: **recurring** (fixed monthly contributions) and **one_time** (collect toward an optional target/deadline; sub-types: **Fixed** = `contributionAmount != null`, everyone pays the same; **Flexi** = `contributionAmount === null`, everyone contributes any amount). No individual debts — everyone is accountable to a shared wallet. Wallet balance = contributions − wallet expenses.
 
 **Navigation (mobile bottom nav + desktop left sidebar):**
-- **Home** (`/groups`) — Trips · Nests · Circles sections (split, not mixed). `HomeControlBar` provides underline-tab Active/Archived toggle + inline search (collapses to filter chip when blurred with a query).
+- **Home** (`/groups`) — Trips · Nests · Circles sections (split, not mixed). `HomeControlBar` provides underline-tab Active/Archived toggle + inline search (collapses to filter chip when blurred with a query). Each section is independently collapsible on the home screen.
 - **Streams** (`/stream`) — bilateral personal debt dashboard.
 - **Insights** (`/insights`) — analytics across all contexts.
 
+**Desktop sidebar section shortcuts** — `AppSidebar` (`app/(app)/app-sidebar.tsx`) exposes Trips · Nests · Circles as first-class nav links (`GROUP_TYPE_LINKS` constant) at the top of the left rail, linking to `/groups?type=trips|nests|circles`. Below a separator: Streams · Insights. Logo always links to `/groups` (all-types overview) — no explicit "Home" nav item. Active state on group-type links syncs while inside a group via `clear_current_group_type` localStorage key written by `GroupTypeSyncer` (in `groups/[id]` layout, dispatches `group-type-change` event).
+
 **Stream terminology:** The feature = "Streams". The bilateral relationship with one person = "a Stream". An individual debt record within a stream = an **"entry"** (NOT "stream"). This distinction matters in all UI copy.
 
-**Circle terminology:** The feature = "Circles". One circle group = "a Circle". Each member's payment = "a contribution" (NOT "expense"). Admin pool draws = **"wallet expenses"** (logged by admin, `is_advance=false`). Admin personal advances = **"wallet advances"** (`is_advance=true`). Ghost members = added by name without a Clear account; admin records contributions on their behalf. `circleMode: 'recurring' | 'one_time'`. One-time sub-types: **Fixed** (`contributionAmount != null`) = equal contributions; **Flexi** (`contributionAmount === null`) = any amount. Derived helpers: `isFixed = isOneTime && group.contributionAmount !== null`; `isFlexi = isOneTime && group.contributionAmount === null`.
+**Circle terminology:** The feature = "Circles". One circle group = "a Circle". Each member's payment = "a contribution" (NOT "expense"). Admin pool draws = **"wallet expenses"** (logged by admin, `is_advance=false`). Admin personal advances = **"wallet advances"** (`is_advance=true`). Ghost members = added by name without a ClearOff account; admin records contributions on their behalf. `circleMode: 'recurring' | 'one_time'`. One-time sub-types: **Fixed** (`contributionAmount != null`) = equal contributions; **Flexi** (`contributionAmount === null`) = any amount. Derived helpers: `isFixed = isOneTime && group.contributionAmount !== null`; `isFlexi = isOneTime && group.contributionAmount === null`.
 
 ---
 
@@ -212,7 +214,7 @@ Page-load error handling is centralised so every failure looks the same and retr
 ## 5. Coding Conventions
 
 - **Server actions** return `{ ok: true, data }` or `{ ok: false, error }`. Never throw to client.
-- **Desktop nav is `AppSidebar`** (`app/(app)/app-sidebar.tsx`) — a collapsible left rail, not a top bar. `AppNav` is mobile-only now (`md:hidden` unconditionally). Any NEW desktop-only sticky element under the content column should use `top-0`, not an AppNav-height offset — see `components/CLAUDE.md` Navigation section for the full sticky-offset audit.
+- **Desktop nav is `AppSidebar`** (`app/(app)/app-sidebar.tsx`) — a collapsible left rail, not a top bar. `AppNav` is mobile-only now (`md:hidden` unconditionally). Sidebar top section = `GROUP_TYPE_LINKS` (Trips/Nests/Circles, each type-coloured) → separator → `FEATURE_NAV_LINKS` (Streams/Insights). Logo links to `/groups` (all-types overview); no explicit "Home" nav item. Any NEW desktop-only sticky element under the content column should use `top-0`, not an AppNav-height offset — see `components/CLAUDE.md` Navigation section for the full sticky-offset audit.
 - **Back navigation — deterministic push, not `router.back()`/history-shape assumptions.** `BackButton` pushes its known `href`; a form reached by pushing forward from a list (Edit group, Edit/Add expense, templates, circle wallet expense) calls `router.back()` on save — never `router.push`/`router.replace()` to that same list URL, which writes an adjacent duplicate-URL history entry (the native back button's first press then visibly "does nothing"). Forms that navigate to a brand-new URL (create group) correctly keep `router.replace()`. Full rationale in `components/CLAUDE.md` Navigation section.
 - **Money**: `numeric(12,2)` in DB, `number` in TS. Format with `formatCurrency()`.
 - **Dates**: `date` type (no time). Format with `formatDate()`. Recurring: always first of month (`YYYY-MM-01`).

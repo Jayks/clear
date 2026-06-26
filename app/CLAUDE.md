@@ -1,4 +1,4 @@
-# Clear — App Routes & Features Reference
+# ClearOff — App Routes & Features Reference
 
 > Loaded when editing `app/**`.
 

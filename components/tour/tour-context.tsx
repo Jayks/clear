@@ -13,6 +13,9 @@ import { getTourSteps } from "@/lib/tour/steps";
 import { TourLayer } from "./tour-layer";
 
 const DONE_KEY = "clear_tour_done";
+// Pre-rebrand key written when the app was called "Wayfare". Migrate once so
+// returning users don't see the tour again after the rename.
+const LEGACY_DONE_KEY = "wayfare_tour_done";
 
 interface TourContextValue {
   active: boolean;
@@ -47,8 +50,11 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const steps = getTourSteps(demoTripId);
   const totalSteps = steps.length;
 
-  // Read completion state from localStorage
+  // Read completion state from localStorage; migrate legacy key on first load.
   useEffect(() => {
+    if (!localStorage.getItem(DONE_KEY) && localStorage.getItem(LEGACY_DONE_KEY)) {
+      localStorage.setItem(DONE_KEY, "1");
+    }
     setIsCompleted(!!localStorage.getItem(DONE_KEY));
   }, []);
 

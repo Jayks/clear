@@ -15,6 +15,7 @@ interface UnclaimedGuest {
 
 interface Props {
   token: string;
+  groupId: string;
   groupType: string;
   groupLabel: string;
   isLoggedIn: boolean;
@@ -22,7 +23,7 @@ interface Props {
   userDisplayName: string | null;
 }
 
-export function JoinButton({ token, groupType, groupLabel, isLoggedIn, unclaimedGuests, userDisplayName }: Props) {
+export function JoinButton({ token, groupId, groupType, groupLabel, isLoggedIn, unclaimedGuests, userDisplayName }: Props) {
   const [loading, setLoading] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<UnclaimedGuest | null>(null);
   const router = useRouter();
@@ -44,7 +45,7 @@ export function JoinButton({ token, groupType, groupLabel, isLoggedIn, unclaimed
       }
       trackEvent("guest_claimed");
       toast.success("Your expenses are now linked to your account!");
-      router.push(`/groups/${result.groupId}`);
+      router.push(`/groups/${result.groupId}?welcome=1`);
     } else {
       const result = await joinGroup(token);
       setLoading(false);
@@ -54,7 +55,7 @@ export function JoinButton({ token, groupType, groupLabel, isLoggedIn, unclaimed
       }
       trackEvent("group_joined", { group_type: groupType });
       toast.success(`You've joined the ${groupLabel.toLowerCase()}!`);
-      router.push(`/groups/${result.groupId}`);
+      router.push(`/groups/${result.groupId}?welcome=1`);
     }
   }
 

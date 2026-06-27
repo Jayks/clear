@@ -25,6 +25,7 @@ import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components
 import { NestMonthlyBadge, NestMonthlyBadgeSkeleton } from "@/components/trip/nest-monthly-badge";
 import { RepeatTripPrompt } from "@/components/trip/repeat-trip-prompt";
 import { FirstRunChecklist } from "@/components/trip/first-run-checklist";
+import { WelcomeBanner } from "@/components/join/welcome-banner";
 import { HeroBalancePill } from "@/components/trip/hero-balance-pill";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
 import { Lock } from "lucide-react";
@@ -44,7 +45,7 @@ export default async function GroupPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; welcome?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -76,14 +77,31 @@ export default async function GroupPage({
 
   // ── Circle groups get their own dedicated dashboard ───────────────────────
   if (config.isCircle) {
+    const showWelcome = sp.welcome === "1";
     return (
-      <CircleDashboard
-        group={group}
-        members={members}
-        currentMember={currentMember}
-        selectedPeriod={sp.period}
-        isLocked={locked}
-      />
+      <>
+        {showWelcome && (
+          <WelcomeBanner
+            groupId={group.id}
+            groupName={group.name}
+            groupType="circle"
+            creatorName=""
+            expenseCount={0}
+            memberCount={members.length}
+            currency={group.defaultCurrency}
+            circleMode={group.circleMode as "recurring" | "one_time" | null}
+            contributionAmount={group.contributionAmount ? Number(group.contributionAmount) : null}
+          />
+        )}
+        <CircleDashboard
+          group={group}
+          members={members}
+          currentMember={currentMember}
+          selectedPeriod={sp.period}
+          isLocked={locked}
+          hideOrientationBanner={showWelcome}
+        />
+      </>
     );
   }
 
@@ -107,6 +125,11 @@ export default async function GroupPage({
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join/${group.shareToken}`;
 
+  // Need creator name for the WelcomeBanner on trip/nest.
+  // We derive it from the member whose userId matches group.createdBy.
+  const creatorMember = members.find((m) => m.userId === group.createdBy);
+  const creatorName   = creatorMember?.displayName ?? creatorMember?.guestName ?? "A member";
+
   return (
     <div>
       {/* Desktop-only back link — mobile nav handles it */}
@@ -115,6 +138,19 @@ export default async function GroupPage({
         label="All groups"
         className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-6 transition-colors"
       />
+
+      {/* Post-join welcome banner (shows once, dismissed via localStorage) */}
+      {sp.welcome === "1" && (
+        <WelcomeBanner
+          groupId={group.id}
+          groupName={group.name}
+          groupType={group.groupType as "trip" | "nest" | "circle"}
+          creatorName={creatorName}
+          expenseCount={hasExpenses ? 1 : 0}
+          memberCount={members.length}
+          currency={group.defaultCurrency}
+        />
+      )}
 
       {/* Hero */}
       <div className="relative">

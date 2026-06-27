@@ -217,16 +217,26 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
       uploadReceiptProofInBackground(result.expenseId, group.id, proofFile);
     }
 
-    const isFirst = !localStorage.getItem("first_expense_added");
-    if (isFirst) {
-      localStorage.setItem("first_expense_added", "1");
-      toast.success("First expense logged!", {
-        description: "Ready to settle up with the group?",
-        action: { label: "Settle up →", onClick: () => router.push(`/groups/${group.id}/settle`) },
-        duration: 6000,
+    // Invite nudge — when the user is the only member, splits are meaningless
+    // until someone else joins. Skip for demo groups.
+    if (members.length === 1 && !group.isDemo) {
+      toast.success("Expense saved! 🎉 Now invite your tripmates to split it", {
+        description: "Splits only work when everyone's in.",
+        action: { label: "Invite →", onClick: () => router.push(`/groups/${group.id}/members`) },
+        duration: 7000,
       });
     } else {
-      toast.success("Expense added!");
+      const isFirst = !localStorage.getItem("first_expense_added");
+      if (isFirst) {
+        localStorage.setItem("first_expense_added", "1");
+        toast.success("First expense logged!", {
+          description: "Ready to settle up with the group?",
+          action: { label: "Settle up →", onClick: () => router.push(`/groups/${group.id}/settle`) },
+          duration: 6000,
+        });
+      } else {
+        toast.success("Expense added!");
+      }
     }
 
     // Reached by pushing forward (from the expenses list, the overview page's

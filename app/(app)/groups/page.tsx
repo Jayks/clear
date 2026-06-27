@@ -29,6 +29,7 @@ import { HomeControlBar } from "@/components/shared/home-control-bar";
 import { BadgePop } from "@/components/shared/badge-pop";
 import { HomeBalanceSummary, HomeBalanceSkeleton } from "@/components/shared/home-balance-summary";
 import type { HomeGroupMeta } from "@/lib/home/balance-summary";
+import { WhatsNewBanner } from "@/components/shared/whats-new-banner";
 
 // Maps URL ?type= param → DB groupType value
 const TYPE_FILTER_MAP = {
@@ -623,6 +624,9 @@ export default async function GroupsPage({
         hasDisputed={streamBadge.hasDisputed}
       />
       {groupNudge && <PlanNudgeBanner nudge={groupNudge} resource="groups" />}
+
+      {/* ── What's New banner — returning users only, one-shot per version ─── */}
+      {!isEmpty && <WhatsNewBanner />}
 
       {/* ── Empty state — "what are you tracking?" chooser (truly nothing) ──── */}
       {isEmpty && <EmptyChooser showSampleCta />}

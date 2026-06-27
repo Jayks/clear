@@ -40,6 +40,9 @@ interface Props {
    *  shortcut). Passed false from inside-group entry points (GroupMobileNav,
    *  GroupHeroHub) where the bottom nav / overview cards already cover it. */
   showJumpTo?:     boolean;
+  /** When true, shows the pulsing cyan glow dot on the Scan tile to surface
+   *  AI receipt scanning to users who have been logging manually. */
+  showScanGlow?:   boolean;
 }
 
 // ─── Zone 1 — quick-log tiles ─────────────────────────────────────────────
@@ -77,6 +80,7 @@ export function GroupActionHub({
   groupStartDate, groupEndDate,
   members,
   showJumpTo = true,
+  showScanGlow = false,
 }: Props) {
   const [quickAddOpen, setQuickAddOpen]     = useState(false);
   const [startMode, setStartMode]           = useState<StartMode>("text");
@@ -180,7 +184,7 @@ export function GroupActionHub({
                   {!isCircle && (
                     <section>
                       <SectionLabel>Log expense</SectionLabel>
-                      <LogExpenseTiles onPick={openQuickAdd} />
+                      <LogExpenseTiles onPick={openQuickAdd} showScanGlow={showScanGlow} />
                     </section>
                   )}
 

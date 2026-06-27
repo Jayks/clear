@@ -56,6 +56,47 @@ export default async function AllInsightsPage() {
     );
   }
 
+  // Sparse state — there's data but not enough for meaningful charts (< 5 expenses).
+  // Progress bar gives users a concrete, achievable goal.
+  const SPARSE_THRESHOLD = 5;
+  const totalExpenses =
+    (tripsData?.totalExpenses ?? 0) + (nestsData?.totalExpenses ?? 0);
+  const hasSparseData = hasAnyData && totalExpenses < SPARSE_THRESHOLD;
+
+  if (hasSparseData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400
+                        flex items-center justify-center mb-5 shadow-lg shadow-amber-500/25">
+          <BarChart2 className="w-7 h-7 text-white" />
+        </div>
+        <h2 className="text-lg text-slate-700 dark:text-slate-200 mb-1"
+            style={{ fontFamily: "var(--font-fraunces)" }}>
+          Your insights are coming together
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mb-5 max-w-xs">
+          Add more expenses to see spending patterns and breakdowns.
+        </p>
+        {/* Progress bar */}
+        <div className="w-48 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mb-1.5">
+          <div
+            className="bg-gradient-to-r from-amber-400 to-orange-400 h-1.5 rounded-full transition-all"
+            style={{ width: `${(totalExpenses / SPARSE_THRESHOLD) * 100}%` }}
+          />
+        </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
+          {totalExpenses} of {SPARSE_THRESHOLD} expenses logged
+        </p>
+        <Link href="/groups"
+          className="inline-flex items-center gap-1.5 bg-gradient-to-br from-cyan-500 to-teal-500
+                     hover:from-cyan-600 hover:to-teal-600 text-white text-sm font-medium
+                     rounded-xl px-5 py-2.5 shadow-md shadow-cyan-500/25 transition-all">
+          Log more expenses →
+        </Link>
+      </div>
+    );
+  }
+
   const primaryCurrency =
     tripsData?.byTrip[0]?.currency ??
     nestsData?.byNest[0]?.currency ??

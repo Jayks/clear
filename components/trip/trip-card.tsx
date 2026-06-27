@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/utils";
 import { GroupActionHub } from "./group-action-hub";
 import { CardRibbon } from "@/components/shared/card-ribbon";
 import { ImageShimmer } from "@/components/shared/image-shimmer";
+import { ONBOARDING_KEYS } from "@/lib/onboarding-keys";
 
 // ── No-cover-photo SVG patterns ──────────────────────────────────────────────
 // Two overlay divs toggled via dark:hidden / hidden dark:block.
@@ -113,6 +114,14 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [photoLoaded, setPhotoLoaded] = useState(false);
+  // Scan glow — client-derived from localStorage; false until effect runs.
+  // Circles never show the glow (no "Log expense" zone in their hub).
+  const [showScanGlow, setShowScanGlow] = useState(false);
+  useEffect(() => {
+    if (group.groupType === "circle") return;
+    const dismissed = localStorage.getItem(ONBOARDING_KEYS.SCAN_GLOW_DISMISSED) === "1";
+    setShowScanGlow(!dismissed);
+  }, [group.groupType]);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl}/join/${group.shareToken}`;
   const isNest     = group.groupType === "nest";
@@ -356,6 +365,7 @@ export function TripCard({ group, memberCount, balanceBadge, priority = false, i
         joinUrl={joinUrl}
         groupStartDate={group.startDate}
         groupEndDate={group.endDate}
+        showScanGlow={showScanGlow}
       />
     </div>
   );

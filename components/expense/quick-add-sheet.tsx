@@ -226,14 +226,28 @@ export function QuickAddSheet({
       if (result.ok) {
         hapticLight();
         trackEvent("expense_added", { source: "quick_add" });
-        const isFirst = !localStorage.getItem("first_expense_added");
-        if (isFirst) {
-          localStorage.setItem("first_expense_added", "1");
-          toast.success("First expense logged!", {
-            description: "Ready to settle up with the group?",
-            action: { label: "Settle up →", onClick: () => { window.location.href = `/groups/${groupId}/settle`; } },
-            duration: 6000,
+        // Invite nudge when sole member (splits need other people).
+        // memberCount from members state; skip when unknown (GlobalFab path may
+        // not have loaded members yet — default to undefined to suppress nudge).
+        // TODO(onboarding-1a): add memberCount to the GlobalFab group-list query
+        // to enable the nudge in that path too.
+        const currentMemberCount = members?.length ?? undefined;
+        if (currentMemberCount === 1) {
+          toast.success("Expense saved! 🎉 Now invite your tripmates to split it", {
+            description: "Splits only work when everyone's in.",
+            action: { label: "Invite →", onClick: () => { window.location.href = `/groups/${groupId}/members`; } },
+            duration: 7000,
           });
+        } else {
+          const isFirst = !localStorage.getItem("first_expense_added");
+          if (isFirst) {
+            localStorage.setItem("first_expense_added", "1");
+            toast.success("First expense logged!", {
+              description: "Ready to settle up with the group?",
+              action: { label: "Settle up →", onClick: () => { window.location.href = `/groups/${groupId}/settle`; } },
+              duration: 6000,
+            });
+          }
         }
         addRecentCategory(input.category);
         // Store payer + date as sticky context for the next "Add another" entry

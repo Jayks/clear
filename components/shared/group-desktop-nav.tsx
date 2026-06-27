@@ -9,6 +9,7 @@ import { getContextTheme } from "@/lib/theme/context-theme";
 import { getGroupTabs, sectionFromPath } from "@/lib/nav/group-tabs";
 import { GroupSwitcherDropdown } from "./group-switcher-dropdown";
 import { GroupActionHub } from "@/components/trip/group-action-hub";
+import { ONBOARDING_KEYS } from "@/lib/onboarding-keys";
 
 /**
  * Desktop in-group tab strip (md+ only). The desktop counterpart of the mobile
@@ -51,6 +52,13 @@ export function GroupDesktopNav({
   const current = pending ?? actual;
 
   const [hubOpen, setHubOpen] = useState(false);
+  // Scan glow — client-derived from localStorage; circles never show it.
+  const [showScanGlow, setShowScanGlow] = useState(false);
+  useEffect(() => {
+    if (groupType === "circle") return;
+    const dismissed = localStorage.getItem(ONBOARDING_KEYS.SCAN_GLOW_DISMISSED) === "1";
+    setShowScanGlow(!dismissed);
+  }, [groupType]);
 
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = shareToken ? `${appUrl}/join/${shareToken}` : undefined;
@@ -131,6 +139,7 @@ export function GroupDesktopNav({
         groupStartDate={groupStartDate}
         groupEndDate={groupEndDate}
         showJumpTo={false}
+        showScanGlow={showScanGlow}
       />
     </nav>
   );

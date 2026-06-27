@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/shared/skeleton";
 import { DebtFlowGraph } from "@/components/settlement/debt-flow-graph";
 import { SettleBreakdownSection } from "./settle-breakdown-section";
 import { SettleActionsClient } from "./settle-actions-client";
+import { SettleHintOverlay } from "@/components/settlement/settle-hint-overlay";
+import { NotifyPermissionPrompt } from "@/components/settlement/notify-permission-prompt";
 import { SectionHeader } from "@/components/shared/section-header";
 import type { ContextTheme } from "@/lib/theme/context-theme";
 import {
@@ -90,6 +92,21 @@ export async function BalancesSection({
        * RSC-rendered content (DebtFlowGraph, monthly context, net balances)
        * is passed as children — server-rendered, static until router.refresh().
        */}
+      {/* ── Notification permission prompt ───────────────────────────────────
+       * Shown above the graph when the current user is owed money and hasn't
+       * yet been prompted about push notifications. Derives currentUserNet
+       * from balances (no currentUserNet variable exists in this RSC). */}
+      {(() => {
+        const currentUserNet =
+          balances.find((b) => b.memberId === currentMemberId)?.net ?? 0;
+        return currentUserNet > 0 ? (
+          <NotifyPermissionPrompt
+            amountOwedToMe={currentUserNet}
+            currency={currency}
+          />
+        ) : null;
+      })()}
+
       <SettleActionsClient
         balances={balances}
         pendingSettlements={pendingSettlements}
@@ -115,7 +132,7 @@ export async function BalancesSection({
       >
         {/* ── Debt flow graph ──────────────────────────────────── */}
         {members.length > 1 && (
-          <div data-tour="debt-flow-graph">
+          <div data-tour="debt-flow-graph" className="relative">
             <DebtFlowGraph
               suggestions={suggestions}
               members={members}
@@ -124,6 +141,7 @@ export async function BalancesSection({
               currency={currency}
               groupId={groupId}
             />
+            <SettleHintOverlay hasDebts={suggestions.length > 0} />
           </div>
         )}
 

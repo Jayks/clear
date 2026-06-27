@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Camera, Mic, Sparkles } from "lucide-react";
+import { ONBOARDING_KEYS } from "@/lib/onboarding-keys";
 import type { LucideIcon } from "lucide-react";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import { QuickAddSheet } from "./quick-add-sheet";
@@ -21,6 +22,9 @@ interface Props {
   groupStartDate?: string | null;
   groupEndDate?: string | null;
   isPlusUser?: boolean;
+  /** When true, shows a pulsing cyan dot on the Scan FAB button to surface
+   *  AI receipt scanning to users who have been logging manually (>= 3 expenses). */
+  showScanGlow?: boolean;
 }
 
 // The three input methods share the same palette + icons as GroupActionHub's
@@ -42,14 +46,27 @@ export function ExpenseQuickAddFab({
   groupStartDate,
   groupEndDate,
   isPlusUser = false,
+  showScanGlow = false,
 }: Props) {
-  const [fabOpen, setFabOpen]   = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [startMode, setStartMode] = useState<StartMode>("text");
+  const [fabOpen, setFabOpen]         = useState(false);
+  const [sheetOpen, setSheetOpen]     = useState(false);
+  const [startMode, setStartMode]     = useState<StartMode>("text");
+  const [glowDismissed, setGlowDismissed] = useState(true);
   const theme = getContextTheme(groupType, circleMode);
+
+  useEffect(() => {
+    if (!showScanGlow) return;
+    const dismissed =
+      localStorage.getItem(ONBOARDING_KEYS.SCAN_GLOW_DISMISSED) === "1";
+    setGlowDismissed(dismissed);
+  }, [showScanGlow]);
 
   function pick(mode: StartMode) {
     hapticLight();
+    if (mode === "scan" && showScanGlow && !glowDismissed) {
+      localStorage.setItem(ONBOARDING_KEYS.SCAN_GLOW_DISMISSED, "1");
+      setGlowDismissed(true);
+    }
     setStartMode(mode);
     setFabOpen(false);
     setSheetOpen(true);
@@ -112,10 +129,16 @@ export function ExpenseQuickAddFab({
               <button
                 type="button"
                 onClick={() => pick(mode)}
-                className={`w-12 h-12 rounded-full flex items-center justify-center
+                className={`relative w-12 h-12 rounded-full flex items-center justify-center
                             bg-gradient-to-br ${gradient} shadow-lg ${shadow} text-white
                             hover:brightness-105 active:scale-95 transition-all`}
               >
+                {mode === "scan" && showScanGlow && !glowDismissed && (
+                  <span className="absolute -top-1 -right-1 z-10 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500" />
+                  </span>
+                )}
                 <Icon className="w-[18px] h-[18px]" />
               </button>
             </motion.div>

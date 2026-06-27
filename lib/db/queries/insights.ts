@@ -72,7 +72,11 @@ export async function getAllTripsInsightsData() {
   const categoryTotals: Record<string, number> = {};
   for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
 
-  return computeAllTripsInsights({ trips: tripGroups, summaries, categoryTotals, allMembers: tripMembers, currentUserId: user.id });
+  // totalExpenses — sum per-trip cnt; getAllTripsInsightsData has no flat expense array.
+  const totalExpenses = perTripTotals.reduce((s, t) => s + Number(t.cnt), 0);
+
+  const insights = computeAllTripsInsights({ trips: tripGroups, summaries, categoryTotals, allMembers: tripMembers, currentUserId: user.id });
+  return insights ? { ...insights, totalExpenses } : null;
 }
 
 export async function getAllNestsInsightsData() {
@@ -128,7 +132,7 @@ export async function getAllNestsInsightsData() {
   const categoryTotals: Record<string, number> = {};
   for (const row of catRows) categoryTotals[row.category] = Number(row.total ?? 0);
 
-  return computeAllNestsInsights({
+  const insights = computeAllNestsInsights({
     nests: nestGroups,
     allExpenses,
     categoryTotals,
@@ -136,6 +140,8 @@ export async function getAllNestsInsightsData() {
     currentUserId: user.id,
     currency: primaryCurrency,
   });
+  // allExpenses is the flat expense array (nests path has it in memory).
+  return insights ? { ...insights, totalExpenses: allExpenses.length } : null;
 }
 
 export async function getOtherTripsSummary(currentGroupId: string): Promise<OtherTripSummary[]> {

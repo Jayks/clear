@@ -19,6 +19,8 @@ import { BackButton } from "@/components/shared/back-button";
 import { getContextTheme } from "@/lib/theme/context-theme";
 import { getGroupConfig } from "@/lib/group-config";
 import { Lock } from "lucide-react";
+import { CircleOrientationBanner } from "./circle-orientation-banner";
+import { CircleFirstRun } from "./circle-first-run";
 
 interface Props {
   group:          Group;
@@ -27,9 +29,17 @@ interface Props {
   selectedPeriod: string | undefined;
   /** Overflow read-only lock (RAZORPAY_PLAN.md §9) — see TripCard's isLocked doc. */
   isLocked?: boolean;
+  /**
+   * True when the group page was reached via ?welcome=1 (post-join first render).
+   * Passed through to CircleOrientationBanner so it suppresses itself on this
+   * render — WelcomeBanner already handles orientation on join day. The orientation
+   * banner will still appear on the user's NEXT visit (its own localStorage key
+   * not yet written), so no information is permanently lost.
+   */
+  hideOrientationBanner?: boolean;
 }
 
-export async function CircleDashboard({ group, members, currentMember, selectedPeriod, isLocked = false }: Props) {
+export async function CircleDashboard({ group, members, currentMember, selectedPeriod, isLocked = false, hideOrientationBanner = false }: Props) {
   const isRecurring = group.circleMode === "recurring";
   const isOneTime   = group.circleMode === "one_time";
   const isFixed     = isOneTime && group.contributionAmount !== null;
@@ -109,6 +119,21 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
   // Show hero action zone on current period (recurring) or always (one-time)
   const showActionZone = dash.currentMemberId && ((isRecurring && dash.isCurrentPeriod) || isOneTime);
 
+  // ── Onboarding: first-run checklist vs orientation banner ────────────────
+  // hasContributions = any member has a confirmed contribution (controls show-condition
+  // AND admin item 2 done-state). memberStatuses.isPaid is true for confirmed only.
+  const hasContributions = dash.memberStatuses.some((m) => m.isPaid);
+  // currentMemberHasContributed = THIS member specifically (controls member item 1
+  // done-state — separate from show condition).
+  const currentMemberHasContributed = myMemberStatus?.isPaid ?? false;
+  // Show the first-run checklist when: brand-new real circle, no contributions yet,
+  // only 1–2 members (creator or creator + 1 ghost). Archived and demo circles skip.
+  const showCircleFirstRun =
+    !group.isDemo &&
+    !group.isArchived &&
+    !hasContributions &&
+    members.length <= 2;
+
   return (
     <div>
       {/* Desktop back link */}
@@ -138,6 +163,34 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Onboarding: first-run checklist OR orientation banner ──────────── */}
+      {/*
+       * These are mutually exclusive:
+       *   showCircleFirstRun → CircleFirstRun (brand-new circle, nothing logged yet)
+       *   else               → CircleOrientationBanner (first-time visitor with data)
+       * WelcomeBanner (post-join) suppresses the orientation banner on the first
+       * render via the hideOrientationBanner RSC prop.
+       */}
+      {showCircleFirstRun ? (
+        <CircleFirstRun
+          groupId={group.id}
+          isAdmin={isAdmin}
+          memberCount={members.length}
+          hasContributions={hasContributions}
+          currentMemberHasContributed={currentMemberHasContributed}
+        />
+      ) : (
+        <CircleOrientationBanner
+          groupId={group.id}
+          groupName={group.name}
+          isAdmin={isAdmin}
+          circleMode={(group.circleMode as "recurring" | "one_time") ?? "recurring"}
+          contributionAmount={amount}
+          currency={group.defaultCurrency}
+          hideOrientationBanner={hideOrientationBanner}
+        />
       )}
 
       {/* ── Hero card ───────────────────────────────────────────────────────── */}
@@ -377,7 +430,8 @@ export async function CircleDashboard({ group, members, currentMember, selectedP
       )}
 
       {/* ── Contribution roster ─────────────────────────────────────────────── */}
-      <div className="glass rounded-2xl p-5 mb-6">
+      {/* id="contribution-roster" — used by CircleFirstRun checklist scroll target */}
+      <div id="contribution-roster" className="glass rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className={`w-6 h-6 rounded-md ${sectionBg} flex items-center justify-center shrink-0`}>

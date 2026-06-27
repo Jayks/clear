@@ -7,6 +7,7 @@ import { GroupActionHub } from "@/components/trip/group-action-hub";
 import { GroupSwitcherSheet } from "@/components/shared/group-switcher-sheet";
 import { getContextTheme } from "@/lib/theme/context-theme";
 import { usePathname, useRouter } from "next/navigation";
+import { ONBOARDING_KEYS } from "@/lib/onboarding-keys";
 
 interface Props {
   groupId:         string;
@@ -107,14 +108,24 @@ export function GroupMobileNav({
   groupType, circleMode, currency, isArchived, isAdmin,
   shareToken, groupStartDate, groupEndDate,
 }: Props) {
-  const [navOpen, setNavOpen] = useState(false);
+  const [navOpen, setNavOpen]       = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  // Scan glow — client-derived so the layout doesn't need an expense-count query.
+  // Defaults false (hidden) until localStorage read; circles never show it.
+  const [showScanGlow, setShowScanGlow] = useState(false);
   const pathname = usePathname();
   const router   = useRouter();
 
   // Stable reference — prevents the history useEffect in GroupActionHub from
   // re-running (and re-pushing fake history entries) on every re-render.
   const handleClose = useCallback(() => setNavOpen(false), []);
+
+  // Read the scan-glow dismissed flag once on mount (client-only — localStorage).
+  useEffect(() => {
+    if (groupType === "circle") return;
+    const dismissed = localStorage.getItem(ONBOARDING_KEYS.SCAN_GLOW_DISMISSED) === "1";
+    setShowScanGlow(!dismissed);
+  }, [groupType]);
 
   // Close the switcher once a switch commits (groupId prop changes).
   useEffect(() => { setSwitcherOpen(false); }, [groupId]);
@@ -229,6 +240,7 @@ export function GroupMobileNav({
         groupStartDate={groupStartDate}
         groupEndDate={groupEndDate}
         showJumpTo={false}
+        showScanGlow={showScanGlow}
       />
 
       <GroupSwitcherSheet

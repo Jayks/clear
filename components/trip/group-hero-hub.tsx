@@ -7,9 +7,10 @@
  * (and stays visible on mobile as a secondary entry point).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { GroupActionHub } from "./group-action-hub";
+import { ONBOARDING_KEYS } from "@/lib/onboarding-keys";
 
 interface Props {
   groupId:         string;
@@ -33,6 +34,14 @@ export function GroupHeroHub({
   joinUrl, groupStartDate, groupEndDate,
 }: Props) {
   const [open, setOpen] = useState(false);
+  // Scan glow — client-derived; defaults false until localStorage read.
+  const [showScanGlow, setShowScanGlow] = useState(false);
+
+  useEffect(() => {
+    if (groupType === "circle") return;
+    const dismissed = localStorage.getItem(ONBOARDING_KEYS.SCAN_GLOW_DISMISSED) === "1";
+    setShowScanGlow(!dismissed);
+  }, [groupType]);
 
   return (
     <>
@@ -59,6 +68,7 @@ export function GroupHeroHub({
         groupStartDate={groupStartDate}
         groupEndDate={groupEndDate}
         showJumpTo={false}
+        showScanGlow={showScanGlow}
       />
     </>
   );

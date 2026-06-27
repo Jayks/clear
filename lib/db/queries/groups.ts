@@ -2,7 +2,8 @@ import { db } from "@/lib/db/client";
 import { groups } from "@/lib/db/schema/groups";
 import type { Group } from "@/lib/db/schema/groups";
 import { groupMembers } from "@/lib/db/schema/group-members";
-import { eq, and, count, inArray, sql, getTableColumns, isNull, or, not, desc } from "drizzle-orm";
+import { expenses } from "@/lib/db/schema/expenses";
+import { eq, and, count, sum, inArray, sql, getTableColumns, isNull, or, not, desc } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 
@@ -107,7 +108,7 @@ export async function getGroupByToken(token: string) {
 
   if (!group) return null;
 
-  const [memberCountResult, unclaimedGuests] = await Promise.all([
+  const [memberCountResult, unclaimedGuests, expenseStats, creatorRow] = await Promise.all([
     db
       .select({ memberCount: count(groupMembers.id) })
       .from(groupMembers)
@@ -116,9 +117,35 @@ export async function getGroupByToken(token: string) {
       .select({ id: groupMembers.id, guestName: groupMembers.guestName })
       .from(groupMembers)
       .where(and(eq(groupMembers.groupId, group.id), isNull(groupMembers.userId))),
+    // Expense count + total for the "What's inside" strip on the join page.
+    // sum() returns string | null — callers must use Number(totalAmount ?? 0).
+    db
+      .select({ expenseCount: count(expenses.id), totalAmount: sum(expenses.amount) })
+      .from(expenses)
+      .where(and(eq(expenses.groupId, group.id), eq(expenses.isTemplate, false))),
+    // Creator name — match by createdBy (not role='admin'; a group can have many admins).
+    group.createdBy
+      ? db
+          .select({ displayName: groupMembers.displayName, guestName: groupMembers.guestName })
+          .from(groupMembers)
+          .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, group.createdBy)))
+          .limit(1)
+      : Promise.resolve([] as { displayName: string | null; guestName: string | null }[]),
   ]);
 
-  return { group, memberCount: memberCountResult[0].memberCount, unclaimedGuests };
+  const { expenseCount, totalAmount } = expenseStats[0] ?? { expenseCount: 0, totalAmount: null };
+  const creatorMember = creatorRow[0];
+  const creatorName =
+    (creatorMember?.displayName ?? creatorMember?.guestName) ?? "A member";
+
+  return {
+    group,
+    memberCount: memberCountResult[0].memberCount,
+    unclaimedGuests,
+    expenseCount: Number(expenseCount),
+    totalAmount,          // string | null — wrap with Number(totalAmount ?? 0) in callers
+    creatorName,
+  };
 }
 
 // Returns all the user's other groups with their members — for the "Import from group" feature.

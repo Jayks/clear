@@ -45,7 +45,8 @@ export function JoinButton({ token, groupId, groupType, groupLabel, isLoggedIn, 
       }
       trackEvent("guest_claimed");
       toast.success("Your expenses are now linked to your account!");
-      router.push(`/groups/${result.groupId}?welcome=1`);
+      // First-time users go to home so the demo trip + onboarding tour loads.
+      router.push(result.isFirstGroup ? "/groups" : `/groups/${result.groupId}?welcome=1`);
     } else {
       const result = await joinGroup(token);
       setLoading(false);
@@ -55,7 +56,8 @@ export function JoinButton({ token, groupId, groupType, groupLabel, isLoggedIn, 
       }
       trackEvent("group_joined", { group_type: groupType });
       toast.success(`You've joined the ${groupLabel.toLowerCase()}!`);
-      router.push(`/groups/${result.groupId}?welcome=1`);
+      // First-time users go to home so the demo trip + onboarding tour loads.
+      router.push(result.isFirstGroup ? "/groups" : `/groups/${result.groupId}?welcome=1`);
     }
   }
 

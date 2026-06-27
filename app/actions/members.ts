@@ -13,6 +13,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { canRemoveMember } from "@/lib/members/member-guards";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
 import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
+import { seedDemoGroup } from "@/lib/demo/seed-demo-trip";
 
 export async function addGuestMember(input: { groupId: string; guestName: string }) {
   const user = await getCurrentUser();
@@ -143,6 +144,15 @@ export async function claimGuestMember(token: string, guestMemberId: string) {
   const [group] = await db.select({ id: groups.id }).from(groups).where(eq(groups.shareToken, token));
   if (!group) return { ok: false, error: "Invalid invite link" } as const;
 
+  // Detect brand-new users before the transaction (same logic as joinGroup).
+  const [priorMembership] = await db
+    .select({ id: groupMembers.id })
+    .from(groupMembers)
+    .innerJoin(groups, eq(groupMembers.groupId, groups.id))
+    .where(and(eq(groupMembers.userId, user.id), eq(groups.isDemo, false)))
+    .limit(1);
+  const isFirstGroup = !priorMembership;
+
   try {
     await db.transaction(async (tx) => {
       const [guest] = await tx
@@ -163,10 +173,15 @@ export async function claimGuestMember(token: string, guestMemberId: string) {
         .where(eq(groupMembers.id, guestMemberId));
     });
 
+    // Auto-seed demo trip for first-time users (fire-and-forget).
+    if (isFirstGroup) {
+      seedDemoGroup(user.id, extractDisplayName(user)).catch(() => {});
+    }
+
     revalidateTag(`group-${group.id}`, "max");
     revalidatePath("/groups");
     revalidatePath(`/groups/${group.id}`, "layout");
-    return { ok: true, groupId: group.id } as const;
+    return { ok: true, groupId: group.id, isFirstGroup } as const;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Failed to claim";
     return { ok: false, error: msg } as const;
@@ -189,7 +204,19 @@ export async function joinGroup(token: string) {
     .from(groupMembers)
     .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, user.id)));
 
-  if (existing) return { ok: true, groupId: group.id } as const;
+  if (existing) return { ok: true, groupId: group.id, isFirstGroup: false } as const;
+
+  // Detect brand-new users BEFORE inserting so the count is accurate.
+  // "First group" = no prior non-demo group memberships. We check all
+  // their memberships (not just trips) so a user who already created a
+  // Nest isn't treated as a first-timer when they join their first Trip.
+  const [priorMembership] = await db
+    .select({ id: groupMembers.id })
+    .from(groupMembers)
+    .innerJoin(groups, eq(groupMembers.groupId, groups.id))
+    .where(and(eq(groupMembers.userId, user.id), eq(groups.isDemo, false)))
+    .limit(1);
+  const isFirstGroup = !priorMembership;
 
   try {
     await db.insert(groupMembers).values({
@@ -199,10 +226,18 @@ export async function joinGroup(token: string) {
       role: "member",
     });
 
+    // First-time users need the sample trip so the onboarding tour triggers on
+    // the home page. The seeder is idempotent — safe to call even if a demo
+    // somehow already exists. Fire-and-forget: a seeding failure must never
+    // block the join itself.
+    if (isFirstGroup) {
+      seedDemoGroup(user.id, extractDisplayName(user)).catch(() => {});
+    }
+
     revalidateTag(`group-${group.id}`, "max");
     revalidatePath("/groups");
     revalidatePath(`/groups/${group.id}`, "layout");
-    return { ok: true, groupId: group.id } as const;
+    return { ok: true, groupId: group.id, isFirstGroup } as const;
   } catch {
     return { ok: false, error: "Failed to join group" } as const;
   }

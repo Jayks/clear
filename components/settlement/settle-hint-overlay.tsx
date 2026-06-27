@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { ONBOARDING_KEYS } from "@/lib/onboarding-keys";
+import { useTour } from "@/components/tour/tour-context";
 
 interface Props {
   /** Only show the overlay when real debts exist (not on an all-settled group). */
@@ -17,15 +18,20 @@ interface Props {
  * once across all groups.
  */
 export function SettleHintOverlay({ hasDebts }: Props) {
+  const { active: tourActive } = useTour();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (!hasDebts) return;
+    // Suppress during the onboarding tour — the tour IS the guide for this page;
+    // overlaying it blocks the graph step. The hint will show on the user's next
+    // organic settle visit once the tour is done.
+    if (tourActive) return;
     if (localStorage.getItem(ONBOARDING_KEYS.SETTLE_HINT) === "1") return;
     // Small delay — let the graph render and animate first.
     const t = setTimeout(() => setShow(true), 400);
     return () => clearTimeout(t);
-  }, [hasDebts]);
+  }, [hasDebts, tourActive]);
 
   function dismiss() {
     localStorage.setItem(ONBOARDING_KEYS.SETTLE_HINT, "1");

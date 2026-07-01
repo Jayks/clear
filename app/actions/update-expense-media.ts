@@ -28,6 +28,18 @@ export async function updateExpenseMedia(
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false };
 
+  // FIX #3: Fetch the expense row so we can enforce creator-or-admin (same guard
+  // as updateExpense and deleteExpense — server actions are the trust boundary).
+  const [expense] = await db
+    .select({ createdByUserId: expenses.createdByUserId })
+    .from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.groupId, groupId)))
+    .limit(1);
+  if (!expense) return { ok: false };
+
+  if (expense.createdByUserId !== user.id && membership.role !== "admin")
+    return { ok: false };
+
   try {
     await db
       .update(expenses)
@@ -56,9 +68,19 @@ export async function clearExpenseReceipt(
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false };
 
+  // FIX #4: Enforce creator-or-admin server-side. The component-level canEdit
+  // guard is not a security boundary; any caller can invoke server actions directly.
+  const [expense] = await db
+    .select({ createdByUserId: expenses.createdByUserId })
+    .from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.groupId, groupId)))
+    .limit(1);
+  if (!expense) return { ok: false };
+
+  if (expense.createdByUserId !== user.id && membership.role !== "admin")
+    return { ok: false };
+
   try {
-    // Only the creator or an admin may remove — check at DB level by matching groupId
-    // (admin check is enforced in the component via canEdit; we just verify membership here)
     await db
       .update(expenses)
       .set({ receiptUrl: null, receiptItems: null })

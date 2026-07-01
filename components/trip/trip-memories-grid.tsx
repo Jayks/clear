@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { TripPhoto } from "@/lib/db/schema/trip-photos";
 import { AnimatedList } from "@/components/shared/animated-list";
@@ -29,9 +30,20 @@ export function TripMemoriesGrid({
   canUpload,
   memberNames,
 }: TripMemoriesGridProps) {
+  const router = useRouter();
+
   // Optimistically append newly-uploaded photos (public URLs only — no DB row yet reflected)
   const [extraUrls, setExtraUrls]   = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // FIX #8: Once router.refresh() delivers updated initialPhotos, remove any
+  // optimistic URLs that are now represented as real server rows — this transitions
+  // each thumbnail from the non-interactive <div> to an interactive <button>.
+  useEffect(() => {
+    if (extraUrls.length === 0) return;
+    const serverUrls = new Set(initialPhotos.map((p) => p.publicUrl));
+    setExtraUrls((prev) => prev.filter((url) => !serverUrls.has(url)));
+  }, [initialPhotos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Merge server photos + optimistic ones (optimistic shown at the end)
   const allPhotos = initialPhotos;
@@ -40,7 +52,10 @@ export function TripMemoriesGrid({
   const openLightbox = useCallback((i: number) => setLightboxIndex(i), []);
 
   function handleUploaded(publicUrl: string) {
+    // Show thumbnail immediately (optimistic), then refresh RSC data so the
+    // photo becomes a real interactive row in initialPhotos.
     setExtraUrls((prev) => [...prev, publicUrl]);
+    router.refresh();
   }
 
   return (

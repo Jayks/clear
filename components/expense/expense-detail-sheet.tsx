@@ -162,8 +162,14 @@ export function ExpenseDetailSheet({
     if (commentsFetchedRef.current === expense.id) return;
     commentsFetchedRef.current = expense.id;
     setCommentsLoading(true);
+    // FIX #10: Add a cancellation guard so that if the user taps a different
+    // expense pin while a fetch is in flight, the stale result doesn't overwrite
+    // the new expense's comment state.  Mirrors the pattern in the receipt URL
+    // effect directly below this one.
+    let cancelled = false;
     fetchExpenseCommentsAction(expense.id, expense.groupId)
       .then((fresh) => {
+        if (cancelled) return;
         if (fresh !== null) {
           setComments(fresh);
           if (fresh.length > 0) scrollToLatest();
@@ -172,8 +178,9 @@ export function ExpenseDetailSheet({
       })
       .catch(() => {
         // Silently hide skeleton on transient errors; user can retry by closing and reopening
-        setCommentsLoading(false);
+        if (!cancelled) setCommentsLoading(false);
       });
+    return () => { cancelled = true; };
   }, [isOpen, expense.id, expense.groupId]);
 
   // ── Fetch resolved disputes on open ─────────────────────────────────────

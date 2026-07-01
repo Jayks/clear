@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, Pencil, Trash2, Check } from "lucide-react";
 import Image from "next/image";
@@ -34,6 +35,7 @@ export function TripMemoriesLightbox({
   groupId,
   memberNames,
 }: TripMemoriesLightboxProps) {
+  const router = useRouter();
   const [index, setIndex]           = useState(startIndex);
   const [deleting, setDeleting]     = useState(false);
   const [editingCaption, setEditingCaption] = useState(false);
@@ -105,8 +107,11 @@ export function TripMemoriesLightbox({
     setDeleting(false);
     if (!result.ok) { toast.error(result.error); return; }
     toast.success("Photo removed");
-    if (photos.length === 1) { onClose(); return; }
+    // FIX #6: Refresh RSC data so initialPhotos reflects the deletion.
+    // Close first (if last photo), then refresh so the grid updates too.
+    if (photos.length === 1) { onClose(); router.refresh(); return; }
     setIndex((i) => Math.min(i, photos.length - 2));
+    router.refresh();
   }
 
   function startEditCaption() {
@@ -121,6 +126,9 @@ export function TripMemoriesLightbox({
     if (!result.ok) { toast.error(result.error); return; }
     setEditingCaption(false);
     toast.success("Caption updated");
+    // FIX #7: Refresh RSC data so the lightbox re-renders with the saved caption
+    // instead of reverting to the stale prop value from initialPhotos.
+    router.refresh();
   }
 
   return (
@@ -195,15 +203,17 @@ export function TripMemoriesLightbox({
               <>
                 <button
                   onClick={(e) => { e.stopPropagation(); prev(); }}
+                  disabled={deleting}
                   aria-label="Previous photo"
-                  className="hidden sm:flex absolute left-3 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-10"
+                  className="hidden sm:flex absolute left-3 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-10 disabled:opacity-30"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); next(); }}
+                  disabled={deleting}
                   aria-label="Next photo"
-                  className="hidden sm:flex absolute right-3 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-10"
+                  className="hidden sm:flex absolute right-3 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-10 disabled:opacity-30"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>

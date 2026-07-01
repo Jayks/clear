@@ -368,7 +368,14 @@ export async function getCircleDashboardData(
   // • pendingCount  — total unconfirmed (backward compat; includes self-reports)
   // • unpaidCount   — truly haven't paid yet (no confirmed OR self-reported row)
   const pendingCount = allMembers.length - paidCount;
-  const unpaidCount  = allMembers.length - paidCount - unconfirmedMap.size;
+  // FIX #15: In one-time circles a member can have BOTH a confirmed and an
+  // unconfirmed contribution (multiple contributions allowed).  The old formula
+  // subtracted unconfirmedMap.size unconditionally, double-counting members who
+  // appear in both maps and making unpaidCount go negative.  The correct count is
+  // members who appear in neither map.
+  const unpaidCount  = allMembers.filter(
+    (m) => !confirmedMap.has(m.id) && !unconfirmedMap.has(m.id),
+  ).length;
   // Cycle collected = confirmed only (unconfirmed don't count until admin confirms)
   const cycleCollected = [...confirmedMap.values()].reduce((s, c) => s + Number(c.amount), 0);
 

@@ -200,15 +200,18 @@ async function _computeHomeBalances(
       .where(and(inArray(expenseSplits.memberId, memberIds), eq(expenses.isTemplate, false)))
       .groupBy(expenses.groupId, expenses.currency),
 
-    db.select({ groupId: settlements.groupId, total: sum(settlements.amount) })
+    // FIX #9: Include currency in the SELECT so we can post-filter to the group's
+    // default currency — matching how paidByGroup/owedByGroup work.  Without this,
+    // legacy non-default-currency settlements corrupt the home badge net.
+    db.select({ groupId: settlements.groupId, currency: settlements.currency, total: sum(settlements.amount) })
       .from(settlements)
       .where(and(inArray(settlements.fromMemberId, memberIds), eq(settlements.isConfirmed, true)))
-      .groupBy(settlements.groupId),
+      .groupBy(settlements.groupId, settlements.currency),
 
-    db.select({ groupId: settlements.groupId, total: sum(settlements.amount) })
+    db.select({ groupId: settlements.groupId, currency: settlements.currency, total: sum(settlements.amount) })
       .from(settlements)
       .where(and(inArray(settlements.toMemberId, memberIds), eq(settlements.isConfirmed, true)))
-      .groupBy(settlements.groupId),
+      .groupBy(settlements.groupId, settlements.currency),
 
     // Distinct currencies present per group — drives hasMixedCurrencies + hasExpenses
     db.select({ groupId: expenses.groupId, currency: expenses.currency })
@@ -234,8 +237,20 @@ async function _computeHomeBalances(
     }
   }
 
-  const sentByGroup     = new Map(sentRows.map((r) => [r.groupId, Number(r.total ?? 0)]));
-  const receivedByGroup = new Map(receivedRows.map((r) => [r.groupId, Number(r.total ?? 0)]));
+  // FIX #9 (continued): Apply the same default-currency filter that paidByGroup/
+  // owedByGroup already use.  sentRows/receivedRows now carry a `currency` column.
+  const sentByGroup = new Map<string, number>();
+  for (const r of sentRows) {
+    if (r.currency === currencyByGroup.get(r.groupId)) {
+      sentByGroup.set(r.groupId, (sentByGroup.get(r.groupId) ?? 0) + Number(r.total ?? 0));
+    }
+  }
+  const receivedByGroup = new Map<string, number>();
+  for (const r of receivedRows) {
+    if (r.currency === currencyByGroup.get(r.groupId)) {
+      receivedByGroup.set(r.groupId, (receivedByGroup.get(r.groupId) ?? 0) + Number(r.total ?? 0));
+    }
+  }
 
   const currenciesByGroup = new Map<string, Set<string>>();
   for (const r of currencyRows) {

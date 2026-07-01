@@ -2,20 +2,26 @@
 
 import { db } from "@/lib/db/client";
 import { tripPhotos } from "@/lib/db/schema/trip-photos";
+import { groups } from "@/lib/db/schema/groups";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUploadTripMemories } from "@/lib/subscription/gates";
 import { getTripPhotoCount } from "@/lib/db/queries/trip-photos";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const BUCKET = "trip-photos";
 const PHOTO_CAP = 30;
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+/** Validates that a storage path belongs to the declared group (prevents cross-group injection). */
+export function isValidStoragePath(storagePath: string, groupId: string): boolean {
+  return storagePath.startsWith(`${groupId}/`) && storagePath.length > groupId.length + 1;
+}
+
 /**
  * Returns a signed upload URL for uploading a trip photo directly to Supabase Storage.
- * Gated behind Plus membership and group membership.
+ * Gated behind Plus membership, group membership, and trips-only (not nests or circles).
  */
 export async function getTripPhotoUploadUrl(
   groupId: string,
@@ -29,6 +35,11 @@ export async function getTripPhotoUploadUrl(
 
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" };
+
+  // FIX #2: Trip Memories is trips-only — block nests and circles
+  const [group] = await db.select({ groupType: groups.groupType }).from(groups).where(eq(groups.id, groupId)).limit(1);
+  if (!group || group.groupType !== "trip")
+    return { ok: false, error: "Trip Memories is only available for trips." };
 
   if (!(await canUploadTripMemories(user.id)))
     return { ok: false, error: "Trip Memories requires Clear Plus." };
@@ -62,7 +73,7 @@ export async function getTripPhotoUploadUrl(
 
 /**
  * Inserts a trip_photos row after the client has completed the signed upload.
- * Re-checks membership, Plus gate, and the 30-photo cap.
+ * Re-checks membership, Plus gate, group type, and the 30-photo cap (atomically).
  */
 export async function createTripPhoto(
   groupId: string,
@@ -76,29 +87,50 @@ export async function createTripPhoto(
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" };
 
+  // FIX #2: Trip Memories is trips-only
+  const [group] = await db.select({ groupType: groups.groupType }).from(groups).where(eq(groups.id, groupId)).limit(1);
+  if (!group || group.groupType !== "trip")
+    return { ok: false, error: "Trip Memories is only available for trips." };
+
   if (!(await canUploadTripMemories(user.id)))
     return { ok: false, error: "Trip Memories requires Clear Plus." };
 
-  const count = await getTripPhotoCount(groupId);
-  if (count >= PHOTO_CAP)
-    return { ok: false, error: `Photo limit reached (${PHOTO_CAP} photos per trip).` };
+  // FIX #1: Validate storagePath belongs to this group — prevents cross-group storage injection
+  if (!isValidStoragePath(storagePath, groupId))
+    return { ok: false, error: "Invalid photo path." };
 
   try {
-    const [photo] = await db
-      .insert(tripPhotos)
-      .values({
-        groupId,
-        memberId: membership.id,
-        storagePath,
-        publicUrl,
-        caption: caption?.trim() || null,
-        displayOrder: count, // append after existing photos
-      })
-      .returning();
+    // FIX #13: Enforce the photo cap atomically inside a transaction to prevent
+    // concurrent uploads from both passing the count check and exceeding the cap.
+    const photo = await db.transaction(async (tx) => {
+      const [{ count }] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tripPhotos)
+        .where(eq(tripPhotos.groupId, groupId));
+
+      if (count >= PHOTO_CAP)
+        throw new Error(`Photo limit reached (${PHOTO_CAP} photos per trip).`);
+
+      const [inserted] = await tx
+        .insert(tripPhotos)
+        .values({
+          groupId,
+          memberId: membership.id,
+          storagePath,
+          publicUrl,
+          caption: caption?.trim() || null,
+          displayOrder: count, // append after existing photos
+        })
+        .returning();
+
+      return inserted;
+    });
 
     revalidatePath(`/groups/${groupId}`, "layout");
     return { ok: true, photoId: photo.id };
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.startsWith("Photo limit reached")) return { ok: false, error: msg };
     return { ok: false, error: "Failed to save photo." };
   }
 }

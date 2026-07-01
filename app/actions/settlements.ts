@@ -216,10 +216,22 @@ export async function confirmSettlement(settlementId: string, groupId: string) {
   }
 
   try {
-    await db
+    // FIX #11: Add isConfirmed=false to the WHERE clause and use .returning() to
+    // detect a 0-row update.  Without this, a concurrent disputeSettlement that
+    // deletes or already-confirmed this row between our SELECT and this UPDATE
+    // causes confirmSettlement to silently fire a spurious push notification while
+    // updating 0 rows.  Mirrors the R13-5 fix applied to confirmContribution.
+    const [updated] = await db
       .update(settlements)
       .set({ isConfirmed: true })
-      .where(and(eq(settlements.id, settlementId), eq(settlements.groupId, groupId)));
+      .where(and(
+        eq(settlements.id, settlementId),
+        eq(settlements.groupId, groupId),
+        eq(settlements.isConfirmed, false),
+      ))
+      .returning({ id: settlements.id });
+
+    if (!updated) return { ok: false, error: "Settlement was already processed" } as const;
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");

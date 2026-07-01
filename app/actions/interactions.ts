@@ -59,8 +59,11 @@ async function getGroupName(groupId: string): Promise<string> {
 
 // ── Fetch actions (called from client components, like fetchExpenseSplitsAction) ─
 
-/** Bypass unstable_cache and return fresh comments — used by the detail sheet.
- *  Returns null on auth failure; returns [] on DB error so the caller degrades gracefully. */
+/** Bypass unstable_cache and return fresh comments.
+ *  Returns null on auth failure; propagates DB errors to the caller.
+ *  - RSC call sites (thread page): errors propagate through Promise.all to the
+ *    error boundary, showing the ErrorCard instead of a false empty state.
+ *  - Client call sites (detail sheet): the caller's .catch() handles gracefully. */
 export async function fetchExpenseCommentsAction(expenseId: string, groupId: string) {
   const user = await getCurrentUser();
   if (!user) return null;
@@ -68,32 +71,31 @@ export async function fetchExpenseCommentsAction(expenseId: string, groupId: str
   if (!membership) return null;
   if (!(await expenseBelongsToGroup(expenseId, groupId))) return null;
 
-  try {
-    const rows = await db
-      .select({
-        id:          expenseComments.id,
-        content:     expenseComments.content,
-        createdAt:   expenseComments.createdAt,
-        memberId:    expenseComments.memberId,
-        displayName: groupMembers.displayName,
-        guestName:   groupMembers.guestName,
-      })
-      .from(expenseComments)
-      .leftJoin(groupMembers, eq(groupMembers.id, expenseComments.memberId))
-      .where(eq(expenseComments.expenseId, expenseId))
-      .orderBy(expenseComments.createdAt);
+  // FIX #14: Removed try/catch that was swallowing DB errors and returning [].
+  // CLAUDE.md §4.11: page-load queries must propagate to the error boundary rather
+  // than rendering a false "empty state" during an outage.  The detail sheet's
+  // client-side .catch() already handles transient errors gracefully.
+  const rows = await db
+    .select({
+      id:          expenseComments.id,
+      content:     expenseComments.content,
+      createdAt:   expenseComments.createdAt,
+      memberId:    expenseComments.memberId,
+      displayName: groupMembers.displayName,
+      guestName:   groupMembers.guestName,
+    })
+    .from(expenseComments)
+    .leftJoin(groupMembers, eq(groupMembers.id, expenseComments.memberId))
+    .where(eq(expenseComments.expenseId, expenseId))
+    .orderBy(expenseComments.createdAt);
 
-    return rows.map((r) => ({
-      id:         r.id,
-      content:    r.content,
-      createdAt:  r.createdAt,
-      memberId:   r.memberId,
-      memberName: r.displayName ?? r.guestName ?? "Member",
-    }));
-  } catch {
-    // Transient DB error (e.g. pool timeout) — return empty rather than crashing
-    return [];
-  }
+  return rows.map((r) => ({
+    id:         r.id,
+    content:    r.content,
+    createdAt:  r.createdAt,
+    memberId:   r.memberId,
+    memberName: r.displayName ?? r.guestName ?? "Member",
+  }));
 }
 
 

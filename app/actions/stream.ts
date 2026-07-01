@@ -599,6 +599,17 @@ export async function settleWithPerson(
         break;
       }
     }
+    // FIX #5: If partialAmount is smaller than every individual entry amount,
+    // the loop produces ids=[].  Drizzle's inArray(col,[]) emits WHERE false
+    // (not an error), so the transaction would silently update 0 rows and then
+    // still fire a "Settled ✓" push.  Reject early so the caller can surface a
+    // meaningful error rather than a ghost success.
+    if (ids.length === 0) {
+      return {
+        ok: false,
+        error: "Amount is too small to cover any individual outstanding entry",
+      } as const;
+    }
   } else {
     ids = active.map((r) => r.id);
   }
@@ -801,6 +812,7 @@ export async function selfReportStreamSettle(input: SelfReportStreamSettleInput)
     .select({
       id:            streamRecords.id,
       amount:        streamRecords.amount,
+      currency:      streamRecords.currency,
       direction:     streamRecords.direction,
       creatorId:     streamRecords.creatorId,
       counterpartId: streamRecords.counterpartId,
@@ -819,6 +831,17 @@ export async function selfReportStreamSettle(input: SelfReportStreamSettleInput)
 
   if (active.length === 0) {
     return { ok: false, error: "No active balance to settle" } as const;
+  }
+
+  // FIX #12: Validate the submitted currency matches the stream records' currency.
+  // Without this, a client can insert a settlement row tagged "USD" for an INR
+  // stream, causing confirmStreamSettle to compare amounts across currencies.
+  const primaryRecord = active[0];
+  if (currency !== primaryRecord.currency) {
+    return {
+      ok: false,
+      error: `Currency must be ${primaryRecord.currency} for this stream`,
+    } as const;
   }
 
   // Compute net from current user's perspective (positive = owed to user, negative = user owes)
@@ -850,9 +873,7 @@ export async function selfReportStreamSettle(input: SelfReportStreamSettleInput)
     } as const;
   }
 
-  // Attach the settlement to the oldest active record (primary record)
-  const primaryRecord = active[0];
-
+  // Attach the settlement to the oldest active record (primaryRecord already set above)
   try {
     const [settlement] = await db
       .insert(streamSettlements)

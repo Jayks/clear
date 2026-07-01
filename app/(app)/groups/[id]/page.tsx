@@ -375,7 +375,7 @@ export default async function GroupPage({
 
       {/* Photo album link card — shown when a URL is set (read-only link, no Plus required) */}
       {config.isTrip && group.photoAlbumUrl && (
-        <PhotoAlbumCard url={group.photoAlbumUrl} />
+        <PhotoAlbumCard url={group.photoAlbumUrl} tripName={group.name} />
       )}
 
       {/* Budget bar — links to insights for drill-down */}

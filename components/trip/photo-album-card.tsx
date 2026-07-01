@@ -3,14 +3,17 @@ import { getAlbumHostLabel } from "@/lib/trip-memories/host-label";
 
 interface PhotoAlbumCardProps {
   url: string;
+  /** Trip name shown as the primary label, e.g. "Goa 2025 Album". Falls back to "Photo Album". */
+  tripName?: string;
 }
 
 /**
  * A simple link card that opens the trip's shared photo album in a new tab.
  * Rendered only for trips (not nests, not circles) when photoAlbumUrl is set.
  */
-export function PhotoAlbumCard({ url }: PhotoAlbumCardProps) {
+export function PhotoAlbumCard({ url, tripName }: PhotoAlbumCardProps) {
   const hostLabel = getAlbumHostLabel(url);
+  const label = tripName ? `${tripName} Album` : "Photo Album";
 
   return (
     <a
@@ -23,7 +26,7 @@ export function PhotoAlbumCard({ url }: PhotoAlbumCardProps) {
         <ImageIcon className="w-4 h-4 text-white" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Photo Album</p>
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{hostLabel}</p>
       </div>
       <ExternalLink className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-rose-500 transition-colors shrink-0" />

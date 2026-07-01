@@ -324,7 +324,7 @@ export default async function SummaryPage({
             )}
             {trip.photoAlbumUrl && (
               <div className={photos.length > 0 ? "mt-3" : ""}>
-                <PhotoAlbumCard url={trip.photoAlbumUrl} />
+                <PhotoAlbumCard url={trip.photoAlbumUrl} tripName={trip.name} />
               </div>
             )}
           </div>

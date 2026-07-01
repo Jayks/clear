@@ -16,14 +16,16 @@ import { ClearLogo } from "@/components/shared/clear-logo";
 import { BRAND } from "@/lib/brand";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, TrendingUp } from "lucide-react";
+import { ArrowLeft, TrendingUp, Camera } from "lucide-react";
 import type { Metadata } from "next";
+import { getTripPhotos } from "@/lib/db/queries/trip-photos";
+import { TripMemoriesGrid } from "@/components/trip/trip-memories-grid";
 
 const getSummaryData = cache(async function getSummaryData(token: string) {
   const [trip] = await db.select().from(groups).where(eq(groups.summaryToken, token));
   if (!trip || trip.groupType === "nest") return null;
 
-  const [memberRows, categoryRows, [expCount], allExpenseRows] = await Promise.all([
+  const [memberRows, categoryRows, [expCount], allExpenseRows, photos] = await Promise.all([
     db.select({ id: groupMembers.id, displayName: groupMembers.displayName, guestName: groupMembers.guestName })
       .from(groupMembers).where(eq(groupMembers.groupId, trip.id)),
     db
@@ -49,6 +51,7 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
       .from(expenses)
       .where(and(eq(expenses.groupId, trip.id), eq(expenses.isTemplate, false)))
       .orderBy(asc(expenses.expenseDate)),
+    getTripPhotos(trip.id),
   ]);
 
   const memberCount = memberRows.length;
@@ -93,7 +96,7 @@ const getSummaryData = cache(async function getSummaryData(token: string) {
     tripDays = Math.max(1, differenceInDays(parseISO(trip.endDate), parseISO(trip.startDate)) + 1);
   }
 
-  return { trip, memberCount, expenseCount, categoryTotals: sorted, totalSpend, perPerson, tripDays, dailyTimeline };
+  return { trip, memberCount, expenseCount, categoryTotals: sorted, totalSpend, perPerson, tripDays, dailyTimeline, memberNameMap, photos };
 });
 
 export async function generateMetadata({
@@ -130,7 +133,7 @@ export default async function SummaryPage({
   const { data: { user } } = await supabase.auth.getUser();
   const isLoggedIn = !!user;
 
-  const { trip, memberCount, expenseCount, categoryTotals, totalSpend, perPerson, tripDays, dailyTimeline } = data;
+  const { trip, memberCount, expenseCount, categoryTotals, totalSpend, perPerson, tripDays, dailyTimeline, memberNameMap, photos } = data;
   const currency = trip.defaultCurrency;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const shareUrl = `${appUrl}/summary/${token}`;
@@ -294,6 +297,29 @@ export default async function SummaryPage({
             }))}
             dailyTimeline={dailyTimeline}
           />
+        )}
+
+        {/* Trip Memories — read-only grid, no upload/edit/delete */}
+        {photos.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-6 h-6 rounded-md bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
+                <Camera className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
+              </div>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Memories <span className="text-slate-400 dark:text-slate-500 font-normal">({photos.length})</span>
+              </span>
+              <div className="flex-1 h-[1.5px] bg-gradient-to-r from-rose-200/70 to-transparent dark:from-rose-800/40 dark:to-transparent" />
+            </div>
+            <TripMemoriesGrid
+              initialPhotos={photos}
+              groupId={trip.id}
+              currentMemberId=""
+              isAdmin={false}
+              canUpload={false}
+              memberNames={Object.fromEntries(memberNameMap)}
+            />
+          </div>
         )}
 
         {/* Day-by-day timeline */}

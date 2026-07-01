@@ -20,6 +20,7 @@ import { ArrowLeft, TrendingUp, Camera } from "lucide-react";
 import type { Metadata } from "next";
 import { getTripPhotos } from "@/lib/db/queries/trip-photos";
 import { TripMemoriesGrid } from "@/components/trip/trip-memories-grid";
+import { PhotoAlbumCard } from "@/components/trip/photo-album-card";
 
 const getSummaryData = cache(async function getSummaryData(token: string) {
   const [trip] = await db.select().from(groups).where(eq(groups.summaryToken, token));
@@ -299,26 +300,33 @@ export default async function SummaryPage({
           />
         )}
 
-        {/* Trip Memories — read-only grid, no upload/edit/delete */}
-        {photos.length > 0 && (
+        {/* Trip Memories — read-only grid + optional external album link */}
+        {(photos.length > 0 || trip.photoAlbumUrl) && (
           <div className="mb-6">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-6 h-6 rounded-md bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
                 <Camera className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
               </div>
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Memories <span className="text-slate-400 dark:text-slate-500 font-normal">({photos.length})</span>
+                Memories{photos.length > 0 && <span className="text-slate-400 dark:text-slate-500 font-normal"> ({photos.length})</span>}
               </span>
               <div className="flex-1 h-[1.5px] bg-gradient-to-r from-rose-200/70 to-transparent dark:from-rose-800/40 dark:to-transparent" />
             </div>
-            <TripMemoriesGrid
-              initialPhotos={photos}
-              groupId={trip.id}
-              currentMemberId=""
-              isAdmin={false}
-              canUpload={false}
-              memberNames={Object.fromEntries(memberNameMap)}
-            />
+            {photos.length > 0 && (
+              <TripMemoriesGrid
+                initialPhotos={photos}
+                groupId={trip.id}
+                currentMemberId=""
+                isAdmin={false}
+                canUpload={false}
+                memberNames={Object.fromEntries(memberNameMap)}
+              />
+            )}
+            {trip.photoAlbumUrl && (
+              <div className={photos.length > 0 ? "mt-3" : ""}>
+                <PhotoAlbumCard url={trip.photoAlbumUrl} />
+              </div>
+            )}
           </div>
         )}
 

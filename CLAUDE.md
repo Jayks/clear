@@ -12,7 +12,7 @@
 **Clear** — shared expense tracking for trips and households, plus bilateral personal debt tracking and shared fund management. Deployed on Vercel + Supabase (free tier).
 
 **Four financial contexts:**
-- **Trip** — multi-day travel groups. Has dates, itinerary, AI narrative, budget adherence, travel categories.
+- **Trip** — multi-day travel groups. Has dates, itinerary, AI narrative, budget adherence, travel categories. Has **Trip Memories** (photo grid, Plus-gated upload; free external album link). Public summary page shows both.
 - **Nest** — ongoing household groups. Has recurring expense templates, monthly grouping, household categories. No dates/itinerary.
 - **Stream** — bilateral personal debt ledger (no group needed). One stream per person; individual debt records within = **entries**.
 - **Circle** — shared fund managed by an organiser. Two modes: **recurring** (fixed monthly contributions) and **one_time** (collect toward an optional target/deadline; sub-types: **Fixed** = `contributionAmount != null`, everyone pays the same; **Flexi** = `contributionAmount === null`, everyone contributes any amount). No individual debts — everyone is accountable to a shared wallet. Wallet balance = contributions − wallet expenses.
@@ -264,6 +264,14 @@ Page-load error handling is centralised so every failure looks the same and retr
 - **New group URL pre-fill**: `/groups/new?type=trip` or `?type=nest` — `NewGroupPage` reads `searchParams.type` and passes `defaultGroupType` prop to `CreateTripForm`. Form `defaultValues` uses it.
 - **App nav bars are transparent**: `AppNav`, `MobileNav`, `GroupMobileNav` all use `backdrop-blur-sm` (no background). Marketing navs (`/`, `/pricing`, `/changelog`) still use `glass-nav`. Do NOT apply `glass-nav` to in-app navbars.
 - **AppNav hides on mobile for Stream pages**: `isInsideStream = pathParts[0] === "stream" && pathParts[1] !== "confirm"` — same pattern as `isInsideGroup`. Stream pages have their own custom sticky headers.
+- **Trip Memories** — trips-only feature (never nests, never circles):
+  - **Option A (free)**: `photo_album_url` on `groups` table. Edit form "Photo album link" under More options. Group overview shows `PhotoAlbumCard` (rose icon, domain label via `getAlbumHostLabel()`, external link). `updatePhotoAlbumUrl` narrow server action.
+  - **Option B (Plus)**: `trip_photos` table (see `lib/db/schema/trip-photos.ts`). Gate: `canUploadTripMemories(userId)` in `lib/subscription/gates.ts`. DB migration: `drizzle/trip-photos.sql` (applied via Node postgres client — drizzle-kit push fails on this project due to CHECK constraint bug).
+  - **Storage bucket `trip-photos`**: **no per-user storage RLS INSERT policy**. Must use `createAdminClient()` (service role) for all storage operations in `app/actions/trip-photos.ts` — `createSignedUploadUrl`, `getPublicUrl`, and `storage.remove()`. All auth/membership/Plus checks run at the server action level before reaching storage, making the service-role approach safe. Do NOT switch to user-scoped `createClient()` for this bucket.
+  - **Components**: `TripMemoriesSection` (RSC, Suspense-wrapped; fetches photos + Plus gate in parallel), `TripMemoriesGrid` (client; thumbnails + lightbox), `TripMemoriesUpload` (client; compress → signed URL → uploadToSignedUrl → createTripPhoto), `TripMemoriesLightbox` (client; swipe/keyboard/backdrop-click dismiss), `TripMemoriesUpgrade` (free-tier gate card + album link form), `PhotoAlbumCard` (static link card, no Plus required).
+  - **Summary page** (`/summary/[token]`): shows both the uploaded photos grid (when `photos.length > 0`) AND `PhotoAlbumCard` (when `trip.photoAlbumUrl` is set) under one "Memories" section header. Either or both can appear independently. `getTripPhotos(trip.id)` is included in the page's `Promise.all` fetch.
+  - **Section color**: rose (`bg-rose-50 dark:bg-rose-900/30` badge, `text-rose-500 dark:text-rose-400` icon, `from-rose-200/70 to-transparent` rule). Not in the standard color-identity table — rose is Memories-specific.
+  - **Photo cap**: 30 photos per trip. `isAtPhotoCap(count)` in `lib/trip-memories/host-label.ts`. Cap message shown below grid when reached.
 
 ---
 

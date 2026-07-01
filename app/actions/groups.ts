@@ -41,7 +41,7 @@ export async function createGroup(input: CreateGroupInput) {
   const parsed = createGroupSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input" } as const;
 
-  const { name, description, coverPhotoUrl, defaultCurrency, groupType, startDate, endDate, budget, itinerary } = parsed.data;
+  const { name, description, coverPhotoUrl, photoAlbumUrl, defaultCurrency, groupType, startDate, endDate, budget, itinerary } = parsed.data;
 
   try {
     if (!(await canCreateGroup(user.id)))
@@ -54,6 +54,7 @@ export async function createGroup(input: CreateGroupInput) {
         name,
         description: description || null,
         coverPhotoUrl: coverPhotoUrl || null,
+        photoAlbumUrl: photoAlbumUrl || null,
         defaultCurrency,
         groupType,
         startDate: startDate || null,
@@ -91,13 +92,14 @@ export async function updateGroup(groupId: string, input: CreateGroupInput) {
   if (!membership || membership.role !== "admin")
     return { ok: false, error: "Not authorized" } as const;
 
-  const { name, description, coverPhotoUrl, defaultCurrency, startDate, endDate, budget, itinerary } = parsed.data;
+  const { name, description, coverPhotoUrl, photoAlbumUrl, defaultCurrency, startDate, endDate, budget, itinerary } = parsed.data;
 
   try {
     await db.update(groups).set({
       name,
       description: description || null,
       coverPhotoUrl: coverPhotoUrl || null,
+      photoAlbumUrl: photoAlbumUrl || null,
       defaultCurrency,
       startDate: startDate || null,
       endDate: endDate || null,
@@ -152,6 +154,41 @@ export async function deleteGroup(groupId: string) {
     return { ok: true } as const;
   } catch {
     return { ok: false, error: "Failed to delete group" } as const;
+  }
+}
+
+/**
+ * Updates only the photo album URL for a trip — a narrow alternative to the
+ * full updateGroup action that requires all required fields to be provided.
+ * Any authenticated group member may call this (not admin-only, same as album
+ * links being visible to all members on the overview page).
+ * Admin-only: only admins can update the link (consistent with other group metadata edits).
+ */
+export async function updatePhotoAlbumUrl(groupId: string, url: string) {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Not authenticated" } as const;
+
+  const membership = await getMembership(groupId, user.id);
+  if (!membership || membership.role !== "admin")
+    return { ok: false, error: "Not authorized" } as const;
+
+  const trimmed = url.trim();
+  const photoAlbumUrl = trimmed === "" ? null : trimmed;
+
+  // Validate URL when non-empty
+  if (photoAlbumUrl) {
+    try { new URL(photoAlbumUrl); } catch {
+      return { ok: false, error: "Invalid URL" } as const;
+    }
+  }
+
+  try {
+    await db.update(groups).set({ photoAlbumUrl }).where(eq(groups.id, groupId));
+    revalidateTag(`group-${groupId}`, "max");
+    revalidatePath(`/groups/${groupId}`, "layout");
+    return { ok: true } as const;
+  } catch {
+    return { ok: false, error: "Failed to update photo album link" } as const;
   }
 }
 

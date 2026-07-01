@@ -20,6 +20,7 @@ export const groups = pgTable("groups", {
   // Separate from shareToken: the invite/join link (shareToken) must NOT double as
   // the public read-only summary link. summaryToken gates /summary/[token] only.
   summaryToken: uuid("summary_token").notNull().unique().default(sql`gen_random_uuid()`),
+  photoAlbumUrl: text("photo_album_url"),
   createdBy: uuid("created_by").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
 

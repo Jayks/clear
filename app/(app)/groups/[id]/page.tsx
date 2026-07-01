@@ -25,6 +25,8 @@ import { InsightsSummaryBadge, InsightsSummaryBadgeSkeleton } from "@/components
 import { NestMonthlyBadge, NestMonthlyBadgeSkeleton } from "@/components/trip/nest-monthly-badge";
 import { RepeatTripPrompt } from "@/components/trip/repeat-trip-prompt";
 import { FirstRunChecklist } from "@/components/trip/first-run-checklist";
+import { TripMemoriesSection, TripMemoriesSkeleton } from "@/components/trip/trip-memories-section";
+import { PhotoAlbumCard } from "@/components/trip/photo-album-card";
 import { WelcomeBanner } from "@/components/join/welcome-banner";
 import { HeroBalancePill } from "@/components/trip/hero-balance-pill";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
@@ -356,6 +358,25 @@ export default async function GroupPage({
           />
         </Suspense>
       </div>
+
+      {/* Trip Memories — trips only */}
+      {config.isTrip && !group.isArchived && currentMember && (
+        <Suspense fallback={<TripMemoriesSkeleton />}>
+          <TripMemoriesSection
+            groupId={group.id}
+            userId={currentUser.id}
+            currentMemberId={currentMember.id}
+            isAdmin={isAdmin}
+            members={members}
+            photoAlbumUrl={group.photoAlbumUrl ?? null}
+          />
+        </Suspense>
+      )}
+
+      {/* Photo album link card — shown when a URL is set (read-only link, no Plus required) */}
+      {config.isTrip && group.photoAlbumUrl && (
+        <PhotoAlbumCard url={group.photoAlbumUrl} />
+      )}
 
       {/* Budget bar — links to insights for drill-down */}
       {config.showBudget && group.budget && (

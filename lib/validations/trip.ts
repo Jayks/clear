@@ -4,6 +4,7 @@ export const createGroupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   coverPhotoUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  photoAlbumUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
   defaultCurrency: z.string().length(3),
   groupType: z.enum(["trip", "nest", "circle"]).default("trip"),
   startDate: z.string().optional(),

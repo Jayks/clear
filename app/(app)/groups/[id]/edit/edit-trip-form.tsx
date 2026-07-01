@@ -22,7 +22,7 @@ export function EditTripForm({ group }: { group: Group }) {
   const [uploadingDoc, setUploadingDoc] = useState(false);
   // Auto-expand if any secondary fields already have content
   const [showMore, setShowMore] = useState(
-    !!(group.description || group.itinerary || group.budget)
+    !!(group.description || group.itinerary || group.budget || group.photoAlbumUrl)
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const config = getGroupConfig(group.groupType);
@@ -40,6 +40,7 @@ export function EditTripForm({ group }: { group: Group }) {
       name: group.name,
       description: group.description ?? "",
       coverPhotoUrl: group.coverPhotoUrl ?? "",
+      photoAlbumUrl: group.photoAlbumUrl ?? "",
       defaultCurrency: group.defaultCurrency,
       groupType: group.groupType as "trip" | "nest" | "circle",
       startDate: group.startDate ?? "",
@@ -178,6 +179,25 @@ export function EditTripForm({ group }: { group: Group }) {
       {/* Collapsible section */}
       {showMore && (
         <div className="space-y-5">
+          {/* Trip-only: photo album link */}
+          {config.isTrip && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                Photo album link <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional)</span>
+              </label>
+              <input
+                {...register("photoAlbumUrl")}
+                type="url"
+                placeholder="https://photos.google.com/share/…"
+                className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500`}
+              />
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                Google Photos, iCloud, Flickr — any shared album link
+              </p>
+              {errors.photoAlbumUrl && <p className="mt-1 text-xs text-red-500">{errors.photoAlbumUrl.message}</p>}
+            </div>
+          )}
+
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">

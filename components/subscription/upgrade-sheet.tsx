@@ -19,7 +19,7 @@ import { BRAND } from "@/lib/brand";
  * navigation, wiping form state (see components/CLAUDE.md gotcha). Focus trap
  * + a plain inline Escape listener are both history-independent and safe here.
  */
-export type UpgradeReason = "ai" | "group_cap" | "network" | "insights";
+export type UpgradeReason = "ai" | "group_cap" | "network" | "insights" | "memories";
 
 interface UpgradeSheetContext {
   groupName?: string;
@@ -70,6 +70,13 @@ function buildCopy(reason: UpgradeReason, context?: UpgradeSheetContext) {
         title: "Your personal money story is ready.",
         body: "See your real spend across every group, your top categories, and who you share the most with.",
         cta: "See your story →",
+        href: "/upgrade",
+      };
+    case "memories":
+      return {
+        title: "Keep your trip alive.",
+        body: "Upload highlight photos from your trip. Visible to every member.",
+        cta: "Go Plus →",
         href: "/upgrade",
       };
   }

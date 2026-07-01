@@ -49,6 +49,10 @@ export async function getUserSubscription(userId: string) {
 
 // ── User-level gates (current user's plan) ────────────────────────────────────
 
+export async function canUploadTripMemories(userId: string): Promise<boolean> {
+  return (await getUserPlan(userId)) === "plus";
+}
+
 export async function canCreateGroup(userId: string): Promise<boolean> {
   try {
     if ((await getUserPlan(userId)) === "plus") return true;

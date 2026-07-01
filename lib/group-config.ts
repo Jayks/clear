@@ -25,6 +25,7 @@ export const GROUP_CONFIG = {
     showRecurring: false,
     showBudget: true,
     isCircle: false as const,
+    isTrip: true as const,
     categories: TRIP_CATEGORIES,
   },
   nest: {
@@ -47,6 +48,7 @@ export const GROUP_CONFIG = {
     showRecurring: true,
     showBudget: false,
     isCircle: false as const,
+    isTrip: false as const,
     categories: NEST_CATEGORIES,
   },
   circle: {
@@ -69,6 +71,7 @@ export const GROUP_CONFIG = {
     showRecurring: false,
     showBudget: false,
     isCircle: true as const,
+    isTrip: false as const,
     categories: CIRCLE_CATEGORIES,
   },
 } as const;

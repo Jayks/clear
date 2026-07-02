@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClearLogo } from "@/components/shared/clear-logo";
 import { ConfirmStreamClient } from "@/components/stream/confirm-stream-client";
 import { getStreamForConfirmPage } from "@/lib/db/queries/stream";
 import { BRAND } from "@/lib/brand";
+import { PublicPageShell } from "@/components/shared/public-page-shell";
 
 // UUID format validation — avoids a DB round-trip on obviously invalid tokens
 const UUID_RE =
@@ -21,15 +20,11 @@ export default async function ConfirmStreamPage({ params }: Props) {
   const data = await getStreamForConfirmPage(token);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-8">
-      {/* Clear branding */}
-      <ClearLogo
-        iconSize={36}
-        showWordmark
-        wordmarkClassName="text-2xl text-slate-800 dark:text-slate-100"
-        className="flex items-center gap-2.5"
-      />
-
+    <PublicPageShell
+      footerText={`Track your own debts on ${BRAND.name}.`}
+      footerCtaHref="/login?intent=signup"
+      footerCtaLabel="Join for free →"
+    >
       {/* Main card */}
       <div className="glass rounded-2xl w-full max-w-sm p-6">
         {/* ── Token not found ──────────────────────────────────────────────── */}
@@ -76,19 +71,7 @@ export default async function ConfirmStreamPage({ params }: Props) {
           />
         )}
       </div>
-
-      {/* Soft acquisition CTA — shown on all states */}
-      <p className="text-center text-sm text-slate-400 dark:text-slate-500">
-        Track your own debts on {BRAND.name}.{" "}
-        <Link
-          href="/login?intent=signup"
-          className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-          scroll={false}
-        >
-          Join for free →
-        </Link>
-      </p>
-    </div>
+    </PublicPageShell>
   );
 }
 

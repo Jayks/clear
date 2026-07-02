@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDefaultUpiId } from "@/lib/db/queries/upi";
-import { ClearLogo } from "@/components/shared/clear-logo";
 import { MemberAvatar } from "@/components/shared/member-avatar";
 import { PayClient } from "./pay-client";
+import { PublicPageShell } from "@/components/shared/public-page-shell";
+import { BRAND } from "@/lib/brand";
 
 /**
  * React cache() deduplicates this call within a single render pass —
@@ -108,82 +108,60 @@ export default async function PayPage({ searchParams }: PageProps) {
   const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "https://clearoff.in";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-cyan-50/30 dark:from-slate-950 dark:to-slate-900">
+    <PublicPageShell
+      footerText={`Track shared expenses on ${BRAND.name}.`}
+      footerCtaHref="/login"
+      footerCtaLabel="Sign in →"
+    >
+      <div className="w-full max-w-sm space-y-4">
 
-      {/* ── Top nav ────────────────────────────────────────────────────── */}
-      <nav className="flex items-center justify-between px-5 py-4 border-b border-slate-100/80 dark:border-slate-800/60">
-        <Link href="/">
-          <ClearLogo iconSize={26} showWordmark />
-        </Link>
-        <Link
-          href="/login"
-          className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-        >
-          Sign in →
-        </Link>
-      </nav>
-
-      {/* ── Main ───────────────────────────────────────────────────────── */}
-      <main className="flex-1 flex items-start justify-center px-4 pt-10 pb-16">
-        <div className="w-full max-w-sm space-y-4">
-
-          {/* ── Payee + amount card ─────────────────────────────────────── */}
-          <div className="glass rounded-2xl p-6 text-center space-y-4">
-            {/* Avatar */}
-            <div className="flex justify-center">
-              <MemberAvatar name={payeeName} size="lg" />
-            </div>
-
-            {/* Name + verified badge */}
-            <div>
-              <p className="font-semibold text-slate-800 dark:text-slate-100">
-                {payeeName}
-              </p>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-                ✓ Verified ClearOff user
-              </p>
-            </div>
-
-            {/* Divider */}
-            <div className="h-px bg-slate-100 dark:bg-slate-700/60" />
-
-            {/* Amount */}
-            <div>
-              <p
-                className="text-5xl font-bold text-slate-900 dark:text-slate-50 tracking-tight"
-                style={{ fontFamily: "var(--font-fraunces)" }}
-              >
-                {sym}{Number(amount).toLocaleString("en-IN")}
-              </p>
-              {contextName && (
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
-                  for <span className="font-medium text-slate-600 dark:text-slate-300">{contextName}</span>
-                </p>
-              )}
-            </div>
+        {/* ── Payee + amount card ─────────────────────────────────────── */}
+        <div className="glass rounded-2xl p-6 text-center space-y-4">
+          {/* Avatar */}
+          <div className="flex justify-center">
+            <MemberAvatar name={payeeName} size="lg" />
           </div>
 
-          {/* ── Payment actions (client) ────────────────────────────────── */}
-          <PayClient
-            payeeName={payeeName}
-            vpa={defaultUpiId?.upiId ?? null}
-            amount={amount}
-            currency={currency}
-            contextName={contextName || "ClearOff"}
-            backUrl={backUrl}
-            appUrl={appUrl}
-          />
+          {/* Name + verified badge */}
+          <div>
+            <p className="font-semibold text-slate-800 dark:text-slate-100">
+              {payeeName}
+            </p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
+              ✓ Verified ClearOff user
+            </p>
+          </div>
 
-          {/* ── Footer ──────────────────────────────────────────────────── */}
-          <p className="text-center text-[11px] text-slate-400 dark:text-slate-600 pt-2">
-            Powered by{" "}
-            <Link href="/" className="text-cyan-600 dark:text-cyan-500 hover:underline">
-              ClearOff
-            </Link>{" "}
-            — group expense tracking
-          </p>
+          {/* Divider */}
+          <div className="h-px bg-slate-100 dark:bg-slate-700/60" />
+
+          {/* Amount */}
+          <div>
+            <p
+              className="text-5xl font-bold text-slate-900 dark:text-slate-50 tracking-tight"
+              style={{ fontFamily: "var(--font-fraunces)" }}
+            >
+              {sym}{Number(amount).toLocaleString("en-IN")}
+            </p>
+            {contextName && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+                for <span className="font-medium text-slate-600 dark:text-slate-300">{contextName}</span>
+              </p>
+            )}
+          </div>
         </div>
-      </main>
-    </div>
+
+        {/* ── Payment actions (client) ────────────────────────────────── */}
+        <PayClient
+          payeeName={payeeName}
+          vpa={defaultUpiId?.upiId ?? null}
+          amount={amount}
+          currency={currency}
+          contextName={contextName || "ClearOff"}
+          backUrl={backUrl}
+          appUrl={appUrl}
+        />
+      </div>
+    </PublicPageShell>
   );
 }

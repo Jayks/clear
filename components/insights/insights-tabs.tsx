@@ -135,7 +135,7 @@ export function InsightsTabs({ tripsData, nestsData, primaryCurrency, personalDa
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
             {!isPlusUser ? (
-              <PersonalPlusGate />
+              <PersonalPlusGate data={personalData} />
             ) : personalData ? (
               <PersonalContent data={personalData} streamSummary={streamSummary} />
             ) : (

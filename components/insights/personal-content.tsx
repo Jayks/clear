@@ -60,7 +60,25 @@ function useFmt(currency: string) {
 
 // ── Plus gate card ────────────────────────────────────────────────────────
 
-export function PersonalPlusGate() {
+/**
+ * `data` is the same PersonalInsights the Plus view renders — the free-tier
+ * page fetches it too (needed for the sparse/empty-state checks upstream) and
+ * previously discarded it before it ever reached this gate. Surfacing the
+ * real totalShare here turns a generic pitch into a data-backed tease
+ * ("You've shared ₹48,200 — see the rest") without exposing anything the
+ * paid tabs are meant to be exclusive to (categories, companions, banker
+ * story stay locked). `data` is optional/nullable — a genuinely fresh
+ * account (no real-group membership yet) falls back to the generic copy.
+ */
+export function PersonalPlusGate({ data }: { data?: PersonalInsights | null }) {
+  // useFmt is a plain formatter factory (no React hook state inside), but it's
+  // called unconditionally anyway — never gate a `use*`-named call behind a
+  // condition, since eslint's rules-of-hooks can't tell it apart from a real hook.
+  const fmt = useFmt(data?.currency ?? "INR");
+  const groupCount = data ? data.byGroup.length : 0;
+  const hasTease = !!data && data.totalShare > 0;
+  const sinceYear = data?.firstExpenseDate ? new Date(data.firstExpenseDate).getFullYear() : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -71,17 +89,35 @@ export function PersonalPlusGate() {
       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
         <Sparkles className="w-6 h-6 text-white" />
       </div>
-      <div>
-        <p
-          className="text-xl text-slate-800 dark:text-slate-100 mb-1"
-          style={{ fontFamily: "var(--font-fraunces)" }}
-        >
-          Personal insights — Plus feature
-        </p>
-        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
-          See your actual spend across all groups, your top categories, who you share the most with, and your personal banker story.
-        </p>
-      </div>
+      {hasTease ? (
+        <div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
+            {sinceYear ? `Since ${sinceYear}, you've shared` : "You've shared"}
+          </p>
+          <p
+            className="text-3xl text-slate-800 dark:text-slate-100"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            {fmt(data!.totalShare)}
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mt-2">
+            across {groupCount} {groupCount === 1 ? "group" : "groups"}. Upgrade to see your top categories,
+            closest companions, and your personal banker story.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <p
+            className="text-xl text-slate-800 dark:text-slate-100 mb-1"
+            style={{ fontFamily: "var(--font-fraunces)" }}
+          >
+            Personal insights — Plus feature
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
+            See your actual spend across all groups, your top categories, who you share the most with, and your personal banker story.
+          </p>
+        </div>
+      )}
       <Link
         href="/upgrade"
         className="inline-flex items-center gap-1.5 bg-gradient-to-br from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl px-5 py-2.5 shadow-md shadow-violet-500/25 transition-all"

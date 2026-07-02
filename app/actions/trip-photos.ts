@@ -7,17 +7,13 @@ import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canUploadTripMemories } from "@/lib/subscription/gates";
 import { getTripPhotoCount } from "@/lib/db/queries/trip-photos";
+import { isValidStoragePath } from "@/lib/trip-photos/storage-path";
 import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const BUCKET = "trip-photos";
 const PHOTO_CAP = 30;
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-/** Validates that a storage path belongs to the declared group (prevents cross-group injection). */
-export function isValidStoragePath(storagePath: string, groupId: string): boolean {
-  return storagePath.startsWith(`${groupId}/`) && storagePath.length > groupId.length + 1;
-}
 
 /**
  * Returns a signed upload URL for uploading a trip photo directly to Supabase Storage.

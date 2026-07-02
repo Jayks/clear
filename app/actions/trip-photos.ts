@@ -159,9 +159,18 @@ export async function deleteTripPhoto(
   if (!isUploader && !isAdmin) return { ok: false, error: "Not authorized" };
 
   try {
-    // Delete from storage first — if this fails we don't orphan the DB row
+    // Delete from storage first — if this fails we don't orphan the DB row.
+    // BUGFIX (audit): Supabase Storage's .remove() *resolves* to { data, error } —
+    // it does not throw on failure, so the old code always fell through to the
+    // DB delete regardless of whether the storage delete actually succeeded.
+    // A failed/stale storagePath silently orphaned the file in the bucket (no
+    // cron sweeps this bucket, unlike receipt-photos). Explicitly check `error`.
     const adminSupabase = createAdminClient();
-    await adminSupabase.storage.from(BUCKET).remove([photo.storagePath]);
+    const { error: storageError } = await adminSupabase.storage.from(BUCKET).remove([photo.storagePath]);
+    if (storageError) {
+      console.error("[deleteTripPhoto] storage remove failed:", storageError);
+      return { ok: false, error: "Failed to delete photo." };
+    }
 
     await db.delete(tripPhotos).where(eq(tripPhotos.id, photoId));
     revalidatePath(`/groups/${groupId}`, "layout");

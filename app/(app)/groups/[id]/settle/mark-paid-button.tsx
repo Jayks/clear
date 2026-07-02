@@ -33,6 +33,14 @@ export function MarkPaidButton({ groupId, fromMemberId, toMemberId, amount, curr
     trackEvent("settlement_recorded", { currency });
     const { settlementId } = result;
 
+    // BUGFIX (audit): every sibling mutation on this page (suggestion-cards.tsx
+    // handleMarkPaid, PendingConfirmations.handleConfirm, ExternalPaymentsPending
+    // .handleConfirm) calls router.refresh() on success — this one didn't, so
+    // marking a settlement paid for two OTHER members (the admin !isYours path)
+    // left the "Minimum payments" list and net balances stale on screen even
+    // though the write succeeded.
+    router.refresh();
+
     toast.success("Payment recorded!", {
       duration: 5000,
       action: {

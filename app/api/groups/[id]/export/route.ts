@@ -2,7 +2,7 @@ import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { groupMembers } from "@/lib/db/schema/group-members";
 import { groups } from "@/lib/db/schema/groups";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/db/queries/auth";
 import { eq, desc, and } from "drizzle-orm";
 import { getCategory } from "@/lib/categories";
 import { canExportCSV } from "@/lib/subscription/gates";
@@ -25,8 +25,10 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // BUGFIX (audit): was a raw supabase.auth.getUser() call — CLAUDE.md mandates
+  // getCurrentUser() everywhere so this route stays on the single, cache()-deduped
+  // trust boundary (future auth changes, e.g. ban checks, only need updating once).
+  const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
 
   if (!(await canExportCSV(user.id)))

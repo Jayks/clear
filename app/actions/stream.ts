@@ -21,6 +21,7 @@ import {
   type SelfReportStreamSettleInput,
 } from "@/lib/validations/stream";
 import { sendStreamPush } from "@/lib/notifications/send-stream-notification";
+import { allocateOldestFirstSettlement } from "@/lib/settle/allocate-settlement";
 import { revalidatePath } from "next/cache";
 import { eq, and, or, sum, sql, inArray, asc } from "drizzle-orm";
 import { formatCurrency } from "@/lib/utils";
@@ -257,11 +258,28 @@ export async function settleStream(input: SettleStreamInput) {
   // SELECT and the INSERT and cause overpayment.  The old code only checked
   // `amount > record.amount`, not `amount > (record.amount − alreadySettled)`,
   // so e.g. ₹80 + ₹60 could over-settle a ₹100 entry.
+  //
+  // BUGFIX (audit): the transaction wrapper alone does not serialise this —
+  // Postgres's default READ COMMITTED isolation lets two concurrent transactions
+  // each compute `alreadySettled` from the same pre-commit state, both pass the
+  // remaining-balance check, and both insert, over-settling the record (e.g. two
+  // concurrent ₹60 settlements on a ₹100 entry with nothing settled yet). Locking
+  // the stream_records row with SELECT ... FOR UPDATE first serialises concurrent
+  // settleStream calls for the same streamId.
   try {
     let settlementId: string | undefined;
     let remainingExceeded = false;
 
     await db.transaction(async (tx) => {
+      // Lock this stream record so a concurrent settleStream call for the same
+      // streamId blocks until this transaction commits, then re-reads the
+      // updated already-settled total instead of a stale pre-insert value.
+      await tx
+        .select({ id: streamRecords.id })
+        .from(streamRecords)
+        .where(eq(streamRecords.id, streamId))
+        .for("update");
+
       // Compute already-settled amount inside the transaction
       const [existingRow] = await tx
         .select({ total: sum(streamSettlements.amount) })
@@ -964,16 +982,34 @@ export async function confirmStreamSettle(settlementId: string) {
   // the settlement appeared confirmed but the balance showed as still outstanding —
   // unrecoverable without direct DB access.
   try {
+    let alreadyConfirmed = false;
+
     await db.transaction(async (tx) => {
-      // Step 1: mark the settlement row as confirmed
-      await tx
+      // Step 1: mark the settlement row as confirmed.
+      // BUGFIX (audit): re-assert isConfirmed=false in the UPDATE and check
+      // whether a row was actually affected, mirroring the confirmContribution
+      // row-guard pattern elsewhere in the codebase. Without this, two
+      // concurrent confirmStreamSettle calls for the same settlementId (e.g.
+      // a double-tap or two browser tabs) would both pass the earlier
+      // `settlement.isConfirmed` check (read before the transaction) and both
+      // run the stream-record settlement logic below — the second run redundant
+      // at best, or, if a new active record was inserted between the two runs,
+      // one that consumes the paid amount against an unintended record.
+      const [updated] = await tx
         .update(streamSettlements)
         .set({ isConfirmed: true })
-        .where(eq(streamSettlements.id, settlementId));
+        .where(and(eq(streamSettlements.id, settlementId), eq(streamSettlements.isConfirmed, false)))
+        .returning({ id: streamSettlements.id });
+
+      if (!updated) {
+        alreadyConfirmed = true;
+        return; // no further writes — transaction commits empty
+      }
 
       // Step 2: settle stream records up to the confirmed amount.
       // Oldest entries first — only entries whose full amount fits within the
-      // paid amount are settled (Bug S-2 fix retained inside the transaction).
+      // paid amount are settled (Bug S-2 fix; allocation logic now in the pure,
+      // unit-tested allocateOldestFirstSettlement()).
       const ACTIVE = ["pending", "confirmed", "disputed"] as const;
       const activeRecords = await tx
         .select({ id: streamRecords.id, amount: streamRecords.amount })
@@ -989,37 +1025,23 @@ export async function confirmStreamSettle(settlementId: string) {
         )
         .orderBy(asc(streamRecords.createdAt));
 
-      if (activeRecords.length > 0) {
-        const paidAmount       = Number(settlement.amount);
-        const totalOutstanding = activeRecords.reduce((s, r) => s + Number(r.amount), 0);
+      const toSettleIds = allocateOldestFirstSettlement(
+        activeRecords.map((r) => ({ id: r.id, amount: Number(r.amount) })),
+        Number(settlement.amount),
+      );
 
-        let toSettleIds: string[];
-        if (paidAmount >= totalOutstanding - 0.01) {
-          toSettleIds = activeRecords.map((r) => r.id);
-        } else {
-          let remaining = paidAmount;
-          toSettleIds = [];
-          for (const r of activeRecords) {
-            const amt = Number(r.amount);
-            if (remaining <= 0) break;
-            if (amt <= remaining + 0.01) {
-              toSettleIds.push(r.id);
-              remaining -= amt;
-            } else {
-              break;
-            }
-          }
-        }
-
-        if (toSettleIds.length > 0) {
-          const now = new Date();
-          await tx
-            .update(streamRecords)
-            .set({ status: "settled", settledAt: now, updatedAt: now })
-            .where(inArray(streamRecords.id, toSettleIds));
-        }
+      if (toSettleIds.length > 0) {
+        const now = new Date();
+        await tx
+          .update(streamRecords)
+          .set({ status: "settled", settledAt: now, updatedAt: now })
+          .where(inArray(streamRecords.id, toSettleIds));
       }
     });
+
+    if (alreadyConfirmed) {
+      return { ok: false, error: "Already confirmed" } as const;
+    }
 
     // Notify debtor: their payment was confirmed (outside transaction — fire-and-forget)
     const amountStr = formatCurrency(Number(settlement.amount), settlement.currency);

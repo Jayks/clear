@@ -711,14 +711,33 @@ export async function addCircleExpense(input: AddCircleExpenseInput) {
   // transaction so they are atomic.  Previously the two balance SELECTs ran
   // outside any transaction, creating a race where two concurrent admin draws
   // both read the same stale balance, both passed the guard, and both inserted —
-  // overdrawing the wallet.  Wrapping in a transaction prevents this because
-  // Postgres serialises the SELECT+INSERT pair per connection.
+  // overdrawing the wallet.
+  //
+  // BUGFIX (audit): the transaction wrapper ALONE does not prevent this race —
+  // Postgres's default isolation is READ COMMITTED, not serializable, and there
+  // is no row to naturally lock for an aggregate SUM() check (unlike the
+  // `WHERE isConfirmed = false` row guards used elsewhere in this file). Two
+  // concurrent transactions could each run their SELECT SUM before either
+  // commits its INSERT, both read the same pre-draw balance, both pass the
+  // `amount > poolBalance` check, and both insert — a real overdraw. Explicitly
+  // locking the group's row with SELECT ... FOR UPDATE serialises concurrent
+  // draws on the same circle: the second transaction blocks until the first
+  // commits, then re-reads the now-updated balance.
   //
   // "I paid from my pocket" (isAdvance=true) is always allowed — the admin is
   // personally advancing funds and will be reimbursed from future contributions.
   try {
     const expense = await db.transaction(async (tx) => {
       if (!isAdvance) {
+        // Lock the circle's row for the duration of this transaction so a
+        // concurrent addCircleExpense call for the same group serialises
+        // behind this one instead of reading a stale pre-draw balance.
+        await tx
+          .select({ id: groups.id })
+          .from(groups)
+          .where(eq(groups.id, groupId))
+          .for("update");
+
         const [contribRow] = await tx
           .select({ total: sql<string>`COALESCE(SUM(${circleContributions.amount}), '0')` })
           .from(circleContributions)

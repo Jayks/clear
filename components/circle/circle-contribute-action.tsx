@@ -87,6 +87,18 @@ export function CircleContributeAction({
 
   const upiTappedRef = useRef(false);
 
+  // BUGFIX (audit): resync optimistic paid/pending state when the server-confirmed
+  // props change. Previously localPaid/localPendingConfirm were seeded once via
+  // useState(isPaid)/useState(isPendingConfirm) with no effect to reconcile them —
+  // if this component stays mounted across an RSC re-render (any future refresh
+  // that keeps it in place, e.g. if circle_contributions is ever added to
+  // useGroupRealtime), the badge would stay stuck at "Awaiting confirmation" even
+  // after the admin confirms, until a full unmount/remount.
+  useEffect(() => {
+    setLocalPaid(isPaid);
+    setLocalPendingConfirm(isPendingConfirm);
+  }, [isPaid, isPendingConfirm]);
+
   // Return-from-UPI: show prompt when app regains focus after UPI deep link tap.
   // #1: timerActive=true is passed once the page becomes visible again, so
   // PaymentConfirmPrompt starts its 15s countdown on return (not on tap).

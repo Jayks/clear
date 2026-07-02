@@ -150,67 +150,80 @@ export async function confirmPassPurchase(
   }
   const { passType, earlyBird } = notes;
 
-  const claimed = await db
-    .insert(razorpayPayments)
-    .values({
-      userId: user.id,
-      paymentId,
-      orderId,
-      amount: getPassAmountPaise(passType, earlyBird),
-      passType,
-      earlyBird,
-      mode: getRazorpayMode(),
-    })
-    .onConflictDoNothing({ target: razorpayPayments.paymentId })
-    .returning({ id: razorpayPayments.id });
+  // BUGFIX (audit): wrapped the DB writes in try/catch. The signature has
+  // already been verified at this point — the user has genuinely paid — so a
+  // transient DB error (e.g. connection-pool exhaustion under max:3) must
+  // never throw here. The client's Razorpay `handler` callback has no
+  // try/catch of its own, so an unhandled throw previously left the checkout
+  // button frozen in its loading state forever with no toast, even though the
+  // webhook backstop (handlePaymentCaptured) will still apply the entitlement
+  // idempotently in the background.
+  try {
+    const claimed = await db
+      .insert(razorpayPayments)
+      .values({
+        userId: user.id,
+        paymentId,
+        orderId,
+        amount: getPassAmountPaise(passType, earlyBird),
+        passType,
+        earlyBird,
+        mode: getRazorpayMode(),
+      })
+      .onConflictDoNothing({ target: razorpayPayments.paymentId })
+      .returning({ id: razorpayPayments.id });
 
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
 
-  if (claimed.length === 0) {
-    // Already applied — by the webhook backstop or a prior call. No-op success.
-    return { ok: true, plusUntil: sub?.currentPeriodEnd ?? new Date() };
-  }
+    if (claimed.length === 0) {
+      // Already applied — by the webhook backstop or a prior call. No-op success.
+      return { ok: true, plusUntil: sub?.currentPeriodEnd ?? new Date() };
+    }
 
-  const plusUntil = extendEntitlement(sub?.currentPeriodEnd ?? null, passType, new Date());
-  await db
-    .insert(subscriptions)
-    .values({
-      userId: user.id,
-      plan: "plus",
-      status: "active",
-      trialEndsAt: null,
-      billingCycle: passType,
-      currentPeriodEnd: plusUntil,
-      lastPaymentId: paymentId,
-    })
-    .onConflictDoUpdate({
-      target: subscriptions.userId,
-      set: {
+    const plusUntil = extendEntitlement(sub?.currentPeriodEnd ?? null, passType, new Date());
+    await db
+      .insert(subscriptions)
+      .values({
+        userId: user.id,
         plan: "plus",
         status: "active",
+        trialEndsAt: null,
         billingCycle: passType,
         currentPeriodEnd: plusUntil,
         lastPaymentId: paymentId,
-        updatedAt: new Date(),
-      },
+      })
+      .onConflictDoUpdate({
+        target: subscriptions.userId,
+        set: {
+          plan: "plus",
+          status: "active",
+          billingCycle: passType,
+          currentPeriodEnd: plusUntil,
+          lastPaymentId: paymentId,
+          updatedAt: new Date(),
+        },
+      });
+
+    revalidatePath("/", "layout");
+
+    // This is the fast/primary confirmation path (checkout tab stayed open) —
+    // the atomic claim above means exactly one of this path or the webhook
+    // backstop (handlePaymentCaptured) reaches here per payment, so this never
+    // double-fires with the webhook's own notify call.
+    const buyerName = user.user_metadata?.full_name ?? "Someone";
+    await recordAdminEvent({
+      type: "purchase",
+      userId: user.id,
+      title: "💰 Purchase",
+      body: `${buyerName} · ${formatCurrency(getPassAmountPaise(passType, earlyBird) / 100, "INR")} · ${passType === "annual" ? "Annual pass" : "30-day pass"}${earlyBird ? " (Early Bird)" : ""}`,
+      url: "/admin",
     });
 
-  revalidatePath("/", "layout");
-
-  // This is the fast/primary confirmation path (checkout tab stayed open) —
-  // the atomic claim above means exactly one of this path or the webhook
-  // backstop (handlePaymentCaptured) reaches here per payment, so this never
-  // double-fires with the webhook's own notify call.
-  const buyerName = user.user_metadata?.full_name ?? "Someone";
-  await recordAdminEvent({
-    type: "purchase",
-    userId: user.id,
-    title: "💰 Purchase",
-    body: `${buyerName} · ${formatCurrency(getPassAmountPaise(passType, earlyBird) / 100, "INR")} · ${passType === "annual" ? "Annual pass" : "30-day pass"}${earlyBird ? " (Early Bird)" : ""}`,
-    url: "/admin",
-  });
-
-  return { ok: true, plusUntil };
+    return { ok: true, plusUntil };
+  } catch (err) {
+    console.error("confirmPassPurchase error (payment already verified — webhook backstop will still apply it):", err);
+    return { ok: false, error: "Payment received — finishing setup. Refresh in a moment if Plus doesn't appear." };
+  }
 }
 
 // ── AI celebratory upgrade nudge (RAZORPAY_PLAN.md §10 / M4) ─────────────────

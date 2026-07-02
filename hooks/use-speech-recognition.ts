@@ -46,6 +46,21 @@ export function useSpeechRecognition({
     onFinalRef.current = onFinal;
   }, [onFinal]);
 
+  // BUGFIX (audit): stop the mic on unmount, not just when the caller's
+  // `isOpen` prop flips to false. QuickAddSheet always stays mounted with
+  // `isOpen` toggling, so its own effect stops listening on close — but its
+  // parents (ExpenseQuickAddFab, GroupActionHub, GlobalFab) DO unmount it on
+  // full page navigation. Without this, starting voice input then navigating
+  // away via the bottom nav (rather than closing the sheet) left the browser
+  // mic listening in the background until SpeechRecognition timed out on its
+  // own — a stray onFinalRef call against an unmounted tree, plus a lingering
+  // mic indicator and wasted battery.
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
   const isSupported =
     typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);

@@ -41,16 +41,39 @@ export async function getAllTripsInsightsData() {
   ]);
 
   if (tripGroups.length === 0) return null;
-  const tripIds = tripGroups.map((g) => g.id);
+
+  // BUGFIX (audit): unlike getAllNestsInsightsData below, this previously summed
+  // expenses across ALL trips regardless of defaultCurrency — a USD trip mixed
+  // with INR trips produced a meaningless raw sum silently labelled with
+  // whatever the first trip's currency happened to be. Determine the dominant
+  // currency (the defaultCurrency used by the most trips) and scope the money
+  // aggregates to it, mirroring the Nest fix exactly: trip/member COUNTS stay
+  // computed across all trips (tripGroups/tripMembers, unfiltered — currency-
+  // agnostic), but $-based totals (perTripTotals, catRows) are scoped to
+  // primary-currency trips only. Off-currency trips still appear in `byTrip`
+  // (via the totalMap lookup below) but with a $0 total rather than being
+  // blended into the totals in the wrong currency.
+  const currencyCount = new Map<string, number>();
+  for (const g of tripGroups) {
+    currencyCount.set(g.defaultCurrency, (currencyCount.get(g.defaultCurrency) ?? 0) + 1);
+  }
+  const primaryCurrency =
+    [...currencyCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+    tripGroups[0]?.defaultCurrency ??
+    "INR";
+
+  const primaryTripIds = tripGroups
+    .filter((g) => g.defaultCurrency === primaryCurrency)
+    .map((g) => g.id);
 
   const [perTripTotals, catRows] = await Promise.all([
     db.select({ groupId: expenses.groupId, total: sum(expenses.amount), cnt: count(expenses.id) })
       .from(expenses)
-      .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
+      .where(and(inArray(expenses.groupId, primaryTripIds), eq(expenses.isTemplate, false)))
       .groupBy(expenses.groupId),
     db.select({ category: expenses.category, total: sum(expenses.amount) })
       .from(expenses)
-      .where(and(inArray(expenses.groupId, tripIds), eq(expenses.isTemplate, false)))
+      .where(and(inArray(expenses.groupId, primaryTripIds), eq(expenses.isTemplate, false)))
       .groupBy(expenses.category),
   ]);
 
@@ -75,7 +98,14 @@ export async function getAllTripsInsightsData() {
   // totalExpenses — sum per-trip cnt; getAllTripsInsightsData has no flat expense array.
   const totalExpenses = perTripTotals.reduce((s, t) => s + Number(t.cnt), 0);
 
-  const insights = computeAllTripsInsights({ trips: tripGroups, summaries, categoryTotals, allMembers: tripMembers, currentUserId: user.id });
+  const insights = computeAllTripsInsights({
+    trips: tripGroups,
+    summaries,
+    categoryTotals,
+    allMembers: tripMembers,
+    currentUserId: user.id,
+    currency: primaryCurrency,
+  });
   return insights ? { ...insights, totalExpenses } : null;
 }
 

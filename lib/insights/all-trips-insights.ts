@@ -25,6 +25,9 @@ export interface AllTripsInsights {
   dailyPace: number;
   mostTraveledWith: { name: string; tripCount: number } | null;
   mostTraveledMonth: string | null;
+  /** Dominant currency across the user's trips — money totals (totalSpend,
+   *  avgTripCost, dailyPace, topCategories) are scoped to this currency only. */
+  currency: string;
 
   byTrip: TripSummary[];           // sorted chronologically (undated trips last)
   topCategories: { category: string; label: string; amount: number; percentage: number; hex: string }[];
@@ -42,8 +45,13 @@ export function computeAllTripsInsights(params: {
   categoryTotals: Record<string, number>;
   allMembers: GroupMember[];
   currentUserId: string;
+  /** Dominant currency, pre-resolved by the caller (getAllTripsInsightsData) —
+   *  falls back to the first summary's currency for direct/test callers that
+   *  don't pass it, matching the AllNestsInsights `currency?` pattern. */
+  currency?: string;
 }): AllTripsInsights {
   const { trips, summaries, categoryTotals, allMembers, currentUserId } = params;
+  const currency = params.currency ?? summaries[0]?.currency ?? "INR";
 
   const totalSpend = summaries.reduce((s, t) => s + t.totalSpend, 0);
   const tripCount = trips.length;
@@ -142,8 +150,7 @@ export function computeAllTripsInsights(params: {
 
   // ── Highlights (3 vivid spotlight cards) ────────────────────────────────
   const highlights: Highlight[] = [];
-  const primaryCurrency = summaries[0]?.currency ?? "INR";
-  const fmt = (n: number, cur = primaryCurrency) =>
+  const fmt = (n: number, cur = currency) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(n);
 
   // 1. Biggest trip by total spend
@@ -197,7 +204,7 @@ export function computeAllTripsInsights(params: {
 
   return {
     totalSpend, tripCount, totalExpenses, uniqueCompanions, avgTripCost,
-    totalDays, dailyPace, mostTraveledWith, mostTraveledMonth,
+    totalDays, dailyPace, mostTraveledWith, mostTraveledMonth, currency,
     byTrip, topCategories, highlights,
   };
 }

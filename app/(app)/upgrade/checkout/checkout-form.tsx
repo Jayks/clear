@@ -101,21 +101,34 @@ export function CheckoutForm({
       theme: { color: "#7c3aed" },
       prefill: { name: userName, email: userEmail },
       handler: async (response) => {
-        const result = await confirmPassPurchase(
-          response.razorpay_order_id,
-          response.razorpay_payment_id,
-          response.razorpay_signature,
-        );
-        if (result.ok) {
-          toast.success("Welcome to Plus! ✦", {
-            description: "All features are now unlocked.",
-            duration: 5000,
-          });
-          router.push("/groups");
-        } else {
+        // BUGFIX (audit): wrapped in try/catch. confirmPassPurchase itself now
+        // catches its own DB errors and returns { ok: false }, but this callback
+        // still calls it over the network (a Server Action round trip) — if that
+        // call itself throws (dropped connection, etc.) the payment has ALREADY
+        // succeeded and must never leave the button stuck spinning with no
+        // feedback. The webhook backstop applies the entitlement regardless.
+        try {
+          const result = await confirmPassPurchase(
+            response.razorpay_order_id,
+            response.razorpay_payment_id,
+            response.razorpay_signature,
+          );
+          if (result.ok) {
+            toast.success("Welcome to Plus! ✦", {
+              description: "All features are now unlocked.",
+              duration: 5000,
+            });
+            router.push("/groups");
+            return; // leave loading=true — the navigation is about to unmount this component
+          }
           // Payment itself succeeded (we're past Razorpay's handler) — a confirm
           // failure here doesn't mean the money is lost. The webhook backstop
           // applies the same entitlement extension idempotently in the background.
+          toast.error("Payment received — finishing setup. Refresh in a moment; contact support if Plus doesn't appear.", {
+            duration: 8000,
+          });
+          setLoading(false);
+        } catch {
           toast.error("Payment received — finishing setup. Refresh in a moment; contact support if Plus doesn't appear.", {
             duration: 8000,
           });

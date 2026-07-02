@@ -54,12 +54,19 @@ export function TripMemoriesLightbox({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { onClose(); return; }
+      // BUGFIX (audit): guard arrow-key nav with the same `deleting` check as
+      // the prev/next buttons (which are already `disabled={deleting}`).
+      // Without this, pressing an arrow key while handleDelete() is awaiting
+      // the server call changes `index` mid-delete; when the delete resolves,
+      // `setIndex(i => Math.min(i, photos.length - 2))` re-clamps against the
+      // pre-delete photos.length and can land on the wrong photo.
+      if (deleting) return;
       if (e.key === "ArrowLeft")  prev();
       if (e.key === "ArrowRight") next();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, index, photos.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, index, photos.length, deleting]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Popstate (Android back button) — close lightbox
   useEffect(() => {

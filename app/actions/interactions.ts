@@ -162,39 +162,48 @@ export async function addReaction(
   if (!(await expenseBelongsToGroup(expenseId, groupId)))
     return { ok: false, error: "Expense not found in this group" } as const;
 
-  const [existing] = await db
-    .select({ id: expenseReactions.id, emoji: expenseReactions.emoji })
-    .from(expenseReactions)
-    .where(
-      and(
-        eq(expenseReactions.expenseId, expenseId),
-        eq(expenseReactions.memberId, membership.id)
-      )
-    );
+  // BUGFIX (audit): this body had no try/catch, unlike every other action file.
+  // A transient DB error (e.g. connection-pool exhaustion under max:3) would throw
+  // past the caller's optimistic-UI rollback in expense-detail-sheet.tsx, leaving
+  // the reaction visually stuck in its optimistic state with no error toast.
+  try {
+    const [existing] = await db
+      .select({ id: expenseReactions.id, emoji: expenseReactions.emoji })
+      .from(expenseReactions)
+      .where(
+        and(
+          eq(expenseReactions.expenseId, expenseId),
+          eq(expenseReactions.memberId, membership.id)
+        )
+      );
 
-  if (existing) {
-    if (existing.emoji === emoji) {
-      // Toggle off — same emoji tapped again
-      await db.delete(expenseReactions).where(eq(expenseReactions.id, existing.id));
-    } else if (existing.emoji === "question" || existing.emoji === "dispute") {
-      // B-2 fix: never silently replace a pending question/dispute reaction via the
-      // passive thumbs_up toggle.  The user must cancel via cancelMyDispute() first.
-      return { ok: false, error: "Cancel your pending dispute or question before reacting" } as const;
+    if (existing) {
+      if (existing.emoji === emoji) {
+        // Toggle off — same emoji tapped again
+        await db.delete(expenseReactions).where(eq(expenseReactions.id, existing.id));
+      } else if (existing.emoji === "question" || existing.emoji === "dispute") {
+        // B-2 fix: never silently replace a pending question/dispute reaction via the
+        // passive thumbs_up toggle.  The user must cancel via cancelMyDispute() first.
+        return { ok: false, error: "Cancel your pending dispute or question before reacting" } as const;
+      } else {
+        // Replace passive "seen" with an active reaction
+        await db.update(expenseReactions).set({ emoji }).where(eq(expenseReactions.id, existing.id));
+      }
     } else {
-      // Replace passive "seen" with an active reaction
-      await db.update(expenseReactions).set({ emoji }).where(eq(expenseReactions.id, existing.id));
+      await db.insert(expenseReactions).values({
+        expenseId,
+        groupId,
+        memberId: membership.id,
+        emoji,
+      });
     }
-  } else {
-    await db.insert(expenseReactions).values({
-      expenseId,
-      groupId,
-      memberId: membership.id,
-      emoji,
-    });
-  }
 
-  revalidateTag(`interactions-${groupId}`, "max");
-  return { ok: true } as const;
+    revalidateTag(`interactions-${groupId}`, "max");
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("addReaction error:", err);
+    return { ok: false, error: "Failed to update reaction" } as const;
+  }
 }
 
 // ── markSeen — upserts a "seen" reaction; never toggles off ──────────────────
@@ -258,70 +267,78 @@ export async function raiseQuestion(expenseId: string, groupId: string, message:
     return { ok: false, error: "You cannot raise a question about your own expense" } as const;
   }
 
-  // I-4 fix: wrap all three mutation steps in a single transaction so they are
-  // atomic.  Previously the three independent DB calls (cancel old → upsert
-  // reaction → insert dispute record) had no transaction, so a failure on step
-  // 3 left partial state: the old dispute cancelled and the emoji upserted, but
-  // no new dispute record — making the expense card show ❓ with no pending
-  // dispute that the payer could action or the requester could cancel.
-  await db.transaction(async (tx) => {
-    // Step 1: cancel any existing pending question from this member on this expense
-    await tx
-      .update(expenseDisputes)
-      .set({ status: "cancelled", resolvedAt: new Date() })
-      .where(
-        and(
-          eq(expenseDisputes.expenseId, expenseId),
-          eq(expenseDisputes.requesterMemberId, membership.id),
-          eq(expenseDisputes.status, "pending")
-        )
-      );
+  // BUGFIX (audit): wrapped in try/catch — this body previously threw straight
+  // past the caller's optimistic-UI rollback on a transient DB error (matches
+  // the addReaction fix above; see CLAUDE.md §5 "Never throw to client").
+  try {
+    // I-4 fix: wrap all three mutation steps in a single transaction so they are
+    // atomic.  Previously the three independent DB calls (cancel old → upsert
+    // reaction → insert dispute record) had no transaction, so a failure on step
+    // 3 left partial state: the old dispute cancelled and the emoji upserted, but
+    // no new dispute record — making the expense card show ❓ with no pending
+    // dispute that the payer could action or the requester could cancel.
+    await db.transaction(async (tx) => {
+      // Step 1: cancel any existing pending question from this member on this expense
+      await tx
+        .update(expenseDisputes)
+        .set({ status: "cancelled", resolvedAt: new Date() })
+        .where(
+          and(
+            eq(expenseDisputes.expenseId, expenseId),
+            eq(expenseDisputes.requesterMemberId, membership.id),
+            eq(expenseDisputes.status, "pending")
+          )
+        );
 
-    // Step 2: upsert ❓ reaction
-    const [existing] = await tx
-      .select({ id: expenseReactions.id })
-      .from(expenseReactions)
-      .where(
-        and(
-          eq(expenseReactions.expenseId, expenseId),
-          eq(expenseReactions.memberId, membership.id)
-        )
-      );
+      // Step 2: upsert ❓ reaction
+      const [existing] = await tx
+        .select({ id: expenseReactions.id })
+        .from(expenseReactions)
+        .where(
+          and(
+            eq(expenseReactions.expenseId, expenseId),
+            eq(expenseReactions.memberId, membership.id)
+          )
+        );
 
-    if (existing) {
-      await tx.update(expenseReactions).set({ emoji: "question" }).where(eq(expenseReactions.id, existing.id));
-    } else {
-      await tx.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "question" });
+      if (existing) {
+        await tx.update(expenseReactions).set({ emoji: "question" }).where(eq(expenseReactions.id, existing.id));
+      } else {
+        await tx.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "question" });
+      }
+
+      // Step 3: create the dispute record
+      await tx.insert(expenseDisputes).values({
+        expenseId,
+        groupId,
+        requesterMemberId: membership.id,
+        disputeType: "question",
+        message: parsed.data.message,
+        status: "pending",
+      });
+    });
+
+    revalidateGroup(groupId);
+
+    // Push to expense payer
+    const payerUserId = await getPayerUserId(expense.paidByMemberId);
+    if (payerUserId && payerUserId !== user.id) {
+      const groupName = await getGroupName(groupId);
+      const actorName = membership.displayName ?? membership.guestName ?? "Someone";
+      sendPushToUser({
+        targetUserId: payerUserId,
+        groupId,
+        title: groupName,
+        body: `${actorName} has a question about "${expense.description}": ${parsed.data.message}`,
+        url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+      }).catch(() => {});
     }
 
-    // Step 3: create the dispute record
-    await tx.insert(expenseDisputes).values({
-      expenseId,
-      groupId,
-      requesterMemberId: membership.id,
-      disputeType: "question",
-      message: parsed.data.message,
-      status: "pending",
-    });
-  });
-
-  revalidateGroup(groupId);
-
-  // Push to expense payer
-  const payerUserId = await getPayerUserId(expense.paidByMemberId);
-  if (payerUserId && payerUserId !== user.id) {
-    const groupName = await getGroupName(groupId);
-    const actorName = membership.displayName ?? membership.guestName ?? "Someone";
-    sendPushToUser({
-      targetUserId: payerUserId,
-      groupId,
-      title: groupName,
-      body: `${actorName} has a question about "${expense.description}": ${parsed.data.message}`,
-      url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-    }).catch(() => {});
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("raiseQuestion error:", err);
+    return { ok: false, error: "Failed to raise question" } as const;
   }
-
-  return { ok: true } as const;
 }
 
 // ── raiseDispute — sets ⚠️ reaction + creates actionable dispute + pushes payer ─
@@ -369,77 +386,83 @@ export async function raiseDispute(
     }
   }
 
-  // I-4 fix: wrap all three mutation steps in a single transaction (same as
-  // raiseQuestion above).  Partial state on INSERT failure would leave a stale
-  // ⚠️ emoji with no actionable dispute record.
-  await db.transaction(async (tx) => {
-    // Step 1: cancel any existing pending dispute from this member on this expense
-    await tx
-      .update(expenseDisputes)
-      .set({ status: "cancelled", resolvedAt: new Date() })
-      .where(
-        and(
-          eq(expenseDisputes.expenseId, expenseId),
-          eq(expenseDisputes.requesterMemberId, membership.id),
-          eq(expenseDisputes.status, "pending")
-        )
-      );
+  // BUGFIX (audit): wrapped in try/catch — same rationale as raiseQuestion above.
+  try {
+    // I-4 fix: wrap all three mutation steps in a single transaction (same as
+    // raiseQuestion above).  Partial state on INSERT failure would leave a stale
+    // ⚠️ emoji with no actionable dispute record.
+    await db.transaction(async (tx) => {
+      // Step 1: cancel any existing pending dispute from this member on this expense
+      await tx
+        .update(expenseDisputes)
+        .set({ status: "cancelled", resolvedAt: new Date() })
+        .where(
+          and(
+            eq(expenseDisputes.expenseId, expenseId),
+            eq(expenseDisputes.requesterMemberId, membership.id),
+            eq(expenseDisputes.status, "pending")
+          )
+        );
 
-    // Step 2: upsert ⚠️ reaction
-    const [existing] = await tx
-      .select({ id: expenseReactions.id })
-      .from(expenseReactions)
-      .where(
-        and(
-          eq(expenseReactions.expenseId, expenseId),
-          eq(expenseReactions.memberId, membership.id)
-        )
-      );
+      // Step 2: upsert ⚠️ reaction
+      const [existing] = await tx
+        .select({ id: expenseReactions.id })
+        .from(expenseReactions)
+        .where(
+          and(
+            eq(expenseReactions.expenseId, expenseId),
+            eq(expenseReactions.memberId, membership.id)
+          )
+        );
 
-    if (existing) {
-      await tx.update(expenseReactions).set({ emoji: "dispute" }).where(eq(expenseReactions.id, existing.id));
-    } else {
-      await tx.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "dispute" });
+      if (existing) {
+        await tx.update(expenseReactions).set({ emoji: "dispute" }).where(eq(expenseReactions.id, existing.id));
+      } else {
+        await tx.insert(expenseReactions).values({ expenseId, groupId, memberId: membership.id, emoji: "dispute" });
+      }
+
+      // Step 3: create the dispute record
+      await tx.insert(expenseDisputes).values({
+        expenseId,
+        groupId,
+        requesterMemberId: membership.id,
+        disputeType,
+        suggestedAmount: suggestedAmount !== undefined ? String(suggestedAmount) : null,
+        message: message?.trim() ?? null,
+        status: "pending",
+      });
+    });
+
+    revalidateGroup(groupId);
+
+    // Push to payer with dispute context
+    const payerUserId = await getPayerUserId(expense.paidByMemberId);
+    if (payerUserId && payerUserId !== user.id) {
+      const groupName = await getGroupName(groupId);
+      const actorName = membership.displayName ?? membership.guestName ?? "Someone";
+
+      const bodyMap: Record<DisputeType, string> = {
+        remove_me:    `${actorName} wants to be removed from "${expense.description}"`,
+        change_share: `${actorName} wants to change their share of "${expense.description}"`,
+        split_equal:  `${actorName} wants "${expense.description}" split equally`,
+        other:        `${actorName} disputed "${expense.description}": ${message ?? ""}`,
+        question:     `${actorName} has a question about "${expense.description}"`,
+      };
+
+      sendPushToUser({
+        targetUserId: payerUserId,
+        groupId,
+        title: `${groupName} · Dispute`,
+        body: bodyMap[disputeType],
+        url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+      }).catch(() => {});
     }
 
-    // Step 3: create the dispute record
-    await tx.insert(expenseDisputes).values({
-      expenseId,
-      groupId,
-      requesterMemberId: membership.id,
-      disputeType,
-      suggestedAmount: suggestedAmount !== undefined ? String(suggestedAmount) : null,
-      message: message?.trim() ?? null,
-      status: "pending",
-    });
-  });
-
-  revalidateGroup(groupId);
-
-  // Push to payer with dispute context
-  const payerUserId = await getPayerUserId(expense.paidByMemberId);
-  if (payerUserId && payerUserId !== user.id) {
-    const groupName = await getGroupName(groupId);
-    const actorName = membership.displayName ?? membership.guestName ?? "Someone";
-
-    const bodyMap: Record<DisputeType, string> = {
-      remove_me:    `${actorName} wants to be removed from "${expense.description}"`,
-      change_share: `${actorName} wants to change their share of "${expense.description}"`,
-      split_equal:  `${actorName} wants "${expense.description}" split equally`,
-      other:        `${actorName} disputed "${expense.description}": ${message ?? ""}`,
-      question:     `${actorName} has a question about "${expense.description}"`,
-    };
-
-    sendPushToUser({
-      targetUserId: payerUserId,
-      groupId,
-      title: `${groupName} · Dispute`,
-      body: bodyMap[disputeType],
-      url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-    }).catch(() => {});
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("raiseDispute error:", err);
+    return { ok: false, error: "Failed to raise dispute" } as const;
   }
-
-  return { ok: true } as const;
 }
 
 // ── cancelMyDispute — withdraws ❓/⚠️ reaction + cancels pending dispute ───────
@@ -451,31 +474,37 @@ export async function cancelMyDispute(expenseId: string, groupId: string) {
   const membership = await getMembership(groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member of this group" } as const;
 
-  // Cancel pending dispute + remove ❓/⚠️ reaction atomically
-  await db.transaction(async (tx) => {
-    await tx
-      .update(expenseDisputes)
-      .set({ status: "cancelled", resolvedAt: new Date() })
-      .where(
-        and(
-          eq(expenseDisputes.expenseId, expenseId),
-          eq(expenseDisputes.requesterMemberId, membership.id),
-          eq(expenseDisputes.status, "pending")
-        )
-      );
+  // BUGFIX (audit): wrapped in try/catch — same rationale as addReaction above.
+  try {
+    // Cancel pending dispute + remove ❓/⚠️ reaction atomically
+    await db.transaction(async (tx) => {
+      await tx
+        .update(expenseDisputes)
+        .set({ status: "cancelled", resolvedAt: new Date() })
+        .where(
+          and(
+            eq(expenseDisputes.expenseId, expenseId),
+            eq(expenseDisputes.requesterMemberId, membership.id),
+            eq(expenseDisputes.status, "pending")
+          )
+        );
 
-    await tx
-      .delete(expenseReactions)
-      .where(
-        and(
-          eq(expenseReactions.expenseId, expenseId),
-          eq(expenseReactions.memberId, membership.id)
-        )
-      );
-  });
+      await tx
+        .delete(expenseReactions)
+        .where(
+          and(
+            eq(expenseReactions.expenseId, expenseId),
+            eq(expenseReactions.memberId, membership.id)
+          )
+        );
+    });
 
-  revalidateGroup(groupId);
-  return { ok: true } as const;
+    revalidateGroup(groupId);
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("cancelMyDispute error:", err);
+    return { ok: false, error: "Failed to cancel dispute" } as const;
+  }
 }
 
 // ── acceptDispute — payer accepts; auto-updates splits ────────────────────────
@@ -629,47 +658,54 @@ export async function declineDispute(disputeId: string) {
     return { ok: false, error: "Only the expense payer or a group admin can decline disputes" } as const;
   }
 
-  // I-3 fix: also remove the ⚠️/❓ reaction when declining, mirroring
-  // acceptDispute which already does this inside its transaction.  Previously
-  // declineDispute left the reaction in place — the expense card kept showing
-  // the dispute emoji until the requester manually cancelled.
-  await db.transaction(async (tx) => {
-    await tx
-      .update(expenseDisputes)
-      .set({ status: "declined", resolvedAt: new Date() })
-      .where(eq(expenseDisputes.id, disputeId));
+  // BUGFIX (audit): wrapped in try/catch — same rationale as acceptDispute's
+  // existing try/catch just above it in this file.
+  try {
+    // I-3 fix: also remove the ⚠️/❓ reaction when declining, mirroring
+    // acceptDispute which already does this inside its transaction.  Previously
+    // declineDispute left the reaction in place — the expense card kept showing
+    // the dispute emoji until the requester manually cancelled.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(expenseDisputes)
+        .set({ status: "declined", resolvedAt: new Date() })
+        .where(eq(expenseDisputes.id, disputeId));
 
-    await tx
-      .delete(expenseReactions)
-      .where(
-        and(
-          eq(expenseReactions.expenseId, expenseId),
-          eq(expenseReactions.memberId, requesterMemberId),
-        )
-      );
-  });
+      await tx
+        .delete(expenseReactions)
+        .where(
+          and(
+            eq(expenseReactions.expenseId, expenseId),
+            eq(expenseReactions.memberId, requesterMemberId),
+          )
+        );
+    });
 
-  revalidateGroup(groupId);
-  revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateGroup(groupId);
+    revalidatePath(`/groups/${groupId}`, "layout");
 
-  // Push to requester privately
-  const [requesterRow] = await db
-    .select({ userId: groupMembers.userId })
-    .from(groupMembers)
-    .where(eq(groupMembers.id, requesterMemberId));
+    // Push to requester privately
+    const [requesterRow] = await db
+      .select({ userId: groupMembers.userId })
+      .from(groupMembers)
+      .where(eq(groupMembers.id, requesterMemberId));
 
-  if (requesterRow?.userId && requesterRow.userId !== user.id) {
-    const groupName = await getGroupName(groupId);
-    sendPushToUser({
-      targetUserId: requesterRow.userId,
-      groupId,
-      title: `${groupName} · Not accepted`,
-      body: `Your request on "${expense.description}" was not accepted`,
-      url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-    }).catch(() => {});
+    if (requesterRow?.userId && requesterRow.userId !== user.id) {
+      const groupName = await getGroupName(groupId);
+      sendPushToUser({
+        targetUserId: requesterRow.userId,
+        groupId,
+        title: `${groupName} · Not accepted`,
+        body: `Your request on "${expense.description}" was not accepted`,
+        url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+      }).catch(() => {});
+    }
+
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("declineDispute error:", err);
+    return { ok: false, error: "Failed to decline dispute" } as const;
   }
-
-  return { ok: true } as const;
 }
 
 // ── addComment — posts a comment, notifies @mentions + thread participants ────
@@ -711,101 +747,109 @@ export async function addComment(
     .limit(1);
   if (!expenseExists) return { ok: false, error: "Expense not found in this group" } as const;
 
-  await db.insert(expenseComments).values({
-    expenseId,
-    groupId,
-    memberId: membership.id,
-    content: parsed.data.content,
-  });
+  // BUGFIX (audit): wrapped in try/catch — same rationale as addReaction above.
+  // A transient failure here previously threw past the optimistic comment bubble
+  // in expense-detail-sheet.tsx with no rollback/toast.
+  try {
+    await db.insert(expenseComments).values({
+      expenseId,
+      groupId,
+      memberId: membership.id,
+      content: parsed.data.content,
+    });
 
-  revalidateTag(`interactions-${groupId}`, "max");
-  revalidatePath(`/groups/${groupId}/expenses/${expenseId}/thread`);
+    revalidateTag(`interactions-${groupId}`, "max");
+    revalidatePath(`/groups/${groupId}/expenses/${expenseId}/thread`);
 
-  // ── Push notifications ─────────────────────────────────────────────────────
+    // ── Push notifications ─────────────────────────────────────────────────────
 
-  const actorName = membership.displayName ?? membership.guestName ?? "Someone";
+    const actorName = membership.displayName ?? membership.guestName ?? "Someone";
 
-  // Fetch expense + group name + all group members in parallel
-  const [expenseRows, allGroupMembers, groupName] = await Promise.all([
-    db
-      .select({ description: expenses.description, paidByMemberId: expenses.paidByMemberId })
-      .from(expenses)
-      .where(eq(expenses.id, expenseId)),
-    db
-      .select({ userId: groupMembers.userId, id: groupMembers.id })
-      .from(groupMembers)
-      .where(eq(groupMembers.groupId, groupId)),
-    getGroupName(groupId),
-  ]);
+    // Fetch expense + group name + all group members in parallel
+    const [expenseRows, allGroupMembers, groupName] = await Promise.all([
+      db
+        .select({ description: expenses.description, paidByMemberId: expenses.paidByMemberId })
+        .from(expenses)
+        .where(eq(expenses.id, expenseId)),
+      db
+        .select({ userId: groupMembers.userId, id: groupMembers.id })
+        .from(groupMembers)
+        .where(eq(groupMembers.groupId, groupId)),
+      getGroupName(groupId),
+    ]);
 
-  const expense = expenseRows[0];
-  const expenseName = expense?.description ?? "an expense";
+    const expense = expenseRows[0];
+    const expenseName = expense?.description ?? "an expense";
 
-  // ── Tier 1: @mentioned members ─────────────────────────────────────────────
-  const mentionedUserIds = new Set<string>();
-  if (parsed.data.mentionedMemberIds.length > 0) {
-    const mentionTargets = allGroupMembers.filter(
-      (m) =>
-        m.userId &&
-        m.userId !== user.id &&
-        parsed.data.mentionedMemberIds.includes(m.id)
-    );
-
-    await Promise.all(
-      mentionTargets.map((m) =>
-        sendPushToUser({
-          targetUserId: m.userId!,
-          groupId,
-          title: `${groupName} · @mention`,
-          body: `${actorName} mentioned you on "${expenseName}"`,
-          url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-        }).catch(() => {})
-      )
-    );
-    mentionTargets.forEach((m) => mentionedUserIds.add(m.userId!));
-  }
-
-  // ── Tier 2: payer + prior commenters (not already @mentioned, not commenter) ─
-  if (expense) {
-    // Fetch prior commenters on this expense, excluding the current commenter
-    const priorCommenterRows = await db
-      .select({ memberId: expenseComments.memberId })
-      .from(expenseComments)
-      .where(
-        and(
-          eq(expenseComments.expenseId, expenseId),
-          ne(expenseComments.memberId, membership.id)
-        )
+    // ── Tier 1: @mentioned members ─────────────────────────────────────────────
+    const mentionedUserIds = new Set<string>();
+    if (parsed.data.mentionedMemberIds.length > 0) {
+      const mentionTargets = allGroupMembers.filter(
+        (m) =>
+          m.userId &&
+          m.userId !== user.id &&
+          parsed.data.mentionedMemberIds.includes(m.id)
       );
 
-    const participantMemberIds = new Set([
-      expense.paidByMemberId,
-      ...priorCommenterRows.map((c) => c.memberId),
-    ]);
-    participantMemberIds.delete(membership.id); // exclude commenter
+      await Promise.all(
+        mentionTargets.map((m) =>
+          sendPushToUser({
+            targetUserId: m.userId!,
+            groupId,
+            title: `${groupName} · @mention`,
+            body: `${actorName} mentioned you on "${expenseName}"`,
+            url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+          }).catch(() => {})
+        )
+      );
+      mentionTargets.forEach((m) => mentionedUserIds.add(m.userId!));
+    }
 
-    const participantTargets = allGroupMembers.filter(
-      (m) =>
-        m.userId &&
-        m.userId !== user.id &&
-        !mentionedUserIds.has(m.userId) &&
-        participantMemberIds.has(m.id)
-    );
+    // ── Tier 2: payer + prior commenters (not already @mentioned, not commenter) ─
+    if (expense) {
+      // Fetch prior commenters on this expense, excluding the current commenter
+      const priorCommenterRows = await db
+        .select({ memberId: expenseComments.memberId })
+        .from(expenseComments)
+        .where(
+          and(
+            eq(expenseComments.expenseId, expenseId),
+            ne(expenseComments.memberId, membership.id)
+          )
+        );
 
-    await Promise.all(
-      participantTargets.map((m) =>
-        sendPushToUser({
-          targetUserId: m.userId!,
-          groupId,
-          title: `${groupName} · New comment`,
-          body: `${actorName} commented on "${expenseName}"`,
-          url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-        }).catch(() => {})
-      )
-    );
+      const participantMemberIds = new Set([
+        expense.paidByMemberId,
+        ...priorCommenterRows.map((c) => c.memberId),
+      ]);
+      participantMemberIds.delete(membership.id); // exclude commenter
+
+      const participantTargets = allGroupMembers.filter(
+        (m) =>
+          m.userId &&
+          m.userId !== user.id &&
+          !mentionedUserIds.has(m.userId) &&
+          participantMemberIds.has(m.id)
+      );
+
+      await Promise.all(
+        participantTargets.map((m) =>
+          sendPushToUser({
+            targetUserId: m.userId!,
+            groupId,
+            title: `${groupName} · New comment`,
+            body: `${actorName} commented on "${expenseName}"`,
+            url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+          }).catch(() => {})
+        )
+      );
+    }
+
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("addComment error:", err);
+    return { ok: false, error: "Failed to post comment" } as const;
   }
-
-  return { ok: true } as const;
 }
 
 // ── deleteComment — own comment or admin ─────────────────────────────────────
@@ -833,9 +877,18 @@ export async function deleteComment(commentId: string, groupId: string) {
     return { ok: false, error: "You can only delete your own comments" } as const;
   }
 
-  await db.delete(expenseComments).where(eq(expenseComments.id, commentId));
+  // BUGFIX (audit): wrapped in try/catch — without this, a transient DB error
+  // threw past the optimistic removal in expense-detail-sheet.tsx (setComments
+  // filter runs before this call), leaving no rollback/toast and the "deleted"
+  // comment silently reappearing on the next router.refresh().
+  try {
+    await db.delete(expenseComments).where(eq(expenseComments.id, commentId));
 
-  revalidateTag(`interactions-${groupId}`, "max");
-  revalidatePath(`/groups/${groupId}/expenses/${comment.expenseId}/thread`);
-  return { ok: true } as const;
+    revalidateTag(`interactions-${groupId}`, "max");
+    revalidatePath(`/groups/${groupId}/expenses/${comment.expenseId}/thread`);
+    return { ok: true } as const;
+  } catch (err) {
+    console.error("deleteComment error:", err);
+    return { ok: false, error: "Failed to delete comment" } as const;
+  }
 }

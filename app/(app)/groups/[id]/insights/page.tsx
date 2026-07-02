@@ -1,8 +1,9 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/shared/skeleton";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
+import { getGroupConfig } from "@/lib/group-config";
 import { getGroupExpensesWithSplits } from "@/lib/db/queries/expenses";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { computeTripInsights } from "@/lib/insights/trip-insights";
@@ -38,6 +39,16 @@ export default async function GroupInsightsPage({ params }: { params: Promise<{ 
   if (!tripData) notFound();
 
   const { group, members } = tripData;
+
+  // BUGFIX (audit): Circles have no insights page — the in-app nav already
+  // omits the link, but the route itself had no server-side guard. This page
+  // treats every non-nest group as a "trip" (only `isNest` is branched), so a
+  // direct/bookmarked visit for a circle computed budget/pace/per-day metrics
+  // that don't apply to it. Mirrors the config.isCircle guard on the settle page.
+  if (getGroupConfig(group.groupType).isCircle) {
+    redirect(`/groups/${id}`);
+  }
+
   const isNest = group.groupType === "nest";
   const currency = group.defaultCurrency;
   // Colour follows the group's context (trip cyan / nest emerald). The chart icon

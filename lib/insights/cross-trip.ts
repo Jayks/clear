@@ -108,7 +108,16 @@ export function computeCrossTripInsights(params: {
   };
   others: OtherTripSummary[];
 }): CrossTripInsight[] {
-  const { current, others } = params;
+  const { current, others: allOthers } = params;
+
+  // BUGFIX (audit): `allOthers` previously fed straight into the per-person/day
+  // average, the spend ranking, and the category-sum comparison below with no
+  // currency filter — a USD trip mixed in with INR trips (or vice versa)
+  // produced a plausible-looking but factually wrong percentage/ranking, with
+  // no indication anything was off. Scope every comparison to trips that share
+  // the current trip's currency, mirroring the same guard already applied to
+  // the All-Nests insights aggregation.
+  const others = allOthers.filter((t) => t.currency === current.currency);
   if (others.length === 0 || current.totalSpend === 0) return [];
 
   const insights: CrossTripInsight[] = [];

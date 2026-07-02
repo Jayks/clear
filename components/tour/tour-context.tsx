@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getTourSteps } from "@/lib/tour/steps";
+import { computeNextTourState } from "@/lib/tour/tour-reducer";
 import { TourLayer } from "./tour-layer";
 
 const DONE_KEY = "clear_tour_done";
@@ -114,13 +115,23 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   const next = useCallback(() => {
-    if (step + 1 >= steps.length) {
-      // End of the tour → home + celebration
-      router.push("/groups");
-      setTimeout(() => setShowCelebration(true), 400);
-      return;
+    // BUGFIX (audit): the end-of-tour transition must deactivate the tour in
+    // the SAME step as navigating home — see computeNextTourState's doc
+    // comment. Previously `active` stayed true, so the "navigate to step's
+    // page" effect above re-ran on the pathname change and pushed straight
+    // back to the last step's page (e.g. .../insights) right after landing
+    // on /groups.
+    const result = computeNextTourState(step, steps.length);
+    setStep(result.step);
+    if (!result.active) {
+      setActive(false);
     }
-    setStep((s) => s + 1);
+    if (result.navigateHome) {
+      router.push("/groups");
+    }
+    if (result.celebrate) {
+      setTimeout(() => setShowCelebration(true), 400);
+    }
   }, [step, steps.length, router]);
 
   const prev = useCallback(() => {

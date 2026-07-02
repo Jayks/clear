@@ -97,8 +97,14 @@ export default async function AllInsightsPage() {
     );
   }
 
+  // BUGFIX (audit): was tripsData?.byTrip[0]?.currency — the chronologically
+  // FIRST trip's currency, which can differ from the dominant currency
+  // getAllTripsInsightsData now actually aggregates totalSpend/avgTripCost/
+  // dailyPace in (see the currency-blending fix in lib/db/queries/insights.ts).
+  // Using tripsData.currency keeps the KPI number and its currency symbol
+  // pointing at the same currency.
   const primaryCurrency =
-    tripsData?.byTrip[0]?.currency ??
+    tripsData?.currency ??
     nestsData?.byNest[0]?.currency ??
     "INR";
 

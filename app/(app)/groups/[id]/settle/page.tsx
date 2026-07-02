@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
+import { getGroupConfig } from "@/lib/group-config";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getMemberDefaultUpiIds } from "@/lib/db/queries/upi";
 import { getPendingSettlements } from "@/lib/db/queries/settlements";
@@ -34,6 +35,16 @@ export default async function SettlePage({
   if (!data) notFound();
 
   const { group, members, currentMember } = data;
+
+  // BUGFIX (audit): Circles have no settle page — the in-app nav already omits
+  // the link, but the route itself had no server-side guard. Circle wallet
+  // expenses have no expense_splits rows, so a direct/bookmarked visit here
+  // rendered a misleading balance view (the admin appearing to be owed the
+  // full wallet spend by no one in particular). Mirrors the config.isCircle
+  // guard already used in expenses/new and expenses/edit.
+  if (getGroupConfig(group.groupType).isCircle) {
+    redirect(`/groups/${id}`);
+  }
 
   // Collect Clear-account userIds so we can batch-fetch their default UPI IDs
   const memberUserIds = members.map((m) => m.userId).filter((uid): uid is string => !!uid);

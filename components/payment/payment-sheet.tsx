@@ -318,7 +318,7 @@ export function PaymentSheet({
                       onBlur={() => setEditingAmount(false)}
                       className="w-32 text-center text-2xl font-bold tabular-nums
                                  text-emerald-600 dark:text-emerald-400 bg-transparent
-                                 border-b-2 border-cyan-400 focus:outline-none"
+                                 border-b-2 border-cyan-400 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-t-md"
                       style={{ fontFamily: "var(--font-fraunces)" }}
                     />
                   </div>

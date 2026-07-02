@@ -115,7 +115,7 @@ export function LocationInput({
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder="Search for a place…"
           autoComplete="off"
-          className="flex-1 text-sm bg-transparent outline-none
+          className="flex-1 text-sm bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-md
                      placeholder:text-slate-400 dark:placeholder:text-slate-500
                      text-slate-800 dark:text-slate-100"
         />

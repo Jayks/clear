@@ -156,7 +156,7 @@ export function RequestClient({
                 placeholder="0"
                 min="1"
                 step="any"
-                className="flex-1 text-2xl font-semibold bg-transparent outline-none
+                className="flex-1 text-2xl font-semibold bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-md
                            text-slate-800 dark:text-slate-100 placeholder:text-slate-300
                            dark:placeholder:text-slate-600"
                 aria-label={`Amount in ${currency}`}

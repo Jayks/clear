@@ -329,7 +329,7 @@ export function StreamSettleSheet({
                       value={amountStr}
                       onChange={(e) => handleAmountChange(e.target.value)}
                       className="flex-1 bg-transparent text-sm font-semibold text-slate-800 dark:text-slate-100
-                                 focus:outline-none tabular-nums"
+                                 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-md tabular-nums"
                     />
                     {isPartial && (
                       <button

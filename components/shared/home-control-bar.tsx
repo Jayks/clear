@@ -180,7 +180,7 @@ export function HomeControlBar({
                 }}
                 className="flex-1 bg-transparent text-sm text-slate-800 dark:text-slate-100
                            placeholder:text-slate-400 dark:placeholder:text-slate-500
-                           focus:outline-none"
+                           outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-md"
               />
               <button
                 type="button"

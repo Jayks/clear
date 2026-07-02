@@ -755,7 +755,7 @@ function EnterAmountStep({
             value={amountStr}
             onChange={(e) => handleAmountChange(e.target.value)}
             className="text-5xl font-bold text-slate-800 dark:text-slate-100 bg-transparent
-                       border-none outline-none text-center w-40 tabular-nums
+                       border-none outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 rounded-xl text-center w-40 tabular-nums
                        placeholder:text-slate-300 dark:placeholder:text-slate-700"
             style={{ fontFamily: "var(--font-fraunces)" }}
           />

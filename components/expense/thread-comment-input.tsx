@@ -221,7 +221,7 @@ export function ThreadCommentInput({
               placeholder="Add a comment…"
               rows={1}
               style={{ height: "auto", minHeight: "38px" }}
-              className="w-full px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent focus:outline-none resize-none leading-snug"
+              className="w-full px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-lg resize-none leading-snug"
             />
             {isNearLimit && (
               <div className="px-4 pb-2 text-right">
@@ -295,7 +295,7 @@ export function ThreadCommentInput({
           onKeyDown={handleKeyDown}
           placeholder="Write a comment… (use @ to mention someone)"
           rows={2}
-          className="w-full px-4 pt-3 pb-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent focus:outline-none resize-none"
+          className="w-full px-4 pt-3 pb-2 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-lg resize-none"
         />
         <div className="flex items-center justify-between px-4 pb-3">
           <div className="flex items-center gap-2">

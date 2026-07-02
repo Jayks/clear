@@ -33,9 +33,15 @@ export default async function SettingsPage() {
 
   return (
     <div>
+      {/* Visible on every breakpoint — mobile previously had no explicit back
+          affordance here (Settings isn't a bottom-nav destination like Home/
+          Streams/Insights, so there's no highlighted tab to fall back on;
+          the logo in AppNav goes to the same place but isn't clearly a
+          "back" cue). Desktop keeps it too since AppSidebar has no back
+          concept of its own. */}
       <Link
         href="/groups"
-        className="hidden md:inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-4 transition-colors"
+        className="inline-flex items-center gap-1.5 min-h-[44px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-sm font-medium mb-4 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Home

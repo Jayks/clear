@@ -198,7 +198,7 @@ export default async function ExpensesPage({ params }: { params: Promise<{ id: s
             defaultMemberId={currentMember?.id ?? members[0]?.id ?? ""}
             groupStartDate={group.startDate ?? null}
             groupEndDate={group.endDate ?? null}
-            canUseAI={aiAllowed}
+            aiAllowed={aiAllowed}
           />
           {expenses.length > 0 && <ExportCsvButton groupId={id} />}
           <Link

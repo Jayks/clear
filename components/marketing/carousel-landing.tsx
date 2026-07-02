@@ -48,17 +48,17 @@ const stagger = (delayChildren = 0) => ({
 const SLIDE_COUNT = 11;
 
 const SLIDES = [
-  { label: "ClearOff",    short: "Home",     accent: "#06B6D4" },
-  { label: "Overview",    short: "Overview", accent: "#0891B2" },
-  { label: "Trips",       short: "Trips",    accent: "#06B6D4" },
-  { label: "AI-powered",  short: "AI",       accent: "#7C3AED" },
-  { label: "Settle up",   short: "Settle",   accent: "#059669" },
-  { label: "Insights",    short: "Insights", accent: "#D97706" },
-  { label: "By the numbers", short: "Stats", accent: "#0891B2" },
-  { label: "Nests",       short: "Nests",    accent: "#0D9488" },
-  { label: "Streams",     short: "Streams",  accent: "#6366F1" },
-  { label: "Circles",     short: "Circles",  accent: "#8B5CF6" },
-  { label: "Get started", short: "Start",    accent: "#0D9488" },
+  { label: "ClearOff",       accent: "#06B6D4" },
+  { label: "Overview",       accent: "#0891B2" },
+  { label: "Trips",          accent: "#06B6D4" },
+  { label: "AI-powered",     accent: "#7C3AED" },
+  { label: "Settle up",      accent: "#059669" },
+  { label: "Insights",       accent: "#D97706" },
+  { label: "By the numbers", accent: "#0891B2" },
+  { label: "Nests",          accent: "#0D9488" },
+  { label: "Streams",        accent: "#6366F1" },
+  { label: "Circles",        accent: "#8B5CF6" },
+  { label: "Get started",    accent: "#0D9488" },
 ];
 
 // ─── HD iPhone 15 Pro–style frame ─────────────────────────────────────────────

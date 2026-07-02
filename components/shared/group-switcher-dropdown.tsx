@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, Building2, Coins, ChevronDown, ChevronRight, Loader2, LayoutGrid } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getContextTheme } from "@/lib/theme/context-theme";
-import { getSwitcherGroups, type SwitcherGroup } from "@/app/actions/groups";
+import { useSwitcherGroups } from "@/hooks/use-switcher-groups";
+import { typeLabel, targetHref, stashSwitcherSection } from "@/lib/nav/group-switcher";
+import type { SwitcherGroup } from "@/app/actions/groups";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,34 +36,12 @@ interface Props {
 
 const TYPE_ICON: Record<string, LucideIcon> = { trip: MapPin, nest: Building2, circle: Coins };
 
-function typeLabel(g: SwitcherGroup): string {
-  if (g.groupType === "circle") return g.circleMode === "one_time" ? "Circle · One-time" : "Circle · Recurring";
-  if (g.groupType === "nest") return "Nest";
-  return "Trip";
-}
-
 export function GroupSwitcherDropdown({ groupId, groupName, currentSection, accentClassName }: Props) {
   const router = useRouter();
-  const [groups, setGroups] = useState<SwitcherGroup[] | null>(null);
-
-  // Section the target group can honour (falls back to overview when invalid) —
-  // same rule as the mobile sheet: keep expenses/members always, settle/insights
-  // only for non-circle targets (circles have no Settle/Insights pages).
-  function targetHref(g: SwitcherGroup): string {
-    const s = currentSection;
-    const keep =
-      s === "expenses" || s === "members"
-        ? s
-        : (s === "settle" || s === "insights") && g.groupType !== "circle"
-          ? s
-          : "";
-    return keep ? `/groups/${g.id}/${keep}` : `/groups/${g.id}`;
-  }
+  const { groups, ensureLoaded } = useSwitcherGroups();
 
   function handleOpenChange(open: boolean) {
-    if (open && groups === null) {
-      getSwitcherGroups().then(setGroups).catch(() => setGroups([]));
-    }
+    if (open) ensureLoaded();
   }
 
   // Same sessionStorage two-step handshake as GroupSwitcherSheet: replace to
@@ -70,14 +49,11 @@ export function GroupSwitcherDropdown({ groupId, groupName, currentSection, acce
   // own landing effect push the section once mounted there. See group-switcher-sheet.tsx
   // for the full history-shape rationale.
   function handleSelect(g: SwitcherGroup) {
-    const sectionHref  = targetHref(g);
+    const sectionHref  = targetHref(g.id, currentSection, g.groupType);
     const overviewHref = `/groups/${g.id}`;
 
     if (sectionHref !== overviewHref) {
-      const section = sectionHref.slice(overviewHref.length + 1);
-      try {
-        sessionStorage.setItem("clearSwitcherSection", JSON.stringify({ groupId: g.id, section }));
-      } catch { /* quota / private browsing — ignore */ }
+      stashSwitcherSection(g.id, sectionHref.slice(overviewHref.length + 1));
     }
     router.replace(overviewHref);
   }
@@ -118,7 +94,7 @@ export function GroupSwitcherDropdown({ groupId, groupName, currentSection, acce
             return (
               <DropdownMenuItem
                 key={g.id}
-                render={<Link href={targetHref(g)} onClick={(e) => { e.preventDefault(); handleSelect(g); }} />}
+                render={<Link href={targetHref(g.id, currentSection, g.groupType)} onClick={(e) => { e.preventDefault(); handleSelect(g); }} />}
                 className="flex items-center gap-2.5 px-1.5 py-2 cursor-pointer"
               >
                 <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center shrink-0 shadow-sm`}>

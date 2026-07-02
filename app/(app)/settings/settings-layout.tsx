@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Palette, CreditCard, Bell, User } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { BillingSection } from "./billing-section";
 import { NotificationsSection } from "./notifications-section";
 import { ProfileSection } from "./profile-section";
+import { resolveSettingsTab, type SettingsSection } from "@/lib/settings/resolve-tab";
 import type { Subscription } from "@/lib/db/schema/subscriptions";
 import type { UserUpiId } from "@/lib/db/schema/upi-ids";
 
-type Section = "profile" | "appearance" | "billing" | "notifications";
+type Section = SettingsSection;
 
 const SIDEBAR_LINKS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "profile",       label: "Profile",       icon: User       },
@@ -26,8 +28,26 @@ interface Props {
   upiIds: UserUpiId[];
 }
 
-export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds }: Props) {
-  const [active, setActive] = useState<Section>("profile");
+// useSearchParams() requires a Suspense boundary (same convention as
+// components/shared/nav-progress.tsx) — wrapped here so the ?tab= deep-link
+// read doesn't trip Next's missing-boundary check.
+export function SettingsLayout(props: Props) {
+  return (
+    <Suspense fallback={null}>
+      <SettingsLayoutContent {...props} />
+    </Suspense>
+  );
+}
+
+function SettingsLayoutContent({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [active, setActive] = useState<Section>(() => resolveSettingsTab(searchParams.get("tab")));
+
+  function selectTab(id: Section) {
+    setActive(id);
+    router.replace(`/settings?tab=${id}`, { scroll: false });
+  }
 
   return (
     <div className="md:grid md:grid-cols-[200px_1fr] md:gap-8 md:items-start">
@@ -41,7 +61,7 @@ export function SettingsLayout({ sub, currentDisplayName, userEmail, userAvatarU
             <button
               key={id}
               type="button"
-              onClick={() => setActive(id)}
+              onClick={() => selectTab(id)}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
                 active === id
                   ? "text-slate-800 dark:text-slate-100 bg-white/80 dark:bg-slate-800/80 shadow-sm"

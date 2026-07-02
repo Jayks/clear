@@ -9,7 +9,8 @@ import { MapPin, Building2, Coins, ChevronRight, Loader2, LayoutGrid } from "luc
 import type { LucideIcon } from "lucide-react";
 import { getContextTheme } from "@/lib/theme/context-theme";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
-import { getSwitcherGroups, type SwitcherGroup } from "@/app/actions/groups";
+import { useSwitcherGroups } from "@/hooks/use-switcher-groups";
+import { typeLabel, targetHref, stashSwitcherSection } from "@/lib/nav/group-switcher";
 
 /**
  * In-group group switcher. Opened by tapping the group name (▾) in the
@@ -30,16 +31,10 @@ interface Props {
 
 const TYPE_ICON: Record<string, LucideIcon> = { trip: MapPin, nest: Building2, circle: Coins };
 
-function typeLabel(g: SwitcherGroup): string {
-  if (g.groupType === "circle") return g.circleMode === "one_time" ? "Circle · One-time" : "Circle · Recurring";
-  if (g.groupType === "nest") return "Nest";
-  return "Trip";
-}
-
 export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSection }: Props) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [groups, setGroups] = useState<SwitcherGroup[] | null>(null);
+  const { groups, ensureLoaded } = useSwitcherGroups();
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -58,22 +53,8 @@ export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSec
 
   // Lazy-fetch the group list the first time the sheet opens.
   useEffect(() => {
-    if (isOpen && groups === null) {
-      getSwitcherGroups().then(setGroups).catch(() => setGroups([]));
-    }
-  }, [isOpen, groups]);
-
-  // Section the target group can honour (falls back to overview when invalid).
-  function targetHref(g: SwitcherGroup): string {
-    const s = currentSection;
-    const keep =
-      s === "expenses" || s === "members"
-        ? s
-        : (s === "settle" || s === "insights") && g.groupType !== "circle"
-          ? s
-          : "";
-    return keep ? `/groups/${g.id}/${keep}` : `/groups/${g.id}`;
-  }
+    if (isOpen) ensureLoaded();
+  }, [isOpen, ensureLoaded]);
 
   if (!mounted) return null;
 
@@ -127,43 +108,34 @@ export function GroupSwitcherSheet({ isOpen, onClose, currentGroupId, currentSec
                   const theme = getContextTheme(g.groupType, g.circleMode);
                   const Icon = TYPE_ICON[g.groupType] ?? MapPin;
                   const isSwitching = switchingId === g.id;
+                  const sectionHref  = targetHref(g.id, currentSection, g.groupType);
+                  const overviewHref = `/groups/${g.id}`;
                   return (
                     <Link
                       key={g.id}
-                      href={targetHref(g)}
+                      href={sectionHref}
                       onClick={(e) => {
                         e.preventDefault();
                         setSwitchingId(g.id);
-                        const sectionHref  = targetHref(g);
-                        const overviewHref = `/groups/${g.id}`;
 
+                        // sessionStorage two-step navigation (only needed when a section
+                        // is actually kept):
+                        //   1. Store the target section so GroupMobileNav can push it
+                        //      after it lands on the overview.
+                        //   2. replace → commits /groups/B overview into history.
+                        //   3. GroupMobileNav useEffect fires on /groups/B, reads the
+                        //      stored section, clears it, and pushes /groups/B/section.
+                        //
+                        // Resulting history: [..., /groups/A/X, /groups/B, /groups/B/X]
+                        // Browser back → /groups/B overview ✓
+                        //
+                        // Why not setTimeout(0)? App Router may cancel the replace when
+                        // the push fires before it commits — sessionStorage decouples the
+                        // two navigations so they can't race.
                         if (sectionHref !== overviewHref) {
-                          // sessionStorage two-step navigation:
-                          //   1. Store the target section so GroupMobileNav can push it
-                          //      after it lands on the overview.
-                          //   2. replace → commits /groups/B overview into history.
-                          //   3. GroupMobileNav useEffect fires on /groups/B, reads the
-                          //      stored section, clears it, and pushes /groups/B/section.
-                          //
-                          // Resulting history: [..., /groups/A/X, /groups/B, /groups/B/X]
-                          // Browser back → /groups/B overview ✓
-                          //
-                          // Why not setTimeout(0)? App Router may cancel the replace when
-                          // the push fires before it commits — sessionStorage decouples the
-                          // two navigations so they can't race.
-                          const section = sectionHref.slice(overviewHref.length + 1);
-                          try {
-                            sessionStorage.setItem(
-                              "clearSwitcherSection",
-                              JSON.stringify({ groupId: g.id, section }),
-                            );
-                          } catch { /* quota / private browsing — ignore */ }
-                          router.replace(overviewHref);
-                        } else {
-                          // Switching directly to overview: single replace so back exits
-                          // to wherever the user was before entering the previous group.
-                          router.replace(overviewHref);
+                          stashSwitcherSection(g.id, sectionHref.slice(overviewHref.length + 1));
                         }
+                        router.replace(overviewHref);
                       }}
                       className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors"
                     >

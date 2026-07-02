@@ -18,7 +18,11 @@ interface Props {
   defaultMemberId: string;
   groupStartDate: string | null;
   groupEndDate: string | null;
-  canUseAI?: boolean;
+  /** Whether Logging-AI is currently available for this user (free-tier quota
+   *  or Plus-uncapped) — NOT the Plus-only `canUseAI` gate in lib/subscription/gates.ts
+   *  (that's for analytical AI). Named distinctly so a future edit doesn't
+   *  accidentally wire the wrong gate in here. */
+  aiAllowed?: boolean;
 }
 
 type RowStatus = "pending" | "adding" | "done" | "error";
@@ -53,7 +57,7 @@ function splitLabel(row: RowState, members: GroupMember[]): string {
 }
 
 export function ChatImportDialog({
-  groupId, members, currency, defaultMemberId, groupStartDate, groupEndDate, canUseAI = true,
+  groupId, members, currency, defaultMemberId, groupStartDate, groupEndDate, aiAllowed = true,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -172,13 +176,13 @@ export function ChatImportDialog({
   return (
     <>
       <button
-        onClick={() => canUseAI ? setOpen(true) : setUpgradeOpen(true)}
-        title={canUseAI ? "Import from chat" : "Import from chat — requires Plus"}
+        onClick={() => aiAllowed ? setOpen(true) : setUpgradeOpen(true)}
+        title={aiAllowed ? "Import from chat" : "Import from chat — requires Plus"}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-white/60 hover:bg-white/80 dark:bg-slate-800/60 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl transition-colors"
       >
-        {canUseAI ? <MessageSquarePlus className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+        {aiAllowed ? <MessageSquarePlus className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
         <span className="hidden sm:inline">Import chat</span>
-        {!canUseAI && (
+        {!aiAllowed && (
           <span className="hidden sm:inline-flex items-center bg-gradient-to-br from-cyan-500 to-teal-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
             Plus
           </span>

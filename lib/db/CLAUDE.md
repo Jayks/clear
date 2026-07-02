@@ -397,3 +397,14 @@ Rounding: `Math.round(n * 100) / 100`. Remainder to first row. **16 Vitest tests
 
 ### Settlement optimizer (`lib/settle/optimize.ts`)
 Greedy: creditors/debtors by net, sort desc, match top pairs, emit min transactions. **6 Vitest tests.**
+
+### Concurrency guards — aggregate balance/overdraw checks need a row lock, not just a transaction
+
+Wrapping a `SELECT SUM(...)` + `INSERT` in `db.transaction()` does **not** serialise it. Postgres's default isolation level is `READ COMMITTED` (the `postgres` client in `lib/db/client.ts` sets no isolation level), and there's no row to naturally lock for an *aggregate* check — unlike the `WHERE isConfirmed = false` row guards used for confirm/dispute UPDATEs elsewhere in this codebase (`confirmContribution`, `disputeContribution`, `confirmStreamSettle`). Two concurrent transactions can each run their `SELECT SUM` before either commits its `INSERT`, both read the same pre-write balance, both pass the guard, and both insert — a real overdraw/over-settlement (found and fixed as a Round 15 audit bug, 2026-07-02).
+
+**Fix**: explicitly `SELECT ... FOR UPDATE` the relevant row *inside* the transaction, before computing the aggregate — this serialises concurrent writers for the same group/record; the second transaction blocks until the first commits, then re-reads the now-updated aggregate.
+```typescript
+await tx.select({ id: groups.id }).from(groups).where(eq(groups.id, groupId)).for("update");
+// ...now safe to SELECT SUM(...) and INSERT within the same transaction
+```
+Applied in `addCircleExpense` (wallet overdraw, locks the `groups` row) and `settleStream` (over-settlement, locks the `stream_records` row) in `app/actions/circle.ts` / `app/actions/stream.ts`. For a **specific known row** being updated by two racing writers (not an aggregate), the cheaper existing pattern still applies: re-assert the guard condition in the UPDATE's `WHERE` clause and check `.returning()` for an empty result (`confirmStreamSettle`'s double-confirm guard is the newest example).

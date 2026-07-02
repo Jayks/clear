@@ -59,6 +59,8 @@
 
 **Dev tools**: `tsx`, `dotenv`, `vitest`, `puppeteer-core`
 
+**Testing**: `vitest.config.ts` adds `@/*` alias resolution + a `server-only` stub alias (Next's bundler aliases that import to a no-op internally; plain Vite/Vitest needs an explicit alias — see `lib/testing/server-only-stub.ts`) and runs the whole suite under `jsdom` (a superset of `node` — plain lib-logic tests are unaffected). **React Testing Library** (`@testing-library/react`/`jest-dom`/`user-event`, added 2026-07-02) enables real component-render tests alongside the existing pure-function unit tests; `vitest.setup.ts` registers `jest-dom` matchers + calls `cleanup()` after each test.
+
 **Do NOT add**: NextAuth, Prisma, Redux, MUI, Chakra, Bootstrap, styled-components, tRPC, Pusher/Ably.
 
 ---
@@ -82,6 +84,10 @@ declare global { var _pgClient: postgres.Sql | undefined; }
 const client = globalThis._pgClient ?? postgres(connectionString, { prepare: false, max: 3 });
 if (process.env.NODE_ENV !== 'production') globalThis._pgClient = client;
 ```
+
+### Concurrency: aggregate balance/overdraw checks need a row lock, not just a transaction
+
+Wrapping `SELECT SUM(...)` + `INSERT` in `db.transaction()` does **not** serialise it — Postgres's default isolation is `READ COMMITTED`, and there's no row to lock for an *aggregate* check (unlike the `WHERE isConfirmed = false` row guards used for confirm/dispute UPDATEs elsewhere). Two concurrent writers can each read the same pre-write balance and both pass the guard — a real overdraw/over-settlement (Round 15 audit bug, 2026-07-02). Fix: `SELECT ... FOR UPDATE` the relevant row *inside* the transaction before computing the aggregate — see `addCircleExpense`/`settleStream` in `app/actions/circle.ts`/`stream.ts`; full pattern + code sample in `lib/db/CLAUDE.md`.
 
 ### proxy.ts (Next.js 16)
 
@@ -117,6 +123,12 @@ Use `scripts/find-bad-imports.mjs` (`node scripts/find-bad-imports.mjs`) to scan
 ### Windows dev — TLS certificate fix
 
 `.npmrc` contains `node-options=--use-system-ca` — required because Node.js 24's bundled CA was missing Supabase's intermediate cert (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Do not remove.
+
+### No `pnpm build` / dep bumps while `pnpm dev` is live — and the PWA service worker compounds both traps
+
+`pnpm build` and dep swaps (`pnpm add`/`pnpm update`) write to the same `.next/` directory a running `pnpm dev` server also writes to — the module graph goes half-old/half-new and the browser throws `Module ... was instantiated ... but the module factory is not available`. Separately, the PWA **service worker** (`public/sw.js`) can serve a stale cached JS bundle straight through a hard reload (Ctrl+Shift+R bypasses the HTTP cache but not an already-registered SW's `fetch` handler) — this can mask a plain client-component code edit too, with no build/dep-bump involved at all. Symptom: new code appears to have zero effect, and even freshly-added `console.log` debug statements are completely silent, while the dev server terminal looks perfectly healthy (clean compiles, 200s).
+
+**Recovery**: kill the dev server, `rm -rf .next`, restart `pnpm dev`, then hard-reload **and** unregister the service worker (DevTools → Application → Service Workers → Unregister) — the hard reload alone is not sufficient. If code changes ever seem to have no effect, suspect the SW before re-theorizing about the logic.
 
 ### Supabase publishable key
 

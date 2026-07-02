@@ -25,6 +25,7 @@ RSC. **No stream strip** — Streams has its own nav tab. Sections (top → bott
 
 1. `HomeGreeting` — `"use client"` personal greeting (`Good morning/afternoon/evening, {firstName} 👋`). `firstName` from `user.user_metadata.full_name`. Only rendered when `user` is set.
 2. `StreamBadgeSync` (invisible client component) — fetches `getStreamBadgeData(userId)`, writes `clear_stream_has_badge` to localStorage so `MobileNav` can show the badge dot.
+2b. `GroupsBackGuard` (`components/shared/groups-back-guard.tsx`, invisible client component, rendered unconditionally in both the type-filtered and default branches) — **double-back-to-exit** on the hardware/browser back button (standard Android pattern, 2026-07-02). 1st back press is trapped via a `pushState`/`popstate` guard entry + a `sonner` toast ("Press back again to exit"); a 2nd press within `EXIT_WINDOW_MS` (2000ms) chains one more `history.back()` to actually consume the real underlying `/groups` entry too, so the exit genuinely happens in 2 presses (not 3 — see the code comment for why a naive "just don't re-trap" implementation needs 3). Deliberately does **not** sign the user out — exiting the app and ending the session are different concerns; session validity is already handled per-request via `getCurrentUser()`. Known limitation: on the very first back-press of a freshly-opened PWA with zero prior navigation history (`start_url: "/groups"` launched while already authenticated), the chained `history.back()` is a no-op since JS can't trigger the native "no history → close app" fallback that only responds to real hardware back events — a 3rd press is needed in that specific case. Also doesn't distinguish its own `popstate` handling from an unrelated bottom sheet's dismiss-via-back on the same page (pre-existing characteristic, not a regression).
 3. `HomeControlBar` — `"use client"`. Unified underline-tab toggle + inline search. Renders when `archived.length > 0` OR `groups.length > 5`. Passes `activeContent` and `archivedContent` RSC nodes as props; switches between them client-side (no re-fetch). Search auto-collapses on blur — empty query = silent close; active query = collapse to `[🔍 query ×]` filter chip. Tab switch clears filter + scrolls to top. `showSearch={groups.length > 5}`.
 4. **Active content** (rendered inside `HomeControlBar.activeContent`):
    - `SectionPillNav` — sticky (`sticky top-14 z-40`); `NavSection[]` for trips/nests/circles only (no amber Archived pill — Archived has its own tab now). `CreatePill[]` for missing types. Renders when 2+ sections OR createPills.
@@ -506,6 +507,12 @@ Login renders as a **modal overlay** (via Next.js parallel routes + intercepting
 ### Sign-out redirect
 
 `handleSignOut()` redirects to `/` (marketing page). Do not change to `/login`.
+
+### Service worker masks dev-time client-component changes — hard reload is NOT enough
+
+`public/sw.js` (network-first navigation + offline fallback) can serve a **stale cached JS bundle straight through a hard reload** (Ctrl+Shift+R bypasses the HTTP cache but not an already-registered SW's `fetch` handler). Confirmed 2026-07-02 debugging `groups-back-guard.tsx`: even freshly-added `console.log` debug statements never fired in the browser console, despite the dev server terminal showing clean compiles and 200s. **Symptom signature**: new code changes appear to have zero effect, and temporary debug logging is completely silent, while the dev server itself looks totally healthy.
+
+**Fix**: DevTools → Application → Service Workers → **Unregister** (for localhost), then reload. If new code still appears to have zero effect after a hard reload, suspect the SW before re-theorizing about the code — go straight to unregistering it rather than burning cycles on the logic. Root `CLAUDE.md`'s "No `pnpm build` / dep bumps while `pnpm dev` is live" gotcha covers the related `.next`-corruption variant of this same trap.
 
 ### AI action rate limiting
 

@@ -4,6 +4,8 @@ import { groupMembers } from "@/lib/db/schema/group-members";
 import { groups } from "@/lib/db/schema/groups";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildExpenseEmail } from "./expense-email";
+import { getEmailNotificationsEnabledBatch } from "@/lib/db/queries/user-preferences";
+import { isEmailEligible } from "./email-preference-gate";
 import { eq, and, isNotNull } from "drizzle-orm";
 
 interface NotificationParams {
@@ -49,17 +51,25 @@ export async function sendExpenseNotification(params: NotificationParams): Promi
   if (!group) return;
 
   const recipients = await db
-    .select({ id: groupMembers.id, userId: groupMembers.userId })
+    .select({ id: groupMembers.id, userId: groupMembers.userId, notificationsMuted: groupMembers.notificationsMuted })
     .from(groupMembers)
-    .where(
-      and(
-        eq(groupMembers.groupId, groupId),
-        isNotNull(groupMembers.userId),
-        eq(groupMembers.notificationsMuted, false)
-      )
-    );
+    .where(and(eq(groupMembers.groupId, groupId), isNotNull(groupMembers.userId)));
 
-  const toNotify = recipients.filter((m) => m.userId !== actorUserId);
+  const candidates = recipients.filter((m) => m.userId !== actorUserId);
+  if (candidates.length === 0) return;
+
+  // Global "Email notifications" switch (Settings, default OFF) — AND-gated
+  // with the existing per-group notifications_muted flag via the shared
+  // isEmailEligible() decision, not two independent filters.
+  const enabledUserIds = await getEmailNotificationsEnabledBatch(
+    candidates.map((m) => m.userId!)
+  );
+  const toNotify = candidates.filter((m) =>
+    isEmailEligible({
+      globalEnabled: enabledUserIds.has(m.userId!),
+      groupMuted: m.notificationsMuted,
+    })
+  );
   if (toNotify.length === 0) return;
 
   const supabase = createAdminClient();

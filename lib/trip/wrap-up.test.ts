@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTripWrapUpDue, getSettleNudgeCopy } from "./wrap-up";
+import { isTripWrapUpDue, getSettleNudgeCopy, buildTripWrapUpNotification } from "./wrap-up";
 
 describe("isTripWrapUpDue", () => {
   const today = "2026-07-03";
@@ -77,5 +77,29 @@ describe("getSettleNudgeCopy", () => {
 
   it("formats using the group's currency, not a hardcoded one", () => {
     expect(getSettleNudgeCopy(100, "USD")).toBe("You're owed $100.00 for this trip");
+  });
+});
+
+describe("buildTripWrapUpNotification", () => {
+  const base = { userId: "user-1", groupId: "group-1", groupName: "Goa 2026" };
+
+  it("returns the trip_wrapup type", () => {
+    expect(buildTripWrapUpNotification(base).type).toBe("trip_wrapup");
+  });
+
+  it("dedupKey is scoped to the group so it only ever fires once per trip", () => {
+    expect(buildTripWrapUpNotification(base).dedupKey).toBe("trip_wrapup:group-1");
+  });
+
+  it("url deep-links to the group overview", () => {
+    expect(buildTripWrapUpNotification(base).url).toBe("/groups/group-1");
+  });
+
+  it("body includes the actual trip name, not a placeholder", () => {
+    expect(buildTripWrapUpNotification(base).body).toContain("Goa 2026");
+  });
+
+  it("passes the recipient userId through unchanged", () => {
+    expect(buildTripWrapUpNotification(base).userId).toBe("user-1");
   });
 });

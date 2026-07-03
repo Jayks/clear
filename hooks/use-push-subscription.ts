@@ -25,11 +25,18 @@ export function usePushSubscription() {
   async function subscribe() {
     if (!isSupported) return;
     setIsLoading(true);
+    // Optimistic — the switch flips on immediately instead of waiting out
+    // the native permission dialog + push-service round trip + server save;
+    // rolled back to false below if any step doesn't actually succeed.
+    setIsSubscribed(true);
     try {
       const reg = await navigator.serviceWorker.ready;
       const perm = await Notification.requestPermission();
       setPermission(perm);
-      if (perm !== "granted") return;
+      if (perm !== "granted") {
+        setIsSubscribed(false); // rollback — user denied the prompt
+        return;
+      }
 
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -41,10 +48,8 @@ export function usePushSubscription() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub.toJSON()),
       });
-
-      setIsSubscribed(true);
     } catch {
-      // permission denied or subscribe failed — state already updated above
+      setIsSubscribed(false); // rollback — subscribe or server save failed
     } finally {
       setIsLoading(false);
     }
@@ -53,6 +58,11 @@ export function usePushSubscription() {
   async function unsubscribe() {
     if (!isSupported) return;
     setIsLoading(true);
+    // Optimistic — mirrors subscribe(); rolled back to true only if the
+    // browser-side unsubscribe itself fails (a failed *server* cleanup
+    // below is deliberately not rolled back — the browser really is
+    // unsubscribed at that point, so "off" is still the accurate state).
+    setIsSubscribed(false);
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
@@ -68,9 +78,9 @@ export function usePushSubscription() {
           console.error("[push] Failed to remove server subscription:", e);
         });
       }
-      setIsSubscribed(false);
     } catch (e) {
       console.error("[push] Unsubscribe error:", e);
+      setIsSubscribed(true); // rollback — the browser-side unsubscribe failed
     } finally {
       setIsLoading(false);
     }

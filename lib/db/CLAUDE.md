@@ -62,7 +62,7 @@ guest_name: text nullable
 display_name: text nullable
 role: enum('admin','member') default 'member'
 joined_at: timestamptz default now()
-notifications_muted: boolean default false   -- per-group email + push opt-out
+notifications_muted: boolean default false   -- per-group email + push opt-out (unsubscribe-link driven, see user_preferences below for the account-level email gate that sits on top of this)
 CHECK: exactly one of (user_id, guest_name)
 UNIQUE: (group_id, user_id)
 ```
@@ -229,11 +229,25 @@ The user-facing mirror of `admin_activity` — persisted in-app notification inb
 
 **Write-path orchestrator**: `recordNotification()` (`lib/notifications/record-notification.ts`) is what every event-producing call site uses instead of calling `sendPushToUser`/`sendStreamPush` directly — persists first, pushes only if the persist won the dedup claim. Deliberately does **not** own the push transport itself (`sendPush: () => Promise<void>` is passed in as a closure over whichever push call the site already had) because call sites differ: group-scoped `sendPushToUser` (checks `notifications_muted`) vs Stream's ungated `sendStreamPush`. `recordNotificationToMembers()` is the fan-out wrapper for the one multi-recipient event type (`expense_added` — every group member except the actor needs their own inbox row).
 
-**The 11 event types** (`NotificationType`) and their call sites: `contribution_pending`/`contribution_confirmed`/`contribution_disputed` (`app/actions/circle.ts` — `selfReportContribution`, `confirmContribution`/`confirmContributions`, `disputeContribution`/`rejectContribution`); `stream_entry_logged`/`stream_settle_pending`/`stream_settle_confirmed`/`stream_disputed` (`app/actions/stream.ts` — `logStream`+`confirmStream`, `selfReportStreamSettle`, `confirmStreamSettle`+`settleStream`, `disputeStreamSettle`+`disputeStream`); `expense_added` (`app/actions/expenses.ts` — `addExpense`, added 2026-07-03; the only fan-out type, via `recordNotificationToMembers`, replacing the old push-only `sendPushToMembers` which has been removed); `expense_mention`/`expense_comment`/`dispute_raised`/`dispute_resolved` (`app/actions/interactions.ts` — `addComment` Tier 1/Tier 2, `raiseQuestion`+`raiseDispute`, `acceptDispute`+`declineDispute`); `settlement_recorded` (`app/actions/settlements.ts` — `recordSettlement`, `selfReportSettlement`, `confirmSettlement`, `disputeSettlement` all share this one type, mirroring the single generic type the plan allocated to this domain — unlike Circle/Stream, trip/nest settlements don't get separate pending/confirmed/disputed types). `trip_wrapup` exists in the schema for Phase 4 (not yet wired).
+**The 11 event types** (`NotificationType`) and their call sites: `contribution_pending`/`contribution_confirmed`/`contribution_disputed` (`app/actions/circle.ts` — `selfReportContribution`, `confirmContribution`/`confirmContributions`, `disputeContribution`/`rejectContribution`); `stream_entry_logged`/`stream_settle_pending`/`stream_settle_confirmed`/`stream_disputed` (`app/actions/stream.ts` — `logStream`+`confirmStream`, `selfReportStreamSettle`, `confirmStreamSettle`+`settleStream`, `disputeStreamSettle`+`disputeStream`); `expense_added` (`app/actions/expenses.ts` — `addExpense`, added 2026-07-03; the only fan-out type, via `recordNotificationToMembers`, replacing the old push-only `sendPushToMembers` which has been removed); `expense_mention`/`expense_comment`/`dispute_raised`/`dispute_resolved` (`app/actions/interactions.ts` — `addComment` Tier 1/Tier 2, `raiseQuestion`+`raiseDispute`, `acceptDispute`+`declineDispute`); `settlement_recorded` (`app/actions/settlements.ts` — `recordSettlement`, `selfReportSettlement`, `confirmSettlement`, `disputeSettlement` all share this one type, mirroring the single generic type the plan allocated to this domain — unlike Circle/Stream, trip/nest settlements don't get separate pending/confirmed/disputed types). `trip_wrapup` (`lib/notifications/trip-wrapup-check.ts` — `checkTripWrapUps`, shipped 2026-07-03 as Phase 4) is the **only** type that is (a) inbox-only with no push, and (b) fired from a page-load check rather than a real user action — see `app/CLAUDE.md`'s Notifications section for the full rationale.
 
 **`recordSettlement` is the one call site with no prior push** — admin-recorded settlements are immediately confirmed with no existing notify step; added alongside the inbox persistence (notifies whichever of from/to member isn't the acting admin) rather than as a separate change, since skipping it would leave trip/nest settlements as the only domain with no "recorded" notification.
 
 **Read-side UI (Phase 2, shipped 2026-07-03)**: bell icon on both platforms + full `/notifications` history page — see `app/CLAUDE.md`'s Notifications section and `components/CLAUDE.md`'s Notifications bell section for the UI layer. The original 10 event types were manually verified live end-to-end (self→other-account round trips) before this UI was built; `expense_added` was added after, discovered as a gap during that same manual verification (adding an expense only ever sent a transient push/email — never persisted to the inbox at all).
+
+### user_preferences
+
+```
+user_id: uuid PK             -- auth.users.id, no FK (cross-schema — matches notifications/admin_activity precedent)
+email_notifications_enabled: boolean NOT NULL default false
+created_at, updated_at: timestamptz
+```
+
+One row per user for account-level (not per-group) preferences — added 2026-07-03 for the Settings → Notifications "Email notifications" switch, **default OFF**. A missing row (never touched the toggle) is treated as OFF by `getEmailNotificationsEnabled()`/`getEmailNotificationsEnabledBatch()` (`lib/db/queries/user-preferences.ts`) — no backfill needed for existing users. Write path: `setEmailNotificationsEnabled()` (upsert via `onConflictDoUpdate`), called from `updateEmailNotificationsAction` (`app/actions/user-preferences.ts`). RLS: real per-user policy (`user_id = auth.uid()`), same posture as `notifications`. Apply via `drizzle/user-preferences.sql`.
+
+**This flips the one real email pathway from opt-out to opt-in.** `sendExpenseNotification` (`lib/notifications/send-expense-notification.ts` — the only Resend call site in the app) previously emailed every group member by default, gated only by the per-group `notifications_muted` unsubscribe-link flag. It now AND-gates on both flags via the pure, unit-tested `isEmailEligible({ globalEnabled, groupMuted })` (`lib/notifications/email-preference-gate.ts`) — the account-level switch must be on AND the group must not be muted. Since the switch defaults off, this immediately stops the expense-added email for every user until they opt in. Batch-fetched (`getEmailNotificationsEnabledBatch`) to avoid an N+1 per recipient, matching this codebase's existing "batch, no N+1" discipline (`getUserMemberIds`).
+
+**Scope note**: only gates the email channel. Push notifications (the `notifications` table + bell UI above) are unaffected — still governed solely by `notifications_muted` per group, as before.
 
 ### stream_guests
 ```

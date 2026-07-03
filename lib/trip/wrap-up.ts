@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/utils";
+import type { NotificationType } from "@/lib/db/schema/notifications";
 
 /**
  * Pure "has this trip wrapped up" condition — shared by the wrap-up card
@@ -35,4 +36,37 @@ export function getSettleNudgeCopy(net: number, currency: string): string | null
   return net > 0
     ? `You're owed ${amount} for this trip`
     : `You owe ${amount} for this trip`;
+}
+
+/**
+ * Pure payload builder for the Phase 4 trip-wrap-up notification
+ * (`NOTIFiCATIONS_INBOX_PLAN.md` §3.3b). Kept separate from the DB-touching
+ * `checkTripWrapUps` orchestrator (`lib/notifications/trip-wrapup-check.ts`)
+ * so the copy/shape is unit-testable without a DB. `dedupKey` is what makes
+ * repeat Home-page visits after the first a no-op — the wrap-up event
+ * fires once per trip, ever.
+ */
+export function buildTripWrapUpNotification(params: {
+  userId: string;
+  groupId: string;
+  groupName: string;
+}): {
+  userId: string;
+  groupId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  url: string;
+  dedupKey: string;
+} {
+  const { userId, groupId, groupName } = params;
+  return {
+    userId,
+    groupId,
+    type: "trip_wrapup",
+    title: "🎉 Trip wrapped up",
+    body: `${groupName} has ended — settle up or share the recap.`,
+    url: `/groups/${groupId}`,
+    dedupKey: `trip_wrapup:${groupId}`,
+  };
 }

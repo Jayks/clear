@@ -10,6 +10,7 @@ import { groupMembers } from "@/lib/db/schema/group-members";
 import { eq, isNotNull, and } from "drizzle-orm";
 import { extractDisplayName } from "@/lib/utils";
 import { getUserUpiIds } from "@/lib/db/queries/upi";
+import { getEmailNotificationsEnabled } from "@/lib/db/queries/user-preferences";
 
 export const metadata: Metadata = { title: "Settings — ClearOff" };
 
@@ -26,9 +27,10 @@ export default async function SettingsPage() {
 
   const currentDisplayName = memberRow?.displayName ?? extractDisplayName(user) ?? "";
 
-  const [sub, upiIds] = await Promise.all([
+  const [sub, upiIds, initialEmailEnabled] = await Promise.all([
     getUserSubscription(user.id),
     getUserUpiIds(user.id),
+    getEmailNotificationsEnabled(user.id),
   ]);
 
   return (
@@ -57,6 +59,7 @@ export default async function SettingsPage() {
         userEmail={user.email ?? ""}
         userAvatarUrl={user.user_metadata?.avatar_url as string | null ?? null}
         upiIds={upiIds}
+        initialEmailEnabled={initialEmailEnabled}
       />
     </div>
   );

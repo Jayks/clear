@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plane, X, Loader2, Users } from "lucide-react";
+import { Plane, X, Loader2, Users, Wallet, Sparkles, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createGroup } from "@/app/actions/groups";
 import { importMembersFromGroup } from "@/app/actions/members";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
+import { getSettleNudgeCopy } from "@/lib/trip/wrap-up";
 
 interface Props {
   groupId: string;
@@ -16,12 +18,22 @@ interface Props {
   /** Names of every non-current-user member to copy */
   memberNames: string[];
   defaultCurrency: string;
+  /**
+   * The viewing admin's own net balance for this trip — Phase 3 wrap-up
+   * addition. This component only ever renders once the trip has wrapped
+   * up (gated by `isTripWrapUpDue` in the group page), so every render is
+   * a wrap-up moment — `net`/`summaryHref` are always passed, not optional.
+   */
+  net: number;
+  /** Deep link to the trip's summary page — Phase 3 wrap-up addition. */
+  summaryHref: string;
 }
 
 const DISMISS_KEY = (id: string) => `clear_repeat_trip_dismissed_${id}`;
 
-export function RepeatTripPrompt({ groupId, groupName, memberNames, defaultCurrency }: Props) {
+export function RepeatTripPrompt({ groupId, groupName, memberNames, defaultCurrency, net, summaryHref }: Props) {
   const router = useRouter();
+  const settleNudge = getSettleNudgeCopy(net, defaultCurrency);
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -136,10 +148,41 @@ export function RepeatTripPrompt({ groupId, groupName, memberNames, defaultCurre
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-0.5">
-              Planning another trip with this squad?
+              This trip&apos;s wrapped up 🎉
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              Start a new trip and copy all{" "}
+              A few things to close out.
+            </p>
+
+            {/* Settle nudge — only when the viewing admin has an outstanding balance */}
+            {settleNudge && (
+              <Link
+                href={`/groups/${groupId}/settle`}
+                className={`flex items-center gap-2 mb-2 text-xs font-medium transition-colors ${
+                  net > 0
+                    ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                    : "text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                }`}
+              >
+                <Wallet className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1">{settleNudge}</span>
+                <ArrowRight className="w-3 h-3 shrink-0" />
+              </Link>
+            )}
+
+            {/* Summary share */}
+            <Link
+              href={summaryHref}
+              className="flex items-center gap-2 mb-3 text-xs font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span className="flex-1">Share the trip recap</span>
+              <ArrowRight className="w-3 h-3 shrink-0" />
+            </Link>
+
+            {/* Repeat-trip CTA — unchanged */}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              Planning another trip with this squad? Copy all{" "}
               {memberNames.length > 0 ? `${memberNames.length} members` : "members"} in one tap.
             </p>
             <button

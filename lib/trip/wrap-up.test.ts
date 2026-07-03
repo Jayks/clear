@@ -1,0 +1,81 @@
+import { describe, it, expect } from "vitest";
+import { isTripWrapUpDue, getSettleNudgeCopy } from "./wrap-up";
+
+describe("isTripWrapUpDue", () => {
+  const today = "2026-07-03";
+
+  it("returns false for a nest, even admin + archived + past end date", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "nest", isAdmin: true, isArchived: true, endDate: "2026-06-01", today })
+    ).toBe(false);
+  });
+
+  it("returns false for a non-admin trip past its end date", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "trip", isAdmin: false, isArchived: false, endDate: "2026-06-01", today })
+    ).toBe(false);
+  });
+
+  it("returns true for an admin trip that is archived (no end date)", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "trip", isAdmin: true, isArchived: true, endDate: null, today })
+    ).toBe(true);
+  });
+
+  it("returns true for an admin trip whose end date is before today", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "trip", isAdmin: true, isArchived: false, endDate: "2026-06-01", today })
+    ).toBe(true);
+  });
+
+  it("returns false when end date is exactly today (last day isn't over yet)", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "trip", isAdmin: true, isArchived: false, endDate: today, today })
+    ).toBe(false);
+  });
+
+  it("returns false for an admin trip whose end date is in the future", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "trip", isAdmin: true, isArchived: false, endDate: "2026-12-01", today })
+    ).toBe(false);
+  });
+
+  it("returns false for an admin trip with no end date and not archived", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "trip", isAdmin: true, isArchived: false, endDate: null, today })
+    ).toBe(false);
+  });
+
+  it("returns true when both archived AND end date has passed (OR doesn't double-fire/error)", () => {
+    expect(
+      isTripWrapUpDue({ groupType: "trip", isAdmin: true, isArchived: true, endDate: "2026-06-01", today })
+    ).toBe(true);
+  });
+});
+
+describe("getSettleNudgeCopy", () => {
+  it("returns 'owed' copy for a positive net", () => {
+    expect(getSettleNudgeCopy(450, "INR")).toBe("You're owed ₹450.00 for this trip");
+  });
+
+  it("returns 'owe' copy for a negative net, showing the magnitude not the sign", () => {
+    expect(getSettleNudgeCopy(-450, "INR")).toBe("You owe ₹450.00 for this trip");
+  });
+
+  it("returns null for a settled (zero) net", () => {
+    expect(getSettleNudgeCopy(0, "INR")).toBeNull();
+  });
+
+  it("returns null for a floating-point rounding artifact within the ±0.005 epsilon", () => {
+    expect(getSettleNudgeCopy(0.001, "INR")).toBeNull();
+    expect(getSettleNudgeCopy(-0.004, "INR")).toBeNull();
+  });
+
+  it("still returns real copy just outside the epsilon", () => {
+    expect(getSettleNudgeCopy(0.01, "INR")).toBe("You're owed ₹0.01 for this trip");
+  });
+
+  it("formats using the group's currency, not a hardcoded one", () => {
+    expect(getSettleNudgeCopy(100, "USD")).toBe("You're owed $100.00 for this trip");
+  });
+});

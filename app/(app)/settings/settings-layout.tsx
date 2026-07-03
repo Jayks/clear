@@ -26,6 +26,7 @@ interface Props {
   userEmail: string;
   userAvatarUrl: string | null;
   upiIds: UserUpiId[];
+  initialEmailEnabled: boolean;
 }
 
 // useSearchParams() requires a Suspense boundary (same convention as
@@ -39,7 +40,7 @@ export function SettingsLayout(props: Props) {
   );
 }
 
-function SettingsLayoutContent({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds }: Props) {
+function SettingsLayoutContent({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds, initialEmailEnabled }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [active, setActive] = useState<Section>(() => resolveSettingsTab(searchParams.get("tab")));
@@ -141,7 +142,7 @@ function SettingsLayoutContent({ sub, currentDisplayName, userEmail, userAvatarU
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Notifications</span>
               <div className="flex-1 h-px bg-slate-200/80 dark:bg-slate-700/50" />
             </div>
-            <NotificationsSection />
+            <NotificationsSection initialEmailEnabled={initialEmailEnabled} />
           </div>
         </section>
 

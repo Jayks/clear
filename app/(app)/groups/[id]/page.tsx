@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { getGroupWithMembers } from "@/lib/db/queries/groups";
 import { getGroupName } from "@/lib/db/queries/meta";
 import { getGroupTotalSpent } from "@/lib/db/queries/expenses";
+import { getBalances } from "@/lib/db/queries/balances";
+import { isTripWrapUpDue } from "@/lib/trip/wrap-up";
 import { autoLogDueTemplates } from "@/app/actions/expenses";
 import { Users, Receipt, Wallet, BarChart2, Sparkles, ArrowRight, Home } from "lucide-react";
 import { GroupHeroHub } from "@/components/trip/group-hero-hub";
@@ -107,10 +109,16 @@ export default async function GroupPage({
     );
   }
 
-  // Show the repeat-trip prompt when the trip has ended or is archived (trips only, admins only)
+  // Show the wrap-up card (repeat-trip CTA + settle nudge + summary share)
+  // when the trip has ended or is archived (trips only, admins only).
   const today = new Date().toISOString().slice(0, 10);
-  const isTripComplete =
-    !isNest && isAdmin && (group.isArchived || (!!group.endDate && group.endDate < today));
+  const isTripComplete = isTripWrapUpDue({
+    groupType: group.groupType,
+    isAdmin,
+    isArchived: group.isArchived ?? false,
+    endDate: group.endDate,
+    today,
+  });
   // Member names to copy — everyone except the current user
   const repeatMemberNames = isTripComplete
     ? members
@@ -118,6 +126,13 @@ export default async function GroupPage({
         .map((m) => m.displayName ?? m.guestName ?? "")
         .filter(Boolean)
     : [];
+  // Admin's own net balance for the settle nudge — only fetched when the
+  // card is actually going to render (avoids the extra query otherwise).
+  const wrapUpNet = isTripComplete && currentMember
+    ? (await getBalances(group.id, group.defaultCurrency)).balances.find(
+        (b) => b.memberId === currentMember.id
+      )?.net ?? 0
+    : 0;
 
   // Defer recurring-template auto-logging off the render path: on the common
   // case it's just a few read queries that returned nothing, and it's never
@@ -411,6 +426,8 @@ export default async function GroupPage({
           groupName={group.name}
           memberNames={repeatMemberNames}
           defaultCurrency={group.defaultCurrency}
+          net={wrapUpNet}
+          summaryHref={`/summary/${group.summaryToken}`}
         />
       )}
 

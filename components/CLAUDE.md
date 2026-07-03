@@ -469,11 +469,14 @@ Sits `sticky top-14 md:top-0 z-40 -mx-6 px-6 md:-mx-8 md:px-8 backdrop-blur-sm` 
 
 **Props:** `groupId`, `groupName`, `inviteUrl`, `networkMembers` (from `getNetworkMembers()`), `sourceGroups` (from `getGroupsForImport()`), `existingNames: Set<string>`, `isPlusUser: boolean`. Uses `useSheetDismiss`.
 
-### RepeatTripPrompt
-`components/trip/repeat-trip-prompt.tsx` — `"use client"`. Shown on a trip group page when trip is complete or archived (admin only). Renders a dismissable prompt card + bottom sheet to create a new trip with members pre-copied.
+### RepeatTripPrompt — now the trip wrap-up card (2026-07-03)
+`components/trip/repeat-trip-prompt.tsx` — `"use client"`. Shown on a trip group page when trip is complete or archived (admin only). Every render of this component now doubles as the "trip wrap-up" moment (`NOTIFiCATIONS_INBOX_PLAN.md` §3, Phase 3) — it was extended in place rather than split into a separate component, since the plan's consolidated card and the original repeat-trip prompt share the same show condition, dismiss key, and sheet.
 
-Show condition (evaluated in group page RSC): `!isNest && isAdmin && (group.isArchived || (!!group.endDate && group.endDate < today))`.
-Sheet: trip name (required), optional start/end dates, member pills (pre-selected, toggle-able). Calls `createGroup` then `importMembersFromGroup` → navigates to new group. Dismiss writes `clear_repeat_trip_dismissed_${groupId}` to localStorage.
+Show condition (evaluated in group page RSC, now the shared pure `isTripWrapUpDue()` in `lib/trip/wrap-up.ts`): `!isNest && isAdmin && (group.isArchived || (!!group.endDate && group.endDate < today))`.
+
+Card body (top to bottom): **settle nudge** (only when the admin's own `net` from `getBalances()` is outside a `±0.005` epsilon — `getSettleNudgeCopy(net, currency)`, emerald "You're owed ₹X" when `net > 0`, amber "You owe ₹X" when `net < 0`, matching the app's balance-color convention) → `/groups/[id]/settle`; **summary share** ("Share the trip recap") → `/summary/[token]`, always shown; then the original **repeat-trip CTA**, unchanged — "Start planning" opens a bottom sheet: trip name (required), optional start/end dates, member pills (pre-selected, toggle-able). Calls `createGroup` then `importMembersFromGroup` → navigates to new group. Dismiss (single ✕, covers the whole card) writes `clear_repeat_trip_dismissed_${groupId}` to localStorage.
+
+`net`/`summaryHref` are required props (not optional) — the component only ever mounts once `isTripWrapUpDue` is already true, so every render needs both.
 
 ### SettledCelebration
 `components/settlement/settled-celebration.tsx` — `"use client"`. 30-piece CSS confetti burst that fires **once per browser session** when all group debts are cleared (placed just above the "All settled ✓" empty state in `BalancesSection`).

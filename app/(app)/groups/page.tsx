@@ -1,7 +1,9 @@
 import { Plus, MapPin, Building2, Coins } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { after } from "next/server";
 import { getAllGroups } from "@/lib/db/queries/groups";
+import { checkTripWrapUps } from "@/lib/notifications/trip-wrapup-check";
 import { getCurrentUser } from "@/lib/db/queries/auth";
 import { getUserMemberIds } from "@/lib/db/queries/auth";
 import { TripCard } from "@/components/trip/trip-card";
@@ -114,6 +116,22 @@ export default async function GroupsPage({
   const isEmpty   = groups.length === 0 && archived.length === 0;
   const firstName = (user?.user_metadata?.full_name as string | undefined)
     ?.split(" ")[0] ?? null;
+
+  // Phase 4 trip wrap-up check (NOTIFiCATIONS_INBOX_PLAN.md §3.3b) — piggybacks
+  // on the trips + memberIds already fetched above, no extra query. Deferred
+  // off the render path via after(), same pattern as autoLogDueTemplates.
+  const adminTripsForWrapUpCheck = trips
+    .filter(({ group }) => memberIds[group.id]?.role === "admin")
+    .map(({ group }) => ({
+      id: group.id,
+      name: group.name,
+      isArchived: group.isArchived ?? false,
+      endDate: group.endDate,
+    }));
+  if (user && adminTripsForWrapUpCheck.length > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    after(() => checkTripWrapUps(user.id, adminTripsForWrapUpCheck, today).catch(() => {}));
+  }
 
   // Balance badge loading skeleton — matches the exact px-4 py-2 border-t shape
   // of GroupBalanceBadge so there's no layout shift when the balance loads.

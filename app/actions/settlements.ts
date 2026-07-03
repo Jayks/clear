@@ -9,6 +9,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { formatCurrency } from "@/lib/utils";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
+import { recordNotification } from "@/lib/notifications/record-notification";
 import { resolveSettleNotifyTargets } from "@/lib/settlements/settle-notify-targets";
 import {
   recordSettlementSchema,
@@ -36,7 +37,14 @@ export async function recordSettlement(input: RecordSettlementInput) {
   if (membership.role !== "admin") return { ok: false, error: "Not authorized" } as const;
   if (fromMemberId === toMemberId) return { ok: false, error: "Cannot settle with yourself" } as const;
 
-  const memberRows = await db.select({ id: groupMembers.id }).from(groupMembers)
+  const memberRows = await db
+    .select({
+      id:          groupMembers.id,
+      userId:      groupMembers.userId,
+      displayName: groupMembers.displayName,
+      guestName:   groupMembers.guestName,
+    })
+    .from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), inArray(groupMembers.id, [fromMemberId, toMemberId])));
   if (memberRows.length !== 2) return { ok: false, error: "Invalid members" } as const;
 
@@ -45,7 +53,7 @@ export async function recordSettlement(input: RecordSettlementInput) {
   // settlement in a different currency would be counted into the net as if it were
   // the default currency — silently corrupting balances. Mirrors the circle R13-1
   // currency guard, which was never applied to group settlements.
-  const [groupRow] = await db.select({ defaultCurrency: groups.defaultCurrency })
+  const [groupRow] = await db.select({ defaultCurrency: groups.defaultCurrency, name: groups.name })
     .from(groups).where(eq(groups.id, groupId)).limit(1);
   if (!groupRow) return { ok: false, error: "Group not found" } as const;
   if (currency !== groupRow.defaultCurrency)
@@ -66,6 +74,37 @@ export async function recordSettlement(input: RecordSettlementInput) {
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
+
+    // Notify the other party — an admin recorded this settlement directly
+    // (isConfirmed:true immediately), so unlike selfReportSettlement there's
+    // no confirm step; both from/to members should just hear it happened.
+    // No prior push call site existed here — added alongside the inbox
+    // persistence rather than as a separate change, since skipping it would
+    // leave trip/nest settlements as the one domain with no "recorded"
+    // notification (circle contributions and Streams both notify on their
+    // equivalent immediate-settle paths).
+    const fromMember = memberRows.find((m) => m.id === fromMemberId);
+    const toMember   = memberRows.find((m) => m.id === toMemberId);
+    const amountStr  = formatCurrency(amount, currency);
+    const otherParties = [fromMember, toMember].filter(
+      (m): m is NonNullable<typeof m> => !!m?.userId && m.userId !== user.id
+    );
+    for (const member of otherParties) {
+      const title = `💸 Settlement recorded — ${groupRow.name}`;
+      const body  = `${amountStr} settlement between ${fromMember?.displayName ?? fromMember?.guestName ?? "a member"} and ${toMember?.displayName ?? toMember?.guestName ?? "a member"} was recorded.`;
+      const url   = `/groups/${groupId}/settle`;
+      const targetUserId = member.userId!;
+      recordNotification({
+        userId: targetUserId,
+        groupId,
+        type:   "settlement_recorded",
+        title,
+        body,
+        url,
+        sendPush: () => sendPushToUser({ targetUserId, groupId, title, body, url }).catch(() => {}),
+      }).catch(() => {});
+    }
+
     return { ok: true, settlementId: row.id } as const;
   } catch {
     return { ok: false, error: "Failed to record settlement" } as const;
@@ -160,13 +199,17 @@ export async function selfReportSettlement(input: SelfReportSettlementInput) {
           ? `${actorName} says they paid ${amountStr}. Confirm receipt →`
           : `${actorName} says they paid ${amountStr} to ${payeeName}. Confirm on their behalf →`;
 
+      const title = "💸 Payment reported";
+      const url   = `/groups/${groupId}/settle?confirm=${row.id}`;
       for (const targetUserId of notify.targetUserIds) {
-        sendPushToUser({
-          targetUserId,
+        recordNotification({
+          userId: targetUserId,
           groupId,
-          title: "💸 Payment reported",
+          type:   "settlement_recorded",
+          title,
           body,
-          url: `/groups/${groupId}/settle?confirm=${row.id}`,
+          url,
+          sendPush: () => sendPushToUser({ targetUserId, groupId, title, body, url }).catch(() => {}),
         }).catch(() => {}); // fire-and-forget
       }
     }
@@ -248,12 +291,18 @@ export async function confirmSettlement(settlementId: string, groupId: string) {
     if (fromMember?.userId && fromMember.userId !== user.id) {
       const amountStr     = formatCurrency(Number(settlement.amount), settlement.currency);
       const confirmerName = membership.displayName ?? membership.guestName ?? "Someone";
-      sendPushToUser({
-        targetUserId: fromMember.userId,
+      const targetUserId  = fromMember.userId;
+      const title = "✓ Payment confirmed";
+      const body  = `${confirmerName} confirmed your ${amountStr} payment.`;
+      const url   = `/groups/${groupId}/settle`;
+      recordNotification({
+        userId: targetUserId,
         groupId,
-        title: "✓ Payment confirmed",
-        body:  `${confirmerName} confirmed your ${amountStr} payment.`,
-        url:   `/groups/${groupId}/settle`,
+        type:   "settlement_recorded",
+        title,
+        body,
+        url,
+        sendPush: () => sendPushToUser({ targetUserId, groupId, title, body, url }).catch(() => {}),
       }).catch(() => {});
     }
 
@@ -333,12 +382,18 @@ export async function disputeSettlement(
       const disputerName = membership.displayName ?? membership.guestName ?? "Someone";
       const reasonSuffix = reason ? ` Reason: "${reason}".` : "";
       const amountStr    = formatCurrency(Number(settlement.amount), settlement.currency);
-      sendPushToUser({
-        targetUserId: fromMember.userId,
+      const targetUserId = fromMember.userId;
+      const title = "⚠️ Payment disputed";
+      const body  = `${disputerName} disputed your ${amountStr} payment.${reasonSuffix} Please re-check and report again.`;
+      const url   = `/groups/${groupId}/settle`;
+      recordNotification({
+        userId: targetUserId,
         groupId,
-        title: "⚠️ Payment disputed",
-        body:  `${disputerName} disputed your ${amountStr} payment.${reasonSuffix} Please re-check and report again.`,
-        url:   `/groups/${groupId}/settle`,
+        type:   "settlement_recorded",
+        title,
+        body,
+        url,
+        sendPush: () => sendPushToUser({ targetUserId, groupId, title, body, url }).catch(() => {}),
       }).catch(() => {});
     }
 

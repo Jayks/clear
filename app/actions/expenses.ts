@@ -4,14 +4,17 @@ import { db } from "@/lib/db/client";
 import { expenses } from "@/lib/db/schema/expenses";
 import { expenseSplits } from "@/lib/db/schema/expense-splits";
 import { groupMembers } from "@/lib/db/schema/group-members";
+import { groups } from "@/lib/db/schema/groups";
 import { addExpenseSchema, addTemplateSchema, type AddExpenseInput, type AddTemplateInput } from "@/lib/validations/expense";
 import { computeSplits } from "@/lib/splits/compute";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNotNull } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { getGroupTemplates } from "@/lib/db/queries/expenses";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sendExpenseNotification } from "@/lib/notifications/send-expense-notification";
-import { sendPushToMembers } from "@/lib/notifications/send-push-notification";
+import { sendPushToUser } from "@/lib/notifications/send-push-notification";
+import { recordNotificationToMembers } from "@/lib/notifications/record-notification";
+import { formatCurrency } from "@/lib/utils";
 import { canUseTemplates } from "@/lib/subscription/gates";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
 import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
@@ -96,9 +99,32 @@ export async function addExpense(input: AddExpenseInput) {
       actorName: membership.displayName ?? "A member",
       actorUserId: user.id,
     };
+
+    // Persist an `expense_added` inbox row for every other member (not just a
+    // transient push) — mirrors the other 10 notification types' pattern via
+    // recordNotificationToMembers; sendPushToUser (used per-recipient inside
+    // it) already handles each member's own notifications_muted check.
+    const [group] = await db.select({ name: groups.name }).from(groups).where(eq(groups.id, groupId));
+    const recipientRows = await db
+      .select({ userId: groupMembers.userId })
+      .from(groupMembers)
+      .where(and(eq(groupMembers.groupId, groupId), isNotNull(groupMembers.userId)));
+    const recipientUserIds = recipientRows
+      .map((r) => r.userId)
+      .filter((id): id is string => id !== null && id !== user.id);
+    const title = group?.name ?? "New expense";
+    const body = `${notifyParams.actorName} logged ${formatCurrency(amount, currency)} for ${description}`;
+
     await Promise.all([
       sendExpenseNotification(notifyParams).catch(() => {}),
-      sendPushToMembers(notifyParams).catch(() => {}),
+      recordNotificationToMembers(recipientUserIds, (userId) => ({
+        groupId,
+        type: "expense_added",
+        title,
+        body,
+        url: `/groups/${groupId}`,
+        sendPush: () => sendPushToUser({ targetUserId: userId, groupId, title, body, url: `/groups/${groupId}` }),
+      })).catch(() => {}),
     ]);
 
     return { ok: true, expenseId: expense.id } as const;

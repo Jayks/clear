@@ -9,9 +9,9 @@
 **Key app routes:**
 - `app/(app)/groups/page.tsx` — Home; `groups/new/page.tsx` — create (reads `?type=trip|nest|circle`); `groups/[id]/page.tsx` — overview (branches `config.isCircle` → CircleDashboard vs trip/nest; `searchParams.period` for circle cycle nav); `groups/[id]/edit|expenses|members|settle|insights/`
 - `app/(app)/stream/page.tsx` + `stream/[personId]/page.tsx` — protected; `app/stream/confirm/[token]/page.tsx` — **PUBLIC** guest confirmation
-- `app/(app)/insights/`, `upgrade/`, `settings/`, `app/pricing/`, `changelog/`, `join/`, `summary/`, `pay/`
+- `app/(app)/insights/`, `upgrade/`, `settings/`, `app/pricing/`, `changelog/`, `join/`, `summary/`, `pay/`, `notifications/` (full inbox history — see Notifications section below)
 
-**Key actions** (`app/actions/`): `stream.ts` (11+ — logStream, confirmStream, settleWithPerson 3-case, forgiveStream, selfReportStreamSettle, confirmStreamSettle, disputeStreamSettle), `circle.ts` (createCircle, recordContribution, selfReportContribution, confirmContribution, disputeContribution, addCircleExpense, updateCircleStatus), `upi-ids.ts`, `groups.ts`, `expenses.ts`, `members.ts`, `settlements.ts`, `interactions.ts`, `subscription.ts`, `admin.ts`, AI actions (parse-expense, narrative, trip-adherence, parse-chat, parse-itinerary)
+**Key actions** (`app/actions/`): `stream.ts` (11+ — logStream, confirmStream, settleWithPerson 3-case, forgiveStream, selfReportStreamSettle, confirmStreamSettle, disputeStreamSettle), `circle.ts` (createCircle, recordContribution, selfReportContribution, confirmContribution, disputeContribution, addCircleExpense, updateCircleStatus), `upi-ids.ts`, `groups.ts`, `expenses.ts`, `members.ts`, `settlements.ts`, `interactions.ts`, `subscription.ts`, `admin.ts`, `notifications.ts` (getNotificationsAction, markNotificationReadAction, markAllNotificationsReadAction), AI actions (parse-expense, narrative, trip-adherence, parse-chat, parse-itinerary)
 
 **Key components** (`components/`): `stream/` (spine-view, log-sheet, dashboard-client, person-page-client, settle-sheet, badge-sync), `circle/` (dashboard, card, card-server, contribution-roster, cycle-nav, reminder-sheet, record-contribution-sheet, add-circle-expense-form, one-time-celebration, one-time-status), `shared/` (section-pill-nav, home-control-bar, global-fab, mobile-nav, group-mobile-nav, animated-list)
 
@@ -270,6 +270,20 @@ Sample data is **opt-in**, not force-seeded on load. A brand-new account (0 grou
 - Auto-launch polls for `[data-tour='new-trip-btn']` at 300ms delay — do NOT make immediate (blank blur before seeding).
 - `ExpenseFilters` listens for `tour-switch-timeline-view` event (step 6, 400ms delay) → calls `setAndSaveViewMode("timeline")`. `showMore()` pre-writes `"full"` to `clear_expense_view_mode` before navigating so the component mounts in list mode.
 - `demoTripId` found by iterating all `<a>` tags inside `[data-tour='demo-trip']` — member-count badge link appears before the main group link in DOM order.
+
+---
+
+## Notifications (`/notifications`)
+
+In-app persisted notification inbox (`NOTIFiCATIONS_INBOX_PLAN.md`, Phase 1+2 shipped 2026-07-03) — the durable "what did I miss" surface backing the bell icon on both platforms (see `components/CLAUDE.md`'s Notifications bell section for the dropdown/sheet UI). Data model + write path fully documented in `lib/db/CLAUDE.md`'s `notifications` table entry.
+
+`app/(app)/notifications/page.tsx` — RSC, full history, real DB offset pagination (`getNotifications(userId, {limit, offset})`, `PAGE_SIZE = 10`) via a `?page=N` search param — same Prev/Next-10-per-page *feel* as `expense-filters.tsx`'s client-side pagination ([[feedback_pagination_pattern]]), but server-paginated since notification history can grow unbounded per account (fetches `PAGE_SIZE + 1` rows to know if a next page exists, without a separate `COUNT(*)`). `notifications-page-client.tsx` owns the read-state + "Mark all read" trigger (rendering itself is delegated to the shared `NotificationList` — see `components/CLAUDE.md`'s Notifications bell section, which also documents the "New"/"Earlier" read/unread grouping shared across all three notification surfaces). Back-to-Home link matches `/settings`'s convention (plain `<Link href="/groups">← Home</Link>`) rather than the group-scoped `SectionHeader`/`BackButton` components, which assume group context this page doesn't have.
+
+`app/actions/notifications.ts` — 3 thin auth-checked wrappers around the query primitives in `lib/db/queries/notifications.ts`: `getNotificationsAction`, `markNotificationReadAction`, `markAllNotificationsReadAction`.
+
+**Badge count**: `app/(app)/layout.tsx` fetches `getUnreadNotificationCount(user.id)` once per layout render (parallel with the existing `isAdmin`/`plan` fetch) and passes it as `unreadCount` to both `AppSidebar` and `AppNav`. Each bell component seeds its own local `unread` state from this prop and optimistically decrements/zeroes it on read — same eventual-consistency posture as the rest of the app's badge counts (no realtime wiring).
+
+**Phase 3+4 (trip wrap-up) — not yet built.** `trip_wrapup` exists in the `NotificationType` union unused. Full spec in `NOTIFiCATIONS_INBOX_PLAN.md` §3: a `RepeatTripPrompt`-adjacent banner on an ended trip's overview, plus a lazy check-on-visit on the Home page (piggybacking `getAllGroups()`'s already-fetched dates) that fires a dedup-keyed (`trip_wrapup:${groupId}`) inbox notification the first time an admin's trip is detected as ended.
 
 ---
 

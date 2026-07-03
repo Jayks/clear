@@ -12,6 +12,7 @@ import { VisitorTracker } from "@/components/shared/visitor-tracker";
 import { ensureTrialStarted } from "@/app/actions/subscription";
 import { TrialBanner } from "@/components/shared/trial-banner";
 import { getUserPlan } from "@/lib/subscription/gates";
+import { getUnreadNotificationCount } from "@/lib/db/queries/notifications";
 
 export default async function AppLayout({
   children,
@@ -22,9 +23,10 @@ export default async function AppLayout({
 
   if (!user) redirect("/login");
 
-  const [isAdmin, plan] = await Promise.all([
+  const [isAdmin, plan, unreadCount] = await Promise.all([
     Promise.resolve(isPlatformAdmin(user.email)),
     getUserPlan(user.id),
+    getUnreadNotificationCount(user.id),
   ]);
 
   after(() => ensureTrialStarted());
@@ -35,8 +37,8 @@ export default async function AppLayout({
           on desktop (AppSidebar rail on the left, content column on the right —
           AppNav contributes nothing there, it's md:hidden internally now). */}
       <div className="min-h-screen flex flex-col md:flex-row">
-        <AppSidebar user={user} isAdmin={isAdmin} plan={plan} />
-        <AppNav user={user} isAdmin={isAdmin} plan={plan} />
+        <AppSidebar user={user} isAdmin={isAdmin} plan={plan} unreadCount={unreadCount} />
+        <AppNav user={user} isAdmin={isAdmin} plan={plan} unreadCount={unreadCount} />
         <div className="flex-1 flex flex-col min-w-0">
           <TrialBanner />
           <main className="flex-1 flex flex-col p-6 pb-safe-nav md:p-8 max-w-7xl mx-auto w-full">

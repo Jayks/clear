@@ -14,6 +14,7 @@ import { canCreateGroup } from "@/lib/subscription/gates";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
 import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
 import { BRAND } from "@/lib/brand";
+import { recordNotification } from "@/lib/notifications/record-notification";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 // ── Create circle group ───────────────────────────────────────────────────────
@@ -326,15 +327,27 @@ export async function selfReportContribution(input: {
         const periodLabel = input.period
           ? new Date(input.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
           : null;
-        const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
-        sendPushToUser({
-          targetUserId: adminMember.userId,
-          groupId:      input.groupId,
-          title:        `💸 Contribution pending — ${groupRow?.name ?? "Circle"}`,
-          body:         periodLabel
-            ? `${reporterName} reported paying their ${periodLabel} contribution.`
-            : `${reporterName} reported paying their contribution.`,
-          url: `/groups/${input.groupId}`,
+        const title = `💸 Contribution pending — ${groupRow?.name ?? "Circle"}`;
+        const body  = periodLabel
+          ? `${reporterName} reported paying their ${periodLabel} contribution.`
+          : `${reporterName} reported paying their contribution.`;
+        recordNotification({
+          userId:  adminMember.userId,
+          groupId: input.groupId,
+          type:    "contribution_pending",
+          title,
+          body,
+          url:     `/groups/${input.groupId}`,
+          sendPush: async () => {
+            const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+            await sendPushToUser({
+              targetUserId: adminMember.userId!,
+              groupId:      input.groupId,
+              title,
+              body,
+              url: `/groups/${input.groupId}`,
+            }).catch(() => {});
+          },
         }).catch(() => {});
       }
     }
@@ -415,15 +428,27 @@ export async function confirmContribution(contributionId: string, groupId: strin
       const periodLabel = contrib.period
         ? new Date(contrib.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
         : null;
-      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
-      sendPushToUser({
-        targetUserId: member.userId,
+      const title = `✓ Payment confirmed — ${groupRow?.name ?? "Circle"}`;
+      const body  = periodLabel
+        ? `Your ${periodLabel} contribution has been confirmed.`
+        : "Your contribution has been confirmed.";
+      recordNotification({
+        userId:  member.userId,
         groupId,
-        title:        `✓ Payment confirmed — ${groupRow?.name ?? "Circle"}`,
-        body:         periodLabel
-          ? `Your ${periodLabel} contribution has been confirmed.`
-          : "Your contribution has been confirmed.",
-        url: `/groups/${groupId}`,
+        type:    "contribution_confirmed",
+        title,
+        body,
+        url:     `/groups/${groupId}`,
+        sendPush: async () => {
+          const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+          await sendPushToUser({
+            targetUserId: member.userId!,
+            groupId,
+            title,
+            body,
+            url: `/groups/${groupId}`,
+          }).catch(() => {});
+        },
       }).catch(() => {});
     }
 
@@ -488,16 +513,28 @@ export async function disputeContribution(
       const periodLabel = contrib.period
         ? new Date(contrib.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
         : null;
-      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
       const reasonSuffix = reason ? ` Reason: "${reason}".` : "";
-      sendPushToUser({
-        targetUserId: memberUserId,
+      const title = `Payment not confirmed — ${groupRow?.name ?? "Circle"}`;
+      const body  = periodLabel
+        ? `Your ${periodLabel} payment wasn't confirmed.${reasonSuffix} Please check and try again.`
+        : `Your payment wasn't confirmed.${reasonSuffix} Please check and try again.`;
+      recordNotification({
+        userId:  memberUserId,
         groupId,
-        title:        `Payment not confirmed — ${groupRow?.name ?? "Circle"}`,
-        body:         periodLabel
-          ? `Your ${periodLabel} payment wasn't confirmed.${reasonSuffix} Please check and try again.`
-          : `Your payment wasn't confirmed.${reasonSuffix} Please check and try again.`,
-        url: `/groups/${groupId}`,
+        type:    "contribution_disputed",
+        title,
+        body,
+        url:     `/groups/${groupId}`,
+        sendPush: async () => {
+          const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+          await sendPushToUser({
+            targetUserId: memberUserId,
+            groupId,
+            title,
+            body,
+            url: `/groups/${groupId}`,
+          }).catch(() => {});
+        },
       }).catch(() => {});
     }
 
@@ -578,19 +615,31 @@ export async function confirmContributions(input: {
         .where(eq(groupMembers.id, c.memberId));
       if (!member?.userId) return;
 
-      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
       const periodLabel = c.period
         ? new Date(c.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
         : null;
+      const title = `✓ Payment confirmed — ${groupName}`;
+      const body  = periodLabel
+        ? `Your ${periodLabel} contribution has been confirmed.`
+        : "Your contribution has been confirmed.";
 
-      return sendPushToUser({
-        targetUserId: member.userId,
-        groupId:      input.groupId,
-        title:        `✓ Payment confirmed — ${groupName}`,
-        body:         periodLabel
-          ? `Your ${periodLabel} contribution has been confirmed.`
-          : "Your contribution has been confirmed.",
-        url: `/groups/${input.groupId}`,
+      return recordNotification({
+        userId:  member.userId,
+        groupId: input.groupId,
+        type:    "contribution_confirmed",
+        title,
+        body,
+        url:     `/groups/${input.groupId}`,
+        sendPush: async () => {
+          const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+          await sendPushToUser({
+            targetUserId: member.userId!,
+            groupId:      input.groupId,
+            title,
+            body,
+            url: `/groups/${input.groupId}`,
+          }).catch(() => {});
+        },
       }).catch(() => {});
     });
     await Promise.all(notifyPromises).catch(() => {});
@@ -647,7 +696,6 @@ export async function rejectContribution(input: {
 
     // Notify the member if they have a Clear account
     if (input.memberUserId) {
-      const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
       const { groupName } = await db
         .select({ groupName: groups.name })
         .from(groups)
@@ -657,15 +705,28 @@ export async function rejectContribution(input: {
       const periodLabel = contrib.period
         ? new Date(contrib.period + "-01").toLocaleString("en-IN", { month: "long", year: "numeric" })
         : null;
+      const title = `Payment not confirmed — ${groupName}`;
+      const body  = periodLabel
+        ? `Your ${periodLabel} payment wasn't confirmed. Please check your UPI app and try again.`
+        : "Your payment wasn't confirmed. Please check your UPI app and try again.";
 
-      sendPushToUser({
-        targetUserId: input.memberUserId,
-        groupId:      input.groupId,
-        title:        `Payment not confirmed — ${groupName}`,
-        body:         periodLabel
-          ? `Your ${periodLabel} payment wasn't confirmed. Please check your UPI app and try again.`
-          : "Your payment wasn't confirmed. Please check your UPI app and try again.",
-        url: `/groups/${input.groupId}`,
+      recordNotification({
+        userId:  input.memberUserId,
+        groupId: input.groupId,
+        type:    "contribution_disputed",
+        title,
+        body,
+        url:     `/groups/${input.groupId}`,
+        sendPush: async () => {
+          const { sendPushToUser } = await import("@/lib/notifications/send-push-notification");
+          await sendPushToUser({
+            targetUserId: input.memberUserId!,
+            groupId:      input.groupId,
+            title,
+            body,
+            url: `/groups/${input.groupId}`,
+          }).catch(() => {});
+        },
       }).catch(() => {});
     }
 

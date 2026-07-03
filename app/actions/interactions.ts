@@ -12,6 +12,7 @@ import { groups } from "@/lib/db/schema/groups";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { applyRemoveMe, applyChangeShare, applySplitEqual } from "@/lib/interactions/split-transforms";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
+import { recordNotification } from "@/lib/notifications/record-notification";
 import { revalidateTag, revalidatePath } from "next/cache";
 import { eq, and, ne, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -325,12 +326,17 @@ export async function raiseQuestion(expenseId: string, groupId: string, message:
     if (payerUserId && payerUserId !== user.id) {
       const groupName = await getGroupName(groupId);
       const actorName = membership.displayName ?? membership.guestName ?? "Someone";
-      sendPushToUser({
-        targetUserId: payerUserId,
+      const title = groupName;
+      const body  = `${actorName} has a question about "${expense.description}": ${parsed.data.message}`;
+      const url   = `/groups/${groupId}/expenses/${expenseId}/thread`;
+      recordNotification({
+        userId: payerUserId,
         groupId,
-        title: groupName,
-        body: `${actorName} has a question about "${expense.description}": ${parsed.data.message}`,
-        url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+        type:   "dispute_raised",
+        title,
+        body,
+        url,
+        sendPush: () => sendPushToUser({ targetUserId: payerUserId, groupId, title, body, url }).catch(() => {}),
       }).catch(() => {});
     }
 
@@ -449,12 +455,17 @@ export async function raiseDispute(
         question:     `${actorName} has a question about "${expense.description}"`,
       };
 
-      sendPushToUser({
-        targetUserId: payerUserId,
+      const title = `${groupName} · Dispute`;
+      const body  = bodyMap[disputeType];
+      const url   = `/groups/${groupId}/expenses/${expenseId}/thread`;
+      recordNotification({
+        userId: payerUserId,
         groupId,
-        title: `${groupName} · Dispute`,
-        body: bodyMap[disputeType],
-        url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+        type:   "dispute_raised",
+        title,
+        body,
+        url,
+        sendPush: () => sendPushToUser({ targetUserId: payerUserId, groupId, title, body, url }).catch(() => {}),
       }).catch(() => {});
     }
 
@@ -617,12 +628,17 @@ export async function acceptDispute(disputeId: string) {
 
   if (requesterRow?.userId && requesterRow.userId !== user.id) {
     const groupName = await getGroupName(groupId);
-    sendPushToUser({
-      targetUserId: requesterRow.userId,
+    const title = `${groupName} · Split updated ✓`;
+    const body  = `Your request on "${expense.description}" was accepted`;
+    const url   = `/groups/${groupId}/expenses/${expenseId}/thread`;
+    recordNotification({
+      userId: requesterRow.userId,
       groupId,
-      title: `${groupName} · Split updated ✓`,
-      body: `Your request on "${expense.description}" was accepted`,
-      url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+      type:   "dispute_resolved",
+      title,
+      body,
+      url,
+      sendPush: () => sendPushToUser({ targetUserId: requesterRow.userId!, groupId, title, body, url }).catch(() => {}),
     }).catch(() => {});
   }
 
@@ -692,12 +708,17 @@ export async function declineDispute(disputeId: string) {
 
     if (requesterRow?.userId && requesterRow.userId !== user.id) {
       const groupName = await getGroupName(groupId);
-      sendPushToUser({
-        targetUserId: requesterRow.userId,
+      const title = `${groupName} · Not accepted`;
+      const body  = `Your request on "${expense.description}" was not accepted`;
+      const url   = `/groups/${groupId}/expenses/${expenseId}/thread`;
+      recordNotification({
+        userId: requesterRow.userId,
         groupId,
-        title: `${groupName} · Not accepted`,
-        body: `Your request on "${expense.description}" was not accepted`,
-        url: `/groups/${groupId}/expenses/${expenseId}/thread`,
+        type:   "dispute_resolved",
+        title,
+        body,
+        url,
+        sendPush: () => sendPushToUser({ targetUserId: requesterRow.userId!, groupId, title, body, url }).catch(() => {}),
       }).catch(() => {});
     }
 
@@ -792,15 +813,21 @@ export async function addComment(
       );
 
       await Promise.all(
-        mentionTargets.map((m) =>
-          sendPushToUser({
-            targetUserId: m.userId!,
+        mentionTargets.map((m) => {
+          const targetUserId = m.userId!;
+          const title = `${groupName} · @mention`;
+          const body  = `${actorName} mentioned you on "${expenseName}"`;
+          const url   = `/groups/${groupId}/expenses/${expenseId}/thread`;
+          return recordNotification({
+            userId: targetUserId,
             groupId,
-            title: `${groupName} · @mention`,
-            body: `${actorName} mentioned you on "${expenseName}"`,
-            url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-          }).catch(() => {})
-        )
+            type:   "expense_mention",
+            title,
+            body,
+            url,
+            sendPush: () => sendPushToUser({ targetUserId, groupId, title, body, url }).catch(() => {}),
+          }).catch(() => {});
+        })
       );
       mentionTargets.forEach((m) => mentionedUserIds.add(m.userId!));
     }
@@ -833,15 +860,21 @@ export async function addComment(
       );
 
       await Promise.all(
-        participantTargets.map((m) =>
-          sendPushToUser({
-            targetUserId: m.userId!,
+        participantTargets.map((m) => {
+          const targetUserId = m.userId!;
+          const title = `${groupName} · New comment`;
+          const body  = `${actorName} commented on "${expenseName}"`;
+          const url   = `/groups/${groupId}/expenses/${expenseId}/thread`;
+          return recordNotification({
+            userId: targetUserId,
             groupId,
-            title: `${groupName} · New comment`,
-            body: `${actorName} commented on "${expenseName}"`,
-            url: `/groups/${groupId}/expenses/${expenseId}/thread`,
-          }).catch(() => {})
-        )
+            type:   "expense_comment",
+            title,
+            body,
+            url,
+            sendPush: () => sendPushToUser({ targetUserId, groupId, title, body, url }).catch(() => {}),
+          }).catch(() => {});
+        })
       );
     }
 

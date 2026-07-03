@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { NotificationBellDesktop } from "@/components/notifications/notification-bell-desktop";
 
 // ── Group-type navigation (Trips / Nests / Circles) ──────────────────────────
 // First-class destinations: each links to a focused type-filtered view.
@@ -97,10 +98,12 @@ export default function AppSidebar({
   user,
   isAdmin,
   plan = "free",
+  unreadCount = 0,
 }: {
   user: User;
   isAdmin: boolean;
   plan?: "plus" | "free";
+  unreadCount?: number;
 }) {
   const router     = useRouter();
   const pathname   = usePathname();
@@ -297,6 +300,7 @@ export default function AppSidebar({
         "flex items-center gap-2 px-2.5 py-3 border-t border-slate-100 dark:border-slate-800/60",
         collapsed && "flex-col gap-2.5"
       )}>
+        <NotificationBellDesktop initialUnread={unreadCount} />
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger

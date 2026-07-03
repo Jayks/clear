@@ -15,12 +15,13 @@ import Link from "next/link";
 import { LogOut, LayoutDashboard, Settings, Newspaper } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ClearLogo } from "@/components/shared/clear-logo";
+import { NotificationBellMobile } from "@/components/notifications/notification-bell-mobile";
 
 // Mobile-only top bar (logo + theme + avatar) — desktop uses AppSidebar
 // instead. Primary nav links (Home/Streams/Insights) live in AppSidebar on
 // desktop and MobileNav's bottom tabs on mobile; this header doesn't need
 // its own copy of them anymore.
-export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; isAdmin: boolean; plan?: "plus" | "free" }) {
+export default function AppNav({ user, isAdmin, plan = "free", unreadCount = 0 }: { user: User; isAdmin: boolean; plan?: "plus" | "free"; unreadCount?: number }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -69,7 +70,10 @@ export default function AppNav({ user, isAdmin, plan = "free" }: { user: User; i
           />
         </Link>
 
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <NotificationBellMobile initialUnread={unreadCount} />
+        </div>
 
         {/* Avatar */}
         <DropdownMenu>

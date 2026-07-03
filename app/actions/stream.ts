@@ -21,6 +21,7 @@ import {
   type SelfReportStreamSettleInput,
 } from "@/lib/validations/stream";
 import { sendStreamPush } from "@/lib/notifications/send-stream-notification";
+import { recordNotification } from "@/lib/notifications/record-notification";
 import { allocateOldestFirstSettlement } from "@/lib/settle/allocate-settlement";
 import { revalidatePath } from "next/cache";
 import { eq, and, or, sum, sql, inArray, asc } from "drizzle-orm";
@@ -87,14 +88,19 @@ export async function logStream(input: LogStreamInput) {
       // B-5 fix: direction-aware body.
       //   they_owe_me = creator paid; counterpart owes creator → "you owe"
       //   i_owe_them  = counterpart paid; creator owes counterpart → "they owe you"
-      const body = direction === "they_owe_me"
+      const body  = direction === "they_owe_me"
         ? `says you owe ${amountStr}${noteClause}`
         : `says they owe you ${amountStr}${noteClause}`;
+      const title = user.user_metadata?.full_name ?? "Someone";
+      const url   = `/stream/confirm/${record.confirmToken}`;
       // Fire-and-forget — don't let notification failure block the action
-      sendStreamPush(counterpartId, {
-        title: user.user_metadata?.full_name ?? "Someone",
+      recordNotification({
+        userId: counterpartId,
+        type:   "stream_entry_logged",
+        title,
         body,
-        url:   `/stream/confirm/${record.confirmToken}`,
+        url,
+        sendPush: () => sendStreamPush(counterpartId, { title, body, url }).catch(() => {}),
       }).catch(() => {});
     }
 
@@ -143,11 +149,17 @@ export async function confirmStream(token: string) {
     // Use the amount + note for context instead.
     const amountStr  = formatCurrency(Number(record.amount), record.currency);
     const noteClause = record.note ? ` for ${record.note}` : "";
-    sendStreamPush(record.creatorId, {
-      title: "✓ Stream confirmed",
-      body:  `${amountStr}${noteClause} — your stream was confirmed`,
-      // Deep-link to the creator's view of this relationship
-      url:   `/stream/${record.counterpartGuestId ?? record.counterpartId ?? ""}`,
+    const title = "✓ Stream confirmed";
+    const body  = `${amountStr}${noteClause} — your stream was confirmed`;
+    // Deep-link to the creator's view of this relationship
+    const url   = `/stream/${record.counterpartGuestId ?? record.counterpartId ?? ""}`;
+    recordNotification({
+      userId: record.creatorId,
+      type:   "stream_entry_logged",
+      title,
+      body,
+      url,
+      sendPush: () => sendStreamPush(record.creatorId, { title, body, url }).catch(() => {}),
     }).catch(() => {});
 
     return {
@@ -199,11 +211,17 @@ export async function disputeStream(input: DisputeStreamInput) {
     // B-6a fix: old body used `${creatorName}` (the RECIPIENT's own name) as the
     // subject, making it read as "you disputed your own entry."  The disputer is
     // the anonymous guest so we can't name them — use neutral copy instead.
-    sendStreamPush(record.creatorId, {
-      title: "⚠️ Entry disputed",
-      body:  `Your entry for ${amountStr}${noteClause} was disputed`,
-      // Deep-link to the creator's view of this relationship
-      url:   `/stream/${record.counterpartGuestId ?? record.counterpartId ?? ""}`,
+    const title = "⚠️ Entry disputed";
+    const body  = `Your entry for ${amountStr}${noteClause} was disputed`;
+    // Deep-link to the creator's view of this relationship
+    const url   = `/stream/${record.counterpartGuestId ?? record.counterpartId ?? ""}`;
+    recordNotification({
+      userId: record.creatorId,
+      type:   "stream_disputed",
+      title,
+      body,
+      url,
+      sendPush: () => sendStreamPush(record.creatorId, { title, body, url }).catch(() => {}),
     }).catch(() => {});
 
     return { ok: true } as const;
@@ -330,11 +348,17 @@ export async function settleStream(input: SettleStreamInput) {
     if (otherUserId) {
       const amountStr = formatCurrency(amount, record.currency);
       const actorName = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
-      sendStreamPush(otherUserId, {
-        title: "Settled ✓",
-        body:  `${actorName} marked ${amountStr} as settled`,
-        // From the receiver's perspective, the current user IS the person — link to their page
-        url:   `/stream/${user.id}`,
+      const title = "Settled ✓";
+      const body  = `${actorName} marked ${amountStr} as settled`;
+      // From the receiver's perspective, the current user IS the person — link to their page
+      const url   = `/stream/${user.id}`;
+      recordNotification({
+        userId: otherUserId,
+        type:   "stream_settle_confirmed",
+        title,
+        body,
+        url,
+        sendPush: () => sendStreamPush(otherUserId, { title, body, url }).catch(() => {}),
       }).catch(() => {});
     }
 
@@ -910,11 +934,17 @@ export async function selfReportStreamSettle(input: SelfReportStreamSettleInput)
     // Push-notify the creditor (counterpart)
     const userName  = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
     const amountStr = formatCurrency(amount, currency);
-    sendStreamPush(counterpartId, {
-      title: "💸 Payment reported",
-      body:  `${userName} says they settled ${amountStr} with you. Confirm →`,
-      // ?confirm= auto-scrolls to the pending settlement badge on the creditor's timeline
-      url:   `/stream/${user.id}?confirm=${settlement.id}`,
+    const title = "💸 Payment reported";
+    const body  = `${userName} says they settled ${amountStr} with you. Confirm →`;
+    // ?confirm= auto-scrolls to the pending settlement badge on the creditor's timeline
+    const url   = `/stream/${user.id}?confirm=${settlement.id}`;
+    recordNotification({
+      userId: counterpartId,
+      type:   "stream_settle_pending",
+      title,
+      body,
+      url,
+      sendPush: () => sendStreamPush(counterpartId, { title, body, url }).catch(() => {}),
     }).catch(() => {});
 
     revalidatePath("/stream", "layout");
@@ -1045,10 +1075,16 @@ export async function confirmStreamSettle(settlementId: string) {
 
     // Notify debtor: their payment was confirmed (outside transaction — fire-and-forget)
     const amountStr = formatCurrency(Number(settlement.amount), settlement.currency);
-    sendStreamPush(debtorId, {
-      title: "✓ Payment confirmed",
-      body:  `${amountStr} settlement confirmed. Balance cleared!`,
-      url:   `/stream/${user.id}`,
+    const confirmTitle = "✓ Payment confirmed";
+    const confirmBody  = `${amountStr} settlement confirmed. Balance cleared!`;
+    const confirmUrl   = `/stream/${user.id}`;
+    recordNotification({
+      userId: debtorId,
+      type:   "stream_settle_confirmed",
+      title:  confirmTitle,
+      body:   confirmBody,
+      url:    confirmUrl,
+      sendPush: () => sendStreamPush(debtorId, { title: confirmTitle, body: confirmBody, url: confirmUrl }).catch(() => {}),
     }).catch(() => {});
 
     revalidatePath("/stream", "layout");
@@ -1118,10 +1154,16 @@ export async function disputeStreamSettle(
     const userName     = (user.user_metadata?.full_name as string | undefined) ?? "Someone";
     const amountStr    = formatCurrency(Number(settlement.amount), settlement.currency);
     const reasonSuffix = reason ? ` Reason: "${reason}".` : "";
-    sendStreamPush(debtorId, {
-      title: "⚠️ Payment disputed",
-      body:  `${userName} disputed the ${amountStr} payment.${reasonSuffix} Please re-check and try again.`,
-      url:   `/stream/${user.id}`,
+    const disputeTitle = "⚠️ Payment disputed";
+    const disputeBody  = `${userName} disputed the ${amountStr} payment.${reasonSuffix} Please re-check and try again.`;
+    const disputeUrl   = `/stream/${user.id}`;
+    recordNotification({
+      userId: debtorId,
+      type:   "stream_disputed",
+      title:  disputeTitle,
+      body:   disputeBody,
+      url:    disputeUrl,
+      sendPush: () => sendStreamPush(debtorId, { title: disputeTitle, body: disputeBody, url: disputeUrl }).catch(() => {}),
     }).catch(() => {});
 
     revalidatePath("/stream", "layout");

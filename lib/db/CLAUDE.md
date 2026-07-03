@@ -207,6 +207,34 @@ Persisted "recent activity" feed backing `/admin`'s Recent activity section — 
 
 **Why a dedup key at all**: Razorpay fires both `refund.created` and `refund.processed` for one refund — two distinct `event_id`s, so the webhook route's own event_id dedup ledger (`razorpay_webhook_events`) doesn't collapse them. `recordAdminEvent()` (`lib/notifications/send-admin-alert.ts`) is the orchestrator every call site uses instead of `notifyAdmins` directly — it awaits the persist, and only pushes when the persist actually won the claim. Keyed on the refund's own stable id, not `eventType` or `paymentId` — order-independent, and a payment can have multiple distinct refunds.
 
+### notifications
+
+```
+id: uuid PK
+user_id: uuid NOT NULL       -- recipient, auth.users.id, no FK (cross-schema — matches admin_activity/stream_guests precedent)
+group_id: uuid nullable FK → groups(cascade)   -- null for account-level events (none yet in v1 — all 10 current types are group/stream-scoped)
+type: text NOT NULL          -- NotificationType (10 values, see lib/db/schema/notifications.ts) — text not enum, matches expenses.category convention
+title: text NOT NULL
+body: text NOT NULL
+url: text NOT NULL           -- deep link opened when the inbox row is tapped
+dedup_key: text nullable     -- only trip_wrapup sets this today (`trip_wrapup:${groupId}`)
+read_at: timestamptz nullable -- null = unread; badge count = COUNT(*) WHERE read_at IS NULL
+created_at: timestamptz NOT NULL
+UNIQUE: dedup_key            -- multiple NULLs are distinct in Postgres, so the 9 non-deduped types are unaffected
+INDEX: (user_id, created_at desc)   -- feed query
+INDEX: (user_id, read_at)           -- unread-count query
+```
+
+The user-facing mirror of `admin_activity` — persisted in-app notification inbox (`NOTIFiCATIONS_INBOX_PLAN.md`, shipped Phase 1 2026-07-02) so every event that would otherwise only exist as a transient push/toast has a durable "what did I miss" surface. Schema: `lib/db/schema/notifications.ts`. Write primitive: `insertNotification()` (`lib/db/queries/notifications.ts`) — same `ON CONFLICT (dedup_key) DO NOTHING` claim + fail-open posture as `recordAdminActivity`. Read queries in the same file: `getUnreadNotificationCount(userId)` (uncached — same reasoning as `getRecentAdminActivity`, this changes on every event), `getNotifications(userId, {limit, offset})`, `markNotificationRead`, `markAllNotificationsRead`. RLS: real per-user policy (`user_id = auth.uid()`, `for all`) — unlike `admin_activity`/`ai_usage` (service-role-only, no policies), the inbox UI reads this table directly for the current user. Apply via `drizzle/notifications.sql`.
+
+**Write-path orchestrator**: `recordNotification()` (`lib/notifications/record-notification.ts`) is what every event-producing call site uses instead of calling `sendPushToUser`/`sendStreamPush` directly — persists first, pushes only if the persist won the dedup claim. Deliberately does **not** own the push transport itself (`sendPush: () => Promise<void>` is passed in as a closure over whichever push call the site already had) because call sites differ: group-scoped `sendPushToUser` (checks `notifications_muted`) vs Stream's ungated `sendStreamPush`. `recordNotificationToMembers()` is the fan-out wrapper for the one multi-recipient event type (`expense_added` — every group member except the actor needs their own inbox row).
+
+**The 11 event types** (`NotificationType`) and their call sites: `contribution_pending`/`contribution_confirmed`/`contribution_disputed` (`app/actions/circle.ts` — `selfReportContribution`, `confirmContribution`/`confirmContributions`, `disputeContribution`/`rejectContribution`); `stream_entry_logged`/`stream_settle_pending`/`stream_settle_confirmed`/`stream_disputed` (`app/actions/stream.ts` — `logStream`+`confirmStream`, `selfReportStreamSettle`, `confirmStreamSettle`+`settleStream`, `disputeStreamSettle`+`disputeStream`); `expense_added` (`app/actions/expenses.ts` — `addExpense`, added 2026-07-03; the only fan-out type, via `recordNotificationToMembers`, replacing the old push-only `sendPushToMembers` which has been removed); `expense_mention`/`expense_comment`/`dispute_raised`/`dispute_resolved` (`app/actions/interactions.ts` — `addComment` Tier 1/Tier 2, `raiseQuestion`+`raiseDispute`, `acceptDispute`+`declineDispute`); `settlement_recorded` (`app/actions/settlements.ts` — `recordSettlement`, `selfReportSettlement`, `confirmSettlement`, `disputeSettlement` all share this one type, mirroring the single generic type the plan allocated to this domain — unlike Circle/Stream, trip/nest settlements don't get separate pending/confirmed/disputed types). `trip_wrapup` exists in the schema for Phase 4 (not yet wired).
+
+**`recordSettlement` is the one call site with no prior push** — admin-recorded settlements are immediately confirmed with no existing notify step; added alongside the inbox persistence (notifies whichever of from/to member isn't the acting admin) rather than as a separate change, since skipping it would leave trip/nest settlements as the only domain with no "recorded" notification.
+
+**Read-side UI (Phase 2, shipped 2026-07-03)**: bell icon on both platforms + full `/notifications` history page — see `app/CLAUDE.md`'s Notifications section and `components/CLAUDE.md`'s Notifications bell section for the UI layer. The original 10 event types were manually verified live end-to-end (self→other-account round trips) before this UI was built; `expense_added` was added after, discovered as a gap during that same manual verification (adding an expense only ever sent a transient push/email — never persisted to the inbox at all).
+
 ### stream_guests
 ```
 id: uuid PK

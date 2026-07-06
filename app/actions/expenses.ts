@@ -224,7 +224,12 @@ export async function duplicateExpense(expenseId: string) {
 
   const membership = await getMembership(expense.groupId, user.id);
   if (!membership) return { ok: false, error: "Not a member" } as const;
-  if (membership.role !== "admin") return { ok: false, error: "Not authorized" } as const;
+  // Round 16 fix #2: matches updateExpense/deleteExpense's creator-or-admin
+  // policy. The UI (expense-card.tsx, swipeable-expense-card.tsx) already
+  // offers Duplicate to creators, not just admins — admin-only here was the
+  // outlier, and always failed with "Not authorized" for non-admin creators.
+  if (expense.createdByUserId !== user.id && membership.role !== "admin")
+    return { ok: false, error: "Not authorized" } as const;
 
   const originalSplits = await db.select().from(expenseSplits)
     .where(eq(expenseSplits.expenseId, expenseId));
@@ -242,6 +247,9 @@ export async function duplicateExpense(expenseId: string) {
         paidByMemberId:  expense.paidByMemberId,
         description:     `${expense.description} (copy)`,
         category:        expense.category,
+        // Round 16 fix #9: was dropped, so a duplicated "Other · Boat ride"
+        // silently rendered as bare "Other".
+        customCategory:  expense.customCategory,
         amount:          expense.amount,
         currency:        expense.currency,
         expenseDate:     today,

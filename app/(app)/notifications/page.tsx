@@ -50,7 +50,13 @@ export default async function NotificationsPage({ searchParams }: Props) {
         Notifications
       </h1>
 
-      <NotificationsPageClient initialNotifications={pageRows} page={page} hasNext={hasNext} />
+      {/* key={page} forces a remount per page — this is a same-segment
+          searchParams navigation, so without the key the client instance
+          survives and its useState(initialNotifications) never picks up the
+          new props (Round 16 fix #1: Prev/Next changed the buttons but not
+          the rendered rows). A remount also cleanly resets `marking` and
+          re-registers useNotificationReadSync. */}
+      <NotificationsPageClient key={page} initialNotifications={pageRows} page={page} hasNext={hasNext} />
     </div>
   );
 }

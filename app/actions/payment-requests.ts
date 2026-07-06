@@ -11,7 +11,8 @@ import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { getDefaultUpiId } from "@/lib/db/queries/upi";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
-import { recordSettlement } from "@/app/actions/settlements";
+import { insertConfirmedSettlement } from "@/lib/settlements/insert-settlement";
+import { selfReportExternalPaymentSchema } from "@/lib/validations/payment-requests";
 
 // ── selfReportExternalPayment ─────────────────────────────────────────────────
 // Called by the public /request/[token] page — NO auth check.
@@ -25,7 +26,37 @@ export async function selfReportExternalPayment(
   utrReference?: string,
   paidAmount?:   number,  // required for Flexi circles (request.amount === null)
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Round 16 fix #7: this is the one PUBLIC, unauthenticated money-adjacent
+  // action (called from /request/[token], no auth check by design). It had
+  // no Zod validation — an unbounded/Infinity/NaN paidAmount would overflow
+  // the numeric(12,2) column, throw past this action, and the caller
+  // (request-client.tsx) never sets `error` on a thrown (not returned)
+  // rejection — the guest taps Confirm and nothing visibly happens.
+  const parsed = selfReportExternalPaymentSchema.safeParse({ method, utrReference, paidAmount });
+  if (!parsed.success) {
+    return { ok: false, error: "Please check the amount and try again" };
+  }
+  // Round to 2 decimals up front — the DB column is numeric(12,2), and a
+  // value like 500.555 would otherwise store as a silently-truncated 500.55
+  // or 500.56 depending on the driver, rather than an intentional round.
+  const roundedPaidAmount = parsed.data.paidAmount !== undefined
+    ? Math.round(parsed.data.paidAmount * 100) / 100
+    : undefined;
 
+  try {
+    return await selfReportExternalPaymentInner(token, method, utrReference, roundedPaidAmount);
+  } catch (err) {
+    console.error("[payment-requests] selfReportExternalPayment failed:", err);
+    return { ok: false, error: "Something went wrong — please try again" };
+  }
+}
+
+async function selfReportExternalPaymentInner(
+  token:         string,
+  method:        "upi" | "cash" | "bank",
+  utrReference:  string | undefined,
+  paidAmount:    number | undefined,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   // ── Fetch the request (service-role read; no auth needed) ──────────────────
   const request = await db
     .select()
@@ -380,109 +411,138 @@ export async function confirmExternalPayment(
   }
 
   // ── Circle ────────────────────────────────────────────────────────────────
+  // Round 16 fix #8: the claim → contribution SELECT → contribution UPDATE →
+  // request final UPDATE now all run inside ONE transaction. Previously the
+  // claim (self_reported → confirming) was a committed standalone UPDATE — a
+  // crash/timeout between it and the later steps left the request stranded
+  // in `confirming` forever (no code path accepts that status, so the
+  // admin's confirm button would error permanently on retry). Wrapping
+  // everything in a transaction means a mid-flight failure rolls the claim
+  // back automatically instead. The contribution row is also now locked
+  // (`.for("update")`) before it's read, so a concurrent
+  // `disputeExternalPayment` serializes behind this transaction instead of
+  // racing the SELECT-then-UPDATE guard.
   if (request.contextType === "circle") {
     if (!request.contributionId) {
       return { ok: false, error: "Missing contribution reference — cannot confirm" } as const;
     }
+    const contributionId = request.contributionId;
 
-    // Atomic claim: flip to 'confirming' to prevent concurrent double-confirms.
-    // If 0 rows updated a concurrent confirm already handled it.
-    const [claimed] = await db
-      .update(paymentRequests)
-      .set({ status: "confirming" })
-      .where(
-        and(
-          eq(paymentRequests.id, requestId),
-          eq(paymentRequests.status, "self_reported"),
-        ),
-      )
-      .returning({ id: paymentRequests.id });
+    type CircleTxResult =
+      | { kind: "concurrent" }
+      | { kind: "confirmed-no-contrib" }
+      | { kind: "confirmed"; contribMemberId: string; contribAmount: string; contribCurrency: string };
 
-    if (!claimed) return { ok: true } as const; // concurrent confirm won
+    let txResult: CircleTxResult;
+    try {
+      txResult = await db.transaction(async (tx) => {
+        // Atomic claim: flip to 'confirming' to prevent concurrent double-confirms.
+        const [claimed] = await tx
+          .update(paymentRequests)
+          .set({ status: "confirming" })
+          .where(and(eq(paymentRequests.id, requestId), eq(paymentRequests.status, "self_reported")))
+          .returning({ id: paymentRequests.id });
 
-    // ── Confirm the circle contribution (admin-only DB update + push notify) ─
-    const [contrib] = await db
-      .select({
-        memberId: circleContributions.memberId,
-        amount:   circleContributions.amount,
-        currency: circleContributions.currency,
-        period:   circleContributions.period,
-      })
-      .from(circleContributions)
-      .where(
-        and(
-          eq(circleContributions.id, request.contributionId),
-          eq(circleContributions.groupId, groupId),
-          eq(circleContributions.isConfirmed, false),
-        ),
-      );
+        if (!claimed) return { kind: "concurrent" } as const; // concurrent confirm won
 
-    if (!contrib) {
-      // Contribution not found — may have been disputed/deleted concurrently, or was
-      // already confirmed by a separate path. Treat as success.
-      await db
-        .update(paymentRequests)
-        .set({ status: "confirmed", confirmedAt: new Date() })
-        .where(eq(paymentRequests.id, requestId));
-      revalidatePath(`/groups/${groupId}`, "layout");
-      revalidateTag(`balances-${groupId}`, "max");
-      return { ok: true } as const;
+        // Lock-only SELECT (same idiom as addCircleExpense's wallet-overdraw
+        // guard) — serializes a concurrent disputeExternalPayment's DELETE
+        // against this row until this transaction commits or rolls back.
+        await tx.select({ id: circleContributions.id }).from(circleContributions)
+          .where(eq(circleContributions.id, contributionId)).for("update");
+
+        const [contrib] = await tx
+          .select({
+            memberId: circleContributions.memberId,
+            amount:   circleContributions.amount,
+            currency: circleContributions.currency,
+          })
+          .from(circleContributions)
+          .where(and(
+            eq(circleContributions.id, contributionId),
+            eq(circleContributions.groupId, groupId),
+            eq(circleContributions.isConfirmed, false),
+          ));
+
+        if (!contrib) {
+          // Contribution not found — may have been disputed/deleted concurrently
+          // (before our lock), or already confirmed by a separate path. Treat as success.
+          await tx.update(paymentRequests).set({ status: "confirmed", confirmedAt: new Date() })
+            .where(eq(paymentRequests.id, requestId));
+          return { kind: "confirmed-no-contrib" } as const;
+        }
+
+        const [confirmed] = await tx
+          .update(circleContributions)
+          .set({ isConfirmed: true })
+          .where(and(
+            eq(circleContributions.id, contributionId),
+            eq(circleContributions.groupId, groupId),
+            eq(circleContributions.isConfirmed, false),
+          ))
+          .returning({ id: circleContributions.id });
+
+        // With the row locked above this shouldn't be reachable, but keep the
+        // guard: throwing aborts the whole transaction, rolling back the
+        // claim too — no more manual "revert to self_reported" needed.
+        if (!confirmed) throw new Error("CONTRIB_CONFLICT");
+
+        await tx.update(paymentRequests).set({ status: "confirmed", confirmedAt: new Date() })
+          .where(eq(paymentRequests.id, requestId));
+
+        return {
+          kind: "confirmed",
+          contribMemberId: contrib.memberId,
+          contribAmount:   contrib.amount,
+          contribCurrency: contrib.currency,
+        } as const;
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "CONTRIB_CONFLICT") {
+        return { ok: false, error: "Contribution already processed" } as const;
+      }
+      throw err;
     }
 
-    const [confirmed] = await db
-      .update(circleContributions)
-      .set({ isConfirmed: true })
-      .where(
-        and(
-          eq(circleContributions.id, request.contributionId),
-          eq(circleContributions.groupId, groupId),
-          eq(circleContributions.isConfirmed, false), // guard: only if still unconfirmed
-        ),
-      )
-      .returning({ id: circleContributions.id });
-
-    if (!confirmed) {
-      // Row was updated/deleted between our SELECT and UPDATE (concurrent dispute).
-      // Rollback to self_reported so the admin surface doesn't show stale state.
-      await db
-        .update(paymentRequests)
-        .set({ status: "self_reported" })
-        .where(eq(paymentRequests.id, requestId));
-      return { ok: false, error: "Contribution already processed" } as const;
-    }
-
-    // ── Mark the payment request as confirmed ─────────────────────────────────
-    await db
-      .update(paymentRequests)
-      .set({ status: "confirmed", confirmedAt: new Date() })
-      .where(eq(paymentRequests.id, requestId));
+    if (txResult.kind === "concurrent") return { ok: true } as const;
 
     revalidatePath("/groups");
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
 
-    // ── Push notify the ghost's admin (fire-and-forget) ───────────────────────
-    // Notify the member whose contribution was confirmed (mirrors confirmContribution).
-    const [memberRow] = await db
-      .select({ userId: groupMembers.userId })
-      .from(groupMembers)
-      .where(eq(groupMembers.id, contrib.memberId));
+    // ── Push notify the ghost's admin (fire-and-forget, after commit) ────────
+    if (txResult.kind === "confirmed") {
+      const [memberRow] = await db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(eq(groupMembers.id, txResult.contribMemberId));
 
-    if (memberRow?.userId) {
-      const amtStr = formatCurrency(Number(contrib.amount), contrib.currency);
-      await sendPushToUser({
-        targetUserId: memberRow.userId,
-        groupId,
-        title:        `✓ Payment confirmed — ${request.groupName}`,
-        body:         `Your ${amtStr} contribution was confirmed.`,
-        url:          `/groups/${groupId}`,
-      }).catch(() => { /* push failure must never block the confirm */ });
+      if (memberRow?.userId) {
+        const amtStr = formatCurrency(Number(txResult.contribAmount), txResult.contribCurrency);
+        await sendPushToUser({
+          targetUserId: memberRow.userId,
+          groupId,
+          title:        `✓ Payment confirmed — ${request.groupName}`,
+          body:         `Your ${amtStr} contribution was confirmed.`,
+          url:          `/groups/${groupId}`,
+        }).catch(() => { /* push failure must never block the confirm */ });
+      }
     }
 
     return { ok: true } as const;
   }
 
   // ── Trip / Nest ───────────────────────────────────────────────────────────
+  // Round 16 fix #8: the old code called `recordSettlement` — a separate,
+  // already-committed action — between the claim UPDATE and this request's
+  // own final UPDATE. A crash/timeout in that window left the request
+  // stranded in `confirming` forever. Fix: validation (member rows exist,
+  // currency guard) runs BEFORE the transaction, same as recordSettlement
+  // itself does; the claim + settlement INSERT (via the extracted
+  // `insertConfirmedSettlement` core) + final UPDATE now all run inside ONE
+  // transaction, so a mid-flight failure rolls everything back atomically.
+  // Notify + revalidate stay outside the transaction (side effects must not
+  // fire on a rollback).
   if (request.contextType === "trip" || request.contextType === "nest") {
     if (!request.payerMemberId) {
       return { ok: false, error: "Missing payer member reference" } as const;
@@ -493,36 +553,31 @@ export async function confirmExternalPayment(
     if (request.amount === null) {
       return { ok: false, error: "Amount is required for trip/nest settlement" } as const;
     }
+    const payerMemberId = request.payerMemberId;
+    const payeeMemberId = request.payeeMemberId;
+    const amount        = Number(request.amount);
 
-    // Claim with 'confirming' to prevent concurrent double-confirm
-    const [claimed] = await db
-      .update(paymentRequests)
-      .set({ status: "confirming" })
-      .where(
-        and(
-          eq(paymentRequests.id, requestId),
-          eq(paymentRequests.status, "self_reported"),
-        ),
-      )
-      .returning({ id: paymentRequests.id });
+    // Validation before the transaction — mirrors recordSettlement's own
+    // pre-tx checks (member rows exist, currency matches the group's live
+    // defaultCurrency; the request's stored `currency` isn't trusted since
+    // the group's default can change after the request was generated).
+    const memberRows = await db
+      .select({
+        id:          groupMembers.id,
+        userId:      groupMembers.userId,
+        displayName: groupMembers.displayName,
+        guestName:   groupMembers.guestName,
+      })
+      .from(groupMembers)
+      .where(and(eq(groupMembers.groupId, groupId), inArray(groupMembers.id, [payerMemberId, payeeMemberId])));
+    if (memberRows.length !== 2) return { ok: false, error: "Invalid members" } as const;
 
-    if (!claimed) return { ok: true } as const; // concurrent confirm won
-
-    // Fetch group's current defaultCurrency — recordSettlement validates it
-    // matches (S-12 guard) so we must pass the live value, not the stored one.
     const [groupRow] = await db
-      .select({ defaultCurrency: groups.defaultCurrency })
+      .select({ defaultCurrency: groups.defaultCurrency, name: groups.name })
       .from(groups)
       .where(eq(groups.id, groupId))
       .limit(1);
-
-    if (!groupRow) {
-      await db
-        .update(paymentRequests)
-        .set({ status: "self_reported" })
-        .where(eq(paymentRequests.id, requestId));
-      return { ok: false, error: "Group not found" } as const;
-    }
+    if (!groupRow) return { ok: false, error: "Group not found" } as const;
 
     // Map paymentMethod: payment_requests stores "bank", settlements expect "bank_transfer".
     const settlementMethod = (() => {
@@ -532,40 +587,59 @@ export async function confirmExternalPayment(
       return undefined;
     })();
 
-    // recordSettlement: admin-only action that writes a confirmed settlement row.
-    // Auth passes because confirmExternalPayment already verified admin role, and
-    // getCurrentUser() + getMembership() are React-cache deduped within this request.
-    const settlementResult = await recordSettlement({
-      groupId,
-      fromMemberId:  request.payerMemberId,
-      toMemberId:    request.payeeMemberId,
-      amount:        Number(request.amount),
-      currency:      groupRow.defaultCurrency,
-      paymentMethod: settlementMethod,
-      utrReference:  request.utrReference ?? undefined,
-      note:          request.description ?? undefined,
+    type TripTxResult = { kind: "concurrent" } | { kind: "confirmed"; settlementId: string };
+
+    const txResult: TripTxResult = await db.transaction(async (tx) => {
+      // Claim with 'confirming' to prevent concurrent double-confirm.
+      const [claimed] = await tx
+        .update(paymentRequests)
+        .set({ status: "confirming" })
+        .where(and(eq(paymentRequests.id, requestId), eq(paymentRequests.status, "self_reported")))
+        .returning({ id: paymentRequests.id });
+
+      if (!claimed) return { kind: "concurrent" } as const; // concurrent confirm won
+
+      const inserted = await insertConfirmedSettlement(tx, {
+        groupId,
+        fromMemberId:  payerMemberId,
+        toMemberId:    payeeMemberId,
+        amount,
+        currency:      groupRow.defaultCurrency,
+        paymentMethod: settlementMethod,
+        utrReference:  request.utrReference ?? undefined,
+        note:          request.description ?? undefined,
+      });
+
+      await tx
+        .update(paymentRequests)
+        .set({ status: "confirmed", confirmedAt: new Date(), settlementId: inserted.id })
+        .where(eq(paymentRequests.id, requestId));
+
+      return { kind: "confirmed", settlementId: inserted.id } as const;
     });
 
-    if (!settlementResult.ok) {
-      // Roll back the confirming claim so the admin can retry
-      await db
-        .update(paymentRequests)
-        .set({ status: "self_reported" })
-        .where(eq(paymentRequests.id, requestId));
-      return { ok: false, error: settlementResult.error } as const;
+    if (txResult.kind === "concurrent") return { ok: true } as const;
+
+    revalidatePath(`/groups/${groupId}`, "layout");
+    revalidateTag(`balances-${groupId}`, "max");
+
+    // ── Notify the other party (mirrors recordSettlement's own notify block,
+    //    which we bypassed in favour of the tx-safe insertConfirmedSettlement
+    //    core) ────────────────────────────────────────────────────────────
+    const payerMember = memberRows.find((m) => m.id === payerMemberId);
+    const payeeMember = memberRows.find((m) => m.id === payeeMemberId);
+    const amountStr    = formatCurrency(amount, groupRow.defaultCurrency);
+    const otherParties = [payerMember, payeeMember].filter(
+      (m): m is NonNullable<typeof m> => !!m?.userId && m.userId !== user.id,
+    );
+    for (const member of otherParties) {
+      const title = `💸 Settlement recorded — ${groupRow.name}`;
+      const body  = `${amountStr} settlement between ${payerMember?.displayName ?? payerMember?.guestName ?? "a member"} and ${payeeMember?.displayName ?? payeeMember?.guestName ?? "a member"} was recorded.`;
+      const url   = `/groups/${groupId}/settle`;
+      const targetUserId = member.userId!;
+      await sendPushToUser({ targetUserId, groupId, title, body, url }).catch(() => {});
     }
 
-    // Mark confirmed + back-ref to settlement row
-    await db
-      .update(paymentRequests)
-      .set({
-        status:       "confirmed",
-        confirmedAt:  new Date(),
-        settlementId: settlementResult.settlementId,
-      })
-      .where(eq(paymentRequests.id, requestId));
-
-    // revalidatePath/revalidateTag already called by recordSettlement
     return { ok: true } as const;
   }
 

@@ -71,6 +71,12 @@ export function RequestClient({
           setError("Please enter the amount you paid");
           return;
         }
+        // Round 16 fix #7: client-side mirror of the server's Zod bound
+        // (max 999999.99) — immediate feedback instead of a round-trip.
+        if (n > 999999.99) {
+          setError("That amount looks too large — please double-check it");
+          return;
+        }
       }
       setError(null);
       startTransition(async () => {
@@ -155,6 +161,7 @@ export function RequestClient({
                 onChange={(e) => setFlexiAmount(e.target.value)}
                 placeholder="0"
                 min="1"
+                max="999999.99"
                 step="any"
                 className="flex-1 text-2xl font-semibold bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-md
                            text-slate-800 dark:text-slate-100 placeholder:text-slate-300
@@ -336,7 +343,7 @@ export function RequestClient({
                   value={utrRef}
                   onChange={(e) => setUtrRef(e.target.value)}
                   placeholder="UTR / Ref No. (optional)"
-                  maxLength={50}
+                  maxLength={30}
                   className="w-full px-3 py-2.5 rounded-xl text-sm
                              border border-slate-200 dark:border-slate-700
                              bg-white/60 dark:bg-slate-800/60

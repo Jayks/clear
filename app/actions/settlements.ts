@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/utils";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
 import { recordNotification } from "@/lib/notifications/record-notification";
 import { resolveSettleNotifyTargets } from "@/lib/settlements/settle-notify-targets";
+import { insertConfirmedSettlement } from "@/lib/settlements/insert-settlement";
 import {
   recordSettlementSchema,
   selfReportSettlementSchema,
@@ -60,17 +61,13 @@ export async function recordSettlement(input: RecordSettlementInput) {
     return { ok: false, error: `Currency must be ${groupRow.defaultCurrency}` } as const;
 
   try {
-    const [row] = await db.insert(settlements).values({
-      groupId,
-      fromMemberId,
-      toMemberId,
-      amount:        String(amount),
-      currency,
-      note:          note || null,
-      isConfirmed:   true,
-      paymentMethod: paymentMethod ?? null,
-      utrReference:  utrReference  ?? null,
-    }).returning({ id: settlements.id });
+    // Round 16 fix #8: uses the shared insertConfirmedSettlement core — no
+    // transaction needed here (a single INSERT is already atomic), but the
+    // same function is now also called from confirmExternalPayment's
+    // trip/nest branch inside its own transaction.
+    const row = await db.transaction((tx) =>
+      insertConfirmedSettlement(tx, { groupId, fromMemberId, toMemberId, amount, currency, note, paymentMethod, utrReference }),
+    );
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
@@ -366,13 +363,20 @@ export async function disputeSettlement(
     // above and this DELETE cannot cause a confirmed settlement (permanent balance
     // history) to be silently deleted.  Mirrors the C-2 fix applied to
     // circle.ts disputeContribution / rejectContribution.
-    await db.delete(settlements).where(
+    // Round 16 fix #10: the DELETE's return value was never checked — a
+    // concurrent confirmSettlement winning the race meant 0 rows were
+    // deleted here, yet this function still notified the payer "your
+    // payment was disputed" and revalidated, even though their payment had
+    // actually just been confirmed. Check `.returning()` and bail cleanly.
+    const [deleted] = await db.delete(settlements).where(
       and(
         eq(settlements.id, settlementId),
         eq(settlements.groupId, groupId),
         eq(settlements.isConfirmed, false),
       )
-    );
+    ).returning({ id: settlements.id });
+
+    if (!deleted) return { ok: false, error: "Settlement was already confirmed" } as const;
 
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");

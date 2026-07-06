@@ -127,12 +127,22 @@ export async function getSettlements(groupId: string) {
 }
 
 /** Full aggregate total for all confirmed settlements in a group — not affected by the
- *  100-row display limit in getSettlements. Use this for any financial summary display. */
-export async function getSettlementsTotal(groupId: string): Promise<number> {
+ *  100-row display limit in getSettlements. Use this for any financial summary display.
+ *
+ *  Round 16 fix #14: `defaultCurrency` param added — without a currency filter, a
+ *  stray non-default-currency settlement (shouldn't normally exist post the S-12
+ *  guard in recordSettlement/selfReportSettlement, but could predate it) would be
+ *  summed in as if it were the default currency, inflating this total. Matches the
+ *  currency-filtered CTEs `getBalances` already uses. */
+export async function getSettlementsTotal(groupId: string, defaultCurrency: string): Promise<number> {
   const [row] = await db
     .select({ total: sum(settlements.amount) })
     .from(settlements)
-    .where(and(eq(settlements.groupId, groupId), eq(settlements.isConfirmed, true)));
+    .where(and(
+      eq(settlements.groupId, groupId),
+      eq(settlements.isConfirmed, true),
+      eq(settlements.currency, defaultCurrency),
+    ));
   return Number(row?.total ?? 0);
 }
 

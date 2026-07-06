@@ -56,7 +56,7 @@ export async function BalancesSection({
   const [{ balances, suggestions, hasMixedCurrencies }, allSettlements, pastSettlementsTotal, monthlySummary] = await Promise.all([
     getBalances(groupId, currency),
     getSettlements(groupId),
-    getSettlementsTotal(groupId),  // aggregate query — not affected by the 100-row display limit
+    getSettlementsTotal(groupId, currency),  // aggregate query — not affected by the 100-row display limit
     getMonthlyExpenseSummary(groupId),
   ]);
 

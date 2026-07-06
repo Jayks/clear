@@ -4,9 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { NotificationList } from "@/components/notifications/notification-list";
-import { markAllNotificationsReadAction } from "@/app/actions/notifications";
-import { broadcastNotificationsRead } from "@/lib/notifications/notification-sync";
-import { useNotificationReadSync } from "@/hooks/use-notification-read-sync";
+import { useNotificationReadSync, useMarkAllRead } from "@/hooks/use-notification-read-sync";
 import type { Notification } from "@/lib/db/schema/notifications";
 
 interface Props {
@@ -23,7 +21,7 @@ interface Props {
 export function NotificationsPageClient({ initialNotifications, page, hasNext, totalUnread }: Props) {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [unread, setUnread] = useState(totalUnread);
-  const [marking, setMarking] = useState(false);
+  const { marking, handleMarkAllRead } = useMarkAllRead();
 
   // This page has no badge of its own, but still needs to (a) react when a
   // notification is read from a bell while this page happens to be open,
@@ -32,13 +30,6 @@ export function NotificationsPageClient({ initialNotifications, page, hasNext, t
   // lib/notifications/notification-sync.ts for why this is needed (the
   // bells are mounted in the persistent layout wrapping this page).
   useNotificationReadSync(setNotifications, setUnread);
-
-  async function handleMarkAllRead() {
-    setMarking(true);
-    await markAllNotificationsReadAction().catch(() => {});
-    setMarking(false);
-    broadcastNotificationsRead({ scope: "all" });
-  }
 
   return (
     <div>

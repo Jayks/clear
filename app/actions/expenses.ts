@@ -11,6 +11,7 @@ import { eq, and, inArray, isNotNull } from "drizzle-orm";
 import { getCurrentUser, getMembership } from "@/lib/db/queries/auth";
 import { getGroupTemplates } from "@/lib/db/queries/expenses";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { afterSafe } from "@/lib/after-safe";
 import { sendExpenseNotification } from "@/lib/notifications/send-expense-notification";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
 import { recordNotificationToMembers } from "@/lib/notifications/record-notification";
@@ -91,6 +92,15 @@ export async function addExpense(input: AddExpenseInput) {
     revalidatePath(`/groups/${groupId}`, "layout");
     revalidateTag(`balances-${groupId}`, "max");
 
+    // Round 16 fix #19: the notification fan-out (2 extra queries + a push
+    // to every other member) used to be awaited before returning — save
+    // latency scaled with member count for no user-visible benefit (the
+    // caller doesn't need the fan-out to have finished to navigate away).
+    // Deferred via afterSafe() (a thin wrapper around next/server's after() —
+    // see lib/after-safe.ts for why the wrapper exists) — same "runs
+    // opportunistically post-response, never blocks the actual save, fails
+    // silently" posture as autoLogDueTemplates's own use of the pattern
+    // elsewhere. Both `.catch(() => {})`s are preserved unchanged.
     const notifyParams = {
       groupId,
       description,
@@ -99,33 +109,34 @@ export async function addExpense(input: AddExpenseInput) {
       actorName: membership.displayName ?? "A member",
       actorUserId: user.id,
     };
+    afterSafe(async () => {
+      // Persist an `expense_added` inbox row for every other member (not just a
+      // transient push) — mirrors the other 10 notification types' pattern via
+      // recordNotificationToMembers; sendPushToUser (used per-recipient inside
+      // it) already handles each member's own notifications_muted check.
+      const [group] = await db.select({ name: groups.name }).from(groups).where(eq(groups.id, groupId));
+      const recipientRows = await db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(and(eq(groupMembers.groupId, groupId), isNotNull(groupMembers.userId)));
+      const recipientUserIds = recipientRows
+        .map((r) => r.userId)
+        .filter((id): id is string => id !== null && id !== user.id);
+      const title = group?.name ?? "New expense";
+      const body = `${notifyParams.actorName} logged ${formatCurrency(amount, currency)} for ${description}`;
 
-    // Persist an `expense_added` inbox row for every other member (not just a
-    // transient push) — mirrors the other 10 notification types' pattern via
-    // recordNotificationToMembers; sendPushToUser (used per-recipient inside
-    // it) already handles each member's own notifications_muted check.
-    const [group] = await db.select({ name: groups.name }).from(groups).where(eq(groups.id, groupId));
-    const recipientRows = await db
-      .select({ userId: groupMembers.userId })
-      .from(groupMembers)
-      .where(and(eq(groupMembers.groupId, groupId), isNotNull(groupMembers.userId)));
-    const recipientUserIds = recipientRows
-      .map((r) => r.userId)
-      .filter((id): id is string => id !== null && id !== user.id);
-    const title = group?.name ?? "New expense";
-    const body = `${notifyParams.actorName} logged ${formatCurrency(amount, currency)} for ${description}`;
-
-    await Promise.all([
-      sendExpenseNotification(notifyParams).catch(() => {}),
-      recordNotificationToMembers(recipientUserIds, (userId) => ({
-        groupId,
-        type: "expense_added",
-        title,
-        body,
-        url: `/groups/${groupId}`,
-        sendPush: () => sendPushToUser({ targetUserId: userId, groupId, title, body, url: `/groups/${groupId}` }),
-      })).catch(() => {}),
-    ]);
+      await Promise.all([
+        sendExpenseNotification(notifyParams).catch(() => {}),
+        recordNotificationToMembers(recipientUserIds, (userId) => ({
+          groupId,
+          type: "expense_added",
+          title,
+          body,
+          url: `/groups/${groupId}`,
+          sendPush: () => sendPushToUser({ targetUserId: userId, groupId, title, body, url: `/groups/${groupId}` }),
+        })).catch(() => {}),
+      ]);
+    });
 
     return { ok: true, expenseId: expense.id } as const;
   } catch {

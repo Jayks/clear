@@ -83,42 +83,65 @@ export function RepeatTripPrompt({ groupId, groupName, memberNames, defaultCurre
     hapticLight();
   }
 
+  // Round 16 fix #12: `selected` is a Set<string> keyed by display name —
+  // known limitation, not fixed this round: two members with the SAME
+  // display name (e.g. two guests both named "Raj") collapse into one entry
+  // here and get imported as a single member. A proper fix needs member IDs
+  // threaded through `importMembersFromGroup` instead of names; low value
+  // until a real collision is reported, and out of scope for this round.
   async function handleCreate() {
     if (!name.trim()) return;
     setSubmitting(true);
 
-    const result = await createGroup({
-      name: name.trim(),
-      groupType: "trip",
-      defaultCurrency,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-    });
+    try {
+      const result = await createGroup({
+        name: name.trim(),
+        groupType: "trip",
+        defaultCurrency,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
 
-    if (!result.ok) {
+      if (!result.ok) {
+        toast.error(result.error ?? "Failed to create trip");
+        return;
+      }
+
+      const newGroupId = result.groupId;
+
+      // Bulk-copy selected members. Round 16 fix #12: the import result was
+      // never checked — a failure here (e.g. a transient DB error) silently
+      // left the new trip with zero members while the toast still claimed
+      // success, and the admin only found out later on the Members page.
+      const toImport = [...selected];
+      let importedCount = toImport.length;
+      if (toImport.length > 0) {
+        const importResult = await importMembersFromGroup(newGroupId, toImport);
+        if (!importResult.ok) {
+          importedCount = 0;
+          toast.warning("Trip created — members couldn't be copied. Add them from the Members page.");
+        }
+      }
+
+      hapticSuccess();
+      if (importedCount > 0) {
+        toast.success("Trip created!", {
+          description: `${importedCount} member${importedCount === 1 ? "" : "s"} copied from ${groupName}.`,
+        });
+      } else if (toImport.length === 0) {
+        toast.success("Trip created!", { description: "Add members from the Members page." });
+      }
+      // else: the importResult.ok===false branch above already toasted a warning.
+
+      closeSheet();
+      router.replace(`/groups/${newGroupId}`);
+    } finally {
+      // Round 16 fix #12: finally, not an inline setSubmitting(false) at
+      // every early-return — a thrown createGroup/importMembersFromGroup
+      // (network blip, unhandled server error) used to strand the button in
+      // "Creating…" forever.
       setSubmitting(false);
-      toast.error(result.error ?? "Failed to create trip");
-      return;
     }
-
-    const newGroupId = result.groupId;
-
-    // Bulk-copy selected members
-    const toImport = [...selected];
-    if (toImport.length > 0) {
-      await importMembersFromGroup(newGroupId, toImport);
-    }
-
-    hapticSuccess();
-    toast.success("Trip created!", {
-      description: toImport.length > 0
-        ? `${toImport.length} member${toImport.length === 1 ? "" : "s"} copied from ${groupName}.`
-        : "Add members from the Members page.",
-    });
-
-    setSubmitting(false);
-    closeSheet();
-    router.replace(`/groups/${newGroupId}`);
   }
 
   if (!visible) return null;

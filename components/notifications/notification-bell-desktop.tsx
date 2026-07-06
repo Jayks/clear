@@ -11,9 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationList } from "./notification-list";
-import { getNotificationFeedAction, markAllNotificationsReadAction } from "@/app/actions/notifications";
-import { broadcastNotificationsRead } from "@/lib/notifications/notification-sync";
-import { useNotificationReadSync } from "@/hooks/use-notification-read-sync";
+import { getNotificationFeedAction } from "@/app/actions/notifications";
+import { useNotificationReadSync, useMarkAllRead } from "@/hooks/use-notification-read-sync";
 import { resolveBellPanelState } from "@/lib/notifications/bell-panel-state";
 import type { Notification } from "@/lib/db/schema/notifications";
 
@@ -30,8 +29,8 @@ import type { Notification } from "@/lib/db/schema/notifications";
 export function NotificationBellDesktop({ initialUnread }: { initialUnread: number }) {
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [unread, setUnread] = useState(initialUnread);
-  const [marking, setMarking] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const { marking, handleMarkAllRead } = useMarkAllRead();
 
   // Keeps this bell's badge + cached list in sync with reads that happen on
   // the *other* two notification surfaces (mobile bell, full /notifications
@@ -58,13 +57,6 @@ export function NotificationBellDesktop({ initialUnread }: { initialUnread: numb
 
   function handleOpenChange(open: boolean) {
     if (open) refresh().catch(() => {}); // never leave a floating rejected promise
-  }
-
-  async function handleMarkAllRead() {
-    setMarking(true);
-    await markAllNotificationsReadAction().catch(() => {});
-    setMarking(false);
-    broadcastNotificationsRead({ scope: "all" });
   }
 
   const panelState = resolveBellPanelState(notifications, loadFailed);

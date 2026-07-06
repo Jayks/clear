@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Palette, CreditCard, Bell, User } from "lucide-react";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -43,7 +43,19 @@ export function SettingsLayout(props: Props) {
 function SettingsLayoutContent({ sub, currentDisplayName, userEmail, userAvatarUrl, upiIds, initialEmailEnabled }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [active, setActive] = useState<Section>(() => resolveSettingsTab(searchParams.get("tab")));
+  const tabParam = searchParams.get("tab");
+  const [active, setActive] = useState<Section>(() => resolveSettingsTab(tabParam));
+
+  // Round 16 fix #15: the initial useState only read ?tab= once, at mount —
+  // typing /settings?tab=notifications directly into the URL bar from
+  // another already-mounted app page (or any nav that lands here with a
+  // different `tab` param on an existing instance) never picked it up.
+  // selectTab already does `router.replace` for its own clicks, so this
+  // effect and the click path converge on the same value — no loop: replace
+  // → tabParam equals state → setState is a no-op re-render.
+  useEffect(() => {
+    setActive(resolveSettingsTab(tabParam));
+  }, [tabParam]);
 
   function selectTab(id: Section) {
     setActive(id);

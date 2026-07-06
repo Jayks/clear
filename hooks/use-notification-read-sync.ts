@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { NOTIFICATIONS_READ_EVENT } from "@/lib/notifications/notification-sync";
+import { toast } from "sonner";
+import { markAllNotificationsReadAction } from "@/app/actions/notifications";
+import { NOTIFICATIONS_READ_EVENT, broadcastNotificationsRead } from "@/lib/notifications/notification-sync";
 import type { NotificationsReadDetail } from "@/lib/notifications/notification-sync";
 import type { Notification } from "@/lib/db/schema/notifications";
 
@@ -40,4 +42,33 @@ export function useNotificationReadSync<T extends Notification[] | null>(
     window.addEventListener(NOTIFICATIONS_READ_EVENT, onRead);
     return () => window.removeEventListener(NOTIFICATIONS_READ_EVENT, onRead);
   }, [setNotifications, setUnread]);
+}
+
+/**
+ * Shared "Mark all read" trigger — was duplicated identically across all
+ * three notification surfaces (desktop bell, mobile bell, full
+ * /notifications page), and all three had the same bug (Round 16 fix #11):
+ * `.catch(() => {})` swallowed a failed `markAllNotificationsReadAction`
+ * call and broadcast the "read" event unconditionally anyway, so a failure
+ * (e.g. offline) still visually cleared every badge/list even though
+ * nothing was actually marked read server-side. Now only broadcasts on a
+ * genuine `{ ok: true }`; on failure, shows a toast and leaves state as-is
+ * (the surfaces' own optimistic state is simply not touched, so nothing
+ * appears to have changed).
+ */
+export function useMarkAllRead() {
+  const [marking, setMarking] = useState(false);
+
+  async function handleMarkAllRead() {
+    setMarking(true);
+    const result = await markAllNotificationsReadAction().catch(() => ({ ok: false }) as const);
+    setMarking(false);
+    if (result.ok) {
+      broadcastNotificationsRead({ scope: "all" });
+    } else {
+      toast.error("Couldn't mark notifications read");
+    }
+  }
+
+  return { marking, handleMarkAllRead };
 }

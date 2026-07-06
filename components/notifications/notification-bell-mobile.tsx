@@ -5,9 +5,8 @@ import Link from "next/link";
 import { Bell, Loader2 } from "lucide-react";
 import { Sheet } from "@/components/shared/sheet";
 import { NotificationList } from "./notification-list";
-import { getNotificationFeedAction, markAllNotificationsReadAction } from "@/app/actions/notifications";
-import { broadcastNotificationsRead } from "@/lib/notifications/notification-sync";
-import { useNotificationReadSync } from "@/hooks/use-notification-read-sync";
+import { getNotificationFeedAction } from "@/app/actions/notifications";
+import { useNotificationReadSync, useMarkAllRead } from "@/hooks/use-notification-read-sync";
 import { resolveBellPanelState } from "@/lib/notifications/bell-panel-state";
 import type { Notification } from "@/lib/db/schema/notifications";
 
@@ -21,8 +20,8 @@ export function NotificationBellMobile({ initialUnread }: { initialUnread: numbe
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [unread, setUnread] = useState(initialUnread);
-  const [marking, setMarking] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const { marking, handleMarkAllRead } = useMarkAllRead();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Keeps this bell's badge + cached list in sync with reads that happen on
@@ -51,13 +50,6 @@ export function NotificationBellMobile({ initialUnread }: { initialUnread: numbe
     })();
     return () => { cancelled = true; };
   }, [isOpen]);
-
-  async function handleMarkAllRead() {
-    setMarking(true);
-    await markAllNotificationsReadAction().catch(() => {});
-    setMarking(false);
-    broadcastNotificationsRead({ scope: "all" });
-  }
 
   function handleRowOpen() {
     setIsOpen(false);

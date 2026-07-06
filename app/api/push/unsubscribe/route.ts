@@ -8,7 +8,16 @@ export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { endpoint } = await req.json();
+  // Round 16 fix #17: same malformed-body guard as the subscribe route —
+  // req.json() throwing on bad JSON was surfacing as a bare 500.
+  let body: { endpoint?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+
+  const { endpoint } = body;
   if (!endpoint) return NextResponse.json({ error: "Missing endpoint" }, { status: 400 });
 
   await db

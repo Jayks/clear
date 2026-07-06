@@ -97,6 +97,19 @@ export function HomeControlBar({
     applyFilter("");
   }
 
+  // Round 16 fix #20: applyFilter operates on the live DOM
+  // ([data-group-card]/[data-group-section]), not React state — so a
+  // router.refresh() that swaps in new card DOM while a filter chip is
+  // still active (e.g. archiving a group from another tab, then coming
+  // back) silently drops the filter on the freshly-rendered cards, which
+  // never got their `display: none` applied. Re-applying after every commit
+  // fixes this. Intentionally no dependency array — cheap (two
+  // querySelectorAll passes) and a no-op when `query` is empty, so this
+  // just needs to run after every render, not react to a specific value.
+  useEffect(() => {
+    if (query) applyFilter(query);
+  });
+
   // ── View switch ───────────────────────────────────────────────────────────
 
   function switchView(next: HomeView) {

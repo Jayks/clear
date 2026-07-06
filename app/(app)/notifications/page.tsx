@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/db/queries/auth";
-import { getNotifications } from "@/lib/db/queries/notifications";
+import { getNotifications, getUnreadNotificationCount } from "@/lib/db/queries/notifications";
 import { NotificationsPageClient } from "./notifications-page-client";
 
 export const metadata: Metadata = { title: "Notifications — ClearOff" };
@@ -32,7 +32,10 @@ export default async function NotificationsPage({ searchParams }: Props) {
 
   // Fetch one extra row to know whether a next page exists, without a
   // separate COUNT(*) query.
-  const rows = await getNotifications(user.id, { limit: PAGE_SIZE + 1, offset });
+  const [rows, totalUnread] = await Promise.all([
+    getNotifications(user.id, { limit: PAGE_SIZE + 1, offset }),
+    getUnreadNotificationCount(user.id),
+  ]);
   const hasNext = rows.length > PAGE_SIZE;
   const pageRows = rows.slice(0, PAGE_SIZE);
 
@@ -56,7 +59,13 @@ export default async function NotificationsPage({ searchParams }: Props) {
           new props (Round 16 fix #1: Prev/Next changed the buttons but not
           the rendered rows). A remount also cleanly resets `marking` and
           re-registers useNotificationReadSync. */}
-      <NotificationsPageClient key={page} initialNotifications={pageRows} page={page} hasNext={hasNext} />
+      <NotificationsPageClient
+        key={page}
+        initialNotifications={pageRows}
+        page={page}
+        hasNext={hasNext}
+        totalUnread={totalUnread}
+      />
     </div>
   );
 }

@@ -120,7 +120,11 @@ export default async function GroupsPage({
   // Phase 4 trip wrap-up check (NOTIFiCATIONS_INBOX_PLAN.md §3.3b) — piggybacks
   // on the trips + memberIds already fetched above, no extra query. Deferred
   // off the render path via after(), same pattern as autoLogDueTemplates.
-  const adminTripsForWrapUpCheck = trips
+  // Round 16 fix #6: candidate list now includes archivedTrips too — archiving
+  // is the most explicit "done" signal a trip gives, and the old active-only
+  // list meant it was never checked. memberIds already covers archived ids
+  // (built from `[...groups, ...archived]` above) so no extra query is needed.
+  const adminTripsForWrapUpCheck = [...trips, ...archivedTrips]
     .filter(({ group }) => memberIds[group.id]?.role === "admin")
     .map(({ group }) => ({
       id: group.id,

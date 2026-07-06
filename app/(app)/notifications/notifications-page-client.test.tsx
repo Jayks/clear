@@ -40,6 +40,7 @@ describe("NotificationsPageClient — remount contract for page navigation", () 
         initialNotifications={[makeRow("1", "Page 1 row")]}
         page={1}
         hasNext={true}
+        totalUnread={0}
       />,
     );
     expect(screen.getByText("Page 1 row")).toBeInTheDocument();
@@ -52,6 +53,7 @@ describe("NotificationsPageClient — remount contract for page navigation", () 
           initialNotifications={[makeRow("1", "Page 1 row")]}
           page={1}
           hasNext={true}
+          totalUnread={0}
         />
       </div>,
     );
@@ -64,6 +66,7 @@ describe("NotificationsPageClient — remount contract for page navigation", () 
           initialNotifications={[makeRow("2", "Page 2 row")]}
           page={2}
           hasNext={false}
+          totalUnread={0}
         />
       </div>,
     );
@@ -77,6 +80,7 @@ describe("NotificationsPageClient — remount contract for page navigation", () 
         initialNotifications={[makeRow("1", "Page 1 row")]}
         page={1}
         hasNext={true}
+        totalUnread={0}
       />,
     );
     expect(screen.getByText("Page 1 row")).toBeInTheDocument();
@@ -88,10 +92,39 @@ describe("NotificationsPageClient — remount contract for page navigation", () 
         initialNotifications={[makeRow("2", "Page 2 row")]}
         page={2}
         hasNext={false}
+        totalUnread={0}
       />,
     );
 
     expect(screen.getByText("Page 1 row")).toBeInTheDocument(); // stale — the bug
     expect(screen.queryByText("Page 2 row")).not.toBeInTheDocument();
+  });
+});
+
+describe("NotificationsPageClient — Round 16 fix #18: page-header Mark all read", () => {
+  it("shows the header button when totalUnread > 0, even if this page's rows are all read", () => {
+    const readRow = { ...makeRow("1", "Read row"), readAt: new Date() } as Notification;
+    render(
+      <NotificationsPageClient
+        initialNotifications={[readRow]}
+        page={1}
+        hasNext={false}
+        totalUnread={3}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /mark all read/i })).toBeInTheDocument();
+  });
+
+  it("hides the header button when totalUnread is 0", () => {
+    const readRow = { ...makeRow("1", "Read row"), readAt: new Date() } as Notification;
+    render(
+      <NotificationsPageClient
+        initialNotifications={[readRow]}
+        page={1}
+        hasNext={false}
+        totalUnread={0}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /mark all read/i })).not.toBeInTheDocument();
   });
 });

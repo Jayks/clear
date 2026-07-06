@@ -87,8 +87,12 @@ describe("buildTripWrapUpNotification", () => {
     expect(buildTripWrapUpNotification(base).type).toBe("trip_wrapup");
   });
 
-  it("dedupKey is scoped to the group so it only ever fires once per trip", () => {
-    expect(buildTripWrapUpNotification(base).dedupKey).toBe("trip_wrapup:group-1");
+  it("dedupKey is scoped to BOTH the group and the user (Round 16 fix #13) so a second admin isn't silently starved by the global unique index", () => {
+    expect(buildTripWrapUpNotification(base).dedupKey).toBe("trip_wrapup:group-1:user-1");
+  });
+
+  it("dedupKey differs for a different userId on the same group", () => {
+    expect(buildTripWrapUpNotification({ ...base, userId: "user-2" }).dedupKey).toBe("trip_wrapup:group-1:user-2");
   });
 
   it("url deep-links to the group overview", () => {

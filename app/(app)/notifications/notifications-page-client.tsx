@@ -13,10 +13,16 @@ interface Props {
   initialNotifications: Notification[];
   page: number;
   hasNext: boolean;
+  /** Round 16 fix #18: total unread count across ALL pages (not just this
+   *  page's rows) — drives the page-header "Mark all read" button so it
+   *  still appears when page 1 happens to be fully read but older,
+   *  unread-page-2+ notifications exist. */
+  totalUnread: number;
 }
 
-export function NotificationsPageClient({ initialNotifications, page, hasNext }: Props) {
+export function NotificationsPageClient({ initialNotifications, page, hasNext, totalUnread }: Props) {
   const [notifications, setNotifications] = useState(initialNotifications);
+  const [unread, setUnread] = useState(totalUnread);
   const [marking, setMarking] = useState(false);
 
   // This page has no badge of its own, but still needs to (a) react when a
@@ -25,7 +31,7 @@ export function NotificationsPageClient({ initialNotifications, page, hasNext }:
   // badge + cached list update immediately too — see
   // lib/notifications/notification-sync.ts for why this is needed (the
   // bells are mounted in the persistent layout wrapping this page).
-  useNotificationReadSync(setNotifications);
+  useNotificationReadSync(setNotifications, setUnread);
 
   async function handleMarkAllRead() {
     setMarking(true);
@@ -36,6 +42,24 @@ export function NotificationsPageClient({ initialNotifications, page, hasNext }:
 
   return (
     <div>
+      {/* Round 16 fix #18: independent of NotificationList's own in-group
+          "Mark all read" (which only shows when THIS page's rows include
+          unread ones) — this header button reflects the account-wide
+          unread count, so it's visible even when page 1 is fully read but
+          an older page still has unread rows. */}
+      {unread > 0 && (
+        <div className="flex justify-end mb-3">
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            disabled={marking}
+            className="text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:underline disabled:opacity-50"
+          >
+            {marking ? "Marking…" : "Mark all read"}
+          </button>
+        </div>
+      )}
+
       {notifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-14 h-14 rounded-2xl bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center mb-4">

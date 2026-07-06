@@ -11,9 +11,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationList } from "./notification-list";
-import { getNotificationsAction, markAllNotificationsReadAction } from "@/app/actions/notifications";
+import { getNotificationFeedAction, markAllNotificationsReadAction } from "@/app/actions/notifications";
 import { broadcastNotificationsRead } from "@/lib/notifications/notification-sync";
 import { useNotificationReadSync } from "@/hooks/use-notification-read-sync";
+import { resolveBellPanelState } from "@/lib/notifications/bell-panel-state";
 import type { Notification } from "@/lib/db/schema/notifications";
 
 /**
@@ -30,6 +31,7 @@ export function NotificationBellDesktop({ initialUnread }: { initialUnread: numb
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [unread, setUnread] = useState(initialUnread);
   const [marking, setMarking] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // Keeps this bell's badge + cached list in sync with reads that happen on
   // the *other* two notification surfaces (mobile bell, full /notifications
@@ -37,11 +39,25 @@ export function NotificationBellDesktop({ initialUnread }: { initialUnread: numb
   // needed (all three are mounted simultaneously, with independent state).
   useNotificationReadSync(setNotifications, setUnread);
 
-  async function handleOpenChange(open: boolean) {
-    if (open && notifications === null) {
-      const rows = await getNotificationsAction({ limit: 10 });
+  // Round 16 fix #5/#16: refresh on EVERY open (not just the first) — a
+  // long-lived tab/PWA session was showing morning data all day. Keeps the
+  // previously-cached list rendered while the refresh is in flight (only
+  // the very first open shows the spinner) so reopening feels instant.
+  // Fix #16: a failed fetch used to leave "Loading…" forever with an
+  // unhandled rejection — now surfaces a retry message instead.
+  async function refresh() {
+    setLoadFailed(false);
+    try {
+      const { rows, unread: freshUnread } = await getNotificationFeedAction({ limit: 10 });
       setNotifications(rows);
+      setUnread(freshUnread);
+    } catch {
+      setLoadFailed(true);
     }
+  }
+
+  function handleOpenChange(open: boolean) {
+    if (open) refresh().catch(() => {}); // never leave a floating rejected promise
   }
 
   async function handleMarkAllRead() {
@@ -50,6 +66,8 @@ export function NotificationBellDesktop({ initialUnread }: { initialUnread: numb
     setMarking(false);
     broadcastNotificationsRead({ scope: "all" });
   }
+
+  const panelState = resolveBellPanelState(notifications, loadFailed);
 
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
@@ -83,16 +101,20 @@ export function NotificationBellDesktop({ initialUnread }: { initialUnread: numb
         <div className="flex items-center justify-between px-1.5 py-1">
           <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Notifications</p>
         </div>
-        {notifications === null ? (
+        {panelState === "failed" ? (
+          <p className="text-center text-sm text-slate-400 py-8">
+            Couldn&apos;t load notifications — close and reopen to retry.
+          </p>
+        ) : panelState === "loading" ? (
           <div className="flex items-center justify-center gap-2 py-8 text-slate-400 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading…
           </div>
-        ) : notifications.length === 0 ? (
+        ) : panelState === "empty" ? (
           <p className="text-center text-sm text-slate-400 py-8">You&apos;re all caught up.</p>
         ) : (
           <div className="max-h-[60vh] overflow-y-auto">
             <NotificationList
-              notifications={notifications}
+              notifications={notifications!}
               marking={marking}
               onMarkAllRead={handleMarkAllRead}
               renderItem={(row) => <DropdownMenuItem render={row} className="p-0 focus:bg-transparent" />}

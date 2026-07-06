@@ -22,20 +22,40 @@ import { isTripWrapUpDue, buildTripWrapUpNotification } from "@/lib/trip/wrap-up
  * => {}))` — same "runs opportunistically on a page load, never blocks
  * render, fails silently" posture as `autoLogDueTemplates`.
  */
+// Round 16 fix #6: caps how far back a wrapped-up trip's notification can
+// still fire, on top of isTripWrapUpDue's own condition. Without this, the
+// first deploy of this check would fire one backfill notification for every
+// long-ended trip in the DB at once. Archived trips without an endDate
+// always pass regardless of age — archiving is an explicit, recent act in
+// practice, and dedup (see buildTripWrapUpNotification) caps the cost at one
+// row ever even if that assumption is ever wrong.
+const WRAPUP_MAX_AGE_DAYS = 30;
+
 export async function checkTripWrapUps(
   userId: string,
   adminTrips: { id: string; name: string; isArchived: boolean; endDate: string | null }[],
   today: string
 ): Promise<void> {
-  const due = adminTrips.filter((trip) =>
-    isTripWrapUpDue({
+  const cutoff = new Date(new Date(today).getTime() - WRAPUP_MAX_AGE_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
+  const due = adminTrips.filter((trip) => {
+    if (!isTripWrapUpDue({
       groupType: "trip",
       isAdmin: true,
       isArchived: trip.isArchived,
       endDate: trip.endDate,
       today,
-    })
-  );
+    })) return false;
+
+    // Only the *inbox notification* is gated by recency — the on-page
+    // wrap-up card (isTripWrapUpDue) is intentionally untouched, so an old
+    // trip still shows its card, it just won't also re-appear in the bell.
+    if (trip.endDate && trip.endDate < cutoff) return false;
+
+    return true;
+  });
   if (due.length === 0) return;
 
   await Promise.all(

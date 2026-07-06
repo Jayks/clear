@@ -5,9 +5,10 @@ import Link from "next/link";
 import { Bell, Loader2 } from "lucide-react";
 import { Sheet } from "@/components/shared/sheet";
 import { NotificationList } from "./notification-list";
-import { getNotificationsAction, markAllNotificationsReadAction } from "@/app/actions/notifications";
+import { getNotificationFeedAction, markAllNotificationsReadAction } from "@/app/actions/notifications";
 import { broadcastNotificationsRead } from "@/lib/notifications/notification-sync";
 import { useNotificationReadSync } from "@/hooks/use-notification-read-sync";
+import { resolveBellPanelState } from "@/lib/notifications/bell-panel-state";
 import type { Notification } from "@/lib/db/schema/notifications";
 
 /**
@@ -21,6 +22,7 @@ export function NotificationBellMobile({ initialUnread }: { initialUnread: numbe
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const [unread, setUnread] = useState(initialUnread);
   const [marking, setMarking] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Keeps this bell's badge + cached list in sync with reads that happen on
@@ -29,11 +31,26 @@ export function NotificationBellMobile({ initialUnread }: { initialUnread: numbe
   // needed (all three are mounted simultaneously, with independent state).
   useNotificationReadSync(setNotifications, setUnread);
 
+  // Round 16 fix #5/#16: refresh on EVERY open (not just the first) — see
+  // the matching comment in notification-bell-desktop.tsx. Keeps the
+  // previously-cached list rendered while the refresh is in flight; a
+  // failed fetch surfaces a retry message instead of an eternal spinner.
   useEffect(() => {
-    if (isOpen && notifications === null) {
-      getNotificationsAction({ limit: 10 }).then(setNotifications);
-    }
-  }, [isOpen, notifications]);
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoadFailed(false);
+    (async () => {
+      try {
+        const { rows, unread: freshUnread } = await getNotificationFeedAction({ limit: 10 });
+        if (cancelled) return;
+        setNotifications(rows);
+        setUnread(freshUnread);
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
   async function handleMarkAllRead() {
     setMarking(true);
@@ -45,6 +62,8 @@ export function NotificationBellMobile({ initialUnread }: { initialUnread: numbe
   function handleRowOpen() {
     setIsOpen(false);
   }
+
+  const panelState = resolveBellPanelState(notifications, loadFailed);
 
   return (
     <>
@@ -78,15 +97,19 @@ export function NotificationBellMobile({ initialUnread }: { initialUnread: numbe
           </button>
         </div>
         <div ref={scrollRef} className="overflow-y-auto px-3 pb-2 min-h-0">
-          {notifications === null ? (
+          {panelState === "failed" ? (
+            <p className="text-center text-sm text-slate-400 py-10">
+              Couldn&apos;t load notifications — close and reopen to retry.
+            </p>
+          ) : panelState === "loading" ? (
             <div className="flex items-center justify-center gap-2 py-10 text-slate-400 text-sm">
               <Loader2 className="w-4 h-4 animate-spin" /> Loading…
             </div>
-          ) : notifications.length === 0 ? (
+          ) : panelState === "empty" ? (
             <p className="text-center text-sm text-slate-400 py-10">You&apos;re all caught up.</p>
           ) : (
             <NotificationList
-              notifications={notifications}
+              notifications={notifications!}
               onRowOpen={handleRowOpen}
               marking={marking}
               onMarkAllRead={handleMarkAllRead}

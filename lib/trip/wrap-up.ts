@@ -67,6 +67,10 @@ export function buildTripWrapUpNotification(params: {
     title: "🎉 Trip wrapped up",
     body: `${groupName} has ended — settle up or share the recap.`,
     url: `/groups/${groupId}`,
-    dedupKey: `trip_wrapup:${groupId}`,
+    // Round 16 fix #13: dedup key is now user-scoped. The unique index is
+    // global, so a group-only key would silently starve a second admin (no
+    // promote flow exists yet, but this closes the gap now rather than
+    // later, when it would be a real reported bug instead of a latent one).
+    dedupKey: `trip_wrapup:${groupId}:${userId}`,
   };
 }

@@ -53,6 +53,18 @@ export function extractDisplayName(user: {
   return typeof fullName === "string" ? fullName : user.email?.split("@")[0] ?? null;
 }
 
+/** Local-timezone "yyyy-MM-dd" — never use toISOString() for calendar dates.
+ *  (Round 16 fix #4 — UTC rollback bug: an IST user before 05:30 got
+ *  *yesterday* pre-filled by every client form that used toISOString(), and
+ *  the "Today" chip actually inserted yesterday.) */
+export function localDateString(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function localYesterdayString(): string {
+  return localDateString(new Date(Date.now() - 864e5));
+}
+
 /**
  * Returns the best default expense date when none was parsed from user input.
  * - Trip ongoing  → today
@@ -64,7 +76,7 @@ export function smartDefaultDate(
   tripStartDate?: string | null,
   tripEndDate?: string | null
 ): string {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateString();
   if (!tripStartDate) return today;
   if (today < tripStartDate) return tripStartDate;           // trip hasn't started
   if (tripEndDate && today > tripEndDate) return tripStartDate; // trip is over

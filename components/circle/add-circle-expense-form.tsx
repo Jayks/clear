@@ -18,6 +18,7 @@ import type { Group } from "@/lib/db/schema/groups";
 import { Camera, Wallet } from "lucide-react";
 import type { ParsedReceipt } from "@/lib/receipt/types";
 import { useAiUpgradeNudge } from "@/hooks/use-ai-upgrade-nudge";
+import { localDateString, localYesterdayString } from "@/lib/utils";
 
 interface Props {
   group:       Group;
@@ -29,8 +30,10 @@ export function AddCircleExpenseForm({ group, isPlusUser = false }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const groupConfig = getGroupConfig(group.groupType);
 
-  const today     = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 864e5).toISOString().split("T")[0];
+  // Round 16 fix #4: was toISOString() (UTC) — rolled back a day for an IST
+  // user before 05:30, dating "Today"/"Yesterday" chips a day early.
+  const today     = localDateString();
+  const yesterday = localYesterdayString();
 
   // ── Scanner state ──────────────────────────────────────────────────────────
   const [scannerOpen, setScannerOpen]   = useState(false);

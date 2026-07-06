@@ -22,7 +22,7 @@ import { useWarnBeforeLeave } from "@/hooks/use-warn-before-leave";
 import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ExpenseLocation } from "@/lib/db/schema/expenses";
-import { getMemberName, smartDefaultDate, formatCurrency } from "@/lib/utils";
+import { getMemberName, smartDefaultDate, formatCurrency, localDateString, localYesterdayString } from "@/lib/utils";
 import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import type { ParsedReceipt } from "@/lib/receipt/types";
@@ -87,8 +87,10 @@ export function AddExpenseForm({ group, members, canUseNonEqual = true, currentM
   const currentDate = watch("expenseDate");
   const receiptItems = watch("receiptItems");
   const locationVal  = watch("location") as ExpenseLocation | null | undefined;
-  const today     = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 864e5).toISOString().split("T")[0];
+  // Round 16 fix #4: was toISOString() (UTC) — rolled back a day for an IST
+  // user before 05:30, dating "Today"/"Yesterday" chips a day early.
+  const today     = localDateString();
+  const yesterday = localYesterdayString();
 
   useWarnBeforeLeave(isDirty);
 

@@ -14,7 +14,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { sendExpenseNotification } from "@/lib/notifications/send-expense-notification";
 import { sendPushToUser } from "@/lib/notifications/send-push-notification";
 import { recordNotificationToMembers } from "@/lib/notifications/record-notification";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, localDateString } from "@/lib/utils";
 import { canUseTemplates } from "@/lib/subscription/gates";
 import { isGroupLocked } from "@/lib/subscription/degradation-queries";
 import { LOCKED_GROUP_ERROR } from "@/lib/subscription/degradation";
@@ -236,8 +236,7 @@ export async function duplicateExpense(expenseId: string) {
 
   // Local date (not UTC) — toISOString() would roll back a day for IST users before
   // 05:30, dating the new expense/template "yesterday". Matches logFromTemplate.
-  const _now = new Date();
-  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+  const today = localDateString();
 
   // C-7 fix: wrap both INSERTs in a transaction.
   try {
@@ -340,8 +339,7 @@ export async function createExpenseTemplate(input: AddTemplateInput) {
 
   // Local date (not UTC) — toISOString() would roll back a day for IST users before
   // 05:30, dating the new expense/template "yesterday". Matches logFromTemplate.
-  const _now = new Date();
-  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+  const today = localDateString();
 
   // C-7 fix: wrap both INSERTs in a transaction.
   try {
@@ -411,6 +409,14 @@ export async function logFromTemplate(templateId: string) {
   // check before either INSERT committed — matching autoLogDueTemplates (line 496).
   try {
     const logged = await db.transaction(async (tx) => {
+      // Round 16 fix #3: lock the template row so two concurrent invocations
+      // for the same template serialize instead of both reading "not logged"
+      // under READ COMMITTED (a SELECT-then-INSERT guard alone isn't atomic —
+      // same class of bug as the aggregate-balance race documented in
+      // lib/db/CLAUDE.md). The second transaction re-reads after the first
+      // commits and hits the alreadyLogged guard below.
+      await tx.select({ id: expenses.id }).from(expenses).where(eq(expenses.id, templateId)).for("update");
+
       // Guard inside tx: concurrent invocation that already inserted will be
       // visible here and cause this call to return null (no-op).
       const [alreadyLogged] = await tx
@@ -558,6 +564,12 @@ export async function autoLogDueTemplates(groupId: string): Promise<void> {
     // atomic with the INSERT — a concurrent commit is visible to this read.
     try {
       await db.transaction(async (tx) => {
+        // Round 16 fix #3: same row-lock as logFromTemplate — serializes two
+        // concurrent auto-log calls for the same template (e.g. two
+        // serverless instances loading the nest page at once) so the second
+        // re-reads after the first commits and hits the alreadyLogged guard.
+        await tx.select({ id: expenses.id }).from(expenses).where(eq(expenses.id, template.id)).for("update");
+
         const [alreadyLogged] = await tx
           .select({ id: expenses.id })
           .from(expenses)
@@ -636,6 +648,11 @@ export async function batchLogTemplates(groupId: string) {
     try {
       let didLog = false;
       await db.transaction(async (tx) => {
+        // Round 16 fix #3: same row-lock as logFromTemplate/autoLogDueTemplates
+        // — serializes a double-tap of the batch-log button or two admins
+        // triggering it at once.
+        await tx.select({ id: expenses.id }).from(expenses).where(eq(expenses.id, template.id)).for("update");
+
         const [alreadyLogged] = await tx
           .select({ id: expenses.id })
           .from(expenses)

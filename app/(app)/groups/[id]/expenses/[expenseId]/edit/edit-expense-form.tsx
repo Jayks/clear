@@ -15,7 +15,7 @@ import type { Group } from "@/lib/db/schema/groups";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { Expense } from "@/lib/db/schema/expenses";
 import type { ExpenseSplit } from "@/lib/db/schema/expense-splits";
-import { getMemberName } from "@/lib/utils";
+import { getMemberName, localDateString, localYesterdayString } from "@/lib/utils";
 import type { SplitMode, SplitInput } from "@/lib/splits/compute";
 
 interface Props {
@@ -74,8 +74,10 @@ export function EditExpenseForm({ group, members, expense, splits, canUseNonEqua
   const currency = watch("currency");
   const category = watch("category");
   const currentDate = watch("expenseDate");
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 864e5).toISOString().split("T")[0];
+  // Round 16 fix #4: was toISOString() (UTC) — rolled back a day for an IST
+  // user before 05:30, dating "Today"/"Yesterday" chips a day early.
+  const today = localDateString();
+  const yesterday = localYesterdayString();
 
   function handleModeChange(mode: SplitMode) {
     setSplitMode(mode);

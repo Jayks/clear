@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Users, MapPin, Building2, MoreHorizontal } from "lucide-react";
 import type { Group } from "@/lib/db/schema/groups";
-import { formatDate } from "@/lib/utils";
+import { formatDate, localDateString } from "@/lib/utils";
 import { GroupActionHub } from "./group-action-hub";
 import { CardRibbon } from "@/components/shared/card-ribbon";
 import { ImageShimmer } from "@/components/shared/image-shimmer";
@@ -61,13 +61,18 @@ interface TripStatus {
 
 const MS_PER_DAY = 86_400_000;
 
-function computeTripStatus(
+// Exported for unit testing only — not used outside this file otherwise.
+export function computeTripStatus(
   startDate: string | null,
   endDate:   string | null,
 ): TripStatus | null {
   if (!startDate) return null;
 
-  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  // Round 16 fix #4: client's local time IS the correct frame for "Day X of
+  // Y" (a trip's day boundary matches the traveler's own clock, not UTC) —
+  // was toISOString().slice(0,10), which rolled the day back for an IST user
+  // before 05:30.
+  const today = localDateString();
 
   if (today < startDate) return null; // upcoming — no badge
 

@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { parseChatExpenses, type ChatParsedExpense } from "@/app/actions/parse-chat";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { addExpense } from "@/app/actions/expenses";
-import { getMemberName, formatCurrency, smartDefaultDate, formatDate } from "@/lib/utils";
+import { getMemberName, formatCurrency, smartDefaultDate, formatDate, localDateString } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
 import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { SplitInput } from "@/lib/splits/compute";
@@ -95,7 +95,9 @@ export function ChatImportDialog({
     setExtracting(true);
     setExtractError(null);
 
-    const today = new Date().toISOString().split("T")[0];
+    // Round 16 fix #4: was toISOString() (UTC) — rolled back a day for an IST
+    // user before 05:30.
+    const today = localDateString();
     const memberContext = members.map((m) => ({ id: m.id, name: getMemberName(m) }));
     const result = await parseChatExpenses(chatText, memberContext, {
       today,
@@ -143,7 +145,7 @@ export function ChatImportDialog({
       }
 
       const splits = resolveSplits(row, members);
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateString();
 
       const result = await addExpense({
         groupId,

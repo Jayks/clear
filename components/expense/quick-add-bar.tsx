@@ -7,7 +7,7 @@ import type { GroupMember } from "@/lib/db/schema/group-members";
 import type { ParsedExpense } from "@/lib/parser/parse-expense";
 import { parseExpenseText } from "@/lib/parser/parse-expense";
 import { parseExpenseWithAI } from "@/app/actions/parse-expense";
-import { getMemberName, formatCurrency, formatDate } from "@/lib/utils";
+import { getMemberName, formatCurrency, formatDate, localDateString } from "@/lib/utils";
 import { getCategory } from "@/lib/categories";
 import { CONTEXT_THEME, type ContextTheme } from "@/lib/theme/context-theme";
 
@@ -47,7 +47,9 @@ export function QuickAddBar({
     setLoading(true);
 
     const memberContext = members.map((m) => ({ id: m.id, name: getMemberName(m) }));
-    const today = new Date().toISOString().split("T")[0];
+    // Round 16 fix #4: was toISOString() (UTC) — rolled back a day for an IST
+    // user before 05:30, feeding the AI parser the wrong "today".
+    const today = localDateString();
 
     const aiResult = await parseExpenseWithAI(value, memberContext, {
       today,

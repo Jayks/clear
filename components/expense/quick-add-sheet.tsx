@@ -18,7 +18,7 @@ import { getGroupMembersForQuickAdd } from "@/app/actions/quick-add";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import type { AddExpenseInput } from "@/lib/validations/expense";
 import { useRecentCategories } from "@/hooks/use-recent-categories";
-import { getMemberName, formatDate, formatCurrency } from "@/lib/utils";
+import { getMemberName, formatDate, formatCurrency, localDateString } from "@/lib/utils";
 import { useSheetDismiss } from "@/hooks/use-sheet-dismiss";
 import { mapToGroupCategory } from "@/lib/receipt/map-category";
 import { getContextTheme } from "@/lib/theme/context-theme";
@@ -61,7 +61,9 @@ function buildExpenseInput(
   if (!parsed.amount || parsed.amount <= 0 || !parsed.description) return null;
   if (members.length === 0) return null;
 
-  const today = new Date().toISOString().split("T")[0];
+  // Round 16 fix #4: was toISOString() (UTC) — rolled back a day for an IST
+  // user before 05:30.
+  const today = localDateString();
   // Use AI-parsed payer first, then sticky context, then first member
   const paidByMemberId = parsed.paidByMemberId ?? context?.paidByMemberId ?? members[0].id;
 
